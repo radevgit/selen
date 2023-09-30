@@ -8,6 +8,6 @@
 
 ```
 
-# Line Coverage
+### Line Coverage
 
 94.10% (1435/1525)
