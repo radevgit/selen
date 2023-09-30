@@ -7,3 +7,7 @@
     open ./target/llvm-cov/html/index.html
 
 ```
+
+# Line Coverage
+
+94.10% (1435/1525)
