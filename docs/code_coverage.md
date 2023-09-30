@@ -11,3 +11,10 @@
 ### Line Coverage
 
 94.10% (1435/1525)
+
+
+
+
+
+[![codecov](https://codecov.io/gh/rradev/csp/graphs/tree.svg?token=34N49FRU78)](https://codecov.io/gh/rradev/csp)
+
