@@ -12,9 +12,6 @@ Implementation in-progress.
 ## Performance
 
 
-# Code Coverage
-Test's code coverage with llvm-cov [Coverage](https://github.com/rradev/csp/blob/main/docs/Code%20Coverage.md)
-
 ## Design
 The implementation follows the [minicp](https://github.com/minicp/minicp) design.
 
