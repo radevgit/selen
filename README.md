@@ -1,6 +1,6 @@
 # CSP Solver
 
-![rust workflow](https://github.com/rradev/csp/actions/workflows/rust.yml/badge.svg)[![codecov](https://codecov.io/gh/rradev/csp/graph/badge.svg?token=34N49FRU78)](https://codecov.io/gh/rradev/csp)
+![rust workflow](https://github.com/radevgit/csp/actions/workflows/rust.yml/badge.svg)[![codecov](https://codecov.io/gh/radevgit/csp/graph/badge.svg?token=34N49FRU78)](https://codecov.io/gh/radevgit/csp)
 
 Constraint Satisfaction Problem (CSP) Solver implemented in Rust.
 
