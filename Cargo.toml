@@ -7,7 +7,7 @@ rust-version = "1.88"
 categories = ["algorithms", "data-structures", "mathematics", "science"]
 keywords = ["constraint-satisfaction-problem", "constraint-solver", "constraint-propagation"]
 license = "MIT"
-repository = "https://github.com/radevgit/csp"
+repository = "https://github.com/radevgit/cspsolver"
 readme = "README.md"
 
 [dependencies]
