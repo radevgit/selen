@@ -1,5 +1,5 @@
 [package]
-name = "csp"
+name = "cspsolver"
 version = "0.3.1"
 edition = "2024"
 description = "CSP Solver"
