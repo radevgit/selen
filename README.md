@@ -6,14 +6,15 @@
 
 A Constraint Satisfaction Problem (CSP) solver library written in Rust.
 
-We are starting the implementation from scratch.
-The new implementation follows the design and implementation of [Copper](https://docs.rs/copper/0.1.0/copper/) v0.1.0.
 
 ## Status
 
+The new implementation follows the design and implementation of [Copper](https://docs.rs/copper/0.1.0/copper/) v0.1.0.
+
 The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
 
-Current version is rewritten from scratch and is following the implementation of Cupper with added **float** type.
+- Int type works as in Copper
+- Added **float** type.
 
 ## Overview
 
