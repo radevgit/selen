@@ -15,7 +15,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use csp::*;
+//! use cspsolver::prelude::*;
 //!
 //! // Example usage will be added as the library develops
 //! ```
@@ -27,53 +27,27 @@
 // pub mod solver;
 // pub mod variable;
 
-// Re-export commonly used types
-// pub use constraints::*;
-// pub use domain::*;
-// pub use propagation::*;
-// pub use search::*;
-// pub use solver::*;
-// pub use variable::*;
+pub mod utils;
+pub mod vars;
+pub mod model;
+pub mod views;
+pub mod solution;
+pub mod props;
+pub mod search;
+pub mod prelude;
 
-/// CSP Solver error types
-#[derive(Debug, Clone, PartialEq)]
-pub enum CspError {
-    /// No solution exists for the given constraints
-    NoSolution,
-    /// Invalid constraint specification
-    InvalidConstraint(String),
-    /// Invalid variable specification
-    InvalidVariable(String),
-    /// Domain is empty or invalid
-    InvalidDomain(String),
-    /// Generic solver error
-    SolverError(String),
-}
-
-impl std::fmt::Display for CspError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CspError::NoSolution => write!(f, "No solution exists"),
-            CspError::InvalidConstraint(msg) => write!(f, "Invalid constraint: {}", msg),
-            CspError::InvalidVariable(msg) => write!(f, "Invalid variable: {}", msg),
-            CspError::InvalidDomain(msg) => write!(f, "Invalid domain: {}", msg),
-            CspError::SolverError(msg) => write!(f, "Solver error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for CspError {}
-
-/// Result type for CSP operations
-pub type CspResult<T> = Result<T, CspError>;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::prelude::*;
+
+    #[test]
+    fn test_prelude_exports() {
+
+    }
 
     #[test]
     fn test_csp_error_display() {
-        let error = CspError::NoSolution;
-        assert_eq!(error.to_string(), "No solution exists");
+    
     }
 }

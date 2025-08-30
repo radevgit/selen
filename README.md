@@ -1,25 +1,24 @@
 # CSP Solver
 
-[![Crates.io](https://img.shields.io/crates/v/csp.svg)](https://crates.io/crates/csp)
-[![Documentation](https://docs.rs/csp/badge.svg)](https://docs.rs/csp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Crates.io](https://img.shields.io/crates/v/cspsolver.svg?color=blue)](https://crates.io/crates/cspsolver)
+[![Documentation](https://docs.rs/cspsolver/badge.svg)](https://docs.rs/cspsolver)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A high-performance Constraint Satisfaction Problem (CSP) solver library written in Rust.
+A Constraint Satisfaction Problem (CSP) solver library written in Rust.
 
 We are starting the implementation from scratch.
+The new implementation follows the design and implementation of [Copper](https://docs.rs/copper/0.1.0/copper/) v0.1.0.
+
+## Status
+
+The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
+
+Current version is rewritten from scratch and is following the implementation of Cupper with added **float** type.
 
 ## Overview
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
 
-## Features
-
-- **Constraint Propagation**: Advanced constraint propagation algorithms for domain reduction
-- **Backtracking Search**: Efficient backtracking search with various heuristics
-- **Domain Management**: Flexible domain representation and manipulation
-- **Multiple Constraint Types**: Support for various constraint types (binary, n-ary, global)
-- **Search Strategies**: Multiple search strategies and variable ordering heuristics
-- **High Performance**: Optimized for speed with minimal memory allocation
 
 ## Installation
 
@@ -27,7 +26,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-csp = "0.0.1"
+cspsolver = "0.3.3-alpha"
 ```
 
 ## Quick Start
@@ -59,146 +58,163 @@ fn main() -> CspResult<()> {
 
 ## Examples
 
-### N-Queens Problem
+```bash
+cargo run --example pc_builder
+cargo run --example resource_allocation
+cargo run --example portfolio_optimization
+```
+
+### PC Building Optimizer
+
+A practical example of constraint optimization - finding the best PC build within budget constraints:
 
 ```rust
-use csp::*;
+use cspsolver::prelude::*;
 
-fn solve_n_queens(n: usize) -> CspResult<Option<Solution>> {
-    let mut solver = CspSolver::new();
+fn main() {
+    // Create a model for our PC building problem
+    let mut m = Model::default();
     
-    // Create variables for each queen (column position in each row)
-    let mut queens = Vec::new();
-    for i in 0..n {
-        let var = solver.add_variable(
-            &format!("queen_{}", i), 
-            (1..=n).collect()
-        )?;
-        queens.push(var);
-    }
+    // How many monitors: at least 1, at most 3
+    let n_monitors = m.new_var(int(1), int(3)).unwrap();
     
-    // Add constraints: no two queens can attack each other
-    for i in 0..n {
-        for j in i + 1..n {
-            // Different columns
-            solver.add_constraint(NotEqualConstraint::new(queens[i], queens[j]))?;
-            
-            // Different diagonals
-            solver.add_constraint(DiagonalConstraint::new(queens[i], queens[j], i, j))?;
+    // Monitor specifications
+    let monitor_price = int(100);
+    let monitor_score = int(250);
+    
+    // GPU options: [budget, mid-range, high-end]
+    let gpu_prices = [int(150), int(250), int(500)];
+    let gpu_scores = [int(100), int(400), int(800)];
+    
+    // Binary variables: do we pick each GPU?
+    let gpus: Vec<_> = m.new_vars_binary(gpu_prices.len()).collect();
+    
+    // Calculate total GPU price and score based on selection
+    let gpu_price = m.sum_iter(
+        gpus.iter()
+            .zip(gpu_prices)
+            .map(|(gpu, price)| gpu.times(price))
+    );
+    let gpu_score = m.sum_iter(
+        gpus.iter()
+            .zip(gpu_scores)
+            .map(|(gpu, score)| gpu.times(score))
+    );
+    
+    // Total build price and score
+    let total_price = m.add(gpu_price, n_monitors.times(monitor_price));
+    let total_score = m.add(gpu_score, n_monitors.times(monitor_score));
+    
+    // Constraints
+    let n_gpus = m.sum(&gpus);
+    m.equals(n_gpus, int(1)); // Exactly one GPU
+    m.less_than_or_equals(total_price, int(600)); // Budget constraint
+    
+    // Find optimal solution
+    let solution = m.maximize(total_score).unwrap();
+    
+    println!("Optimal PC Build:");
+    println!("Monitors: {}", match solution[n_monitors] { 
+        Val::ValI(n) => n,
+        _ => 0
+    });
+    println!("GPU selection: {:?}", solution.get_values_binary(&gpus));
+    println!("Total score: {}", match solution[total_score] { 
+        Val::ValI(s) => s,
+        _ => 0
+    });
+    println!("Total price: ${}", match solution[total_price] { 
+        Val::ValI(p) => p,
+        _ => 0
+    });
+}
+```
+
+### Resource Allocation Problem
+
+Allocating tasks to workers with skill and capacity constraints:
+
+```rust
+use cspsolver::prelude::*;
+
+fn main() {
+    let mut m = Model::default();
+    
+    // 3 workers, 4 tasks
+    let num_workers = 3;
+    let num_tasks = 4;
+    
+    // Worker capacities (hours available)
+    let capacities = [int(8), int(6), int(10)];
+    
+    // Task requirements (hours needed)
+    let task_hours = [int(3), int(4), int(2), int(5)];
+    
+    // Task priorities (higher = more important)
+    let priorities = [int(10), int(15), int(5), int(20)];
+    
+    // Binary variables: worker[i] assigned to task[j]?
+    let mut assignments = Vec::new();
+    for i in 0..num_workers {
+        let mut worker_tasks = Vec::new();
+        for j in 0..num_tasks {
+            worker_tasks.push(m.new_var_binary());
         }
+        assignments.push(worker_tasks);
     }
     
-    solver.solve()
+    // Constraint: Each task assigned to exactly one worker
+    for j in 0..num_tasks {
+        let task_assignments: Vec<_> = assignments
+            .iter()
+            .map(|worker| worker[j])
+            .collect();
+        m.equals(m.sum(&task_assignments), int(1));
+    }
+    
+    // Constraint: Worker capacity not exceeded
+    for i in 0..num_workers {
+        let worker_load = m.sum_iter(
+            assignments[i]
+                .iter()
+                .zip(task_hours.iter())
+                .map(|(assigned, hours)| assigned.times(*hours))
+        );
+        m.less_than_or_equals(worker_load, capacities[i]);
+    }
+    
+    // Objective: Maximize total priority of assigned tasks
+    let total_priority = m.sum_iter(
+        assignments
+            .iter()
+            .flatten()
+            .zip(priorities.iter().cycle())
+            .map(|(assigned, priority)| assigned.times(*priority))
+    );
+    
+    let solution = m.maximize(total_priority).unwrap();
+    
+    println!("Optimal Task Assignment:");
+    for i in 0..num_workers {
+        print!("Worker {}: ", i + 1);
+        let worker_assignments = solution.get_values_binary(&assignments[i]);
+        for (j, &assigned) in worker_assignments.iter().enumerate() {
+            if assigned {
+                print!("Task{} ", j + 1);
+            }
+        }
+        println!();
+    }
+    
+    println!("Total priority: {}", match solution[total_priority] {
+        Val::ValI(p) => p,
+        _ => 0
+    });
 }
 ```
 
-### Graph Coloring
-
-```rust
-use csp::*;
-
-fn solve_graph_coloring(graph: &Graph, colors: usize) -> CspResult<Option<Solution>> {
-    let mut solver = CspSolver::new();
-    
-    // Create variable for each node
-    let mut nodes = Vec::new();
-    for node in graph.nodes() {
-        let var = solver.add_variable(
-            &format!("node_{}", node.id()), 
-            (1..=colors).collect()
-        )?;
-        nodes.push(var);
-    }
-    
-    // Add constraints: adjacent nodes must have different colors
-    for edge in graph.edges() {
-        solver.add_constraint(NotEqualConstraint::new(
-            nodes[edge.from()], 
-            nodes[edge.to()]
-        ))?;
-    }
-    
-    solver.solve()
-}
-```
-
-## Architecture
-
-The library is organized into several key modules:
-
-- **`solver`**: Main CSP solver implementation
-- **`variable`**: Variable representation and management
-- **`domain`**: Domain operations and constraints
-- **`constraints`**: Various constraint types and implementations
-- **`propagation`**: Constraint propagation algorithms
-- **`search`**: Search strategies and heuristics
-
-## Constraint Types
-
-- **Binary Constraints**: Constraints between two variables
-- **N-ary Constraints**: Constraints involving multiple variables
-- **Global Constraints**: Specialized constraints for common patterns
-- **Custom Constraints**: Support for user-defined constraints
-
-## Search Strategies
-
-- **Backtracking**: Basic chronological backtracking
-- **Forward Checking**: Backtracking with look-ahead
-- **MAC (Maintaining Arc Consistency)**: Advanced consistency checking
-- **Variable Ordering**: Various heuristics (MRV, degree, etc.)
-- **Value Ordering**: Least constraining value, etc.
-
-## Performance
-
-The library is designed for high performance:
-
-- Zero-cost abstractions where possible
-- Efficient memory usage
-- Optimized algorithms
-- Benchmarks included in the repository
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
-### Development Setup
-
-1. Clone the repository
-2. Install Rust (latest stable version)
-3. Run tests: `cargo test`
-4. Run benchmarks: `cargo bench`
-
-### Code Style
-
-This project follows standard Rust conventions:
-
-- Use `rustfmt` for formatting
-- Use `clippy` for linting
-- Write documentation for public APIs
-- Include tests for new functionality
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
-
-- Inspired by classical CSP algorithms and research
-- Built with performance and usability in mind
-- Thanks to the Rust community for excellent tooling and libraries
-
-## Related Projects
-
-- [constraint](https://crates.io/crates/constraint) - Another Rust CSP library
-- [satisfiability](https://crates.io/crates/satisfiability) - SAT solver
-- [good_lp](https://crates.io/crates/good_lp) - Linear programming
-
-## References
-
-- Artificial Intelligence: A Modern Approach (Russell & Norvig)
-- Constraint Processing (Rina Dechter)
-- Handbook of Constraint Programming (Rossi, van Beek, Walsh)
-
-## Status
-
-The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
