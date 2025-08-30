@@ -30,33 +30,6 @@ Add this to your `Cargo.toml`:
 cspsolver = "0.3.3-alpha"
 ```
 
-## Quick Start
-
-```rust
-use csp::*;
-
-fn main() -> CspResult<()> {
-    // Create a simple CSP
-    let mut solver = CspSolver::new();
-    
-    // Add variables with domains
-    let var1 = solver.add_variable("x", vec![1, 2, 3])?;
-    let var2 = solver.add_variable("y", vec![1, 2, 3])?;
-    
-    // Add constraints
-    solver.add_constraint(NotEqualConstraint::new(var1, var2))?;
-    
-    // Solve
-    if let Some(solution) = solver.solve()? {
-        println!("Solution found: {:?}", solution);
-    } else {
-        println!("No solution exists");
-    }
-    
-    Ok(())
-}
-```
-
 ## Examples
 
 ```bash
