@@ -115,3 +115,40 @@ fn test_pure_integer_greater_than() {
         x
     );
 }
+
+#[test]
+fn test_counter() {
+    // Test the propagation counter using solve_with_callback
+    println!("\n=== Testing Propagation Counter with Callback ===");
+    
+    let mut m = Model::default();
+
+    let v0 = m.new_var_int(1, 10);
+    let v1 = m.new_var_int(1, 5);
+
+    // Add constraint: v0 > v1
+    m.greater_than(v0, v1);
+
+    // Use the callback approach to capture solving statistics
+    let mut stats = SolveStats::default();
+    let solution = m.solve_with_callback(|solve_stats| {
+        stats.propagation_count = solve_stats.propagation_count;
+        println!("Propagation steps during solving: {}", solve_stats.propagation_count);
+    }).unwrap();
+
+    let x = match solution[v0] {
+        Val::ValI(int_val) => int_val,
+        _ => panic!("Expected integer value"),
+    };
+
+    // Should find v0 = 2 since v0 > v1 and min(v1) = 1, so v0 > 1 means v0 >= 2
+    assert_eq!(x, 2);
+    println!("Solution found: v0 = {} (constraint v0 > v1 satisfied)", x);
+    
+    // Verify we captured the propagation count
+    println!("Final captured propagation count: {}", stats.propagation_count);
+    assert!(stats.propagation_count > 0, "Should have performed some propagation steps");
+    
+    println!("✓ Callback approach working!");
+    println!("=== Test Complete ===\n");
+}

@@ -22,6 +22,15 @@ pub struct SplitOnUnassigned {
     branch: Option<(Space, VarId, Val, bool)>,
 }
 
+impl SplitOnUnassigned {
+    /// Get the current propagation count from the space being explored.
+    pub fn get_propagation_count(&self) -> usize {
+        self.branch.as_ref()
+            .map(|(space, _, _, _)| space.get_propagation_count())
+            .unwrap_or(0)
+    }
+}
+
 impl Iterator for SplitOnUnassigned {
     type Item = (Space, PropId);
 

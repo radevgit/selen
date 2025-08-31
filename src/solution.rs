@@ -3,7 +3,12 @@ use std::ops::Index;
 
 use crate::vars::{Val, VarId, VarIdBin};
 
-
+/// Statistics collected during the solving process.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct SolveStats {
+    /// Number of propagation steps performed during solving
+    pub propagation_count: usize,
+}
 
 /// Assignment for decision variables that satisfies all constraints.
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]

@@ -14,6 +14,13 @@ pub struct Space {
     pub props: Propagators,
 }
 
+impl Space {
+    /// Get the current propagation count from this space.
+    pub fn get_propagation_count(&self) -> usize {
+        self.props.get_propagation_count()
+    }
+}
+
 /// Perform search, iterating over assignments that satisfy all constraints.
 pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
     // Schedule all propagators during initial propagation step
@@ -36,6 +43,17 @@ pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
 pub enum Search<M> {
     Stalled(Engine<M>),
     Done(Option<Space>),
+}
+
+impl<M> Search<M> {
+    /// Get the current propagation count from the search state.
+    pub fn get_propagation_count(&self) -> usize {
+        match self {
+            Self::Stalled(engine) => engine.get_propagation_count(),
+            Self::Done(Some(space)) => space.get_propagation_count(),
+            Self::Done(None) => 0, // Failed search, no space available
+        }
+    }
 }
 
 impl<M: Mode> Iterator for Search<M> {
@@ -63,6 +81,22 @@ impl<M> Engine<M> {
             branch_iter: split_on_unassigned(space),
             stack: Vec::new(),
             mode,
+        }
+    }
+
+    /// Get the current propagation count from the engine's current state.
+    pub fn get_propagation_count(&self) -> usize {
+        // Try to get the count from the current branch iterator
+        let current_count = self.branch_iter.get_propagation_count();
+        
+        // If that's 0, try to get it from the stack
+        if current_count == 0 && !self.stack.is_empty() {
+            // Get the count from the last item in the stack
+            self.stack.last()
+                .map(|split| split.get_propagation_count())
+                .unwrap_or(0)
+        } else {
+            current_count
         }
     }
 }
@@ -107,6 +141,9 @@ fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> {
 
     // Agenda establishes the order in which scheduled propagators get run
     while let Some(p) = agenda.pop() {
+        // Increment the propagation step counter
+        space.props.increment_propagation_count();
+
         // Acquire trait object for propagator, which points to both code and inner state
         let prop = space.props.get_state_mut(p);
 

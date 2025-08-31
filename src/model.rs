@@ -186,6 +186,33 @@ impl Model {
         self.enumerate().next()
     }
 
+    /// Search for assignment with a callback to capture solving statistics.
+    /// 
+    /// The callback receives the solving statistics when the search completes.
+    #[must_use]
+    pub fn solve_with_callback<F>(self, callback: F) -> Option<Solution>
+    where
+        F: FnOnce(&crate::solution::SolveStats),
+    {
+        // Run the solving process
+        let vars = self.vars;
+        let props = self.props;
+        
+        // Create a search and run it to completion to capture final stats
+        let mut search_iter = search(vars, props, mode::Enumerate);
+        let result = search_iter.next();
+        
+        // Get the final propagation count from the search
+        let final_count = search_iter.get_propagation_count();
+        
+        let stats = crate::solution::SolveStats {
+            propagation_count: final_count,
+        };
+        
+        callback(&stats);
+        result
+    }
+
     /// Enumerate all assignments that satisfy all constraints.
     ///
     /// The order in which assignments are yielded is not stable.

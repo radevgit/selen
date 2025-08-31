@@ -28,6 +28,8 @@ clone_trait_object!(Prune);
 pub struct Propagators {
     state: Vec<Box<dyn Prune>>,
     dependencies: Vec<Vec<PropId>>,
+    /// Counter for the number of propagation steps performed
+    propagation_count: usize,
 }
 
 impl Propagators {
@@ -49,6 +51,16 @@ impl Propagators {
     /// Get list of propagators that should be scheduled when a bound of variable `v` changes.
     pub fn on_bound_change(&self, v: VarId) -> impl Iterator<Item = PropId> + '_ {
         self.dependencies[v].iter().copied()
+    }
+
+    /// Get the number of propagation steps performed so far.
+    pub fn get_propagation_count(&self) -> usize {
+        self.propagation_count
+    }
+
+    /// Increment the propagation step counter.
+    pub fn increment_propagation_count(&mut self) {
+        self.propagation_count += 1;
     }
 
     /// Declare a new propagator to enforce `x + y == s`.
