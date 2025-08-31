@@ -1,6 +1,8 @@
 use crate::prelude::*;
 use std::ops::{Index, IndexMut};
 
+const VAR_EPSILON: f32 = 1e-6;
+
 /// Domain for a decision variable
 #[derive(Clone, Debug)]
 pub enum Var {
@@ -103,7 +105,6 @@ impl std::ops::Sub for Val {
     }
 }
 
-const VAR_EPSILON: f32 = 1e-6;
 impl Var {
     /// Assigned variables have a domain reduced to a singleton.
     pub fn is_assigned(&self) -> bool {
@@ -127,7 +128,7 @@ impl Var {
     ///
     /// This function will panic if the decision variable is not assigned.
     pub fn get_assignment(&self) -> Val {
-        assert!(self.is_assigned());
+        debug_assert!(self.is_assigned());
 
         match self {
             Var::VarI { min, .. } => Val::ValI(*min),
@@ -148,7 +149,9 @@ impl Vars {
         match (min, max) {
             (Val::ValI(min), Val::ValI(max)) => self.0.push(Var::VarI { min, max }),
             (Val::ValF(min), Val::ValF(max)) => self.0.push(Var::VarF { min, max }),
-            _ => debug_assert!(false, "Mismatched variable types"),
+            // type coercion
+            (Val::ValI(min), Val::ValF(max)) => self.0.push(Var::VarF { min: min as f32, max }),
+            (Val::ValF(min), Val::ValI(max)) => self.0.push(Var::VarF { min, max: max as f32 }),
         }
 
         v
@@ -240,5 +243,3 @@ impl IndexMut<VarId> for Vec<Val> {
 /// Wrapper to provide specific helper methods for binary decision variables.
 #[derive(Clone, Copy, Debug)]
 pub struct VarIdBin(pub(crate) VarId);
-
-

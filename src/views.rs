@@ -74,14 +74,8 @@ impl<V: View> ViewExt for V {
 
     fn times_neg(self, scale_neg: Val) -> TimesNeg<Self> {
         match scale_neg {
-            Val::ValI(scale_val) => {
-                assert!(scale_val < 0);
-                TimesPos::new(self.opposite(), Val::ValI(-scale_val))
-            }
-            Val::ValF(scale_val) => {
-                assert!(scale_val < 0.0);
-                TimesPos::new(self.opposite(), Val::ValF(-scale_val))
-            }
+            Val::ValI(scale_val) => TimesPos::new(self.opposite(), Val::ValI(-scale_val)),
+            Val::ValF(scale_val) => TimesPos::new(self.opposite(), Val::ValF(-scale_val)),
         }
     }
 }
@@ -149,8 +143,56 @@ impl<'s> Context<'s> {
 
                 Some(Val::ValF(*var_min))
             }
-            // Type mismatch: integer variable with float value or vice versa
-            _ => None,
+            (
+                Var::VarI {
+                    min: var_min,
+                    max: var_max,
+                },
+                Val::ValF(min_f),
+            ) => {
+                // Convert float to integer using ceiling (to ensure the bound is not violated)
+                let min_converted = min_f.ceil() as i32;
+                
+                // Infeasible, fail space
+                if min_converted > *var_max {
+                    return None;
+                }
+
+                if min_converted > *var_min {
+                    // Set new minimum
+                    *var_min = min_converted;
+
+                    // Record modification event
+                    self.events.push(v);
+                }
+
+                Some(Val::ValI(*var_min))
+            }
+            (
+                Var::VarF {
+                    min: var_min,
+                    max: var_max,
+                },
+                Val::ValI(min_i),
+            ) => {
+                // Convert integer to float
+                let min_converted = min_i as f32;
+                
+                // Infeasible, fail space
+                if min_converted > *var_max {
+                    return None;
+                }
+
+                if min_converted > *var_min {
+                    // Set new minimum
+                    *var_min = min_converted;
+
+                    // Record modification event
+                    self.events.push(v);
+                }
+
+                Some(Val::ValF(*var_min))
+            }
         }
     }
 
@@ -204,8 +246,56 @@ impl<'s> Context<'s> {
 
                 Some(Val::ValF(*var_max))
             }
-            // Type mismatch: integer variable with float value or vice versa
-            _ => None,
+            (
+                Var::VarI {
+                    min: var_min,
+                    max: var_max,
+                },
+                Val::ValF(max_f),
+            ) => {
+                // Convert float to integer using floor (to ensure the bound is not violated)
+                let max_converted = max_f.floor() as i32;
+                
+                // Infeasible, fail space
+                if max_converted < *var_min {
+                    return None;
+                }
+
+                if max_converted < *var_max {
+                    // Set new maximum
+                    *var_max = max_converted;
+
+                    // Record modification event
+                    self.events.push(v);
+                }
+
+                Some(Val::ValI(*var_max))
+            }
+            (
+                Var::VarF {
+                    min: var_min,
+                    max: var_max,
+                },
+                Val::ValI(max_i),
+            ) => {
+                // Convert integer to float
+                let max_converted = max_i as f32;
+                
+                // Infeasible, fail space
+                if max_converted < *var_min {
+                    return None;
+                }
+
+                if max_converted < *var_max {
+                    // Set new maximum
+                    *var_max = max_converted;
+
+                    // Record modification event
+                    self.events.push(v);
+                }
+
+                Some(Val::ValF(*var_max))
+            }
         }
     }
 }
@@ -335,7 +425,7 @@ impl<V: View> View for Opposite<V> {
     }
 
     fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val> {
-        // For opposite view: max_opposite = -min_original  
+        // For opposite view: max_opposite = -min_original
         // So to set max_opposite = max, we need min_original = -max
         match max {
             Val::ValI(max_val) => self.0.try_set_min(Val::ValI(-max_val), ctx),
@@ -360,8 +450,9 @@ impl<V: View> ViewRaw for Plus<V> {
         match (self.x.min_raw(vars), self.offset) {
             (Val::ValI(min), Val::ValI(offset)) => Val::ValI(min + offset),
             (Val::ValF(min), Val::ValF(offset)) => Val::ValF(min + offset),
-            // Type mismatch cases - return the base value unchanged
-            (base, _) => base,
+            // type coercion
+            (Val::ValI(min), Val::ValF(offset)) => Val::ValF(min as f32 + offset),
+            (Val::ValF(min), Val::ValI(offset)) => Val::ValF(min + offset as f32),
         }
     }
 
@@ -369,8 +460,9 @@ impl<V: View> ViewRaw for Plus<V> {
         match (self.x.max_raw(vars), self.offset) {
             (Val::ValI(max), Val::ValI(offset)) => Val::ValI(max + offset),
             (Val::ValF(max), Val::ValF(offset)) => Val::ValF(max + offset),
-            // Type mismatch cases - return the base value unchanged
-            (base, _) => base,
+            // type coercion
+            (Val::ValI(min), Val::ValF(max)) => Val::ValF(min as f32 + max),
+            (Val::ValF(min), Val::ValI(max)) => Val::ValF(min + max as f32),
         }
     }
 }
@@ -384,8 +476,15 @@ impl<V: View> View for Plus<V> {
             (Val::ValF(min_val), Val::ValF(offset)) => {
                 self.x.try_set_min(Val::ValF(min_val - offset), ctx)
             }
-            // Type mismatch cases - fail
-            _ => None,
+            // Mixed type cases with automatic conversion
+            (Val::ValI(min_val), Val::ValF(offset)) => {
+                let required_min = min_val as f32 - offset;
+                self.x.try_set_min(Val::ValF(required_min), ctx)
+            }
+            (Val::ValF(min_val), Val::ValI(offset)) => {
+                let required_min = min_val - offset as f32;
+                self.x.try_set_min(Val::ValF(required_min), ctx)
+            }
         }
     }
 
@@ -397,8 +496,15 @@ impl<V: View> View for Plus<V> {
             (Val::ValF(max_val), Val::ValF(offset)) => {
                 self.x.try_set_max(Val::ValF(max_val - offset), ctx)
             }
-            // Type mismatch cases - fail
-            _ => None,
+            // Mixed type cases with automatic conversion
+            (Val::ValI(max_val), Val::ValF(offset)) => {
+                let required_max = max_val as f32 - offset;
+                self.x.try_set_max(Val::ValF(required_max), ctx)
+            }
+            (Val::ValF(max_val), Val::ValI(offset)) => {
+                let required_max = max_val - offset as f32;
+                self.x.try_set_max(Val::ValF(required_max), ctx)
+            }
         }
     }
 }
@@ -434,7 +540,7 @@ impl<V: View> Times<V> {
                 } else {
                     Self::Pos(TimesPos::new(x, scale))
                 }
-            },
+            }
         }
     }
 }
@@ -520,8 +626,9 @@ impl<V: View> ViewRaw for TimesPos<V> {
         match (self.x.min_raw(vars), self.scale_pos) {
             (Val::ValI(min), Val::ValI(scale)) => Val::ValI(min * scale),
             (Val::ValF(min), Val::ValF(scale)) => Val::ValF(min * scale),
-            // Type mismatch cases - return the base value unchanged
-            (base, _) => base,
+            // Mixed type cases with automatic conversion to float
+            (Val::ValI(min), Val::ValF(scale)) => Val::ValF(min as f32 * scale),
+            (Val::ValF(min), Val::ValI(scale)) => Val::ValF(min * scale as f32),
         }
     }
 
@@ -529,8 +636,9 @@ impl<V: View> ViewRaw for TimesPos<V> {
         match (self.x.max_raw(vars), self.scale_pos) {
             (Val::ValI(max), Val::ValI(scale)) => Val::ValI(max * scale),
             (Val::ValF(max), Val::ValF(scale)) => Val::ValF(max * scale),
-            // Type mismatch cases - return the base value unchanged
-            (base, _) => base,
+            // Mixed type cases with automatic conversion to float
+            (Val::ValI(max), Val::ValF(scale)) => Val::ValF(max as f32 * scale),
+            (Val::ValF(max), Val::ValI(scale)) => Val::ValF(max * scale as f32),
         }
     }
 }
@@ -549,8 +657,17 @@ impl<V: View> View for TimesPos<V> {
                 let required_min = min_val / scale;
                 self.x.try_set_min(Val::ValF(required_min), ctx)
             }
-            // Type mismatch cases - fail
-            _ => None,
+            // Mixed type cases with automatic conversion
+            (Val::ValI(min_val), Val::ValF(scale)) => {
+                // Convert to float and divide
+                let required_min = min_val as f32 / scale;
+                self.x.try_set_min(Val::ValF(required_min), ctx)
+            }
+            (Val::ValF(min_val), Val::ValI(scale)) => {
+                // Convert scale to float and divide
+                let required_min = min_val / scale as f32;
+                self.x.try_set_min(Val::ValF(required_min), ctx)
+            }
         }
     }
 
@@ -567,12 +684,20 @@ impl<V: View> View for TimesPos<V> {
                 let required_max = max_val / scale;
                 self.x.try_set_max(Val::ValF(required_max), ctx)
             }
-            // Type mismatch cases - fail
-            _ => None,
+            // Mixed type cases with automatic conversion
+            (Val::ValI(max_val), Val::ValF(scale)) => {
+                // Convert to float and divide
+                let required_max = max_val as f32 / scale;
+                self.x.try_set_max(Val::ValF(required_max), ctx)
+            }
+            (Val::ValF(max_val), Val::ValI(scale)) => {
+                // Convert scale to float and divide
+                let required_max = max_val / scale as f32;
+                self.x.try_set_max(Val::ValF(required_max), ctx)
+            }
         }
     }
 }
 
 /// Scale the underlying view by a strictly negative constant factor.
 pub type TimesNeg<V> = TimesPos<Opposite<V>>;
-
