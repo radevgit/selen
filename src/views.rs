@@ -516,7 +516,9 @@ pub enum Times<V: View> {
     Neg(TimesNeg<V>),
 
     /// Provided factor was exactly zero.
-    Zero,
+    ZeroI,
+
+    ZeroF,
 
     /// Provided factor was strictly positive.
     Pos(TimesPos<V>),
@@ -529,14 +531,14 @@ impl<V: View> Times<V> {
         match scale {
             Val::ValI(scale_val) => match scale_val.cmp(&0) {
                 Ordering::Less => Self::Neg(TimesPos::new(x.opposite(), Val::ValI(-scale_val))),
-                Ordering::Equal => Self::Zero,
+                Ordering::Equal => Self::ZeroI,
                 Ordering::Greater => Self::Pos(TimesPos::new(x, scale)),
             },
             Val::ValF(scale_val) => {
                 if scale_val < 0.0 {
                     Self::Neg(TimesPos::new(x.opposite(), Val::ValF(-scale_val)))
                 } else if scale_val == 0.0 {
-                    Self::Zero
+                    Self::ZeroF
                 } else {
                     Self::Pos(TimesPos::new(x, scale))
                 }
@@ -549,7 +551,7 @@ impl<V: View> ViewRaw for Times<V> {
     fn get_underlying_var_raw(self) -> Option<VarId> {
         match self {
             Self::Neg(neg) => neg.get_underlying_var_raw(),
-            Self::Zero => None,
+            Self::ZeroI | Self::ZeroF => None,
             Self::Pos(pos) => pos.get_underlying_var_raw(),
         }
     }
@@ -557,7 +559,8 @@ impl<V: View> ViewRaw for Times<V> {
     fn min_raw(self, vars: &Vars) -> Val {
         match self {
             Self::Neg(neg) => neg.min_raw(vars),
-            Self::Zero => Val::ValI(0).min_raw(vars),
+            Self::ZeroI => Val::ValI(0).min_raw(vars),
+            Self::ZeroF => Val::ValF(0.0).min_raw(vars),
             Self::Pos(pos) => pos.min_raw(vars),
         }
     }
@@ -565,7 +568,8 @@ impl<V: View> ViewRaw for Times<V> {
     fn max_raw(self, vars: &Vars) -> Val {
         match self {
             Self::Neg(neg) => neg.max_raw(vars),
-            Self::Zero => Val::ValI(0).max_raw(vars),
+            Self::ZeroI => Val::ValI(0).max_raw(vars),
+            Self::ZeroF => Val::ValF(0.0).max_raw(vars),
             Self::Pos(pos) => pos.max_raw(vars),
         }
     }
@@ -575,9 +579,13 @@ impl<V: View> View for Times<V> {
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         match self {
             Self::Neg(neg) => neg.try_set_min(min, ctx),
-            Self::Zero => match min {
+            Self::ZeroI => match min {
                 Val::ValI(min_val) => Val::ValI(0).try_set_min(Val::ValI(min_val), ctx),
                 Val::ValF(min_val) => Val::ValI(0).try_set_min(Val::ValF(min_val), ctx),
+            },
+            Self::ZeroF => match min {
+                Val::ValI(min_val) => Val::ValF(0.0).try_set_min(Val::ValI(min_val), ctx),
+                Val::ValF(min_val) => Val::ValF(0.0).try_set_min(Val::ValF(min_val), ctx),
             },
             Self::Pos(pos) => pos.try_set_min(min, ctx),
         }
@@ -586,9 +594,13 @@ impl<V: View> View for Times<V> {
     fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val> {
         match self {
             Self::Neg(neg) => neg.try_set_max(max, ctx),
-            Self::Zero => match max {
+            Self::ZeroI => match max {
                 Val::ValI(max_val) => Val::ValI(0).try_set_max(Val::ValI(max_val), ctx),
                 Val::ValF(max_val) => Val::ValI(0).try_set_max(Val::ValF(max_val), ctx),
+            },
+            Self::ZeroF => match max {
+                Val::ValI(max_val) => Val::ValF(0.0).try_set_max(Val::ValI(max_val), ctx),
+                Val::ValF(max_val) => Val::ValF(0.0).try_set_max(Val::ValF(max_val), ctx),
             },
             Self::Pos(pos) => pos.try_set_max(max, ctx),
         }
@@ -606,11 +618,9 @@ impl<V: View> TimesPos<V> {
     const fn new(x: V, scale_pos: Val) -> Self {
         match scale_pos {
             Val::ValI(scale_val) => {
-                assert!(scale_val > 0);
                 Self { x, scale_pos }
             }
             Val::ValF(scale_val) => {
-                assert!(scale_val > 0.0);
                 Self { x, scale_pos }
             }
         }
