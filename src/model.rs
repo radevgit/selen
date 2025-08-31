@@ -160,11 +160,70 @@ impl Model {
         self.minimize_and_iterate(objective).last()
     }
 
+    /// Find assignment that minimizes objective expression with callback to capture solving statistics.
+    #[must_use]
+    pub fn minimize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
+    where
+        F: FnOnce(&crate::solution::SolveStats),
+    {
+        // For optimization problems, we need a different approach since we iterate through all solutions
+        let vars = self.vars;
+        let props = self.props;
+        
+        let mut search_iter = search(vars, props, mode::Minimize::new(objective));
+        let mut last_solution = None;
+        let mut current_count = 0;
+        
+        // Iterate through all solutions to find the optimal one
+        while let Some(solution) = search_iter.next() {
+            last_solution = Some(solution);
+            // Capture the count each iteration, as it might get lost when iterator is consumed
+            current_count = search_iter.get_propagation_count();
+        }
+        
+        let stats = crate::solution::SolveStats {
+            propagation_count: current_count,
+        };
+        
+        callback(&stats);
+        last_solution
+    }
+
     /// Enumerate assignments that satisfy all constraints, while minimizing objective expression.
     ///
     /// The order in which assignments are yielded is not stable.
     pub fn minimize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
         search(self.vars, self.props, mode::Minimize::new(objective))
+    }
+
+    /// Enumerate assignments that satisfy all constraints, while minimizing objective expression, with callback.
+    ///
+    /// The callback is called with final statistics after all solutions are found.
+    /// Returns a vector of all solutions found during the search.
+    pub fn minimize_and_iterate_with_callback<F>(self, objective: impl View, callback: F) -> Vec<Solution>
+    where
+        F: FnOnce(&crate::solution::SolveStats),
+    {
+        let vars = self.vars;
+        let props = self.props;
+        
+        let mut search_iter = search(vars, props, mode::Minimize::new(objective));
+        let mut solutions = Vec::new();
+        let mut current_count = 0;
+        
+        // Collect all solutions manually and capture count during iteration
+        while let Some(solution) = search_iter.next() {
+            solutions.push(solution);
+            // Capture the count each iteration, as it might get lost when iterator is consumed
+            current_count = search_iter.get_propagation_count();
+        }
+        
+        let stats = crate::solution::SolveStats {
+            propagation_count: current_count,
+        };
+        
+        callback(&stats);
+        solutions
     }
 
     /// Find assignment that maximizes objective expression while satisfying all constraints.
@@ -173,11 +232,31 @@ impl Model {
         self.minimize(objective.opposite())
     }
 
+    /// Find assignment that maximizes objective expression with callback to capture solving statistics.
+    #[must_use]
+    pub fn maximize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
+    where
+        F: FnOnce(&crate::solution::SolveStats),
+    {
+        self.minimize_with_callback(objective.opposite(), callback)
+    }
+
     /// Enumerate assignments that satisfy all constraints, while maximizing objective expression.
     ///
     /// The order in which assignments are yielded is not stable.
     pub fn maximize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
         self.minimize_and_iterate(objective.opposite())
+    }
+
+    /// Enumerate assignments that satisfy all constraints, while maximizing objective expression, with callback.
+    ///
+    /// The callback is called with final statistics after all solutions are found.
+    /// Returns a vector of all solutions found during the search.
+    pub fn maximize_and_iterate_with_callback<F>(self, objective: impl View, callback: F) -> Vec<Solution>
+    where
+        F: FnOnce(&crate::solution::SolveStats),
+    {
+        self.minimize_and_iterate_with_callback(objective.opposite(), callback)
     }
 
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
@@ -218,5 +297,36 @@ impl Model {
     /// The order in which assignments are yielded is not stable.
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
         search(self.vars, self.props, mode::Enumerate)
+    }
+
+    /// Enumerate all assignments that satisfy all constraints with callback to capture solving statistics.
+    ///
+    /// The callback is called with final statistics after all solutions are found.
+    /// Returns a vector of all solutions found during the search.
+    pub fn enumerate_with_callback<F>(self, callback: F) -> Vec<Solution>
+    where
+        F: FnOnce(&crate::solution::SolveStats),
+    {
+        let vars = self.vars;
+        let props = self.props;
+        
+        let mut search_iter = search(vars, props, mode::Enumerate);
+        let mut solutions = Vec::new();
+        
+        // CRITICAL: Get the propagation count BEFORE calling any next() methods,
+        // because Search::Done(Some(space)) becomes Search::Done(None) after the first next()
+        let final_count = search_iter.get_propagation_count();
+        
+        // Collect all solutions
+        while let Some(solution) = search_iter.next() {
+            solutions.push(solution);
+        }
+        
+        let stats = crate::solution::SolveStats {
+            propagation_count: final_count,
+        };
+        
+        callback(&stats);
+        solutions
     }
 }
