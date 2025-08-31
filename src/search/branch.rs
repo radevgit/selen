@@ -1,6 +1,7 @@
 use crate::props::PropId;
 use crate::search::Space;
 use crate::vars::{VarId, Val};
+use crate::views::Context;
 
 /// Perform a binary split on the first unassigned decision variable.
 pub fn split_on_unassigned(space: Space) -> SplitOnUnassigned {
@@ -37,7 +38,9 @@ impl Iterator for SplitOnUnassigned {
             Some((space_branch_left, p))
         } else {
             let mut space_branch_right = space;
-            let p = space_branch_right.props.greater_than(pivot, mid);
+            let mut events = Vec::new();
+            let ctx = Context::new(&mut space_branch_right.vars, &mut events);
+            let p = space_branch_right.props.greater_than(pivot, mid, &ctx);
             Some((space_branch_right, p))
         }
     }

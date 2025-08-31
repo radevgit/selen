@@ -1,7 +1,7 @@
 use crate::props::PropId;
 use crate::search::Space;
 use crate::vars::{Vars, Val};
-use crate::views::View;
+use crate::views::{View, Context};
 
 /// Control search behavior when a solution is found.
 pub trait Mode: core::fmt::Debug {
@@ -39,9 +39,14 @@ impl<V: View> Minimize<V> {
 impl<V: View> Mode for Minimize<V> {
     fn on_branch(&self, space: &mut Space) -> impl Iterator<Item = PropId> {
         // Prune assignments that cannot lower objective expression
-        self.minimum_opt
-            .map(|minimum| space.props.less_than(self.objective, minimum))
-            .into_iter()
+        if let Some(minimum) = self.minimum_opt {
+            let mut events = Vec::new();
+            let ctx = Context::new(&mut space.vars, &mut events);
+            let prop_id = space.props.less_than(self.objective, minimum, &ctx);
+            vec![prop_id].into_iter()
+        } else {
+            vec![].into_iter()
+        }
     }
 
     fn on_solution(&mut self, vars: &Vars) {

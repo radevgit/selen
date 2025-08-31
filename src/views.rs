@@ -1,5 +1,14 @@
 use crate::vars::{Val, Var, VarId, VarIdBin, Vars};
 
+/// Represents the result type that a view produces
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewType {
+    /// View produces integer values only
+    Integer,
+    /// View produces floating-point values (or mixed integer/float)
+    Float,
+}
+
 /// Apply simple domain transformations on the fly to make propagators more generic.
 #[allow(private_bounds)]
 pub trait View: ViewRaw {
@@ -17,6 +26,9 @@ pub trait View: ViewRaw {
     fn max(self, ctx: &Context) -> Val {
         self.max_raw(ctx.vars)
     }
+
+    /// Determine the result type that this view produces
+    fn result_type(self, ctx: &Context) -> ViewType;
 
     /// Try to set the provided value as domain minimum, failing the search space on infeasibility.
     ///
@@ -36,6 +48,9 @@ pub trait ViewExt: View {
 
     /// Add a constant offset to the underlying view.
     fn plus(self, offset: Val) -> Plus<Self>;
+
+    /// Subtract a constant offset from the underlying view.
+    fn minus(self, offset: Val) -> Plus<Self>;
 
     /// Scale the underlying view by a constant factor.
     fn times(self, scale: Val) -> Times<Self>;
@@ -62,6 +77,15 @@ impl<V: View> ViewExt for V {
 
     fn plus(self, offset: Val) -> Plus<Self> {
         Plus { x: self, offset }
+    }
+
+    fn minus(self, offset: Val) -> Plus<Self> {
+        // Subtraction is addition with negative offset
+        let neg_offset = match offset {
+            Val::ValI(i) => Val::ValI(-i),
+            Val::ValF(f) => Val::ValF(-f),
+        };
+        Plus { x: self, offset: neg_offset }
     }
 
     fn times(self, scale: Val) -> Times<Self> {
@@ -327,6 +351,13 @@ impl ViewRaw for Val {
 }
 
 impl View for Val {
+    fn result_type(self, _ctx: &Context) -> ViewType {
+        match self {
+            Val::ValI(_) => ViewType::Integer,
+            Val::ValF(_) => ViewType::Float,
+        }
+    }
+
     fn try_set_min(self, min: Val, _ctx: &mut Context) -> Option<Val> {
         if min <= self { Some(min) } else { None }
     }
@@ -357,6 +388,13 @@ impl ViewRaw for VarId {
 }
 
 impl View for VarId {
+    fn result_type(self, ctx: &Context) -> ViewType {
+        match &ctx.vars[self] {
+            Var::VarF { .. } => ViewType::Float,
+            Var::VarI { .. } => ViewType::Integer,
+        }
+    }
+
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         ctx.try_set_min(self, min)
     }
@@ -381,6 +419,13 @@ impl ViewRaw for VarIdBin {
 }
 
 impl View for VarIdBin {
+    fn result_type(self, ctx: &Context) -> ViewType {
+        match &ctx.vars[self.0] {
+            Var::VarF { .. } => ViewType::Float,
+            Var::VarI { .. } => ViewType::Integer,
+        }
+    }
+
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         self.0.try_set_min(min, ctx)
     }
@@ -415,6 +460,11 @@ impl<V: View> ViewRaw for Opposite<V> {
 }
 
 impl<V: View> View for Opposite<V> {
+    fn result_type(self, ctx: &Context) -> ViewType {
+        // Opposite preserves the type of the underlying view
+        self.0.result_type(ctx)
+    }
+
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         // For opposite view: min_opposite = -max_original
         // So to set min_opposite = min, we need max_original = -min
@@ -468,6 +518,21 @@ impl<V: View> ViewRaw for Plus<V> {
 }
 
 impl<V: View> View for Plus<V> {
+    fn result_type(self, ctx: &Context) -> ViewType {
+        // Plus operation can promote integers to floats if offset is float
+        let base_type = self.x.result_type(ctx);
+        let offset_type = match self.offset {
+            Val::ValI(_) => ViewType::Integer,
+            Val::ValF(_) => ViewType::Float,
+        };
+        
+        // If either operand is float, result is float
+        match (base_type, offset_type) {
+            (ViewType::Float, _) | (_, ViewType::Float) => ViewType::Float,
+            (ViewType::Integer, ViewType::Integer) => ViewType::Integer,
+        }
+    }
+
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         match (min, self.offset) {
             (Val::ValI(min_val), Val::ValI(offset)) => {
@@ -576,6 +641,15 @@ impl<V: View> ViewRaw for Times<V> {
 }
 
 impl<V: View> View for Times<V> {
+    fn result_type(self, ctx: &Context) -> ViewType {
+        match self {
+            Self::Neg(neg) => neg.result_type(ctx),
+            Self::ZeroI => ViewType::Integer,
+            Self::ZeroF => ViewType::Float,
+            Self::Pos(pos) => pos.result_type(ctx),
+        }
+    }
+
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         match self {
             Self::Neg(neg) => neg.try_set_min(min, ctx),
@@ -654,6 +728,21 @@ impl<V: View> ViewRaw for TimesPos<V> {
 }
 
 impl<V: View> View for TimesPos<V> {
+    fn result_type(self, ctx: &Context) -> ViewType {
+        // TimesPos operation can promote integers to floats if scale is float
+        let base_type = self.x.result_type(ctx);
+        let scale_type = match self.scale_pos {
+            Val::ValI(_) => ViewType::Integer,
+            Val::ValF(_) => ViewType::Float,
+        };
+        
+        // If either operand is float, result is float
+        match (base_type, scale_type) {
+            (ViewType::Float, _) | (_, ViewType::Float) => ViewType::Float,
+            (ViewType::Integer, ViewType::Integer) => ViewType::Integer,
+        }
+    }
+
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         match (min, self.scale_pos) {
             (Val::ValI(min_val), Val::ValI(scale)) => {

@@ -1,8 +1,6 @@
 use crate::prelude::*;
 use std::ops::{Index, IndexMut};
 
-const VAR_EPSILON: f32 = 1e-6;
-
 /// Domain for a decision variable
 #[derive(Clone, Debug)]
 pub enum Var {
@@ -150,8 +148,14 @@ impl Vars {
             (Val::ValI(min), Val::ValI(max)) => self.0.push(Var::VarI { min, max }),
             (Val::ValF(min), Val::ValF(max)) => self.0.push(Var::VarF { min, max }),
             // type coercion
-            (Val::ValI(min), Val::ValF(max)) => self.0.push(Var::VarF { min: min as f32, max }),
-            (Val::ValF(min), Val::ValI(max)) => self.0.push(Var::VarF { min, max: max as f32 }),
+            (Val::ValI(min), Val::ValF(max)) => self.0.push(Var::VarF {
+                min: min as f32,
+                max,
+            }),
+            (Val::ValF(min), Val::ValI(max)) => self.0.push(Var::VarF {
+                min,
+                max: max as f32,
+            }),
         }
 
         v

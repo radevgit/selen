@@ -38,3 +38,5 @@ pub const fn int(value: i32) -> crate::vars::Val {
 pub const fn float(value: f32) -> crate::vars::Val {
     crate::vars::Val::float(value)
 }
+
+pub const VAR_EPSILON: f32 = 1e-6;

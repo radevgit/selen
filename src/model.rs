@@ -137,7 +137,9 @@ impl Model {
 
     /// Declare constraint `x < y`.
     pub fn less_than(&mut self, x: impl View, y: impl View) {
-        let _p = self.props.less_than(x, y);
+        let mut events = Vec::new();
+        let ctx = Context::new(&mut self.vars, &mut events);
+        let _p = self.props.less_than(x, y, &ctx);
     }
 
     /// Declare constraint `x >= y`.
@@ -147,7 +149,9 @@ impl Model {
 
     /// Declare constraint `x > y`.
     pub fn greater_than(&mut self, x: impl View, y: impl View) {
-        let _p = self.props.greater_than(x, y);
+        let mut events = Vec::new();
+        let ctx = Context::new(&mut self.vars, &mut events);
+        let _p = self.props.greater_than(x, y, &ctx);
     }
 
     /// Find assignment that minimizes objective expression while satisfying all constraints.
