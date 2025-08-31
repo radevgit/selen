@@ -14,7 +14,7 @@ fn main() {
     let mut m = Model::default();
     
     // How many monitors: at least 1, at most 3
-    let n_monitors = m.new_var(int(1), int(3)).unwrap();
+    let n_monitors = m.new_var_int(1, 3);
     
     // Monitor specifications
     let monitor_price = int(100);

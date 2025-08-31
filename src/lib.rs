@@ -38,16 +38,4 @@ pub mod prelude;
 
 
 #[cfg(test)]
-mod tests {
-    use crate::prelude::*;
-
-    #[test]
-    fn test_prelude_exports() {
-
-    }
-
-    #[test]
-    fn test_csp_error_display() {
-    
-    }
-}
+mod tests;

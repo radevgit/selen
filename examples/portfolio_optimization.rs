@@ -35,7 +35,7 @@ fn main() {
     
     // Portfolio allocation: simple two-asset model
     // Stocks: 30% to 70% (balanced range)
-    let stock_weight = m.new_var(float(30.0), float(70.0)).unwrap();
+    let stock_weight = m.new_var_float(30.0, 70.0);
     
     // Bonds: remainder to make 100% (use opposite to get negative)
     let bond_weight = m.add(float(100.0), stock_weight.opposite());
