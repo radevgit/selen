@@ -19,6 +19,11 @@ impl Space {
     pub fn get_propagation_count(&self) -> usize {
         self.props.get_propagation_count()
     }
+
+    /// Get the current node count from this space.
+    pub fn get_node_count(&self) -> usize {
+        self.props.get_node_count()
+    }
 }
 
 /// Perform search, iterating over assignments that satisfy all constraints.
@@ -51,6 +56,15 @@ impl<M> Search<M> {
         match self {
             Self::Stalled(engine) => engine.get_propagation_count(),
             Self::Done(Some(space)) => space.get_propagation_count(),
+            Self::Done(None) => 0, // Failed search, no space available
+        }
+    }
+
+    /// Get the current node count from the search state.
+    pub fn get_node_count(&self) -> usize {
+        match self {
+            Self::Stalled(engine) => engine.get_node_count(),
+            Self::Done(Some(space)) => space.get_node_count(),
             Self::Done(None) => 0, // Failed search, no space available
         }
     }
@@ -94,6 +108,22 @@ impl<M> Engine<M> {
             // Get the count from the last item in the stack
             self.stack.last()
                 .map(|split| split.get_propagation_count())
+                .unwrap_or(0)
+        } else {
+            current_count
+        }
+    }
+
+    /// Get the current node count from the engine's current state.
+    pub fn get_node_count(&self) -> usize {
+        // Try to get the count from the current branch iterator
+        let current_count = self.branch_iter.get_node_count();
+        
+        // If that's 0, try to get it from the stack
+        if current_count == 0 && !self.stack.is_empty() {
+            // Get the count from the last item in the stack
+            self.stack.last()
+                .map(|split| split.get_node_count())
                 .unwrap_or(0)
         } else {
             current_count

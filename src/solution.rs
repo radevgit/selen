@@ -8,6 +8,8 @@ use crate::vars::{Val, VarId, VarIdBin};
 pub struct SolveStats {
     /// Number of propagation steps performed during solving
     pub propagation_count: usize,
+    /// Number of search nodes (branching points) explored during solving
+    pub node_count: usize,
 }
 
 /// Assignment for decision variables that satisfies all constraints.

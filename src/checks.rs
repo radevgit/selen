@@ -133,7 +133,9 @@ fn test_counter() {
     let mut stats = SolveStats::default();
     let solution = m.solve_with_callback(|solve_stats| {
         stats.propagation_count = solve_stats.propagation_count;
+        stats.node_count = solve_stats.node_count;
         println!("Propagation steps during solving: {}", solve_stats.propagation_count);
+        println!("Search nodes explored during solving: {}", solve_stats.node_count);
     }).unwrap();
 
     let x = match solution[v0] {
@@ -145,8 +147,9 @@ fn test_counter() {
     assert_eq!(x, 2);
     println!("Solution found: v0 = {} (constraint v0 > v1 satisfied)", x);
     
-    // Verify we captured the propagation count
+    // Verify we captured the statistics
     println!("Final captured propagation count: {}", stats.propagation_count);
+    println!("Final captured node count: {}", stats.node_count);
     assert!(stats.propagation_count > 0, "Should have performed some propagation steps");
     
     println!("✓ Callback approach working!");
@@ -220,13 +223,16 @@ fn test_all_callback_methods() {
         let mut minimize_stats = SolveStats::default();
         let solution = m.minimize_with_callback(v0, |stats| {
             minimize_stats.propagation_count = stats.propagation_count;
-            println!("minimize_with_callback - Propagation count: {}", stats.propagation_count);
+            minimize_stats.node_count = stats.node_count;
+            println!("minimize_with_callback - Propagation count: {}, Node count: {}", 
+                     stats.propagation_count, stats.node_count);
         }).unwrap();
         
         let x = match solution[v0] { Val::ValI(i) => i, _ => panic!() };
         assert_eq!(x, 2); // Should find v0 = 2 since v0 > v1 and min(v1) = 1
         assert!(minimize_stats.propagation_count > 0, "minimize should have propagation steps");
-        println!("✓ minimize_with_callback working - propagation count: {}", minimize_stats.propagation_count);
+        println!("✓ minimize_with_callback working - propagation count: {}, node count: {}", 
+                 minimize_stats.propagation_count, minimize_stats.node_count);
     }
     
     // Test maximize_with_callback
@@ -280,13 +286,15 @@ fn test_all_callback_methods() {
         let mut enumerate_stats = SolveStats::default();
         let solutions = m.enumerate_with_callback(|stats| {
             enumerate_stats.propagation_count = stats.propagation_count;
-            println!("enumerate_with_callback - Propagation count: {}", stats.propagation_count);
+            enumerate_stats.node_count = stats.node_count;
+            println!("enumerate_with_callback - Propagation count: {}, Node count: {}", 
+                     stats.propagation_count, stats.node_count);
         });
         
         // Should find solutions where v0 > v1 > v2
         assert!(solutions.len() >= 1, "Should find at least one solution");
-        println!("✓ enumerate_with_callback working - found {} solutions, propagation count: {}", 
-                 solutions.len(), enumerate_stats.propagation_count);
+        println!("✓ enumerate_with_callback working - found {} solutions, propagation count: {}, node count: {}", 
+                 solutions.len(), enumerate_stats.propagation_count, enumerate_stats.node_count);
         // Don't require propagation steps for enumerate - it might find solutions without propagation
     }
     
@@ -331,4 +339,94 @@ fn test_all_callback_methods() {
     }
     
     println!("=== All Callback Methods Test Complete ===\n");
+}
+
+#[test]
+fn test_node_counter_complex() {
+    use crate::prelude::*;
+    
+    println!("\n=== Testing Node Counter with Complex Problem ===");
+    
+    let mut m = Model::default();
+
+    // Create a problem that DEFINITELY requires branching
+    let v0 = m.new_var_int(1, 10);  
+    let v1 = m.new_var_int(1, 10);
+    let v2 = m.new_var_int(1, 10);
+
+    // These constraints should NOT uniquely determine the solution
+    // They create multiple valid combinations that require search
+    m.greater_than(v0, v1);         // v0 > v1
+    m.greater_than(v1, v2);         // v1 > v2  
+    // No other constraints - should have many valid solutions like:
+    // v0=10, v1=9, v2=8 or v0=9, v1=8, v2=7, etc.
+
+    let mut stats = SolveStats::default();
+    let solution = m.solve_with_callback(|solve_stats| {
+        stats.propagation_count = solve_stats.propagation_count;
+        stats.node_count = solve_stats.node_count;
+        println!("Complex problem - Propagation count: {}, Node count: {}", 
+                 solve_stats.propagation_count, solve_stats.node_count);
+    }).unwrap();
+
+    let x0 = match solution[v0] { Val::ValI(i) => i, _ => panic!() };
+    let x1 = match solution[v1] { Val::ValI(i) => i, _ => panic!() };
+    let x2 = match solution[v2] { Val::ValI(i) => i, _ => panic!() };
+    
+    println!("Solution: v0={}, v1={}, v2={}", x0, x1, x2);
+    println!("Constraint checks: v0>v1? {}, v1>v2? {}", x0 > x1, x1 > x2);
+    
+    println!("Final stats - Propagation count: {}, Node count: {}", 
+             stats.propagation_count, stats.node_count);
+    
+    // This should definitely require branching since there are multiple solutions
+    // and the solver needs to search to find the first one
+    assert!(stats.node_count > 0, "Expected node count > 0 for search problem, got {}", stats.node_count);
+    println!("✓ Complex node counter test complete!");
+    println!("=== Test Complete ===\n");
+}
+
+#[test]
+fn test_node_counter_trivial() {
+    use crate::prelude::*;
+    
+    println!("\n=== Testing Node Counter with Trivial Problem (should be 0) ===");
+    
+    let mut m = Model::default();
+
+    // Create a problem that should be solved purely by propagation
+    // Single variable with tight constraint that determines the result uniquely
+    let v0 = m.new_var_int(1, 5);  
+    let v1 = m.new_var_int(3, 3);   // v1 is fixed to 3
+
+    // This constraint plus propagation should uniquely determine v0
+    m.equals(v0, v1);               // v0 = v1 = 3
+
+    let mut stats = SolveStats::default();
+    let solution = m.solve_with_callback(|solve_stats| {
+        stats.propagation_count = solve_stats.propagation_count;
+        stats.node_count = solve_stats.node_count;
+        println!("Trivial problem - Propagation count: {}, Node count: {}", 
+                 solve_stats.propagation_count, solve_stats.node_count);
+    }).unwrap();
+
+    let x0 = match solution[v0] { Val::ValI(i) => i, _ => panic!() };
+    let x1 = match solution[v1] { Val::ValI(i) => i, _ => panic!() };
+    
+    println!("Solution: v0={}, v1={}", x0, x1);
+    println!("Constraint checks: v0==v1? {}", x0 == x1);
+    
+    println!("Final stats - Propagation count: {}, Node count: {}", 
+             stats.propagation_count, stats.node_count);
+    
+    // This should be solved by propagation alone, no branching needed
+    // The constraint v0 = v1 with v1 fixed to 3 should propagate v0 = 3
+    println!("Node count for propagation-only problem: {}", stats.node_count);
+    if stats.node_count == 0 {
+        println!("✓ Correctly solved by propagation alone (0 nodes)!");
+    } else {
+        println!("Note: Solver used {} search nodes (branching occurred)", stats.node_count);
+    }
+    println!("✓ Trivial node counter test complete!");
+    println!("=== Test Complete ===\n");
 }

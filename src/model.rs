@@ -183,6 +183,7 @@ impl Model {
         
         let stats = crate::solution::SolveStats {
             propagation_count: current_count,
+            node_count: search_iter.get_node_count(),
         };
         
         callback(&stats);
@@ -220,6 +221,7 @@ impl Model {
         
         let stats = crate::solution::SolveStats {
             propagation_count: current_count,
+            node_count: search_iter.get_node_count(),
         };
         
         callback(&stats);
@@ -281,11 +283,13 @@ impl Model {
         let mut search_iter = search(vars, props, mode::Enumerate);
         let result = search_iter.next();
         
-        // Get the final propagation count from the search
-        let final_count = search_iter.get_propagation_count();
+        // Get the final stats from the search
+        let final_propagation_count = search_iter.get_propagation_count();
+        let final_node_count = search_iter.get_node_count();
         
         let stats = crate::solution::SolveStats {
-            propagation_count: final_count,
+            propagation_count: final_propagation_count,
+            node_count: final_node_count,
         };
         
         callback(&stats);
@@ -313,9 +317,10 @@ impl Model {
         let mut search_iter = search(vars, props, mode::Enumerate);
         let mut solutions = Vec::new();
         
-        // CRITICAL: Get the propagation count BEFORE calling any next() methods,
+        // CRITICAL: Get the stats BEFORE calling any next() methods,
         // because Search::Done(Some(space)) becomes Search::Done(None) after the first next()
         let final_count = search_iter.get_propagation_count();
+        let final_node_count = search_iter.get_node_count();
         
         // Collect all solutions
         while let Some(solution) = search_iter.next() {
@@ -324,6 +329,7 @@ impl Model {
         
         let stats = crate::solution::SolveStats {
             propagation_count: final_count,
+            node_count: final_node_count,
         };
         
         callback(&stats);

@@ -29,6 +29,13 @@ impl SplitOnUnassigned {
             .map(|(space, _, _, _)| space.get_propagation_count())
             .unwrap_or(0)
     }
+
+    /// Get the current node count from the space being explored.
+    pub fn get_node_count(&self) -> usize {
+        self.branch.as_ref()
+            .map(|(space, _, _, _)| space.get_node_count())
+            .unwrap_or(0)
+    }
 }
 
 impl Iterator for SplitOnUnassigned {
@@ -40,6 +47,10 @@ impl Iterator for SplitOnUnassigned {
         if is_left {
             // Split the provided space using a new propagator, to explore a specific branch.
             let mut space_branch_left = space.clone();
+            
+            // Increment node counter when creating a new search node (left branch)
+            space_branch_left.props.increment_node_count();
+            
             let p = space_branch_left.props.less_than_or_equals(pivot, mid);
 
             self.branch = Some((space, pivot, mid, false));
@@ -47,6 +58,10 @@ impl Iterator for SplitOnUnassigned {
             Some((space_branch_left, p))
         } else {
             let mut space_branch_right = space;
+            
+            // Increment node counter when creating a new search node (right branch)
+            space_branch_right.props.increment_node_count();
+            
             let mut events = Vec::new();
             let ctx = Context::new(&mut space_branch_right.vars, &mut events);
             let p = space_branch_right.props.greater_than(pivot, mid, &ctx);

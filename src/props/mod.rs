@@ -30,6 +30,8 @@ pub struct Propagators {
     dependencies: Vec<Vec<PropId>>,
     /// Counter for the number of propagation steps performed
     propagation_count: usize,
+    /// Counter for the number of search nodes (branching points) explored
+    node_count: usize,
 }
 
 impl Propagators {
@@ -61,6 +63,16 @@ impl Propagators {
     /// Increment the propagation step counter.
     pub fn increment_propagation_count(&mut self) {
         self.propagation_count += 1;
+    }
+
+    /// Get the number of search nodes explored so far.
+    pub fn get_node_count(&self) -> usize {
+        self.node_count
+    }
+
+    /// Increment the search node counter.
+    pub fn increment_node_count(&mut self) {
+        self.node_count += 1;
     }
 
     /// Declare a new propagator to enforce `x + y == s`.
