@@ -691,10 +691,10 @@ pub struct TimesPos<V> {
 impl<V: View> TimesPos<V> {
     const fn new(x: V, scale_pos: Val) -> Self {
         match scale_pos {
-            Val::ValI(scale_val) => {
+            Val::ValI(_) => {
                 Self { x, scale_pos }
             }
-            Val::ValF(scale_val) => {
+            Val::ValF(_) => {
                 Self { x, scale_pos }
             }
         }

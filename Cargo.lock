@@ -54,7 +54,7 @@ checksum = "baf0a07a401f374238ab8e2f11a104d2851bf9ce711ec69804834de8af45c7af"
 
 [[package]]
 name = "cspsolver"
-version = "0.3.3-alpha"
+version = "0.3.4"
 dependencies = [
  "divan",
  "dyn-clone",

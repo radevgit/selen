@@ -13,8 +13,8 @@ The new implementation follows the design and implementation of [Copper](https:/
 
 The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
 
-- Int type works as in Copper
-- Added **float** type.
+Supported types:
+- Int, Float, Mixed
 
 ## Overview
 
@@ -27,16 +27,45 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cspsolver = "0.3.3-alpha"
+cspsolver = "0.3.4"
 ```
 
 ## Examples
-
 ```bash
 cargo run --example pc_builder
 cargo run --example resource_allocation
 cargo run --example portfolio_optimization
 ```
+
+### Basic Usage
+
+```rust
+use cspsolver::prelude::*;
+
+fn main() {
+    // constraint: v0(int) * 1.5 < 5.0
+    // solving for maximum v0
+    let mut m = Model::default();
+
+    let v0 = m.new_var_int(1, 3);
+    println!("v0 domain: [1, 3]");
+
+    m.less_than(v0.times_pos(float(1.5)), float(5.0));
+
+    let solution = m.maximize(v0).unwrap();
+    let x = match solution[v0] {
+        Val::ValI(int_val) => int_val,
+        _ => panic!("Expected integer value"),
+    };
+
+    assert!(x == 3);
+    println!("Found optimal value: {}", x);
+}
+```
+
+
+
+
 
 
 
