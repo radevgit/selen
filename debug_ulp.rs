@@ -1,23 +1,29 @@
-use cspsolver::utils::{almost_equal_as_int, float_equal};
-
 fn main() {
-    let a = 1.0f32;
-    let next1 = f32::from_bits(a.to_bits() + 1);
-    let next2 = f32::from_bits(a.to_bits() + 2);
+    let a = 0.0f32;
+    let b = -1.4e-45f32; // approximately what we get
     
-    println!("a = {}, bits = {:032b}", a, a.to_bits());
-    println!("next1 = {}, bits = {:032b}", next1, next1.to_bits());
-    println!("next2 = {}, bits = {:032b}", next2, next2.to_bits());
+    println!("a = {} (bits: {:032b})", a, a.to_bits());
+    println!("b = {} (bits: {:032b})", b, b.to_bits());
     
-    println!("almost_equal_as_int(a, next1, 1) = {}", almost_equal_as_int(a, next1, 1));
-    println!("almost_equal_as_int(a, next2, 1) = {}", almost_equal_as_int(a, next2, 1));
-    println!("almost_equal_as_int(a, next2, 2) = {}", almost_equal_as_int(a, next2, 2));
-    
-    println!("float_equal(a, next1) = {}", float_equal(a, next1));
-    println!("float_equal(a, next2) = {}", float_equal(a, next2));
-    
-    // Check the ULP difference calculation
     let a_i = a.to_bits() as i32;
-    let next2_i = next2.to_bits() as i32;
-    println!("ULP difference: {}", (a_i - next2_i).abs());
+    let b_i = b.to_bits() as i32;
+    println!("a_i = {} (raw)", a_i);
+    println!("b_i = {} (raw)", b_i);
+    
+    let two_comp = 0x8000_0000_u32 as i32;
+    let mut a_transformed = a_i;
+    let mut b_transformed = b_i;
+    
+    if a_i < 0 {
+        a_transformed = two_comp - a_i;
+    }
+    if b_i < 0 {
+        b_transformed = two_comp - b_i;
+    }
+    
+    println!("a_transformed = {}", a_transformed);
+    println!("b_transformed = {}", b_transformed);
+    println!("diff = {}", (a_transformed - b_transformed).abs());
+    println!("FLOAT_INT_EPS = 10");
+    println!("Is diff <= 10? {}", (a_transformed - b_transformed).abs() <= 10);
 }
