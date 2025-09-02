@@ -1,3 +1,4 @@
+
 const TWO_COMPLEMENT: u32 = 0x8000_0000_u32;
 const TWO_COMPLEMENT_CI: i32 = TWO_COMPLEMENT as i32;
 
@@ -5,10 +6,9 @@ const TWO_COMPLEMENT_CI: i32 = TWO_COMPLEMENT as i32;
 // Use ULP (Units in the Last Place) comparison.
 #[inline]
 #[must_use]
-pub fn almost_equal_as_int(a: f32, b: f32, ulps: i32) -> bool {
+pub fn almost_equal_as_int(a: f32, b: f32, ulps: u32) -> bool {
     debug_assert!(a.is_finite());
     debug_assert!(b.is_finite());
-    debug_assert!(ulps >= 0);
 
     if a.signum() != b.signum() {
         return a == b;
@@ -25,10 +25,10 @@ pub fn almost_equal_as_int(a: f32, b: f32, ulps: i32) -> bool {
         b_i = TWO_COMPLEMENT_CI - b_i;
     }
 
-    (a_i - b_i).abs() <= ulps
+    (a_i - b_i).abs() <= ulps as i32
 }
 
-pub const FLOAT_INT_EPS: i32 = 10;
+pub const FLOAT_INT_EPS: u32 = 10;
 #[inline]
 #[must_use]
 pub fn float_equal(a: f32, b: f32) -> bool {
@@ -81,10 +81,12 @@ pub fn float_perturbed_as_int(f: f32, c: i32) -> f32 {
 
 #[must_use]
 pub fn float_prev(f: f32) -> f32 {
-    float_perturbed_as_int(f, -FLOAT_INT_EPS - 1)
+    let eps = -(FLOAT_INT_EPS as i32) - 1;
+    float_perturbed_as_int(f, eps)
 }
 
 #[must_use]
 pub fn float_next(f: f32) -> f32 {
-    float_perturbed_as_int(f, FLOAT_INT_EPS + 1)
+    let eps = FLOAT_INT_EPS as i32 + 1;
+    float_perturbed_as_int(f, eps)
 }

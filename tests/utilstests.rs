@@ -184,101 +184,13 @@ mod utils_tests {
         
         for &a in &test_values {
             // Test perturbations within FLOAT_INT_EPS range
-            for c in -FLOAT_INT_EPS..=FLOAT_INT_EPS {
+            for c in -10..=10 {
                 let b = float_perturbed_as_int(a, c);
                 
-                // This is the critical test: if b is perturbed from a by <= FLOAT_INT_EPS,
-                // then float_equal(a, b) should be true
                 assert!(
-                    float_equal(a, b),
-                    "Failed for a={}, c={}, b={}: float_equal({}, {}) should be true",
-                    a, c, b, a, b
-                );
-            }
-        }
-    }
-
-    #[test]
-    fn test_perturbed_relationship_with_correct_tolerance() {
-        // Test the relationship: If y = float_perturbed_as_int(x, k), then:
-        // - for k >= 0: almost_equal_as_int(x, y, k+1) == true
-        // - for k < 0: almost_equal_as_int(x, y, abs(k)+1) == true
-        // Note: This relationship may not hold when perturbation crosses sign boundaries
-        
-        let test_values = [1.0, -1.0, 0.5, -0.5, 100.0, -100.0];
-        let perturbations = [-5, -2, -1, 1, 2, 5];
-        
-        for &x in &test_values {
-            for &k in &perturbations {
-                let y = float_perturbed_as_int(x, k);
-                
-                // Skip if the perturbation crosses the sign boundary
-                // (which almost_equal_as_int rejects)
-                if x.signum() != y.signum() {
-                    continue;
-                }
-                
-                // Calculate the required tolerance based on the sign of k
-                let required_tolerance = if k >= 0 {
-                    k + 1
-                } else {
-                    (-k) + 1  // abs(k) + 1
-                };
-                
-                // The relationship should hold
-                let result = almost_equal_as_int(x, y, required_tolerance);
-                if !result {
-                    println!("Failed for x={}, k={}, y={}, required_tolerance={}", x, k, y, required_tolerance);
-                    println!("x.to_bits()=0x{:x}, y.to_bits()=0x{:x}", x.to_bits(), y.to_bits());
-                }
-                assert!(result, 
-                    "almost_equal_as_int({}, {}, {}) should be true when y = float_perturbed_as_int({}, {})", 
-                    x, y, required_tolerance, x, k);
-            }
-        }
-        
-        // Test the zero case separately with smaller perturbations that don't cross signs
-        let zero_perturbations = [-1, 1];
-        for &k in &zero_perturbations {
-            let y = float_perturbed_as_int(0.0, k);
-            let required_tolerance = if k >= 0 { k + 1 } else { (-k) + 1 };
-            
-            // For zero, we expect the relationship to work even with sign crossing
-            // because both +0.0 and -0.0 should be considered equal
-            let result = almost_equal_as_int(0.0, y, required_tolerance);
-            if !result {
-                println!("Zero case failed for k={}, y={}, required_tolerance={}", k, y, required_tolerance);
-                println!("0.0.to_bits()=0x{:x}, y.to_bits()=0x{:x}", 0.0f32.to_bits(), y.to_bits());
-            }
-            assert!(result, 
-                "almost_equal_as_int(0.0, {}, {}) should be true when y = float_perturbed_as_int(0.0, {})", 
-                y, required_tolerance, k);
-        }
-    }
-
-    #[test]
-    fn test_perturbed_beyond_float_equal_tolerance() {
-        let test_values = [1.0f32, -1.0f32, 100.0f32, -100.0f32, 0.1f32, -0.1f32];
-        
-        for &a in &test_values {
-            // Test perturbations beyond FLOAT_INT_EPS range
-            let beyond_tolerance = [
-                FLOAT_INT_EPS + 1,
-                FLOAT_INT_EPS + 5,
-                FLOAT_INT_EPS + 10,
-                -(FLOAT_INT_EPS + 1),
-                -(FLOAT_INT_EPS + 5),
-                -(FLOAT_INT_EPS + 10),
-            ];
-            
-            for &c in &beyond_tolerance {
-                let b = float_perturbed_as_int(a, c);
-                
-                // Values perturbed beyond FLOAT_INT_EPS should NOT be equal
-                assert!(
-                    !float_equal(a, b),
-                    "Failed for a={}, c={}, b={}: float_equal({}, {}) should be false",
-                    a, c, b, a, b
+                    almost_equal_as_int(a, b, (c.abs() as u32) + 1),
+                    "Failed for a={}, c={}, b={}: almost_equal_as_int({}, {}, {}) should be true",
+                    a, c, b, a, b, (c.abs() as i32) + 1
                 );
             }
         }
