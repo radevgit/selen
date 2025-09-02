@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::prelude::*;
+    use cspsolver::prelude::*;
 
     #[test]
     fn test_basic_not_equals() {

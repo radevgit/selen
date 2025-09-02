@@ -8,7 +8,7 @@ mod sum;
 use std::ops::{Index, IndexMut};
 use dyn_clone::{clone_trait_object, DynClone};
 
-use crate::{vars::{Val, VarId}, views::{Context, View, ViewExt}};
+use crate::{vars::VarId, views::{Context, View, ViewExt}};
 
 /// Enforce a specific constraint by pruning domain of decision variables.
 pub trait Prune: core::fmt::Debug + DynClone {
