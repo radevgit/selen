@@ -159,6 +159,12 @@ impl Model {
         let _p = self.props.greater_than(x, y);
     }
 
+    /// Declare all-different constraint: all variables must have distinct values.
+    /// This is more efficient than adding pairwise not-equals constraints.
+    pub fn all_different(&mut self, vars: Vec<VarId>) {
+        let _p = self.props.all_different(vars);
+    }
+
     /// Find assignment that minimizes objective expression while satisfying all constraints.
     #[must_use]
     pub fn minimize(self, objective: impl View) -> Option<Solution> {

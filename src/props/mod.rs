@@ -1,4 +1,5 @@
 mod add;
+mod alldiff;
 mod eq;
 mod leq;
 mod neq;
@@ -120,6 +121,12 @@ impl Propagators {
     pub fn greater_than(&mut self, x: impl View, y: impl View) -> PropId {
         // x > y  =>  x >= y + 1 (this works for both integers and floats due to type promotion)
         self.greater_than_or_equals(x, y.next())
+    }
+
+    /// Declare a new propagator to enforce that all variables have different values.
+    /// This is more efficient than pairwise not-equals constraints.
+    pub fn all_different(&mut self, vars: Vec<VarId>) -> PropId {
+        self.push_new_prop(self::alldiff::AllDifferent::new(vars))
     }
 
     /// Register propagator dependencies and store its state as a trait object.
