@@ -1,11 +1,9 @@
 use crate::props::PropId;
 use crate::search::Space;
+use crate::utils::{float_next, float_prev};
 use crate::vars::{VarId, Val};
 use crate::views::{Context, ViewType};
 use std::collections::HashMap;
-
-// Small epsilon for strict inequality constraints in branching
-const BRANCH_EPSILON: f32 = 1e-6;
 
 /// Enhanced branching strategy that can split around forbidden values
 /// to create "holes" in domains through branching.
@@ -109,19 +107,10 @@ impl Iterator for SplitAroundForbiddenValues {
                     let mut left_space = space.clone();
                     left_space.props.increment_node_count();
                     
-                    // Determine appropriate delta based on variable type
-                    let var_domain = &left_space.vars[var];
-                    let delta = match var_domain {
-                        crate::vars::Var::VarI { .. } => Val::ValI(1),
-                        crate::vars::Var::VarF { .. } => Val::ValF(BRANCH_EPSILON),
-                    };
-                    
-                    // Add constraint: var <= forbidden_value - delta (i.e., var < forbidden_value)
-                    let upper_bound = match (forbidden_value, delta) {
-                        (Val::ValI(fv), Val::ValI(d)) => Val::ValI(fv - d),
-                        (Val::ValF(fv), Val::ValF(d)) => Val::ValF(fv - d),
-                        (Val::ValI(fv), Val::ValF(d)) => Val::ValF(fv as f32 - d),
-                        (Val::ValF(fv), Val::ValI(d)) => Val::ValF(fv - d as f32),
+                    // Add constraint: var <= forbidden_value.prev() (i.e., var < forbidden_value)
+                    let upper_bound = match forbidden_value {
+                        Val::ValI(fv) => Val::ValI(fv - 1),
+                        Val::ValF(fv) => Val::ValF(float_prev(fv)),
                     };
                     
                     let prop_id = left_space.props.less_than_or_equals(var, upper_bound);
@@ -140,23 +129,14 @@ impl Iterator for SplitAroundForbiddenValues {
                     let mut right_space = space;
                     right_space.props.increment_node_count();
                     
-                    // Determine appropriate delta based on variable type
-                    let var_domain = &right_space.vars[var];
-                    let delta = match var_domain {
-                        crate::vars::Var::VarI { .. } => Val::ValI(1),
-                        crate::vars::Var::VarF { .. } => Val::ValF(BRANCH_EPSILON),
-                    };
-                    
-                    // Add constraint: var >= forbidden_value + delta (i.e., var > forbidden_value)
-                    let lower_bound = match (forbidden_value, delta) {
-                        (Val::ValI(fv), Val::ValI(d)) => Val::ValI(fv + d),
-                        (Val::ValF(fv), Val::ValF(d)) => Val::ValF(fv + d),
-                        (Val::ValI(fv), Val::ValF(d)) => Val::ValF(fv as f32 + d),
-                        (Val::ValF(fv), Val::ValI(d)) => Val::ValF(fv + d as f32),
+                    // Add constraint: var >= forbidden_value.next() (i.e., var > forbidden_value)
+                    let lower_bound = match forbidden_value {
+                        Val::ValI(fv) => Val::ValI(fv + 1),
+                        Val::ValF(fv) => Val::ValF(float_next(fv)),
                     };
                     
                     let mut events = Vec::new();
-                    let ctx = Context::new(&mut right_space.vars, &mut events);
+                    let _ctx = Context::new(&mut right_space.vars, &mut events);
                     let prop_id = right_space.props.greater_than(var, lower_bound);
                     
                     Some((right_space, prop_id))
@@ -185,7 +165,7 @@ impl Iterator for SplitAroundForbiddenValues {
                     right_space.props.increment_node_count();
                     
                     let mut events = Vec::new();
-                    let ctx = Context::new(&mut right_space.vars, &mut events);
+                    let _ctx = Context::new(&mut right_space.vars, &mut events);
                     let prop_id = right_space.props.greater_than(var, mid);
                     
                     Some((right_space, prop_id))

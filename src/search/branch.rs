@@ -18,6 +18,7 @@ pub fn split_on_unassigned(space: Space) -> SplitOnUnassigned {
 }
 
 /// Manual state machine until `gen` keyword is available (edition 2024).
+#[derive(Debug)]
 pub struct SplitOnUnassigned {
     branch: Option<(Space, VarId, Val, bool)>,
 }
@@ -63,7 +64,7 @@ impl Iterator for SplitOnUnassigned {
             space_branch_right.props.increment_node_count();
             
             let mut events = Vec::new();
-            let ctx = Context::new(&mut space_branch_right.vars, &mut events);
+            let _ctx = Context::new(&mut space_branch_right.vars, &mut events);
             let p = space_branch_right.props.greater_than(pivot, mid);
             Some((space_branch_right, p))
         }

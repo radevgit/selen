@@ -7,6 +7,12 @@ pub mod mode;
 mod agenda;
 mod branch;
 mod enhanced_branch;
+mod value_branch;
+mod hybrid_branch;
+
+// Re-export the new branching strategies
+pub use value_branch::{ValueBasedBranching, split_with_value_assignment};
+pub use hybrid_branch::{HybridBranching, split_with_hybrid_strategy};
 
 /// Data required to perform search, copied on branch and discarded on failure.
 #[derive(Clone, Debug)]
