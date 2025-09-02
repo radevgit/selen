@@ -64,7 +64,7 @@ impl Iterator for SplitOnUnassigned {
             
             let mut events = Vec::new();
             let ctx = Context::new(&mut space_branch_right.vars, &mut events);
-            let p = space_branch_right.props.greater_than(pivot, mid, &ctx);
+            let p = space_branch_right.props.greater_than(pivot, mid);
             Some((space_branch_right, p))
         }
     }

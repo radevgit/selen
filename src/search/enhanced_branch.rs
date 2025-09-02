@@ -4,6 +4,9 @@ use crate::vars::{VarId, Val};
 use crate::views::{Context, ViewType};
 use std::collections::HashMap;
 
+// Small epsilon for strict inequality constraints in branching
+const BRANCH_EPSILON: f32 = 1e-6;
+
 /// Enhanced branching strategy that can split around forbidden values
 /// to create "holes" in domains through branching.
 pub struct SplitAroundForbiddenValues {
@@ -154,7 +157,7 @@ impl Iterator for SplitAroundForbiddenValues {
                     
                     let mut events = Vec::new();
                     let ctx = Context::new(&mut right_space.vars, &mut events);
-                    let prop_id = right_space.props.greater_than(var, lower_bound, &ctx);
+                    let prop_id = right_space.props.greater_than(var, lower_bound);
                     
                     Some((right_space, prop_id))
                 }
@@ -183,7 +186,7 @@ impl Iterator for SplitAroundForbiddenValues {
                     
                     let mut events = Vec::new();
                     let ctx = Context::new(&mut right_space.vars, &mut events);
-                    let prop_id = right_space.props.greater_than(var, mid, &ctx);
+                    let prop_id = right_space.props.greater_than(var, mid);
                     
                     Some((right_space, prop_id))
                 }

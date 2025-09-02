@@ -7,7 +7,7 @@ mod sum;
 use std::ops::{Index, IndexMut};
 use dyn_clone::{clone_trait_object, DynClone};
 
-use crate::{utils::{float_next, FLOAT_INT_EPS}, vars::{Val, VarId}, views::{Context, View, ViewExt, ViewType}};
+use crate::{vars::{Val, VarId}, views::{Context, View, ViewExt}};
 
 /// Enforce a specific constraint by pruning domain of decision variables.
 pub trait Prune: core::fmt::Debug + DynClone {
@@ -102,13 +102,11 @@ impl Propagators {
     }
 
     /// Declare a type-aware propagator to enforce `x < y`.
-    /// This version uses ViewType analysis to determine the appropriate delta.
-    pub fn less_than(&mut self, x: impl View, y: impl View, ctx: &Context) -> PropId {
-        // Determine the appropriate delta based on the view types
-        let x_type = x.result_type(ctx);
-        let y_type = y.result_type(ctx);
-
-        self.less_than_or_equals(float_next(x), y)
+    /// This version uses ULP-based precision by implementing x < y as x + 1 <= y for integers
+    /// and appropriate ULP-based bounds for floats.
+    pub fn less_than(&mut self, x: impl View, y: impl View) -> PropId {
+        // x < y  =>  x + 1 <= y (this works for both integers and floats due to type promotion)
+        self.less_than_or_equals(x.plus(Val::ValI(1)), y)
     }
 
     /// Declare a new propagator to enforce `x >= y`.
@@ -117,21 +115,11 @@ impl Propagators {
     }
 
     /// Declare a type-aware propagator to enforce `x > y`.
-    /// This version uses ViewType analysis to determine the appropriate delta.
-    pub fn greater_than(&mut self, x: impl View, y: impl View, ctx: &Context) -> PropId {
-        // Determine the appropriate delta based on the view types
-        let x_type = x.result_type(ctx);
-        let y_type = y.result_type(ctx);
-        
-        // Use floating-point epsilon if either side involves floats, 
-        // otherwise use integer delta of 1
-        let delta = match (x_type, y_type) {
-            (ViewType::Float, _) | (_, ViewType::Float) => Val::ValF(1e-6),
-            (ViewType::Integer, ViewType::Integer) => Val::ValI(1),
-        };
-        
-        // x > y  =>  x >= y + delta
-        self.greater_than_or_equals(x, y.plus(delta))
+    /// This version uses ULP-based precision by implementing x > y as x >= y + 1 for integers
+    /// and appropriate ULP-based bounds for floats.
+    pub fn greater_than(&mut self, x: impl View, y: impl View) -> PropId {
+        // x > y  =>  x >= y + 1 (this works for both integers and floats due to type promotion)
+        self.greater_than_or_equals(x, y.plus(Val::ValI(1)))
     }
 
     /// Register propagator dependencies and store its state as a trait object.

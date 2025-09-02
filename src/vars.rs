@@ -28,6 +28,24 @@ impl Val {
     pub const fn float(value: f32) -> Self {
         Val::ValF(value)
     }
+
+    /// Get the previous representable value using ULP-based approach
+    pub fn prev(self) -> Self {
+        use crate::utils::float_prev;
+        match self {
+            Val::ValI(i) => Val::ValI(i - 1),
+            Val::ValF(f) => Val::ValF(float_prev(f)),
+        }
+    }
+
+    /// Get the next representable value using ULP-based approach
+    pub fn next(self) -> Self {
+        use crate::utils::float_next;
+        match self {
+            Val::ValI(i) => Val::ValI(i + 1),
+            Val::ValF(f) => Val::ValF(float_next(f)),
+        }
+    }
 }
 
 impl From<i32> for Val {

@@ -42,7 +42,7 @@ impl<V: View> Mode for Minimize<V> {
         if let Some(minimum) = self.minimum_opt {
             let mut events = Vec::new();
             let ctx = Context::new(&mut space.vars, &mut events);
-            let prop_id = space.props.less_than(self.objective, minimum, &ctx);
+            let prop_id = space.props.less_than(self.objective, minimum);
             vec![prop_id].into_iter()
         } else {
             vec![].into_iter()

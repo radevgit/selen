@@ -68,6 +68,12 @@ pub trait ViewExt: View {
     ///
     /// This function will panic if the provided scale is not strictly negative.
     fn times_neg(self, scale_neg: Val) -> TimesNeg<Self>;
+
+    /// Get the next representable value using ULP-based approach.
+    fn next(self) -> Next<Self>;
+
+    /// Get the previous representable value using ULP-based approach.
+    fn prev(self) -> Prev<Self>;
 }
 
 impl<V: View> ViewExt for V {
@@ -101,6 +107,14 @@ impl<V: View> ViewExt for V {
             Val::ValI(scale_val) => TimesPos::new(self.opposite(), Val::ValI(-scale_val)),
             Val::ValF(scale_val) => TimesPos::new(self.opposite(), Val::ValF(-scale_val)),
         }
+    }
+
+    fn next(self) -> Next<Self> {
+        Next { x: self }
+    }
+
+    fn prev(self) -> Prev<Self> {
+        Prev { x: self }
     }
 }
 
@@ -439,6 +453,18 @@ impl View for VarIdBin {
 #[derive(Clone, Copy, Debug)]
 pub struct Opposite<V>(V);
 
+/// Apply next operation using ULP-based approach.
+#[derive(Clone, Copy, Debug)]
+pub struct Next<V> {
+    x: V,
+}
+
+/// Apply prev operation using ULP-based approach.
+#[derive(Clone, Copy, Debug)]
+pub struct Prev<V> {
+    x: V,
+}
+
 impl<V: View> ViewRaw for Opposite<V> {
     fn get_underlying_var_raw(self) -> Option<VarId> {
         self.0.get_underlying_var_raw()
@@ -481,6 +507,76 @@ impl<V: View> View for Opposite<V> {
             Val::ValI(max_val) => self.0.try_set_min(Val::ValI(-max_val), ctx),
             Val::ValF(max_val) => self.0.try_set_min(Val::ValF(-max_val), ctx),
         }
+    }
+}
+
+impl<V: View> ViewRaw for Next<V> {
+    fn get_underlying_var_raw(self) -> Option<VarId> {
+        self.x.get_underlying_var_raw()
+    }
+
+    fn min_raw(self, vars: &Vars) -> Val {
+        let base_min = self.x.min_raw(vars);
+        base_min.next()
+    }
+
+    fn max_raw(self, vars: &Vars) -> Val {
+        let base_max = self.x.max_raw(vars);
+        base_max.next()
+    }
+}
+
+impl<V: View> View for Next<V> {
+    fn result_type(self, ctx: &Context) -> ViewType {
+        // Next preserves the type of the underlying view
+        self.x.result_type(ctx)
+    }
+
+    fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
+        // To set min of next view, we need to reverse the operation
+        let target_min = min.prev();
+        self.x.try_set_min(target_min, ctx)
+    }
+
+    fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val> {
+        // To set max of next view, we need to reverse the operation
+        let target_max = max.prev();
+        self.x.try_set_max(target_max, ctx)
+    }
+}
+
+impl<V: View> ViewRaw for Prev<V> {
+    fn get_underlying_var_raw(self) -> Option<VarId> {
+        self.x.get_underlying_var_raw()
+    }
+
+    fn min_raw(self, vars: &Vars) -> Val {
+        let base_min = self.x.min_raw(vars);
+        base_min.prev()
+    }
+
+    fn max_raw(self, vars: &Vars) -> Val {
+        let base_max = self.x.max_raw(vars);
+        base_max.prev()
+    }
+}
+
+impl<V: View> View for Prev<V> {
+    fn result_type(self, ctx: &Context) -> ViewType {
+        // Prev preserves the type of the underlying view
+        self.x.result_type(ctx)
+    }
+
+    fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
+        // To set min of prev view, we need to reverse the operation
+        let target_min = min.next();
+        self.x.try_set_min(target_min, ctx)
+    }
+
+    fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val> {
+        // To set max of prev view, we need to reverse the operation
+        let target_max = max.next();
+        self.x.try_set_max(target_max, ctx)
     }
 }
 
