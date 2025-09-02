@@ -38,6 +38,6 @@ pub mod prelude;
 
 
 #[cfg(test)]
-mod tests_enhanced_neq;
+mod tests;
 
 
