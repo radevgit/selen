@@ -44,10 +44,12 @@ impl From<f32> for Val {
 
 impl PartialEq for Val {
     fn eq(&self, other: &Self) -> bool {
+        use crate::utils::float_equal;
         match (self, other) {
             (Val::ValI(a), Val::ValI(b)) => a == b,
-            (Val::ValF(a), Val::ValF(b)) => (a - b).abs() < VAR_EPSILON,
-            _ => false,
+            (Val::ValF(a), Val::ValF(b)) => float_equal(*a, *b),
+            (Val::ValI(a), Val::ValF(b)) => float_equal(*a as f32, *b),
+            (Val::ValF(a), Val::ValI(b)) => float_equal(*a, *b as f32),
         }
     }
 }
@@ -106,9 +108,10 @@ impl std::ops::Sub for Val {
 impl Var {
     /// Assigned variables have a domain reduced to a singleton.
     pub fn is_assigned(&self) -> bool {
+        use crate::utils::float_equal;
         match self {
             Var::VarI { min, max } => min == max,
-            Var::VarF { min, max } => close_enough(*min, *max, VAR_EPSILON),
+            Var::VarF { min, max } => float_equal(*min, *max),
         }
     }
 
@@ -185,7 +188,7 @@ impl Vars {
 }
 
 /// Decision variable handle that is not bound to a specific memory location.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct VarId(usize);
 
 impl Index<VarId> for Vars {

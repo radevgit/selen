@@ -130,6 +130,11 @@ impl Model {
         let _p = self.props.equals(x, y);
     }
 
+    /// Declare two expressions to be not equal.
+    pub fn not_equals(&mut self, x: impl View, y: impl View) {
+        let _p = self.props.not_equals(x, y);
+    }
+
     /// Declare constraint `x <= y`.
     pub fn less_than_or_equals(&mut self, x: impl View, y: impl View) {
         let _p = self.props.less_than_or_equals(x, y);

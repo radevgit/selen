@@ -1,12 +1,13 @@
 mod add;
 mod eq;
 mod leq;
+mod neq;
 mod sum;
 
 use std::ops::{Index, IndexMut};
 use dyn_clone::{clone_trait_object, DynClone};
 
-use crate::{prelude::VAR_EPSILON, vars::{Val, VarId}, views::{Context, View, ViewExt, ViewType}};
+use crate::{utils::{float_next, FLOAT_INT_EPS}, vars::{Val, VarId}, views::{Context, View, ViewExt, ViewType}};
 
 /// Enforce a specific constraint by pruning domain of decision variables.
 pub trait Prune: core::fmt::Debug + DynClone {
@@ -90,18 +91,14 @@ impl Propagators {
         self.push_new_prop(self::eq::Equals::new(x, y))
     }
 
+    /// Declare a new propagator to enforce `x != y`.
+    pub fn not_equals(&mut self, x: impl View, y: impl View) -> PropId {
+        self.push_new_prop(self::neq::NotEquals::new(x, y))
+    }
+
     /// Declare a new propagator to enforce `x <= y`.
     pub fn less_than_or_equals(&mut self, x: impl View, y: impl View) -> PropId {
         self.push_new_prop(self::leq::LessThanOrEquals::new(x, y))
-    }
-
-    /// Declare a simple propagator to enforce `x < y` using fixed epsilon.
-    /// For backward compatibility - uses floating-point epsilon for all constraints.
-    pub fn less_than_simple(&mut self, x: impl View, y: impl View) -> PropId {
-        // For strict inequality x < y, we need x <= y - delta
-        // Use a small epsilon for floating-point to handle precision correctly
-        // This will work for mixed integer/float constraints like v0 * 1.5 < 5.0
-        self.less_than_or_equals(x, y.minus(Val::ValF(VAR_EPSILON)))
     }
 
     /// Declare a type-aware propagator to enforce `x < y`.
@@ -110,16 +107,8 @@ impl Propagators {
         // Determine the appropriate delta based on the view types
         let x_type = x.result_type(ctx);
         let y_type = y.result_type(ctx);
-        
-        // Use floating-point epsilon if either side involves floats, 
-        // otherwise use integer delta of 1
-        let delta = match (x_type, y_type) {
-            (ViewType::Float, _) | (_, ViewType::Float) => Val::ValF(VAR_EPSILON),
-            (ViewType::Integer, ViewType::Integer) => Val::ValI(1),
-        };
-        
-        // x < y  =>  x <= y - delta
-        self.less_than_or_equals(x, y.minus(delta))
+
+        self.less_than_or_equals(float_next(x), y)
     }
 
     /// Declare a new propagator to enforce `x >= y`.
