@@ -34,28 +34,43 @@ impl<U: View, V: View> Prune for NotEquals<U, V> {
             return Some(());
         }
 
-        // Case 1: x is assigned (singleton domain)
+        // Case 1: Both variables are assigned - check constraint violation
+        if is_singleton(x_min, x_max) && is_singleton(y_min, y_max) {
+            if values_equal(x_min, y_min) {
+                return None; // Constraint violated: both assigned to same value
+            } else {
+                return Some(()); // Both assigned to different values - constraint satisfied
+            }
+        }
+
+        // Case 2: x is assigned (singleton domain)
         if is_singleton(x_min, x_max) {
             let x_value = x_min;
             
-            // Check for violation: both assigned to same value
-            if is_singleton(y_min, y_max) && values_equal(x_value, y_min) {
-                return None; // Constraint violated
+            // If y's domain contains only the forbidden value, constraint fails
+            if is_singleton(y_min, y_max) && values_equal(y_min, x_value) {
+                return None;
             }
             
-            // Exclude x_value from y's domain
+            // Try to exclude x_value from y's domain
             exclude_value_from_domain(&self.y, x_value, ctx)?;
         }
-        // Case 2: y is assigned (singleton domain) 
+        // Case 3: y is assigned (singleton domain) 
         else if is_singleton(y_min, y_max) {
             let y_value = y_min;
             
-            // Exclude y_value from x's domain
+            // If x's domain contains only the forbidden value, constraint fails  
+            if is_singleton(x_min, x_max) && values_equal(x_min, y_value) {
+                return None;
+            }
+            
+            // Try to exclude y_value from x's domain
             exclude_value_from_domain(&self.x, y_value, ctx)?;
         }
 
-        // Case 3: Neither variable is assigned yet
-        // The constraint will be checked again when one becomes assigned
+        // Case 4: Neither variable is assigned yet
+        // For interval domains, we can only do limited propagation
+        // The main constraint checking happens when variables become assigned
         
         Some(())
     }
@@ -116,17 +131,33 @@ fn exclude_value_from_domain<W: View>(view: &W, forbidden_value: Val, ctx: &mut 
     let current_min = view.min(ctx);
     let current_max = view.max(ctx);
     
+    // If the forbidden value is outside the current domain, nothing to do
+    if values_less_than(forbidden_value, current_min) || values_less_than(current_max, forbidden_value) {
+        return Some(());
+    }
+    
+    // If the forbidden value is the only value in the domain, domain becomes empty
+    if values_equal(current_min, current_max) && values_equal(current_min, forbidden_value) {
+        return None; // Domain becomes empty - constraint violation
+    }
+    
     // If forbidden value is at the minimum bound, move minimum up
     if values_equal(current_min, forbidden_value) {
         let new_min = get_next_value(forbidden_value);
         view.try_set_min(new_min, ctx)?;
+        return Some(());
     }
     
     // If forbidden value is at the maximum bound, move maximum down
     if values_equal(current_max, forbidden_value) {
         let new_max = get_prev_value(forbidden_value);
         view.try_set_max(new_max, ctx)?;
+        return Some(());
     }
+    
+    // For values in the middle of the domain, we cannot exclude them with interval domains.
+    // This is a fundamental limitation - the constraint will be enforced when variables
+    // become assigned during search.
     
     Some(())
 }

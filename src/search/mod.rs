@@ -6,12 +6,10 @@ pub mod agenda;
 pub mod branch;
 mod value_branch;
 mod hybrid_branch;
-mod mcv_branch;
 
-// Re-export the new branching strategies
+// Re-export the branching strategies (keep for potential future use)
 pub use value_branch::{ValueBasedBranching, split_with_value_assignment};
 pub use hybrid_branch::{HybridBranching, split_with_hybrid_strategy};
-pub use mcv_branch::MCVBranching;
 
 /// Data required to perform search, copied on branch and discarded on failure.
 #[derive(Clone, Debug)]
@@ -50,29 +48,6 @@ pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
     }
 }
 
-/// Perform search with custom branching strategy, iterating over assignments that satisfy all constraints.
-pub fn search_with_branching<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)> + Clone>(
-    vars: Vars, 
-    props: Propagators, 
-    mode: M, 
-    branching_factory: fn(Space) -> B
-) -> SearchWithBranching<M, B> {
-    // Schedule all propagators during initial propagation step
-    let agenda = Agenda::with_props(props.get_prop_ids_iter());
-
-    // Propagate constraints until search is stalled or a solution is found
-    let Some((is_stalled, space)) = propagate(Space { vars, props }, agenda) else {
-        return SearchWithBranching::Done(None);
-    };
-
-    // Explore space by alternating branching and propagation
-    if is_stalled {
-        SearchWithBranching::Stalled(Engine::new_with_branching(space, mode, branching_factory))
-    } else {
-        SearchWithBranching::Done(Some(space))
-    }
-}
-
 /// Manual state machine until `gen` keyword is available (edition 2024).
 pub enum Search<M> {
     Stalled(DefaultEngine<M>),
@@ -99,43 +74,6 @@ impl<M> Search<M> {
     }
 }
 
-/// Manual state machine for custom branching strategies.
-pub enum SearchWithBranching<M, B> {
-    Stalled(Engine<M, B>),
-    Done(Option<Space>),
-}
-
-impl<M, B: Iterator<Item = (Space, crate::props::PropId)> + Clone> SearchWithBranching<M, B> {
-    /// Get the current propagation count from the search state.
-    pub fn get_propagation_count(&self) -> usize {
-        match self {
-            Self::Stalled(engine) => engine.get_propagation_count(),
-            Self::Done(Some(space)) => space.get_propagation_count(),
-            Self::Done(None) => 0, // Failed search, no space available
-        }
-    }
-
-    /// Get the current node count from the search state.
-    pub fn get_node_count(&self) -> usize {
-        match self {
-            Self::Stalled(engine) => engine.get_node_count(),
-            Self::Done(Some(space)) => space.get_node_count(),
-            Self::Done(None) => 0, // Failed search, no space available
-        }
-    }
-}
-
-impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)> + Clone> Iterator for SearchWithBranching<M, B> {
-    type Item = Solution;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::Stalled(engine) => engine.next(),
-            Self::Done(space_opt) => space_opt.take().map(|space| space.vars.into_solution()),
-        }
-    }
-}
-
 impl<M: Mode> Iterator for Search<M> {
     type Item = Solution;
 
@@ -150,23 +88,10 @@ impl<M: Mode> Iterator for Search<M> {
 /// Manual state machine until `gen` keyword is available (edition 2024).
 pub struct Engine<M, B> {
     branch_iter: B,
-    stack: Vec<Space>,
+    stack: Vec<B>, // Store branching iterators instead of spaces
     mode: M,
     branching_factory: fn(Space) -> B,
     current_stats: Option<(usize, usize)>, // (propagation_count, node_count)
-}
-
-impl<M, B: Clone> Engine<M, B> {
-    pub fn new_with_branching(space: Space, mode: M, branching_factory: fn(Space) -> B) -> Self {
-        // Preserve a trail of copies to allow backtracking on failed spaces
-        Self {
-            branch_iter: branching_factory(space),
-            stack: Vec::new(),
-            mode,
-            branching_factory,
-            current_stats: None,
-        }
-    }
 }
 
 /// Default Engine with SplitOnUnassigned for backwards compatibility
@@ -218,11 +143,9 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
                     self.current_stats = Some((space.get_propagation_count(), space.get_node_count()));
                     
                     if is_stalled {
-                        // Branch on new space, to explore it further
-                        // Push current space to stack for backtracking
-                        self.stack.push(space.clone());
-                        // Create new branching iterator for the stalled space
-                        self.branch_iter = (self.branching_factory)(space);
+                        // Save the current iterator state before branching deeper
+                        let current_iter = std::mem::replace(&mut self.branch_iter, (self.branching_factory)(space));
+                        self.stack.push(current_iter);
                         continue; // Continue with new branching iterator
                     } else {
                         // Mode object may update its internal state when new solutions are found
@@ -235,8 +158,8 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
             }
 
             // Pop from stack if we have anything there
-            if let Some(parent_space) = self.stack.pop() {
-                self.branch_iter = (self.branching_factory)(parent_space);
+            if let Some(parent_iter) = self.stack.pop() {
+                self.branch_iter = parent_iter;
             } else {
                 return None;
             }
@@ -270,12 +193,13 @@ pub fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> 
                 agenda.schedule(p);
             }
         }
-
-        // Search is over once all decision variables have been assigned
-        if space.vars.is_assigned_all() {
-            return Some((false, space));
-        }
     }
 
-    Some((true, space))
+    // Search is over once all decision variables have been assigned AND agenda is empty
+    // (meaning all constraints have been checked on the final assignment)
+    if space.vars.is_assigned_all() {
+        Some((false, space))
+    } else {
+        Some((true, space))
+    }
 }

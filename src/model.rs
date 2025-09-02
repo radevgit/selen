@@ -166,33 +166,14 @@ impl Model {
     }
 
     /// Find assignment that minimizes objective expression while satisfying all constraints.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     #[must_use]
     pub fn minimize(self, objective: impl View) -> Option<Solution> {
-        self.minimize_with_mcv(objective)
-    }
-
-    /// Find assignment that minimizes objective expression using default search strategy.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    #[must_use]
-    pub fn minimize_default(self, objective: impl View) -> Option<Solution> {
-        self.minimize_and_iterate_default(objective).last()
+        self.minimize_and_iterate(objective).last()
     }
 
     /// Find assignment that minimizes objective expression with callback to capture solving statistics.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     #[must_use]
     pub fn minimize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        self.minimize_with_mcv_and_callback(objective, callback)
-    }
-
-    /// Find assignment that minimizes objective expression with callback using default search strategy.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    #[must_use]
-    pub fn minimize_with_callback_default<F>(self, objective: impl View, callback: F) -> Option<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
@@ -221,18 +202,9 @@ impl Model {
     }
 
     /// Enumerate assignments that satisfy all constraints, while minimizing objective expression.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     ///
     /// The order in which assignments are yielded is not stable.
     pub fn minimize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
-        search_with_branching(self.vars, self.props, mode::Minimize::new(objective), MCVBranching::new)
-    }
-
-    /// Enumerate assignments that satisfy all constraints, while minimizing objective expression using default search.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    ///
-    /// The order in which assignments are yielded is not stable.
-    pub fn minimize_and_iterate_default(self, objective: impl View) -> impl Iterator<Item = Solution> {
         search(self.vars, self.props, mode::Minimize::new(objective))
     }
 
@@ -268,53 +240,25 @@ impl Model {
     }
 
     /// Find assignment that maximizes objective expression while satisfying all constraints.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     #[must_use]
     pub fn maximize(self, objective: impl View) -> Option<Solution> {
         self.minimize(objective.opposite())
     }
 
-    /// Find assignment that maximizes objective expression using default search strategy.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    #[must_use]
-    pub fn maximize_default(self, objective: impl View) -> Option<Solution> {
-        self.minimize_default(objective.opposite())
-    }
-
     /// Find assignment that maximizes objective expression with callback to capture solving statistics.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     #[must_use]
     pub fn maximize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
-        self.minimize_with_mcv_and_callback(objective.opposite(), callback)
-    }
-
-    /// Find assignment that maximizes objective expression with callback using default search strategy.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    #[must_use]
-    pub fn maximize_with_callback_default<F>(self, objective: impl View, callback: F) -> Option<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        self.minimize_with_callback_default(objective.opposite(), callback)
+        self.minimize_with_callback(objective.opposite(), callback)
     }
 
     /// Enumerate assignments that satisfy all constraints, while maximizing objective expression.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     ///
     /// The order in which assignments are yielded is not stable.
     pub fn maximize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
         self.minimize_and_iterate(objective.opposite())
-    }
-
-    /// Enumerate assignments that satisfy all constraints, while maximizing objective expression using default search.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    ///
-    /// The order in which assignments are yielded is not stable.
-    pub fn maximize_and_iterate_default(self, objective: impl View) -> impl Iterator<Item = Solution> {
-        self.minimize_and_iterate_default(objective.opposite())
     }
 
     /// Enumerate assignments that satisfy all constraints, while maximizing objective expression, with callback.
@@ -329,37 +273,16 @@ impl Model {
     }
 
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     #[must_use]
     pub fn solve(self) -> Option<Solution> {
-        self.solve_with_mcv()
-    }
-
-    /// Search for assignment using default search strategy.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    #[must_use]
-    pub fn solve_default(self) -> Option<Solution> {
-        self.enumerate_default().next()
+        self.enumerate().next()
     }
 
     /// Search for assignment with a callback to capture solving statistics.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     /// 
     /// The callback receives the solving statistics when the search completes.
     #[must_use]
     pub fn solve_with_callback<F>(self, callback: F) -> Option<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        self.solve_with_mcv_and_callback(callback)
-    }
-
-    /// Search for assignment with a callback using default search strategy.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    /// 
-    /// The callback receives the solving statistics when the search completes.
-    #[must_use]
-    pub fn solve_with_callback_default<F>(self, callback: F) -> Option<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
@@ -385,18 +308,9 @@ impl Model {
     }
 
     /// Enumerate all assignments that satisfy all constraints.
-    /// Uses MCV (Most Constrained Variable) heuristics for improved performance.
     ///
     /// The order in which assignments are yielded is not stable.
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
-        search_with_branching(self.vars, self.props, mode::Enumerate, MCVBranching::new)
-    }
-
-    /// Enumerate all assignments that satisfy all constraints using default search strategy.
-    /// This method uses the original SplitOnUnassigned branching strategy.
-    ///
-    /// The order in which assignments are yielded is not stable.
-    pub fn enumerate_default(self) -> impl Iterator<Item = Solution> {
         search(self.vars, self.props, mode::Enumerate)
     }
 
@@ -431,94 +345,5 @@ impl Model {
         
         callback(&stats);
         solutions
-    }
-
-    /// Solve the CSP using MCV (Most Constrained Variable) branching heuristics.
-    ///
-    /// This method provides enhanced performance for complex constraint problems
-    /// by using intelligent variable ordering that prioritizes variables with
-    /// the smallest domains first.
-    pub fn solve_with_mcv(self) -> Option<Solution> {
-        search_with_branching(self.vars, self.props, mode::Enumerate, MCVBranching::new).next()
-    }
-
-    /// Solve the CSP using MCV heuristics with callback to capture solving statistics.
-    ///
-    /// The callback is called with solving statistics after completion.
-    pub fn solve_with_mcv_and_callback<F>(self, callback: F) -> Option<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        let vars = self.vars;
-        let props = self.props;
-        
-        // Create a search with MCV branching and run it to completion to capture final stats
-        let mut search_iter = search_with_branching(vars, props, mode::Enumerate, MCVBranching::new);
-        let result = search_iter.next();
-        
-        // Get the final stats from the search
-        let final_propagation_count = search_iter.get_propagation_count();
-        let final_node_count = search_iter.get_node_count();
-        
-        let stats = crate::solution::SolveStats {
-            propagation_count: final_propagation_count,
-            node_count: final_node_count,
-        };
-        
-        callback(&stats);
-        result
-    }
-
-    /// Maximize an objective function using MCV branching heuristics.
-    ///
-    /// Finds the assignment that maximizes the given objective function
-    /// while satisfying all constraints.
-    pub fn maximize_with_mcv(self, objective: impl View) -> Option<Solution> {
-        self.minimize_with_mcv(objective.opposite())
-    }
-
-    /// Maximize an objective function using MCV heuristics with callback to capture solving statistics.
-    ///
-    /// The callback is called with solving statistics after completion.
-    pub fn maximize_with_mcv_and_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        self.minimize_with_mcv_and_callback(objective.opposite(), callback)
-    }
-
-    /// Minimize an objective function using MCV branching heuristics.
-    ///
-    /// Finds the assignment that minimizes the given objective function
-    /// while satisfying all constraints.
-    pub fn minimize_with_mcv(self, objective: impl View) -> Option<Solution> {
-        search_with_branching(self.vars, self.props, mode::Minimize::new(objective), MCVBranching::new).next()
-    }
-
-    /// Minimize an objective function using MCV heuristics with callback to capture solving statistics.
-    ///
-    /// The callback is called with solving statistics after completion.
-    pub fn minimize_with_mcv_and_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        let vars = self.vars;
-        let props = self.props;
-        
-        // Create a search with MCV branching and run it to completion to capture final stats
-        let mut search_iter = search_with_branching(vars, props, mode::Minimize::new(objective), MCVBranching::new);
-        let result = search_iter.next();
-        
-        // Get the final stats from the search
-        let final_propagation_count = search_iter.get_propagation_count();
-        let final_node_count = search_iter.get_node_count();
-        
-        let stats = crate::solution::SolveStats {
-            propagation_count: final_propagation_count,
-            node_count: final_node_count,
-        };
-        
-        callback(&stats);
-        result
     }
 }
