@@ -10,14 +10,10 @@ pub fn almost_equal_as_int(a: f32, b: f32, ulps: u32) -> bool {
     debug_assert!(a.is_finite());
     debug_assert!(b.is_finite());
 
-    if a.signum() != b.signum() {
-        return a == b;
-    }
-
     let mut a_i: i32 = a.to_bits() as i32;
     let mut b_i: i32 = b.to_bits() as i32;
 
-    // Make bInt lexicographically ordered as a twos-complement int
+    // Make a_i, b_i lexicographically ordered as a twos-complement int
     if a_i < 0i32 {
         a_i = TWO_COMPLEMENT_CI - a_i;
     }
@@ -25,7 +21,9 @@ pub fn almost_equal_as_int(a: f32, b: f32, ulps: u32) -> bool {
         b_i = TWO_COMPLEMENT_CI - b_i;
     }
 
-    (a_i - b_i).abs() <= ulps as i32
+    // Use saturating arithmetic to avoid overflow when values are very far apart
+    let diff = (a_i as i64) - (b_i as i64);
+    diff.abs() <= ulps as i64
 }
 
 pub const FLOAT_INT_EPS: u32 = 10;
