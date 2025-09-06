@@ -29,7 +29,7 @@ fn main() {
     let (propagations, nodes) = solve_and_display("EASY", &easy_puzzle);
     
     println!("\n✨ Summary:");
-    println!("Easy puzzle demonstrates excellent performance with MCV heuristics:");
+    println!("Easy puzzle demonstrates solid performance with default search heuristics:");
     println!("• {} propagations, {} nodes explored", propagations, nodes);
     let efficiency = if nodes > 0 { 
         format!("{:.1} propagations/node", propagations as f64 / nodes as f64)

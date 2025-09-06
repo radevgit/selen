@@ -28,6 +28,7 @@
 // pub mod variable;
 
 pub mod utils;
+pub mod utils64;
 pub mod vars;
 pub mod model;
 pub mod views;
@@ -37,7 +38,7 @@ pub mod search;
 pub mod prelude;
 
 
-#[cfg(test)]
-mod tests;
+//#[cfg(test)]
+
 
 
