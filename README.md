@@ -6,20 +6,16 @@
 
 A Constraint Satisfaction Problem (CSP) solver library written in Rust.
 
-
-## Status
-
-The new implementation follows the design and implementation of [Copper](https://docs.rs/copper/0.1.0/copper/) v0.1.0.
-
-The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
-
-Supported types:
-- Int, Float, Mixed
-
 ## Overview
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
 
+Supported types: float, int, mixed(int, float)
+
+Constraints supported include:
+- Arithmetic: `+`, `-`, `*`, `/`
+- Comparisons: `<`, `<=`, `>`, `>=`, `==`, `!=`
+- `all_different`
 
 ## Installation
 
@@ -32,15 +28,15 @@ cspsolver = "0.3.5"
 
 
 ## Examples
+
+![Sudoku Example](https://raw.githubusercontent.com/radevgit/cspsolver/main/img/sudoku.png)
+
 ```bash
 cargo run --example sudoku
 cargo run --example pc_builder
 cargo run --example resource_allocation
 cargo run --example portfolio_optimization
 ```
-
-![Sudoku Example](https://raw.githubusercontent.com/radevgit/cspsolver/main/img/sudoku.png)
-
 
 ### Basic Usage
 
@@ -69,11 +65,11 @@ fn main() {
 ```
 
 
+## Status
 
+The new implementation follows the design and implementation of [Copper](https://docs.rs/copper/0.1.0/copper/) v0.1.0.
 
-
-
-
+The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
 
 ## License
 
