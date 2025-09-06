@@ -566,13 +566,35 @@ impl<V: View> View for Next<V> {
 
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         // To set min of next view, we need to reverse the operation
-        let target_min = min.prev();
+        // Handle mixed types: if min is integer but underlying view is float,
+        // we need to convert to float first before taking prev()
+        let target_min = match (min, self.x.result_type(ctx)) {
+            (Val::ValI(min_int), ViewType::Float) => {
+                // Convert integer to float, then take prev
+                Val::ValF(min_int as f32).prev()
+            }
+            _ => {
+                // Same type or float to integer conversion - use direct prev
+                min.prev()
+            }
+        };
         self.x.try_set_min(target_min, ctx)
     }
 
     fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val> {
         // To set max of next view, we need to reverse the operation
-        let target_max = max.prev();
+        // Handle mixed types: if max is integer but underlying view is float,
+        // we need to convert to float first before taking prev()
+        let target_max = match (max, self.x.result_type(ctx)) {
+            (Val::ValI(max_int), ViewType::Float) => {
+                // Convert integer to float, then take prev
+                Val::ValF(max_int as f32).prev()
+            }
+            _ => {
+                // Same type or float to integer conversion - use direct prev
+                max.prev()
+            }
+        };
         self.x.try_set_max(target_max, ctx)
     }
 }
