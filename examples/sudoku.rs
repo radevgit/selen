@@ -12,7 +12,7 @@ fn main() {
     println!("🔢 Simple Sudoku Solver");
     println!("======================");
     
-    // Easy Sudoku puzzle (30 clues)
+    // Easy Sudoku puzzle (26 clues)
     let easy_puzzle = [
         [5, 3, 0, 0, 7, 0, 0, 0, 0],
         [6, 0, 0, 1, 9, 5, 0, 0, 0],
@@ -25,19 +25,64 @@ fn main() {
         [0, 0, 0, 0, 8, 0, 0, 7, 0],
     ];
     
-    // Solve only the easy puzzle for now
-    let (propagations, nodes) = solve_and_display("EASY", &easy_puzzle);
+    // Hard Sudoku puzzle - "AI Escargot" - known as one of the most difficult
+    let hard_puzzle = [
+        [1, 0, 0, 0, 0, 7, 0, 9, 0],
+        [0, 3, 0, 0, 2, 0, 0, 0, 8],
+        [0, 0, 9, 6, 0, 0, 5, 0, 0],
+        [0, 0, 5, 3, 0, 0, 9, 0, 0],
+        [0, 1, 0, 0, 8, 0, 0, 0, 2],
+        [6, 0, 0, 0, 0, 4, 0, 0, 0],
+        [3, 0, 0, 0, 0, 0, 0, 1, 0],
+        [0, 4, 0, 0, 0, 0, 0, 0, 7],
+        [0, 0, 7, 0, 0, 0, 3, 0, 0],
+    ];
+    
+    // Extreme Sudoku puzzle - "World's Hardest Sudoku" - designed to be extremely challenging
+    let extreme_puzzle = [
+        [8, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 3, 6, 0, 0, 0, 0, 0],
+        [0, 7, 0, 0, 9, 0, 2, 0, 0],
+        [0, 5, 0, 0, 0, 7, 0, 0, 0],
+        [0, 0, 0, 0, 4, 5, 7, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 3, 0],
+        [0, 0, 1, 0, 0, 0, 0, 6, 8],
+        [0, 0, 8, 5, 0, 0, 0, 1, 0],
+        [0, 9, 0, 0, 0, 0, 4, 0, 0],
+    ];
+    
+    // Solve all three puzzles
+    let (easy_propagations, easy_nodes) = solve_and_display("EASY", &easy_puzzle);
+    let (hard_propagations, hard_nodes) = solve_and_display("HARD", &hard_puzzle);
+    let (extreme_propagations, extreme_nodes) = solve_and_display("EXTREME", &extreme_puzzle);
     
     println!("\n✨ Summary:");
     println!("Easy puzzle demonstrates solid performance with default search heuristics:");
-    println!("• {} propagations, {} nodes explored", propagations, nodes);
-    let efficiency = if nodes > 0 { 
-        format!("{:.1} propagations/node", propagations as f64 / nodes as f64)
+    println!("• {} propagations, {} nodes explored", easy_propagations, easy_nodes);
+    let easy_efficiency = if easy_nodes > 0 { 
+        format!("{:.1} propagations/node", easy_propagations as f64 / easy_nodes as f64)
     } else {
         "Pure propagation (no search)".to_string()
     };
-    println!("• {} efficiency", efficiency);
-    println!("• Solved in ~3ms");
+    println!("• {} efficiency", easy_efficiency);
+    
+    println!("\nHard puzzle (AI Escargot) demonstrates increased computational challenge:");
+    println!("• {} propagations, {} nodes explored", hard_propagations, hard_nodes);
+    let hard_efficiency = if hard_nodes > 0 { 
+        format!("{:.1} propagations/node", hard_propagations as f64 / hard_nodes as f64)
+    } else {
+        "Pure propagation (no search)".to_string()
+    };
+    println!("• {} efficiency", hard_efficiency);
+    
+    println!("\nExtreme puzzle (World's Hardest) demonstrates the ultimate CSP challenge:");
+    println!("• {} propagations, {} nodes explored", extreme_propagations, extreme_nodes);
+    let extreme_efficiency = if extreme_nodes > 0 { 
+        format!("{:.1} propagations/node", extreme_propagations as f64 / extreme_nodes as f64)
+    } else {
+        "Pure propagation (no search)".to_string()
+    };
+    println!("• {} efficiency", extreme_efficiency);
 }
 
 fn solve_and_display(difficulty: &str, puzzle: &[[i32; 9]; 9]) -> (usize, usize) {
