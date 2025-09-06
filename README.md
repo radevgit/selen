@@ -39,7 +39,7 @@ cargo run --example resource_allocation
 cargo run --example portfolio_optimization
 ```
 
-![Sudoku Example](https://raw.githubusercontent.com/yourusername/cspsolver/main/img/sudoku.png)
+![Sudoku Example](https://raw.githubusercontent.com/radevgit/cspsolver/main/img/sudoku.png)
 
 
 ### Basic Usage
