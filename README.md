@@ -30,12 +30,17 @@ Add this to your `Cargo.toml`:
 cspsolver = "0.3.5"
 ```
 
+
 ## Examples
 ```bash
+cargo run --example sudoku
 cargo run --example pc_builder
 cargo run --example resource_allocation
 cargo run --example portfolio_optimization
 ```
+
+![Sudoku Example](https://raw.githubusercontent.com/yourusername/cspsolver/main/img/sudoku.png)
+
 
 ### Basic Usage
 
