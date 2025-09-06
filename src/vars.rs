@@ -206,8 +206,14 @@ impl Vars {
 }
 
 /// Decision variable handle that is not bound to a specific memory location.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct VarId(usize);
+
+impl std::fmt::Debug for VarId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "VarId({})", self.0)
+    }
+}
 
 impl Index<VarId> for Vars {
     type Output = Var;

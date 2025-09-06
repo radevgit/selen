@@ -38,7 +38,10 @@ pub mod search;
 pub mod prelude;
 
 
-//#[cfg(test)]
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+mod debug;
 
 
 

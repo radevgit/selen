@@ -76,6 +76,17 @@ pub trait ViewExt: View {
     fn prev(self) -> Prev<Self>;
 }
 
+/// Extension trait for debug formatting views with domain information.
+pub trait ViewDebugExt: View {
+    /// Format view with domain bounds for debugging.
+    fn debug_with_domain(&self, vars: &Vars) -> String {
+        format!("{:?} [{:?}..{:?}]", 
+                self, 
+                self.min_raw(vars), 
+                self.max_raw(vars))
+    }
+}
+
 impl<V: View> ViewExt for V {
     fn opposite(self) -> Opposite<Self> {
         Opposite(self)
@@ -117,6 +128,9 @@ impl<V: View> ViewExt for V {
         Prev { x: self }
     }
 }
+
+// Implement ViewDebugExt for all views - the blanket implementation covers all View types
+impl<V: View> ViewDebugExt for V {}
 
 /// Wrapper around search space object to restrict exposed interface and track changes.
 #[derive(Debug)]
@@ -450,19 +464,37 @@ impl View for VarIdBin {
 }
 
 /// Invert the sign of the bounds of the underlying view.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Opposite<V>(V);
 
+impl<V: std::fmt::Debug> std::fmt::Debug for Opposite<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Opposite({:?})", self.0)
+    }
+}
+
 /// Apply next operation using ULP-based approach.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Next<V> {
     x: V,
 }
 
+impl<V: std::fmt::Debug> std::fmt::Debug for Next<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Next({:?})", self.x)
+    }
+}
+
 /// Apply prev operation using ULP-based approach.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Prev<V> {
     x: V,
+}
+
+impl<V: std::fmt::Debug> std::fmt::Debug for Prev<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Prev({:?})", self.x)
+    }
 }
 
 impl<V: View> ViewRaw for Opposite<V> {
@@ -581,10 +613,16 @@ impl<V: View> View for Prev<V> {
 }
 
 /// Add a constant offset to the underlying view.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Plus<V> {
     x: V,
     offset: Val,
+}
+
+impl<V: std::fmt::Debug> std::fmt::Debug for Plus<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Plus(x: {:?}, offset: {:?})", self.x, self.offset)
+    }
 }
 
 impl<V: View> ViewRaw for Plus<V> {
@@ -671,7 +709,7 @@ impl<V: View> View for Plus<V> {
 }
 
 /// Scale the underlying view by a constant factor.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub enum Times<V: View> {
     /// Provided factor was strictly negative.
     Neg(TimesNeg<V>),
@@ -683,6 +721,17 @@ pub enum Times<V: View> {
 
     /// Provided factor was strictly positive.
     Pos(TimesPos<V>),
+}
+
+impl<V: View + std::fmt::Debug> std::fmt::Debug for Times<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Neg(neg) => write!(f, "Times::Neg({:?})", neg),
+            Self::ZeroI => write!(f, "Times::ZeroI"),
+            Self::ZeroF => write!(f, "Times::ZeroF"),
+            Self::Pos(pos) => write!(f, "Times::Pos({:?})", pos),
+        }
+    }
 }
 
 impl<V: View> Times<V> {
@@ -778,10 +827,16 @@ impl<V: View> View for Times<V> {
 }
 
 /// Scale the underlying view by a strictly positive constant factor.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct TimesPos<V> {
     x: V,
     scale_pos: Val,
+}
+
+impl<V: std::fmt::Debug> std::fmt::Debug for TimesPos<V> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TimesPos(x: {:?}, scale: {:?})", self.x, self.scale_pos)
+    }
 }
 
 impl<V: View> TimesPos<V> {
