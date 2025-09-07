@@ -1,7 +1,7 @@
 use crate::props::PropId;
 use crate::search::Space;
+use crate::utils::float_next;
 use crate::vars::{VarId, Val};
-use crate::views::Context;
 
 /// Perform a binary split on the first unassigned decision variable.
 /// Uses efficient SparseSet state management for integer variables.
@@ -67,10 +67,9 @@ impl Iterator for SplitOnUnassigned {
         match branch_state {
             BranchState::BinarySplit { space, pivot, mid, is_left } => {
                 if is_left {
-                    // Left branch: pivot <= mid
+                    // Left branch: pivot <= mid - create constraint and let propagation handle domain filtering
                     let mut space_left = space.clone();
                     space_left.props.increment_node_count();
-                    let p = space_left.props.less_than_or_equals(pivot, mid);
                     
                     // Set up for right branch
                     self.branch = Some(BranchState::BinarySplit { 
@@ -80,17 +79,30 @@ impl Iterator for SplitOnUnassigned {
                         is_left: false 
                     });
                     
+                    // Create constraint: pivot <= mid, let the constraint system handle domain filtering
+                    let p = space_left.props.less_than_or_equals(pivot, mid);
                     Some((space_left, p))
                 } else {
-                    // Right branch: pivot > mid
+                    // Right branch: pivot > mid - create constraint and let propagation handle domain filtering
                     let mut space_right = space;
                     space_right.props.increment_node_count();
                     
-                    let mut events = Vec::new();
-                    let _ctx = Context::new(&mut space_right.vars, &mut events);
-                    let p = space_right.props.greater_than(pivot, mid);
+                    // Calculate the minimum value for pivot > mid
+                    let min_val = match mid {
+                        crate::vars::Val::ValI(mid_val) => crate::vars::Val::ValI(mid_val + 1),
+                        crate::vars::Val::ValF(mid_val) => {
+                            // For floats, use next representable value
+                            let next_val = if mid_val.is_finite() {
+                                float_next(mid_val)
+                            } else {
+                                mid_val
+                            };
+                            crate::vars::Val::ValF(next_val)
+                        },
+                    };
                     
-                    // No more branches after this
+                    // Create constraint: pivot >= min_val, let the constraint system handle domain filtering
+                    let p = space_right.props.greater_than_or_equals(pivot, min_val);
                     Some((space_right, p))
                 }
             }

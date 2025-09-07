@@ -1,5 +1,51 @@
 use cspsolver::{model::Model, prelude::{int, Solution}, vars::Val, views::ViewExt};
 
+#[test]
+fn debug_minimal_hang() {
+    println!("=== Testing simple positive domain [0, 2] ===");
+    let mut model = Model::default();
+    let x = model.new_var(Val::ValI(0), Val::ValI(2));
+    
+    let mut count = 0;
+    let start = std::time::Instant::now();
+    
+    for solution in model.enumerate() {
+        count += 1;
+        println!("Solution {}: x = {:?}", count, solution[x]);
+        
+        if count > 10 || start.elapsed().as_secs() > 1 {
+            println!("Breaking early - too many solutions or taking too long");
+            break;
+        }
+    }
+    
+    println!("Found {} solutions in {:?}", count, start.elapsed());
+    assert_eq!(count, 3, "Should find exactly 3 solutions for domain [0, 2]");
+}
+
+#[test]
+fn debug_negative_domain() {
+    println!("=== Testing negative domain [-1, 1] ===");
+    let mut model = Model::default();
+    let x = model.new_var(Val::ValI(-1), Val::ValI(1));
+    
+    let mut count = 0;
+    let start = std::time::Instant::now();
+    
+    for solution in model.enumerate() {
+        count += 1;
+        println!("Solution {}: x = {:?}", count, solution[x]);
+        
+        if count > 10 || start.elapsed().as_secs() > 1 {
+            println!("Breaking early - too many solutions or taking too long");
+            break;
+        }
+    }
+    
+    println!("Found {} solutions in {:?}", count, start.elapsed());
+    assert_eq!(count, 3, "Should find exactly 3 solutions for domain [-1, 1]");
+}
+
     #[test]
     fn new_var() {
         let mut m = Model::default();

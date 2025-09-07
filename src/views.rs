@@ -399,11 +399,11 @@ impl View for Val {
     }
 
     fn try_set_min(self, min: Val, _ctx: &mut Context) -> Option<Val> {
-        if min <= self { Some(min) } else { None }
+        if min <= self { Some(self) } else { None }
     }
 
     fn try_set_max(self, max: Val, _ctx: &mut Context) -> Option<Val> {
-        if max >= self { Some(max) } else { None }
+        if max >= self { Some(self) } else { None }
     }
 }
 

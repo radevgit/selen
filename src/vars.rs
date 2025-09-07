@@ -145,7 +145,21 @@ impl Var {
                     Val::ValI(0)
                 } else {
                     // Use the midpoint between min and max for binary search
-                    let mid_val = (sparse_set.min() + sparse_set.max()) / 2;
+                    // For proper binary search, we need to ensure the midpoint is always valid
+                    // and that the split makes progress
+                    let min_val = sparse_set.min();
+                    let max_val = sparse_set.max();
+                    
+                    // If domain is a single value, return that value
+                    if min_val == max_val {
+                        return Val::ValI(min_val);
+                    }
+                    
+                    // Calculate midpoint - use floor division to ensure left bias
+                    // This ensures that for [-1, 0], mid = -1, giving:
+                    // Left: x <= -1 (just [-1])
+                    // Right: x >= 0 (just [0])
+                    let mid_val = min_val + (max_val - min_val) / 2;
                     Val::ValI(mid_val)
                 }
             }

@@ -47,6 +47,11 @@ impl Display for SparseSet {
 
 impl SparseSet {
     pub fn new(min: i32, max: i32) -> Self {
+        if min > max {
+            // Handle invalid range by swapping
+            return Self::new(max, min);
+        }
+        
         let maxmin = (max - min) as u32;
         let n = (maxmin + 1) as u16;
         SparseSet {

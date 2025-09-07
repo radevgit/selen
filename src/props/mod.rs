@@ -3,6 +3,7 @@ mod alldiff;
 mod eq;
 mod leq;
 mod neq;
+mod noop;
 mod sum;
 
 use std::ops::{Index, IndexMut};
@@ -127,6 +128,11 @@ impl Propagators {
     /// This is more efficient than pairwise not-equals constraints.
     pub fn all_different(&mut self, vars: Vec<VarId>) -> PropId {
         self.push_new_prop(self::alldiff::AllDifferent::new(vars))
+    }
+
+    /// Create a no-operation propagator for branching operations that have already applied domain filtering.
+    pub fn noop(&mut self) -> PropId {
+        self.push_new_prop(self::noop::NoOp::new())
     }
 
     /// Register propagator dependencies and store its state as a trait object.
