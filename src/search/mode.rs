@@ -40,8 +40,8 @@ impl<V: View> Mode for Minimize<V> {
     fn on_branch(&self, space: &mut Space) -> impl Iterator<Item = PropId> {
         // Prune assignments that cannot lower objective expression
         if let Some(minimum) = self.minimum_opt {
-            let mut events = Vec::new();
-            let ctx = Context::new(&mut space.vars, &mut events);
+            // let mut events = Vec::new();
+            // let ctx = Context::new(&mut space.vars, &mut events);
             let prop_id = space.props.less_than(self.objective, minimum);
             vec![prop_id].into_iter()
         } else {
