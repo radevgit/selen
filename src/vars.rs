@@ -1,13 +1,15 @@
 use crate::prelude::*;
+use crate::domain::SparseSet;
+use crate::domain::sparse_set::SparseSetState;
 use std::ops::{Index, IndexMut};
 
 /// Domain for a decision variable
 #[derive(Clone, Debug)]
 pub enum Var {
-    /// interval of integers
-    VarI { min: i32, max: i32 },
     /// interval of floating-point numbers
     VarF { min: f32, max: f32 },
+    /// sparse set for integer domains
+    VarI(SparseSet),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -128,16 +130,25 @@ impl Var {
     pub fn is_assigned(&self) -> bool {
         use crate::utils::float_equal;
         match self {
-            Var::VarI { min, max } => min == max,
             Var::VarF { min, max } => float_equal(*min, *max),
+            Var::VarI(sparse_set) => sparse_set.is_fixed(),
         }
     }
 
     /// Midpoint of domain for easier binary splits.
     pub fn mid(&self) -> Val {
         match self {
-            Var::VarI { min, max } => Val::ValI(min + (max - min) / 2),
             Var::VarF { min, max } => Val::ValF(*min + (*max - *min) / 2.0),
+            Var::VarI(sparse_set) => {
+                if sparse_set.is_empty() {
+                    // Should not happen in a valid CSP, but provide a fallback
+                    Val::ValI(0)
+                } else {
+                    // Use the midpoint between min and max for binary search
+                    let mid_val = (sparse_set.min() + sparse_set.max()) / 2;
+                    Val::ValI(mid_val)
+                }
+            }
         }
     }
 
@@ -150,8 +161,12 @@ impl Var {
         debug_assert!(self.is_assigned());
 
         match self {
-            Var::VarI { min, .. } => Val::ValI(*min),
             Var::VarF { min, .. } => Val::ValF(*min),
+            Var::VarI(sparse_set) => {
+                debug_assert!(sparse_set.is_fixed());
+                // For a fixed sparse set, min == max, so we can use either
+                Val::ValI(sparse_set.min())
+            }
         }
     }
 }
@@ -166,7 +181,11 @@ impl Vars {
         let v = VarId(self.0.len());
 
         match (min, max) {
-            (Val::ValI(min), Val::ValI(max)) => self.0.push(Var::VarI { min, max }),
+            (Val::ValI(min), Val::ValI(max)) => {
+                // Create SparseSet for integer variables
+                let sparse_set = SparseSet::new(min, max);
+                self.0.push(Var::VarI(sparse_set))
+            },
             (Val::ValF(min), Val::ValF(max)) => self.0.push(Var::VarF { min, max }),
             // type coercion
             (Val::ValI(min), Val::ValF(max)) => self.0.push(Var::VarF {
@@ -192,6 +211,11 @@ impl Vars {
         self.get_unassigned_var().is_none()
     }
 
+    /// Get an iterator over all variables with their indices for validation.
+    pub fn iter_with_indices(&self) -> impl Iterator<Item = (usize, &Var)> {
+        self.0.iter().enumerate()
+    }
+
     /// Extract assignment for all decision variables.
     ///
     /// # Panics
@@ -202,6 +226,35 @@ impl Vars {
         let values: Vec<_> = self.0.into_iter().map(|v| v.get_assignment()).collect();
 
         Solution::from(values)
+    }
+
+    /// Save state of all sparse set variables for efficient backtracking
+    pub fn save_sparse_states(&self) -> Vec<Option<SparseSetState>> {
+        self.0.iter().map(|var| {
+            match var {
+                Var::VarF { .. } => None, // Float variables don't need state saving
+                Var::VarI(sparse_set) => Some(sparse_set.save_state()),
+            }
+        }).collect()
+    }
+
+    /// Restore state of all sparse set variables from saved state
+    pub fn restore_sparse_states(&mut self, states: &[Option<SparseSetState>]) {
+        debug_assert_eq!(self.0.len(), states.len(), "State vector size mismatch");
+        
+        for (var, state_opt) in self.0.iter_mut().zip(states.iter()) {
+            match (var, state_opt) {
+                (Var::VarF { .. }, None) => {
+                    // Float variables don't have saved state - nothing to restore
+                }
+                (Var::VarI(sparse_set), Some(state)) => {
+                    sparse_set.restore_state(state);
+                }
+                _ => {
+                    debug_assert!(false, "Mismatched variable type and state");
+                }
+            }
+        }
     }
 }
 

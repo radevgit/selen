@@ -1,4 +1,5 @@
 use crate::{prelude::Solution, props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, vars::Vars, views::Context};
+use crate::domain::sparse_set::SparseSetState;
 
 pub mod mode;
 
@@ -10,6 +11,13 @@ mod hybrid_branch;
 // Re-export the branching strategies (keep for potential future use)
 pub use value_branch::{ValueBasedBranching, split_with_value_assignment};
 pub use hybrid_branch::{HybridBranching, split_with_hybrid_strategy};
+
+/// Lightweight state snapshot for efficient backtracking
+#[derive(Debug)]
+pub struct SpaceState {
+    sparse_states: Vec<Option<SparseSetState>>,
+    // Note: Propagators state could be added here if needed for more advanced backtracking
+}
 
 /// Data required to perform search, copied on branch and discarded on failure.
 #[derive(Clone, Debug)]
@@ -27,6 +35,18 @@ impl Space {
     /// Get the current node count from this space.
     pub fn get_node_count(&self) -> usize {
         self.props.get_node_count()
+    }
+
+    /// Save state for efficient backtracking instead of expensive cloning
+    pub fn save_state(&self) -> SpaceState {
+        SpaceState {
+            sparse_states: self.vars.save_sparse_states(),
+        }
+    }
+
+    /// Restore state from a previous save point
+    pub fn restore_state(&mut self, state: &SpaceState) {
+        self.vars.restore_sparse_states(&state.sparse_states);
     }
 }
 

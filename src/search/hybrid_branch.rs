@@ -4,9 +4,9 @@ use crate::vars::Var;
 use crate::search::value_branch::ValueBasedBranching;
 use crate::search::branch::SplitOnUnassigned;
 
-/// Hybrid branching strategy that intelligently chooses between:
-/// - Value-based branching for float variables (reduces search tree)
-/// - Domain splitting for integer variables (traditional approach)
+/// Hybrid branching strategy that chooses between:
+/// - Binary splitting for integer variables (O(1) state management with SparseSet)
+/// - Value-based branching for float variables (reduces search tree depth)
 pub struct HybridBranching {
     state: HybridState,
 }
@@ -17,8 +17,8 @@ enum HybridState {
     FindStrategy(Space),
     /// Use value-based branching
     ValueBased(ValueBasedBranching),
-    /// Use domain splitting  
-    DomainSplit(SplitOnUnassigned),
+    /// Use binary splitting  
+    BinarySplit(SplitOnUnassigned),
     /// No more branches
     Done,
 }
@@ -36,21 +36,10 @@ impl HybridBranching {
         // Find the first unassigned variable to determine strategy
         if let Some(var) = space.vars.get_unassigned_var() {
             match &space.vars[var] {
-                Var::VarI { min, max } => {
-                    // Since Value-Based Branching works better with NotEquals constraints,
-                    // prefer it more aggressively
-                    let domain_size = max - min + 1;
-                    
-                    // Use Value-Based Branching if:
-                    // 1. Domain is reasonably small (≤ 20, increased from 10)
-                    // 2. NotEquals or other constraints are present (better propagation)
-                    // 3. Multiple constraints suggest complex interaction
-                    if domain_size <= 20 || self.has_not_equals_constraints(&space) {
-                        HybridState::ValueBased(ValueBasedBranching::new(space))
-                    } else {
-                        // Only use domain splitting for very large domains without constraints
-                        HybridState::DomainSplit(crate::search::branch::split_on_unassigned(space))
-                    }
+                Var::VarI(_) => {
+                    // Always use binary splitting for integer variables
+                    // Empirical evidence shows no benefit from value enumeration
+                    HybridState::BinarySplit(crate::search::branch::split_on_unassigned(space))
                 }
                 Var::VarF { .. } => {
                     // For floats, always use value-based branching to reduce search tree
@@ -64,23 +53,14 @@ impl HybridBranching {
         }
     }
     
-    /// Check if the space has not_equals constraints that would benefit from value-based branching
-    fn has_not_equals_constraints(&self, space: &Space) -> bool {
-        // This is a heuristic - if there are propagators present, we likely have constraints
-        // that benefit from value assignment (like not_equals)
-        let num_props = space.props.get_prop_ids_iter().count();
-        
-        // If we have any propagators, prefer value-based branching since it triggers
-        // immediate constraint propagation, which is especially effective for NotEquals
-        num_props > 0
-    }
+
     
     /// Get the current propagation count
     pub fn get_propagation_count(&self) -> usize {
         match &self.state {
             HybridState::FindStrategy(space) => space.get_propagation_count(),
             HybridState::ValueBased(vb) => vb.get_propagation_count(),
-            HybridState::DomainSplit(ds) => ds.get_propagation_count(),
+            HybridState::BinarySplit(bs) => bs.get_propagation_count(),
             HybridState::Done => 0,
         }
     }
@@ -90,7 +70,7 @@ impl HybridBranching {
         match &self.state {
             HybridState::FindStrategy(space) => space.get_node_count(),
             HybridState::ValueBased(vb) => vb.get_node_count(),
-            HybridState::DomainSplit(ds) => ds.get_node_count(),
+            HybridState::BinarySplit(bs) => bs.get_node_count(),
             HybridState::Done => 0,
         }
     }
@@ -121,11 +101,11 @@ impl Iterator for HybridBranching {
                         return None;
                     }
                 }
-                HybridState::DomainSplit(domain_splitting) => {
-                    if let Some(result) = domain_splitting.next() {
+                HybridState::BinarySplit(binary_splitting) => {
+                    if let Some(result) = binary_splitting.next() {
                         return Some(result);
                     } else {
-                        // Domain splitting is exhausted
+                        // Binary splitting is exhausted
                         self.state = HybridState::Done;
                         return None;
                     }

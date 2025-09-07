@@ -152,26 +152,29 @@ impl<'s> Context<'s> {
 
         match (var, min) {
             (
-                Var::VarI {
-                    min: var_min,
-                    max: var_max,
-                },
+                Var::VarI(sparse_set),
                 Val::ValI(min_i),
             ) => {
                 // Infeasible, fail space
-                if min_i > *var_max {
+                if min_i > sparse_set.max() {
                     return None;
                 }
 
-                if min_i > *var_min {
-                    // Set new minimum
-                    *var_min = min_i;
+                let old_min = sparse_set.min();
+                if min_i > old_min {
+                    // Remove values below min_i
+                    sparse_set.remove_below(min_i);
+                    
+                    // Check if domain became empty
+                    if sparse_set.is_empty() {
+                        return None;
+                    }
 
                     // Record modification event
                     self.events.push(v);
                 }
 
-                Some(Val::ValI(*var_min))
+                Some(Val::ValI(sparse_set.min()))
             }
             (
                 Var::VarF {
@@ -196,29 +199,32 @@ impl<'s> Context<'s> {
                 Some(Val::ValF(*var_min))
             }
             (
-                Var::VarI {
-                    min: var_min,
-                    max: var_max,
-                },
+                Var::VarI(sparse_set),
                 Val::ValF(min_f),
             ) => {
                 // Convert float to integer using ceiling (to ensure the bound is not violated)
                 let min_converted = min_f.ceil() as i32;
                 
                 // Infeasible, fail space
-                if min_converted > *var_max {
+                if min_converted > sparse_set.max() {
                     return None;
                 }
 
-                if min_converted > *var_min {
-                    // Set new minimum
-                    *var_min = min_converted;
+                let old_min = sparse_set.min();
+                if min_converted > old_min {
+                    // Remove values below min_converted
+                    sparse_set.remove_below(min_converted);
+                    
+                    // Check if domain became empty
+                    if sparse_set.is_empty() {
+                        return None;
+                    }
 
                     // Record modification event
                     self.events.push(v);
                 }
 
-                Some(Val::ValI(*var_min))
+                Some(Val::ValI(sparse_set.min()))
             }
             (
                 Var::VarF {
@@ -255,26 +261,29 @@ impl<'s> Context<'s> {
 
         match (var, max) {
             (
-                Var::VarI {
-                    min: var_min,
-                    max: var_max,
-                },
+                Var::VarI(sparse_set),
                 Val::ValI(max_i),
             ) => {
                 // Infeasible, fail space
-                if max_i < *var_min {
+                if max_i < sparse_set.min() {
                     return None;
                 }
 
-                if max_i < *var_max {
-                    // Set new maximum
-                    *var_max = max_i;
+                let old_max = sparse_set.max();
+                if max_i < old_max {
+                    // Remove values above max_i
+                    sparse_set.remove_above(max_i);
+                    
+                    // Check if domain became empty
+                    if sparse_set.is_empty() {
+                        return None;
+                    }
 
                     // Record modification event
                     self.events.push(v);
                 }
 
-                Some(Val::ValI(*var_max))
+                Some(Val::ValI(sparse_set.max()))
             }
             (
                 Var::VarF {
@@ -299,29 +308,32 @@ impl<'s> Context<'s> {
                 Some(Val::ValF(*var_max))
             }
             (
-                Var::VarI {
-                    min: var_min,
-                    max: var_max,
-                },
+                Var::VarI(sparse_set),
                 Val::ValF(max_f),
             ) => {
                 // Convert float to integer using floor (to ensure the bound is not violated)
                 let max_converted = max_f.floor() as i32;
                 
                 // Infeasible, fail space
-                if max_converted < *var_min {
+                if max_converted < sparse_set.min() {
                     return None;
                 }
 
-                if max_converted < *var_max {
-                    // Set new maximum
-                    *var_max = max_converted;
+                let old_max = sparse_set.max();
+                if max_converted < old_max {
+                    // Remove values above max_converted
+                    sparse_set.remove_above(max_converted);
+                    
+                    // Check if domain became empty
+                    if sparse_set.is_empty() {
+                        return None;
+                    }
 
                     // Record modification event
                     self.events.push(v);
                 }
 
-                Some(Val::ValI(*var_max))
+                Some(Val::ValI(sparse_set.max()))
             }
             (
                 Var::VarF {
@@ -402,14 +414,14 @@ impl ViewRaw for VarId {
 
     fn min_raw(self, vars: &Vars) -> Val {
         match vars[self] {
-            Var::VarI { min, .. } => Val::ValI(min),
+            Var::VarI(ref sparse_set) => Val::ValI(sparse_set.min()),
             Var::VarF { min, .. } => Val::ValF(min),
         }
     }
 
     fn max_raw(self, vars: &Vars) -> Val {
         match vars[self] {
-            Var::VarI { max, .. } => Val::ValI(max),
+            Var::VarI(ref sparse_set) => Val::ValI(sparse_set.max()),
             Var::VarF { max, .. } => Val::ValF(max),
         }
     }

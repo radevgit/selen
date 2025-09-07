@@ -272,6 +272,50 @@ impl Model {
         self.minimize_and_iterate_with_callback(objective.opposite(), callback)
     }
 
+    /// Validate that all integer variable domains fit within the u16 optimization range.
+    /// 
+    /// This method checks that all integer variables have domains that can be represented
+    /// using u16 optimization (domain size ≤ 65535). Since we've already replaced VarI 
+    /// with VarSparse in the new_var_with_bounds method, this validation mainly serves
+    /// as a safety check and provides clear error messages for invalid domain sizes.
+    ///
+    /// # Returns
+    /// 
+    /// Returns `Ok(())` if validation succeeds, or `Err(String)` with error details if validation fails.
+    pub fn validate(&self) -> Result<(), String> {
+        for (i, var) in self.vars.iter_with_indices() {
+            match var {
+                Var::VarI(sparse_set) => {
+                    let domain_size = sparse_set.universe_size();
+                    if domain_size > 65535 {
+                        return Err(format!(
+                            "Variable {} has domain size {} which exceeds the maximum of 65535 for u16 optimization. \
+                            Consider using smaller domains or splitting large domains into multiple variables.",
+                            i, domain_size
+                        ));
+                    }
+                    
+                    // Additional validation: check if domain range is reasonable
+                    let min_val = sparse_set.min_universe_value();
+                    let max_val = sparse_set.max_universe_value();
+                    let actual_range = max_val - min_val + 1;
+                    
+                    if actual_range < 0 || actual_range > 65535 {
+                        return Err(format!(
+                            "Variable {} has invalid domain range [{}, {}] which results in {} values. \
+                            Domain range must be positive and ≤ 65535.",
+                            i, min_val, max_val, actual_range
+                        ));
+                    }
+                }
+                Var::VarF { .. } => {
+                    // Float variables use interval representation, no validation needed
+                }
+            }
+        }
+        Ok(())
+    }
+
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
     #[must_use]
     pub fn solve(self) -> Option<Solution> {

@@ -40,9 +40,9 @@ impl ValueBasedBranching {
             let var_domain = &space.vars[var];
             
             let chosen_value = match var_domain {
-                Var::VarI { min, max: _ } => {
+                Var::VarI(sparse_set) => {
                     // For integers, try the minimum value first (could also be midpoint)
-                    Val::ValI(*min)
+                    Val::ValI(sparse_set.min())
                 }
                 Var::VarF { min, max: _ } => {
                     // For floats, try a specific value that respects ULP precision

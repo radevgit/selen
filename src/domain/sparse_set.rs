@@ -5,20 +5,20 @@ use std::fmt::Display;
 /// State snapshot for backtracking in SparseSet
 #[derive(Clone, Debug, PartialEq)]
 pub struct SparseSetState {
-    pub size: u32,
-    pub min: u32,
-    pub max: u32,
+    pub size: u16,
+    pub min: u16,
+    pub max: u16,
 }
 
 #[derive(Debug, Clone)]
 pub struct SparseSet {
     off: i32,      // the domain offset (fixed)
-    n: u32,        // total number of values in domain
-    min: u32,      // current minimum value in the set
-    max: u32,      // current maximum value in the set
-    size: u32,     // domain size
-    ind: Vec<u32>, // sparse set indices
-    val: Vec<u32>, // sparse set values
+    n: u16,        // total number of values in domain
+    min: u16,      // current minimum value in the set
+    max: u16,      // current maximum value in the set
+    size: u16,     // domain size
+    ind: Vec<u16>, // sparse set indices
+    val: Vec<u16>, // sparse set values
 }
 
 impl Display for SparseSet {
@@ -48,15 +48,15 @@ impl Display for SparseSet {
 impl SparseSet {
     pub fn new(min: i32, max: i32) -> Self {
         let maxmin = (max - min) as u32;
-        let n = maxmin + 1;
+        let n = (maxmin + 1) as u16;
         SparseSet {
             off: min,
             min: 0,
-            max: maxmin,
+            max: maxmin as u16,
             n,
             size: n,
-            ind: Vec::from_iter(0..n),
-            val: Vec::from_iter(0..n),
+            ind: (0..n).collect(),
+            val: (0..n).collect(),
         }
     }
 
@@ -85,17 +85,17 @@ impl SparseSet {
             return false;
         }
         let v = v - self.off;
-        self.contains_intl(v as u32)
+        self.contains_intl(v as u16)
     }
     // This method operates on the shifted value (one cannot shift now).
-    fn contains_intl(&self, v: u32) -> bool {
+    fn contains_intl(&self, v: u16) -> bool {
         if v >= self.n {
             false
         } else {
             self.ind[v as usize] < self.size
         }
     }
-    pub fn exchange(&mut self, val1: u32, val2: u32) {
+    pub fn exchange(&mut self, val1: u16, val2: u16) {
         let v1 = val1;
         let v2 = val2;
         let i1 = self.ind[v1 as usize];
@@ -106,12 +106,12 @@ impl SparseSet {
         self.ind[v2 as usize] = i1;
     }
 
-    fn update_bounds_val_removed(&mut self, val: u32) {
+    fn update_bounds_val_removed(&mut self, val: u16) {
         self.update_max_val_removed(val);
         self.update_min_val_removed(val);
     }
     // update after max value is removed
-    fn update_max_val_removed(&mut self, val: u32) {
+    fn update_max_val_removed(&mut self, val: u16) {
         if !self.is_empty() && self.max == val {
             // The maximum was removed, search the new one
             for v in (self.min..val).rev() {
@@ -123,7 +123,7 @@ impl SparseSet {
         }
     }
     // update after min value is removed
-    fn update_min_val_removed(&mut self, val: u32) {
+    fn update_min_val_removed(&mut self, val: u16) {
         if !self.is_empty() && self.min == val {
             // The minimum was removed, search the new one
             let vv = val + 1;
@@ -142,7 +142,7 @@ impl SparseSet {
             // The value has already been removed
             return false;
         }
-        let val = (val - self.off) as u32;
+        let val = (val - self.off) as u16;
         self.exchange(val, self.val[self.size() - 1]);
         self.size = self.size - 1;
         self.update_bounds_val_removed(val);
@@ -161,7 +161,7 @@ impl SparseSet {
             self.remove_all();
             return;
         }
-        let v = (v - self.off) as u32;
+        let v = (v - self.off) as u16;
         let val = self.val[0];
         let index = self.ind[v as usize];
         self.ind[v as usize] = 0;
@@ -268,7 +268,7 @@ impl SparseSet {
             // Check if value is in our universe
             if val >= self.off && val < self.off + self.n as i32 {
                 // Manually add the value (similar to remove but in reverse)
-                let val_internal = (val - self.off) as u32;
+                let val_internal = (val - self.off) as u16;
                 if !self.contains_intl(val_internal) {
                     // Add value to the end of the active set
                     let new_pos = self.size;
@@ -335,7 +335,7 @@ impl SparseSet {
         
         for val in values {
             if val >= min_val && val <= max_val {
-                let val_internal = (val - set.off) as u32;
+                let val_internal = (val - set.off) as u16;
                 // Add value to the active set
                 let new_pos = set.size;
                 let old_val_at_pos = set.val[new_pos as usize];
@@ -381,13 +381,13 @@ impl SparseSet {
     }
     
     /// Get current state size (for simple size-only backtracking)
-    pub fn current_size(&self) -> u32 {
+    pub fn current_size(&self) -> u16 {
         self.size
     }
     
     /// Restore to a specific size (assumes min/max are still valid)
     /// WARNING: Only use if you're certain min/max haven't changed since the size was recorded
-    pub fn restore_size(&mut self, size: u32) {
+    pub fn restore_size(&mut self, size: u16) {
         debug_assert!(size <= self.n, "Cannot restore to size larger than universe");
         self.size = size;
     }
