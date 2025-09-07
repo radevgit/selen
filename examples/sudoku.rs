@@ -158,30 +158,28 @@ fn solve_and_display(difficulty: &str, puzzle: &[[i32; 9]; 9]) -> (usize, usize)
 fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)> {
     let mut model = Model::default();
     
-    // Create variables for each cell (1-9)
+    // OPTIMIZATION 1: Create variables more efficiently
+    // For clues, create singleton variables directly; for empty cells, create full domain
     let mut grid = [[model.new_var_int(1, 9); 9]; 9];
     for row in 0..9 {
         for col in 0..9 {
-            // Re-initialize with proper constraints
-            grid[row][col] = model.new_var_int(1, 9);
-        }
-    }
-    
-    // Add clue constraints
-    for row in 0..9 {
-        for col in 0..9 {
             if puzzle[row][col] != 0 {
-                model.equals(grid[row][col], Val::int(puzzle[row][col]));
+                // Create singleton variable for clues (much more efficient than equals constraint)
+                let clue_val = puzzle[row][col];
+                grid[row][col] = model.new_var_int(clue_val, clue_val);
+            } else {
+                grid[row][col] = model.new_var_int(1, 9);
             }
         }
     }
     
+    // OPTIMIZATION 2: Pre-allocate vectors and use more efficient constraint posting
     // Row constraints: each row has all digits 1-9
     for row in 0..9 {
         model.all_different(grid[row].to_vec());
     }
     
-    // Column constraints: each column has all digits 1-9
+    // Column constraints: each column has all digits 1-9  
     for col in 0..9 {
         let column: Vec<VarId> = (0..9).map(|row| grid[row][col]).collect();
         model.all_different(column);
@@ -190,7 +188,7 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     // Box constraints: each 3x3 box has all digits 1-9
     for box_row in 0..3 {
         for box_col in 0..3 {
-            let mut box_vars = Vec::new();
+            let mut box_vars = Vec::with_capacity(9); // Pre-allocate for efficiency
             for r in 0..3 {
                 for c in 0..3 {
                     box_vars.push(grid[box_row * 3 + r][box_col * 3 + c]);
@@ -199,6 +197,9 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
             model.all_different(box_vars);
         }
     }
+    
+    // OPTIMIZATION 3: Optimize constraint order for better propagation
+    model.optimize_constraint_order();
     
     // Solve the model with statistics tracking
     let mut propagation_count = 0;

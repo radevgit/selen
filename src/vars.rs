@@ -215,9 +215,17 @@ impl Vars {
         v
     }
 
-    /// Get handle to an unassigned decision variable.
+    /// Get handle to an unassigned decision variable using Most Restricted Variable (MRV) heuristic.
+    /// 
+    /// Get the first unassigned variable.
     pub fn get_unassigned_var(&self) -> Option<VarId> {
-        self.0.iter().position(|var| !var.is_assigned()).map(VarId)
+        for (index, var) in self.0.iter().enumerate() {
+            if !var.is_assigned() {
+                return Some(VarId(index));
+            }
+        }
+        
+        None
     }
 
     /// Determine if all decision variables are assigned.

@@ -178,8 +178,7 @@ impl Model {
         F: FnOnce(&crate::solution::SolveStats),
     {
         // For optimization problems, we need a different approach since we iterate through all solutions
-        let vars = self.vars;
-        let props = self.props;
+        let (vars, props) = self.prepare_for_search();
         
         let mut search_iter = search(vars, props, mode::Minimize::new(objective));
         let mut last_solution = None;
@@ -205,7 +204,8 @@ impl Model {
     ///
     /// The order in which assignments are yielded is not stable.
     pub fn minimize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
-        search(self.vars, self.props, mode::Minimize::new(objective))
+        let (vars, props) = self.prepare_for_search();
+        search(vars, props, mode::Minimize::new(objective))
     }
 
     /// Enumerate assignments that satisfy all constraints, while minimizing objective expression, with callback.
@@ -216,8 +216,7 @@ impl Model {
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
-        let vars = self.vars;
-        let props = self.props;
+        let (vars, props) = self.prepare_for_search();
         
         let mut search_iter = search(vars, props, mode::Minimize::new(objective));
         let mut solutions = Vec::new();
@@ -316,6 +315,22 @@ impl Model {
         Ok(())
     }
 
+    /// Optimize constraint processing order based on constraint characteristics.
+    /// 
+    /// This method analyzes constraints (particularly AllDifferent) and reorders them
+    /// to prioritize constraints with more fixed values, which tend to propagate more effectively.
+    /// This can significantly improve solving performance by doing more effective propagation earlier.
+    ///
+    /// Should be called after all constraints are added but before solving.
+    pub fn optimize_constraint_order(&mut self) -> &mut Self {
+        // Since we can't downcast trait objects easily, we'll implement this optimization
+        // at the Propagators level by adding a method there
+        self.props.optimize_alldiff_order(&self.vars);
+        self
+    }
+
+    /// Search for assignment that satisfies all constraints within bounds of decision variables.
+
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
     #[must_use]
     pub fn solve(self) -> Option<Solution> {
@@ -331,8 +346,7 @@ impl Model {
         F: FnOnce(&crate::solution::SolveStats),
     {
         // Run the solving process
-        let vars = self.vars;
-        let props = self.props;
+        let (vars, props) = self.prepare_for_search();
         
         // Create a search and run it to completion to capture final stats
         let mut search_iter = search(vars, props, mode::Enumerate);
@@ -351,11 +365,20 @@ impl Model {
         result
     }
 
+    /// Internal helper that automatically optimizes constraints before search.
+    /// This ensures all solving methods benefit from constraint optimization.
+    fn prepare_for_search(mut self) -> (crate::vars::Vars, crate::props::Propagators) {
+        // Automatically optimize constraint order for better performance
+        self.optimize_constraint_order();
+        (self.vars, self.props)
+    }
+
     /// Enumerate all assignments that satisfy all constraints.
     ///
     /// The order in which assignments are yielded is not stable.
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
-        search(self.vars, self.props, mode::Enumerate)
+        let (vars, props) = self.prepare_for_search();
+        search(vars, props, mode::Enumerate)
     }
 
     /// Enumerate all assignments that satisfy all constraints with callback to capture solving statistics.
@@ -366,8 +389,7 @@ impl Model {
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
-        let vars = self.vars;
-        let props = self.props;
+        let (vars, props) = self.prepare_for_search();
         
         let mut search_iter = search(vars, props, mode::Enumerate);
         let mut solutions = Vec::new();

@@ -5,12 +5,6 @@ pub mod mode;
 
 pub mod agenda;
 pub mod branch;
-mod value_branch;
-mod hybrid_branch;
-
-// Re-export the branching strategies (keep for potential future use)
-pub use value_branch::{ValueBasedBranching, split_with_value_assignment};
-pub use hybrid_branch::{HybridBranching, split_with_hybrid_strategy};
 
 /// Lightweight state snapshot for efficient backtracking
 #[derive(Debug)]

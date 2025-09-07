@@ -5,6 +5,7 @@
 /// determine if a node is in an SCC, rather than computing all SCCs explicitly.
 
 use std::collections::{HashMap, HashSet, VecDeque};
+use crate::domain::sparse_set::SparseSet;
 
 /// Represents a variable in the bipartite graph
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -99,26 +100,44 @@ impl BipartiteGraph {
 }
 
 /// Bitwise adjacency matrix for efficient connectivity checking
+/// Now supports arbitrary size graphs using bit vectors
 #[derive(Debug)]
 struct BitMatrix {
-    /// Adjacency matrix: bit_matrix[i] represents edges from node i
-    adjacency: HashMap<usize, u64>,
-    /// Frontier matrix for BFS expansion
-    frontier: HashMap<usize, u64>,
+    /// Adjacency matrix: bit_matrix[i] represents edges from node i using bit vectors
+    adjacency: HashMap<usize, Vec<u64>>,
     /// Node mapping
     node_to_id: HashMap<String, usize>,
     id_to_node: HashMap<usize, String>,
     next_id: usize,
+    /// Number of u64 chunks needed to represent all nodes
+    chunks: usize,
 }
 
 impl BitMatrix {
     fn new() -> Self {
         Self {
             adjacency: HashMap::new(),
-            frontier: HashMap::new(),
             node_to_id: HashMap::new(),
             id_to_node: HashMap::new(),
             next_id: 0,
+            chunks: 1, // Start with at least one chunk
+        }
+    }
+    
+    /// Calculate how many u64 chunks we need for n nodes
+    fn calculate_chunks(max_nodes: usize) -> usize {
+        (max_nodes + 63) / 64 // Round up division
+    }
+    
+    /// Expand bit vectors if needed to accommodate new nodes
+    fn ensure_capacity(&mut self, node_id: usize) {
+        let required_chunks = Self::calculate_chunks(node_id + 1);
+        if required_chunks > self.chunks {
+            self.chunks = required_chunks;
+            // Expand existing bit vectors
+            for bit_vec in self.adjacency.values_mut() {
+                bit_vec.resize(self.chunks, 0);
+            }
         }
     }
     
@@ -130,25 +149,34 @@ impl BitMatrix {
         
         let id = self.next_id;
         self.next_id += 1;
+        
+        // Ensure we have enough capacity
+        self.ensure_capacity(id);
+        
         self.node_to_id.insert(node.clone(), id);
         self.id_to_node.insert(id, node);
-        self.adjacency.insert(id, 0);
-        self.frontier.insert(id, 0);
+        self.adjacency.insert(id, vec![0u64; self.chunks]);
         id
     }
     
-    /// Add an edge between two nodes
+    /// Add an edge between two nodes (now supports unlimited nodes)
     fn add_edge(&mut self, from: &str, to: &str) {
         let from_id = self.add_node(from.to_string());
         let to_id = self.add_node(to.to_string());
         
-        if to_id < 64 { // Limit to 64 nodes for simplicity
-            let bit = 1u64 << to_id;
-            *self.adjacency.get_mut(&from_id).unwrap() |= bit;
+        // Calculate which chunk and bit position
+        let chunk_index = to_id / 64;
+        let bit_position = to_id % 64;
+        
+        if chunk_index < self.chunks {
+            let bit = 1u64 << bit_position;
+            if let Some(adjacency_vec) = self.adjacency.get_mut(&from_id) {
+                adjacency_vec[chunk_index] |= bit;
+            }
         }
     }
     
-    /// Check connectivity from one node to another using bitwise BFS
+    /// Check connectivity from one node to another using bitwise BFS (now scalable)
     fn is_connected(&mut self, from: &str, to: &str) -> bool {
         let from_id = match self.node_to_id.get(from) {
             Some(&id) => id,
@@ -159,30 +187,43 @@ impl BitMatrix {
             None => return false,
         };
         
-        if from_id >= 64 || to_id >= 64 {
-            return false; // Simplified implementation limit
+        // Initialize frontier and visited using bit vectors
+        let mut visited = vec![0u64; self.chunks];
+        let mut frontier = vec![0u64; self.chunks];
+        
+        // Set starting node in frontier
+        let from_chunk = from_id / 64;
+        let from_bit = from_id % 64;
+        if from_chunk < self.chunks {
+            frontier[from_chunk] |= 1u64 << from_bit;
         }
         
-        // Initialize frontier with starting node
-        let mut visited = 0u64;
-        let mut frontier = 1u64 << from_id;
-        
-        while frontier != 0 {
+        // BFS using bitwise operations on vectors
+        while !self.is_bitvec_empty(&frontier) {
             // Check if target is reachable
-            if (frontier & (1u64 << to_id)) != 0 {
+            let to_chunk = to_id / 64;
+            let to_bit = to_id % 64;
+            if to_chunk < self.chunks && (frontier[to_chunk] & (1u64 << to_bit)) != 0 {
                 return true;
             }
             
             // Mark current frontier as visited
-            visited |= frontier;
+            for i in 0..self.chunks {
+                visited[i] |= frontier[i];
+            }
             
-            // Expand frontier using bitwise operations
-            let mut new_frontier = 0u64;
-            for node_id in 0..64 {
-                if (frontier & (1u64 << node_id)) != 0 {
-                    // Add neighbors that haven't been visited
-                    if let Some(&neighbors) = self.adjacency.get(&node_id) {
-                        new_frontier |= neighbors & !visited;
+            // Expand frontier using bitwise operations on vectors
+            let mut new_frontier = vec![0u64; self.chunks];
+            for node_id in 0..self.next_id {
+                let node_chunk = node_id / 64;
+                let node_bit = node_id % 64;
+                
+                if node_chunk < self.chunks && (frontier[node_chunk] & (1u64 << node_bit)) != 0 {
+                    // This node is in the current frontier, add its neighbors
+                    if let Some(neighbors) = self.adjacency.get(&node_id) {
+                        for i in 0..self.chunks {
+                            new_frontier[i] |= neighbors[i] & !visited[i];
+                        }
                     }
                 }
             }
@@ -191,6 +232,11 @@ impl BitMatrix {
         }
         
         false
+    }
+    
+    /// Helper function to check if a bit vector is empty
+    fn is_bitvec_empty(&self, bitvec: &[u64]) -> bool {
+        bitvec.iter().all(|&chunk| chunk == 0)
     }
 }
 
@@ -661,5 +707,383 @@ mod tests {
         // At minimum, domains should be non-empty
         assert!(!domain1.is_empty());
         assert!(!domain2.is_empty());
+    }
+    
+    #[test]
+    fn test_bitmatrix_large_scale() {
+        // Test that we can handle more than 64 nodes (previous limitation)
+        let mut bit_matrix = BitMatrix::new();
+        
+        // Add 100 nodes to test scalability
+        for i in 0..100 {
+            let node_name = format!("node_{}", i);
+            bit_matrix.add_node(node_name);
+        }
+        
+        // Add some edges across the 64-node boundary
+        bit_matrix.add_edge("node_50", "node_70");  // Both > 64 would fail in old version
+        bit_matrix.add_edge("node_10", "node_90");
+        bit_matrix.add_edge("node_70", "node_80");
+        
+        // Test connectivity across large node IDs
+        assert!(bit_matrix.is_connected("node_50", "node_70"));
+        assert!(bit_matrix.is_connected("node_50", "node_80")); // Transitive
+        assert!(bit_matrix.is_connected("node_10", "node_90"));
+        assert!(!bit_matrix.is_connected("node_0", "node_99")); // No path
+    }
+    
+    #[test]
+    fn test_large_scale_gac() {
+        // Test GAC with more than 64 variables (would fail with old limit)
+        let mut gac = SparseSetGAC::new();
+        
+        // Add 100 variables with domains [1, 100]
+        for i in 0..100 {
+            gac.add_variable(Variable(i), 1, 100);
+        }
+        
+        // Should be consistent (100x100 is feasible)
+        assert!(gac.fast_gac_propagate());
+        
+        let stats = gac.stats();
+        assert_eq!(stats.total_variables, 100);
+        assert_eq!(stats.total_domain_size, 10000); // 100 variables * 100 values each
+    }
+}
+
+/// Enhanced GAC implementation using SparseSet for efficient domain operations
+/// This integrates the robust sparse_set with GAC to provide better performance
+/// and memory efficiency compared to vector-based implementations.
+pub struct SparseSetGAC {
+    /// Variable domains using SparseSet for O(1) operations
+    pub domains: HashMap<Variable, SparseSet>,
+    /// Cached matching for incremental updates
+    pub cached_matching: Option<Matching>,
+}
+
+impl SparseSetGAC {
+    /// Create a new SparseSet-based GAC instance
+    pub fn new() -> Self {
+        Self {
+            domains: HashMap::new(),
+            cached_matching: None,
+        }
+    }
+    
+    /// Add a variable with its initial domain range
+    pub fn add_variable(&mut self, var: Variable, min_val: i32, max_val: i32) {
+        let sparse_set = SparseSet::new(min_val, max_val);
+        self.domains.insert(var, sparse_set);
+        // Invalidate cached matching when topology changes
+        self.cached_matching = None;
+    }
+    
+    /// Remove a value from a variable's domain
+    pub fn remove_value(&mut self, var: Variable, val: i32) -> bool {
+        if let Some(domain) = self.domains.get_mut(&var) {
+            if domain.remove(val) {
+                // Invalidate cached matching when domains change
+                self.cached_matching = None;
+                return true;
+            }
+        }
+        false
+    }
+    
+    /// Fix a variable to a specific value (remove all others)
+    pub fn assign_variable(&mut self, var: Variable, val: i32) -> bool {
+        if let Some(domain) = self.domains.get_mut(&var) {
+            if domain.contains(val) {
+                domain.remove_all_but(val);
+                // Invalidate cached matching when assignments change
+                self.cached_matching = None;
+                return true;
+            }
+        }
+        false
+    }
+    
+    /// Remove values above a threshold
+    pub fn remove_above(&mut self, var: Variable, threshold: i32) -> bool {
+        if let Some(domain) = self.domains.get_mut(&var) {
+            let old_size = domain.size();
+            domain.remove_above(threshold);
+            let changed = domain.size() != old_size;
+            if changed {
+                self.cached_matching = None;
+            }
+            changed
+        } else {
+            false
+        }
+    }
+    
+    /// Remove values below a threshold  
+    pub fn remove_below(&mut self, var: Variable, threshold: i32) -> bool {
+        if let Some(domain) = self.domains.get_mut(&var) {
+            let old_size = domain.size();
+            domain.remove_below(threshold);
+            let changed = domain.size() != old_size;
+            if changed {
+                self.cached_matching = None;
+            }
+            changed
+        } else {
+            false
+        }
+    }
+    
+    /// Get the current domain values for a variable
+    pub fn get_domain_values(&self, var: Variable) -> Vec<i32> {
+        if let Some(domain) = self.domains.get(&var) {
+            domain.to_vec()
+        } else {
+            Vec::new()
+        }
+    }
+    
+    /// Check if a variable is assigned (domain size = 1)
+    pub fn is_assigned(&self, var: Variable) -> bool {
+        self.domains.get(&var).map_or(false, |d| d.is_fixed())
+    }
+    
+    /// Get assigned value if variable is assigned
+    pub fn get_assigned_value(&self, var: Variable) -> Option<i32> {
+        let domain = self.domains.get(&var)?;
+        if domain.is_fixed() {
+            Some(domain.min())
+        } else {
+            None
+        }
+    }
+    
+    /// Check if any domain is empty (inconsistent state)
+    pub fn has_empty_domain(&self) -> bool {
+        self.domains.values().any(|d| d.is_empty())
+    }
+    
+    /// Convert to BipartiteGraph for compatibility with existing GAC algorithms
+    pub fn to_bipartite_graph(&self) -> BipartiteGraph {
+        let mut graph = BipartiteGraph::new();
+        
+        for (&var, domain) in &self.domains {
+            let values = domain.to_vec();
+            graph.add_variable(var, values);
+        }
+        
+        graph
+    }
+    
+    /// Apply GAC propagation using sparse set operations
+    pub fn propagate_gac(&mut self) -> bool {
+        // Convert to bipartite graph for GAC algorithm
+        let mut graph = self.to_bipartite_graph();
+        
+        // Apply existing GAC algorithm
+        if !AllDiffbit::propagate(&mut graph) {
+            return false; // Inconsistent
+        }
+        
+        // Update sparse sets with filtered domains
+        let mut changed = false;
+        for (&var, sparse_domain) in &mut self.domains {
+            let new_domain = graph.domain(var);
+            let new_values: Vec<i32> = new_domain.iter().map(|v| v.0).collect();
+            
+            // Remove values that GAC eliminated
+            let current_values = sparse_domain.to_vec();
+            for val in current_values {
+                if !new_values.contains(&val) {
+                    if sparse_domain.remove(val) {
+                        changed = true;
+                    }
+                }
+            }
+        }
+        
+        // Update cached matching if we have changes
+        if changed {
+            self.cached_matching = None;
+        }
+        
+        true
+    }
+    
+    /// Get all variables
+    pub fn variables(&self) -> Vec<Variable> {
+        self.domains.keys().copied().collect()
+    }
+    
+    /// Optimized GAC that leverages SparseSet properties
+    pub fn fast_gac_propagate(&mut self) -> bool {
+        // Quick check: if any domain is empty, fail immediately
+        if self.has_empty_domain() {
+            return false;
+        }
+        
+        // Quick check: if all variables are assigned, verify all-different
+        let assigned_vars: Vec<_> = self.variables().into_iter()
+            .filter(|&v| self.is_assigned(v))
+            .collect();
+            
+        if assigned_vars.len() == self.domains.len() {
+            // All variables assigned - just check they're all different
+            let mut assigned_values = HashSet::new();
+            for var in assigned_vars {
+                if let Some(val) = self.get_assigned_value(var) {
+                    if !assigned_values.insert(val) {
+                        return false; // Duplicate value
+                    }
+                }
+            }
+            return true;
+        }
+        
+        // Use full GAC algorithm for partial assignments
+        self.propagate_gac()
+    }
+    
+    /// Get statistics about the current state
+    pub fn stats(&self) -> GACStats {
+        let total_vars = self.domains.len();
+        let assigned_vars = self.variables().into_iter()
+            .filter(|&v| self.is_assigned(v))
+            .count();
+        let total_domain_size: usize = self.domains.values()
+            .map(|d| d.size())
+            .sum();
+        let min_domain_size = self.domains.values()
+            .map(|d| d.size())
+            .min()
+            .unwrap_or(0);
+        let max_domain_size = self.domains.values()
+            .map(|d| d.size())
+            .max()
+            .unwrap_or(0);
+            
+        GACStats {
+            total_variables: total_vars,
+            assigned_variables: assigned_vars,
+            total_domain_size,
+            min_domain_size,
+            max_domain_size,
+        }
+    }
+}
+
+/// Statistics about GAC state
+#[derive(Debug, Clone)]
+pub struct GACStats {
+    pub total_variables: usize,
+    pub assigned_variables: usize,
+    pub total_domain_size: usize,
+    pub min_domain_size: usize,
+    pub max_domain_size: usize,
+}
+
+#[cfg(test)]
+mod sparse_set_gac_tests {
+    use super::*;
+    
+    #[test]
+    fn test_sparse_set_gac_basic() {
+        let mut gac = SparseSetGAC::new();
+        
+        // Add 3 variables with domains [1,3]
+        gac.add_variable(Variable(0), 1, 3);
+        gac.add_variable(Variable(1), 1, 3);
+        gac.add_variable(Variable(2), 1, 3);
+        
+        // Should be consistent
+        assert!(gac.fast_gac_propagate());
+        
+        // Check initial state
+        let stats = gac.stats();
+        assert_eq!(stats.total_variables, 3);
+        assert_eq!(stats.assigned_variables, 0);
+    }
+    
+    #[test]
+    fn test_sparse_set_gac_assignment() {
+        let mut gac = SparseSetGAC::new();
+        
+        gac.add_variable(Variable(0), 1, 3);
+        gac.add_variable(Variable(1), 1, 3);
+        gac.add_variable(Variable(2), 1, 3);
+        
+        // Assign variable 0 to value 1
+        assert!(gac.assign_variable(Variable(0), 1));
+        assert!(gac.is_assigned(Variable(0)));
+        assert_eq!(gac.get_assigned_value(Variable(0)), Some(1));
+        
+        // Should still be consistent
+        assert!(gac.fast_gac_propagate());
+    }
+    
+    #[test]
+    fn test_sparse_set_gac_impossible() {
+        let mut gac = SparseSetGAC::new();
+        
+        // Add 3 variables with only 2 possible values
+        gac.add_variable(Variable(0), 1, 2);
+        gac.add_variable(Variable(1), 1, 2);
+        gac.add_variable(Variable(2), 1, 2);
+        
+        // Should detect inconsistency
+        assert!(!gac.fast_gac_propagate());
+    }
+    
+    #[test]
+    fn test_sparse_set_gac_domain_operations() {
+        let mut gac = SparseSetGAC::new();
+        
+        gac.add_variable(Variable(0), 1, 5);
+        
+        // Test remove operations
+        assert!(gac.remove_value(Variable(0), 3));
+        assert!(!gac.remove_value(Variable(0), 3)); // Already removed
+        
+        assert!(gac.remove_above(Variable(0), 4));
+        assert!(gac.remove_below(Variable(0), 2));
+        
+        // Should have domain [2, 4] with 3 removed = [2, 4]
+        let mut domain = gac.get_domain_values(Variable(0));
+        domain.sort(); // Sort for consistent comparison
+        assert_eq!(domain, vec![2, 4]);
+    }
+    
+    #[test]
+    fn test_sparse_set_gac_all_assigned() {
+        let mut gac = SparseSetGAC::new();
+        
+        gac.add_variable(Variable(0), 1, 3);
+        gac.add_variable(Variable(1), 1, 3);
+        gac.add_variable(Variable(2), 1, 3);
+        
+        // Assign all variables to different values
+        assert!(gac.assign_variable(Variable(0), 1));
+        assert!(gac.assign_variable(Variable(1), 2));
+        assert!(gac.assign_variable(Variable(2), 3));
+        
+        // Should be consistent
+        assert!(gac.fast_gac_propagate());
+        
+        let stats = gac.stats();
+        assert_eq!(stats.assigned_variables, 3);
+    }
+    
+    #[test]
+    fn test_sparse_set_gac_duplicate_assignment() {
+        let mut gac = SparseSetGAC::new();
+        
+        gac.add_variable(Variable(0), 1, 3);
+        gac.add_variable(Variable(1), 1, 3);
+        
+        // Assign both to same value
+        assert!(gac.assign_variable(Variable(0), 1));
+        assert!(gac.assign_variable(Variable(1), 1));
+        
+        // Should detect conflict
+        assert!(!gac.fast_gac_propagate());
     }
 }
