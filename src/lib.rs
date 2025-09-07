@@ -35,6 +35,8 @@ pub mod views;
 pub mod solution;
 pub mod props;
 pub mod search;
+pub mod gac;
+pub mod domain;
 pub mod prelude;
 
 

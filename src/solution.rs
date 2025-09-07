@@ -1,5 +1,6 @@
 use std::borrow::Borrow;
 use std::ops::Index;
+use std::time::Duration;
 
 use crate::vars::{Val, VarId, VarIdBin};
 
@@ -10,6 +11,95 @@ pub struct SolveStats {
     pub propagation_count: usize,
     /// Number of search nodes (branching points) explored during solving
     pub node_count: usize,
+}
+
+/// Enhanced statistics with detailed timing information for performance analysis.
+#[derive(Clone, Debug, Default)]
+pub struct EnhancedSolveStats {
+    /// Number of propagation steps performed during solving
+    pub propagation_count: usize,
+    /// Number of search nodes (branching points) explored during solving
+    pub node_count: usize,
+    /// Total time spent in search/solving
+    pub total_time: Duration,
+    /// Time spent in constraint propagation
+    pub propagation_time: Duration,
+    /// Time spent in search/branching
+    pub search_time: Duration,
+    /// Time spent in variable domain operations
+    pub domain_time: Duration,
+    /// Time spent in constraint evaluation
+    pub constraint_time: Duration,
+    /// Number of backtracking operations
+    pub backtrack_count: usize,
+    /// Number of constraint checks performed
+    pub constraint_checks: usize,
+    /// Peak memory usage approximation (number of active search states)
+    pub peak_search_depth: usize,
+}
+
+impl EnhancedSolveStats {
+    /// Create a new enhanced stats tracker
+    pub fn new() -> Self {
+        Self::default()
+    }
+    
+    /// Get average time per propagation step
+    pub fn avg_propagation_time(&self) -> Duration {
+        if self.propagation_count > 0 {
+            self.propagation_time / self.propagation_count as u32
+        } else {
+            Duration::ZERO
+        }
+    }
+    
+    /// Get average time per search node
+    pub fn avg_search_time(&self) -> Duration {
+        if self.node_count > 0 {
+            self.search_time / self.node_count as u32
+        } else {
+            Duration::ZERO
+        }
+    }
+    
+    /// Convert to basic SolveStats for compatibility
+    pub fn to_basic(&self) -> SolveStats {
+        SolveStats {
+            propagation_count: self.propagation_count,
+            node_count: self.node_count,
+        }
+    }
+    
+    /// Display detailed performance analysis
+    pub fn display_analysis(&self) {
+        println!("=== Performance Analysis ===");
+        println!("Total time: {:.3}ms", self.total_time.as_secs_f64() * 1000.0);
+        println!("Propagation: {} steps, {:.3}ms total, {:.6}ms avg", 
+                 self.propagation_count, 
+                 self.propagation_time.as_secs_f64() * 1000.0,
+                 self.avg_propagation_time().as_secs_f64() * 1000.0);
+        println!("Search: {} nodes, {:.3}ms total, {:.6}ms avg", 
+                 self.node_count,
+                 self.search_time.as_secs_f64() * 1000.0,
+                 self.avg_search_time().as_secs_f64() * 1000.0);
+        println!("Domain ops: {:.3}ms", self.domain_time.as_secs_f64() * 1000.0);
+        println!("Constraints: {:.3}ms ({} checks)", 
+                 self.constraint_time.as_secs_f64() * 1000.0,
+                 self.constraint_checks);
+        println!("Backtracking: {} operations", self.backtrack_count);
+        println!("Peak search depth: {}", self.peak_search_depth);
+        
+        if self.total_time.as_nanos() > 0 {
+            let prop_pct = (self.propagation_time.as_nanos() * 100) / self.total_time.as_nanos();
+            let search_pct = (self.search_time.as_nanos() * 100) / self.total_time.as_nanos();
+            let domain_pct = (self.domain_time.as_nanos() * 100) / self.total_time.as_nanos();
+            let constraint_pct = (self.constraint_time.as_nanos() * 100) / self.total_time.as_nanos();
+            
+            println!("Time breakdown: {}% propagation, {}% search, {}% domain, {}% constraints",
+                     prop_pct, search_pct, domain_pct, constraint_pct);
+        }
+        println!("=============================");
+    }
 }
 
 /// Assignment for decision variables that satisfies all constraints.

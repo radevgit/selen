@@ -10,7 +10,7 @@ A Constraint Satisfaction Problem (CSP) solver library written in Rust.
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
 
-Supported types: float, int, mixed(int, float)
+Type of variables: float, int, mixed(int, float)
 
 Constraints supported include:
 - Arithmetic: `+`, `-`, `*`, `/`
