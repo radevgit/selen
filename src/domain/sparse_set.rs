@@ -3,6 +3,7 @@
 use std::fmt::Display;
 
 /// State snapshot for backtracking in SparseSet
+#[doc(hidden)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SparseSetState {
     pub size: u16,
@@ -362,6 +363,7 @@ impl SparseSet {
     // ===== BACKTRACKING SUPPORT =====
     
     /// Save the current state for backtracking
+    #[doc(hidden)]
     pub fn save_state(&self) -> SparseSetState {
         SparseSetState {
             size: self.size,
@@ -371,6 +373,7 @@ impl SparseSet {
     }
     
     /// Restore a previously saved state
+    #[doc(hidden)]
     pub fn restore_state(&mut self, state: &SparseSetState) {
         self.size = state.size;
         self.min = state.min;

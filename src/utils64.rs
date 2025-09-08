@@ -1,6 +1,7 @@
 const TWO_COMPLEMENT_64: u64 = 0x8000_0000_0000_0000_u64;
 const TWO_COMPLEMENT_CI_64: i64 = TWO_COMPLEMENT_64 as i64;
 
+#[doc(hidden)]
 // Compares two f64 values for approximate equality
 // Use ULP (Units in the Last Place) comparison.
 #[inline]
@@ -26,12 +27,14 @@ pub fn almost_equal_as_int64(a: f64, b: f64, ulps: u64) -> bool {
 }
 
 pub const FLOAT_INT_EPS_64: u64 = 10;
+#[doc(hidden)]
 #[inline]
 #[must_use]
 pub fn float_equal_64(a: f64, b: f64) -> bool {
     almost_equal_as_int64(a, b, FLOAT_INT_EPS_64)
 }
 
+#[doc(hidden)]
 #[must_use]
 pub fn float_perturbed_as_int64(f: f64, c: i64) -> f64 {
     debug_assert!(f.is_finite());

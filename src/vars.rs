@@ -12,6 +12,7 @@ pub enum Var {
     VarI(SparseSet),
 }
 
+/// Value type that can represent either an integer or a floating-point number.
 #[derive(Copy, Clone, Debug)]
 pub enum Val {
     /// Single integer value
@@ -126,6 +127,7 @@ impl std::ops::Sub for Val {
 }
 
 impl Var {
+    #[doc(hidden)]
     /// Assigned variables have a domain reduced to a singleton.
     pub fn is_assigned(&self) -> bool {
         use crate::utils::float_equal;
@@ -135,6 +137,7 @@ impl Var {
         }
     }
 
+    #[doc(hidden)]
     /// Midpoint of domain for easier binary splits.
     pub fn mid(&self) -> Val {
         match self {
@@ -166,6 +169,7 @@ impl Var {
         }
     }
 
+    #[doc(hidden)]
     /// Extract assignment for decision variable.
     ///
     /// # Panics
@@ -186,16 +190,19 @@ impl Var {
 }
 
 /// Store decision variables and expose a limited interface to operate on them.
+#[doc(hidden)]
 #[derive(Clone, Debug, Default)]
 pub struct Vars(Vec<Var>);
 
 impl Vars {
     /// Create a new empty collection of variables.
+    #[doc(hidden)]
     pub fn new() -> Self {
         Vars(Vec::new())
     }
 
     /// Create a new decision variable.
+    #[doc(hidden)]
     pub fn new_var_with_bounds(&mut self, min: Val, max: Val) -> VarId {
         let v = VarId(self.0.len());
 
@@ -235,6 +242,7 @@ impl Vars {
     /// let mut vars = Vars::new();
     /// let var = vars.new_var_with_values(vec![2, 4, 6, 8]); // Even numbers only
     /// ```
+    #[doc(hidden)]
     pub fn new_var_with_values(&mut self, values: Vec<i32>) -> VarId {
         let v = VarId(self.0.len());
         let sparse_set = SparseSet::new_from_values(values);
@@ -245,6 +253,7 @@ impl Vars {
     /// Get handle to an unassigned decision variable using Most Restricted Variable (MRV) heuristic.
     /// 
     /// Get the first unassigned variable.
+    #[doc(hidden)]
     pub fn get_unassigned_var(&self) -> Option<VarId> {
         for (index, var) in self.0.iter().enumerate() {
             if !var.is_assigned() {
@@ -256,11 +265,13 @@ impl Vars {
     }
 
     /// Determine if all decision variables are assigned.
+    #[doc(hidden)]
     pub fn is_assigned_all(&self) -> bool {
         self.get_unassigned_var().is_none()
     }
 
     /// Get an iterator over all variables with their indices for validation.
+    #[doc(hidden)]
     pub fn iter_with_indices(&self) -> impl Iterator<Item = (usize, &Var)> {
         self.0.iter().enumerate()
     }
@@ -270,6 +281,7 @@ impl Vars {
     /// # Panics
     ///
     /// This function will panic if any decision variables are not assigned.
+    #[doc(hidden)]
     pub fn into_solution(self) -> Solution {
         // Extract values for each decision variable
         let values: Vec<_> = self.0.into_iter().map(|v| v.get_assignment()).collect();
@@ -278,6 +290,7 @@ impl Vars {
     }
 
     /// Save state of all sparse set variables for efficient backtracking
+    #[doc(hidden)]
     pub fn save_sparse_states(&self) -> Vec<Option<SparseSetState>> {
         self.0.iter().map(|var| {
             match var {
@@ -288,6 +301,7 @@ impl Vars {
     }
 
     /// Restore state of all sparse set variables from saved state
+    #[doc(hidden)]
     pub fn restore_sparse_states(&mut self, states: &[Option<SparseSetState>]) {
         debug_assert_eq!(self.0.len(), states.len(), "State vector size mismatch");
         
