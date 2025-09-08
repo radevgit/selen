@@ -13,6 +13,13 @@ impl Model {
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
     /// We don't want to deal with "unwrap" every time
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let var = model.new_var(Val::int(1), Val::int(10));
+    /// ```
     pub fn new_var(&mut self, min: Val, max: Val) -> VarId {
         if min < max {
             self.new_var_unchecked(min, max)
@@ -26,6 +33,13 @@ impl Model {
     /// All created variables will have the same starting domain bounds.
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars(3, Val::int(0), Val::int(5)).collect();
+    /// ```
     pub fn new_vars(&mut self, n: usize, min: Val, max: Val) -> impl Iterator<Item = VarId> + '_ {
         let (actual_min, actual_max) = if min < max { (min, max) } else { (max, min) };
         core::iter::repeat_with(move || self.new_var_unchecked(actual_min, actual_max)).take(n)
@@ -35,6 +49,13 @@ impl Model {
     ///
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let var = model.new_var_int(1, 10);
+    /// ```
     pub fn new_var_int(&mut self, min: i32, max: i32) -> VarId {
         self.new_var(Val::ValI(min), Val::ValI(max))
     }
@@ -42,6 +63,13 @@ impl Model {
     /// Create new integer decision variables, with the provided domain bounds.
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars_int(5, 0, 9).collect();
+    /// ```
     pub fn new_vars_int(
         &mut self,
         n: usize,
@@ -60,7 +88,7 @@ impl Model {
     /// # Returns
     /// A new VarId for the created variable
     ///
-    /// # Example
+    ///
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
@@ -75,6 +103,13 @@ impl Model {
     ///
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let var = model.new_var_float(0.0, 10.5);
+    /// ```
     pub fn new_var_float(&mut self, min: f32, max: f32) -> VarId {
         self.new_var(Val::ValF(min), Val::ValF(max))
     }
@@ -83,6 +118,13 @@ impl Model {
     ///
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars_float(3, 0.0, 1.0).collect();
+    /// ```
     pub fn new_vars_float(
         &mut self,
         n: usize,
@@ -93,11 +135,25 @@ impl Model {
     }
 
     /// Create a new binary decision variable.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let var = model.new_var_binary();
+    /// ```
     pub fn new_var_binary(&mut self) -> VarIdBin {
         VarIdBin(self.new_var_unchecked(Val::ValI(0), Val::ValI(1)))
     }
 
     /// Create new binary decision variables.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars_binary(4).collect();
+    /// ```
     pub fn new_vars_binary(&mut self, n: usize) -> impl Iterator<Item = VarIdBin> + '_ {
         core::iter::repeat_with(|| self.new_var_binary()).take(n)
     }
@@ -113,6 +169,15 @@ impl Model {
     }
 
     /// Create an expression of two views added together.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 5);
+    /// let y = model.new_var_int(2, 8);
+    /// let sum = model.add(x, y);
+    /// ```
     pub fn add(&mut self, x: impl View, y: impl View) -> VarId {
         let min = x.min_raw(&self.vars) + y.min_raw(&self.vars);
         let max = x.max_raw(&self.vars) + y.max_raw(&self.vars);
@@ -124,11 +189,27 @@ impl Model {
     }
 
     /// Create an expression of the sum of a slice of views.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars_int(3, 1, 10).collect();
+    /// let total = model.sum(&vars);
+    /// ```
     pub fn sum(&mut self, xs: &[impl View]) -> VarId {
         self.sum_iter(xs.iter().copied())
     }
 
     /// Create an expression of the sum of an iterator of views.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars_int(3, 1, 10).collect();
+    /// let total = model.sum_iter(vars.iter().copied());
+    /// ```
     pub fn sum_iter(&mut self, xs: impl IntoIterator<Item = impl View>) -> VarId {
         let xs: Vec<_> = xs.into_iter().collect();
 
@@ -142,21 +223,56 @@ impl Model {
     }
 
     /// Declare two expressions to be equal.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let y = model.new_var_int(1, 10);
+    /// model.equals(x, y);
+    /// ```
     pub fn equals(&mut self, x: impl View, y: impl View) {
         let _p = self.props.equals(x, y);
     }
 
     /// Declare two expressions to be not equal.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let y = model.new_var_int(1, 10);
+    /// model.not_equals(x, y);
+    /// ```
     pub fn not_equals(&mut self, x: impl View, y: impl View) {
         let _p = self.props.not_equals(x, y);
     }
 
     /// Declare constraint `x <= y`.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let y = model.new_var_int(5, 15);
+    /// model.less_than_or_equals(x, y);
+    /// ```
     pub fn less_than_or_equals(&mut self, x: impl View, y: impl View) {
         let _p = self.props.less_than_or_equals(x, y);
     }
 
     /// Declare constraint `x < y`.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// model.less_than(x, Val::int(5));
+    /// ```
     pub fn less_than(&mut self, x: impl View, y: impl View) {
         //let mut events = Vec::new();
         //let ctx = Context::new(&mut self.vars, &mut events);
@@ -164,11 +280,28 @@ impl Model {
     }
 
     /// Declare constraint `x >= y`.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(5, 15);
+    /// let y = model.new_var_int(1, 10);
+    /// model.greater_than_or_equals(x, y);
+    /// ```
     pub fn greater_than_or_equals(&mut self, x: impl View, y: impl View) {
         let _p = self.props.greater_than_or_equals(x, y);
     }
 
     /// Declare constraint `x > y`.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// model.greater_than(x, float(2.5));
+    /// ```
     pub fn greater_than(&mut self, x: impl View, y: impl View) {
         //let mut events = Vec::new();
         //let ctx = Context::new(&mut self.vars, &mut events);
@@ -177,17 +310,44 @@ impl Model {
 
     /// Declare all-different constraint: all variables must have distinct values.
     /// This is more efficient than adding pairwise not-equals constraints.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars_int(4, 1, 4).collect();
+    /// model.all_different(vars);
+    /// ```
     pub fn all_different(&mut self, vars: Vec<VarId>) {
         let _p = self.props.all_different(vars);
     }
 
     /// Find assignment that minimizes objective expression while satisfying all constraints.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// model.greater_than(x, Val::int(3));
+    /// let solution = model.minimize(x);
+    /// ```
     #[must_use]
     pub fn minimize(self, objective: impl View) -> Option<Solution> {
         self.minimize_and_iterate(objective).last()
     }
 
     /// Find assignment that minimizes objective expression with callback to capture solving statistics.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let solution = model.minimize_with_callback(x, |stats| {
+    ///     println!("Propagations: {}", stats.propagation_count);
+    /// });
+    /// ```
     #[must_use]
     pub fn minimize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
     where
@@ -219,6 +379,14 @@ impl Model {
     /// Enumerate assignments that satisfy all constraints, while minimizing objective expression.
     ///
     /// The order in which assignments are yielded is not stable.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 5);
+    /// let solutions: Vec<_> = model.minimize_and_iterate(x).collect();
+    /// ```
     pub fn minimize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
         let (vars, props) = self.prepare_for_search();
         search(vars, props, mode::Minimize::new(objective))
@@ -259,12 +427,31 @@ impl Model {
     }
 
     /// Find assignment that maximizes objective expression while satisfying all constraints.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// model.less_than(x, Val::int(8));
+    /// let solution = model.maximize(x);
+    /// ```
     #[must_use]
     pub fn maximize(self, objective: impl View) -> Option<Solution> {
         self.minimize(objective.opposite())
     }
 
     /// Find assignment that maximizes objective expression with callback to capture solving statistics.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let solution = model.maximize_with_callback(x, |stats| {
+    ///     println!("Nodes explored: {}", stats.node_count);
+    /// });
+    /// ```
     #[must_use]
     pub fn maximize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
     where
@@ -276,6 +463,14 @@ impl Model {
     /// Enumerate assignments that satisfy all constraints, while maximizing objective expression.
     ///
     /// The order in which assignments are yielded is not stable.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 5);
+    /// let solutions: Vec<_> = model.maximize_and_iterate(x).collect();
+    /// ```
     pub fn maximize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
         self.minimize_and_iterate(objective.opposite())
     }
@@ -339,6 +534,7 @@ impl Model {
         Ok(())
     }
 
+    #[doc(hidden)]
     /// Optimize constraint processing order based on constraint characteristics.
     ///
     /// This method analyzes constraints (particularly AllDifferent) and reorders them
@@ -346,6 +542,15 @@ impl Model {
     /// This can significantly improve solving performance by doing more effective propagation earlier.
     ///
     /// Should be called after all constraints are added but before solving.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars_int(4, 1, 4).collect();
+    /// model.all_different(vars);
+    /// model.optimize_constraint_order();
+    /// ```
     pub fn optimize_constraint_order(&mut self) -> &mut Self {
         // Since we can't downcast trait objects easily, we'll implement this optimization
         // at the Propagators level by adding a method there
@@ -356,6 +561,16 @@ impl Model {
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
 
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let y = model.new_var_int(1, 10);
+    /// model.not_equals(x, y);
+    /// let solution = model.solve();
+    /// ```
     #[must_use]
     pub fn solve(self) -> Option<Solution> {
         self.enumerate().next()
@@ -364,6 +579,16 @@ impl Model {
     /// Search for assignment with a callback to capture solving statistics.
     ///
     /// The callback receives the solving statistics when the search completes.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let solution = model.solve_with_callback(|stats| {
+    ///     println!("Search completed with {} propagations", stats.propagation_count);
+    /// });
+    /// ```
     #[must_use]
     pub fn solve_with_callback<F>(self, callback: F) -> Option<Solution>
     where
@@ -389,6 +614,7 @@ impl Model {
         result
     }
 
+    #[doc(hidden)]
     /// Internal helper that automatically optimizes constraints before search.
     /// This ensures all solving methods benefit from constraint optimization.
     fn prepare_for_search(mut self) -> (crate::vars::Vars, crate::props::Propagators) {
@@ -400,6 +626,16 @@ impl Model {
     /// Enumerate all assignments that satisfy all constraints.
     ///
     /// The order in which assignments are yielded is not stable.
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 3);
+    /// let y = model.new_var_int(1, 3);
+    /// model.not_equals(x, y);
+    /// let solutions: Vec<_> = model.enumerate().collect();
+    /// ```
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
         let (vars, props) = self.prepare_for_search();
         search(vars, props, mode::Enumerate)
