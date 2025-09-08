@@ -11,6 +11,7 @@ pub struct SparseSetState {
     pub max: u16,
 }
 
+#[doc(hidden)]
 #[derive(Debug, Clone)]
 pub struct SparseSet {
     off: i32,      // the domain offset (fixed)
