@@ -20,6 +20,7 @@
 // pub use crate::solver::*;
 // pub use crate::variable::*;
 
+#[doc(hidden)]
 pub use crate::utils::*;
 pub use crate::vars::*;
 pub use crate::views::*;

@@ -3,6 +3,7 @@
 use std::fmt::Display;
 
 /// State snapshot for backtracking in SparseSet
+#[doc(hidden)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct SparseSetState {
     pub size: u16,
@@ -63,6 +64,43 @@ impl SparseSet {
             ind: (0..n).collect(),
             val: (0..n).collect(),
         }
+    }
+
+    /// Create a SparseSet from a vector of specific values
+    /// Memory efficient - creates full range then removes unwanted values
+    pub fn new_from_values(values: Vec<i32>) -> Self {
+        if values.is_empty() {
+            // Return empty sparse set with minimal footprint
+            return SparseSet {
+                off: 0,
+                min: 0,
+                max: 0,
+                n: 0,
+                size: 0,
+                ind: Vec::new(),
+                val: Vec::new(),
+            };
+        }
+
+        // Sort and deduplicate values
+        let mut sorted_values = values;
+        sorted_values.sort_unstable();
+        sorted_values.dedup();
+
+        let min_val = sorted_values[0];
+        let max_val = sorted_values[sorted_values.len() - 1];
+        
+        // Create sparse set with full range - this ensures compatibility with all operations
+        let mut sparse_set = SparseSet::new(min_val, max_val);
+        
+        // Remove all values that are not in our desired set
+        for i in min_val..=max_val {
+            if !sorted_values.contains(&i) {
+                sparse_set.remove(i);
+            }
+        }
+        
+        sparse_set
     }
 
     pub fn min(&self) -> i32 {
@@ -322,54 +360,10 @@ impl SparseSet {
         self.iter().all(|val| other.contains(val))
     }
 
-    /// Create a new sparse set from a vector of values
-    pub fn from_values(values: Vec<i32>) -> Self {
-        if values.is_empty() {
-            // Create an empty set with minimal valid range
-            let mut set = Self::new(0, 0);
-            set.remove_all(); // Make it empty
-            return set;
-        }
-        
-        let min_val = *values.iter().min().unwrap();
-        let max_val = *values.iter().max().unwrap();
-        let mut set = Self::new(min_val, max_val);
-        
-        // Remove all values first, then add only the specified ones
-        set.remove_all();
-        
-        for val in values {
-            if val >= min_val && val <= max_val {
-                let val_internal = (val - set.off) as u16;
-                // Add value to the active set
-                let new_pos = set.size;
-                let old_val_at_pos = set.val[new_pos as usize];
-                
-                // Swap the value to the active part
-                set.exchange(val_internal, old_val_at_pos);
-                set.size += 1;
-                
-                // Update bounds
-                if set.size == 1 {
-                    set.min = val_internal;
-                    set.max = val_internal;
-                } else {
-                    if val_internal < set.min {
-                        set.min = val_internal;
-                    }
-                    if val_internal > set.max {
-                        set.max = val_internal;
-                    }
-                }
-            }
-        }
-        
-        set
-    }
-
     // ===== BACKTRACKING SUPPORT =====
     
     /// Save the current state for backtracking
+    #[doc(hidden)]
     pub fn save_state(&self) -> SparseSetState {
         SparseSetState {
             size: self.size,
@@ -379,6 +373,7 @@ impl SparseSet {
     }
     
     /// Restore a previously saved state
+    #[doc(hidden)]
     pub fn restore_state(&mut self, state: &SparseSetState) {
         self.size = state.size;
         self.min = state.min;
@@ -686,11 +681,14 @@ mod test {
         assert_eq!(v.max_universe_value(), 10);
     }
 
+    // Tests for new_from_values method
     #[test]
-    fn test_from_values() {
-        let v = SparseSet::from_values(vec![2, 4, 6, 8]);
+    fn test_new_from_values_basic() {
+        let v = SparseSet::new_from_values(vec![2, 4, 6, 8]);
         
         assert_eq!(v.size(), 4);
+        assert_eq!(v.min(), 2);
+        assert_eq!(v.max(), 8);
         assert!(v.contains(2));
         assert!(v.contains(4));
         assert!(v.contains(6));
@@ -699,13 +697,239 @@ mod test {
         assert!(!v.contains(3));
         assert!(!v.contains(5));
         assert!(!v.contains(7));
+        assert!(!v.contains(9));
+        
+        // Check that all values are in the iterator
+        let values: Vec<i32> = v.iter().collect();
+        assert_eq!(values.len(), 4);
+        for val in [2, 4, 6, 8] {
+            assert!(values.contains(&val));
+        }
     }
 
     #[test]
-    fn test_from_values_empty() {
-        let v = SparseSet::from_values(vec![]);
+    fn test_new_from_values_empty() {
+        let v = SparseSet::new_from_values(vec![]);
         assert!(v.is_empty());
         assert_eq!(v.size(), 0);
+        assert_eq!(v.universe_size(), 0);
+    }
+
+    #[test]
+    fn test_new_from_values_single() {
+        let v = SparseSet::new_from_values(vec![42]);
+        assert_eq!(v.size(), 1);
+        assert_eq!(v.min(), 42);
+        assert_eq!(v.max(), 42);
+        assert!(v.is_fixed());
+        assert!(v.contains(42));
+        assert!(!v.contains(41));
+        assert!(!v.contains(43));
+    }
+
+    #[test]
+    fn test_new_from_values_contiguous() {
+        let v = SparseSet::new_from_values(vec![3, 4, 5, 6]);
+        assert_eq!(v.size(), 4);
+        assert_eq!(v.min(), 3);
+        assert_eq!(v.max(), 6);
+        
+        for i in 3..=6 {
+            assert!(v.contains(i));
+        }
+        assert!(!v.contains(2));
+        assert!(!v.contains(7));
+    }
+
+    #[test]
+    fn test_new_from_values_duplicates() {
+        let v = SparseSet::new_from_values(vec![1, 3, 1, 5, 3, 5]);
+        assert_eq!(v.size(), 3); // Should deduplicate
+        assert!(v.contains(1));
+        assert!(v.contains(3));
+        assert!(v.contains(5));
+        assert!(!v.contains(2));
+        assert!(!v.contains(4));
+    }
+
+    #[test]
+    fn test_new_from_values_unsorted() {
+        let v = SparseSet::new_from_values(vec![5, 1, 3, 7, 2]);
+        assert_eq!(v.size(), 5);
+        assert_eq!(v.min(), 1);
+        assert_eq!(v.max(), 7);
+        
+        for i in [1, 2, 3, 5, 7] {
+            assert!(v.contains(i));
+        }
+        assert!(!v.contains(4));
+        assert!(!v.contains(6));
+    }
+
+    #[test]
+    fn test_new_from_values_negative() {
+        let v = SparseSet::new_from_values(vec![-3, -1, 1, 3]);
+        assert_eq!(v.size(), 4);
+        assert_eq!(v.min(), -3);
+        assert_eq!(v.max(), 3);
+        
+        assert!(v.contains(-3));
+        assert!(v.contains(-1));
+        assert!(v.contains(1));
+        assert!(v.contains(3));
+        assert!(!v.contains(-2));
+        assert!(!v.contains(0));
+        assert!(!v.contains(2));
+    }
+
+    #[test]
+    fn test_new_from_values_operations() {
+        let mut v = SparseSet::new_from_values(vec![2, 4, 6, 8, 10]);
+        
+        // Test removal
+        assert!(v.remove(4));
+        assert_eq!(v.size(), 4);
+        assert!(!v.contains(4));
+        assert!(v.contains(2));
+        assert!(v.contains(6));
+        
+        // Test remove_all_but
+        v.remove_all_but(8);
+        assert_eq!(v.size(), 1);
+        assert!(v.is_fixed());
+        assert!(v.contains(8));
+        assert!(!v.contains(2));
+        assert!(!v.contains(6));
+        assert!(!v.contains(10));
+    }
+
+    #[test]
+    fn test_new_from_values_bounds_operations() {
+        let mut v = SparseSet::new_from_values(vec![1, 3, 5, 7, 9]);
+        
+        // Test remove_below
+        v.remove_below(5);
+        assert_eq!(v.size(), 3);
+        assert!(v.contains(5));
+        assert!(v.contains(7));
+        assert!(v.contains(9));
+        assert!(!v.contains(1));
+        assert!(!v.contains(3));
+        
+        // Test remove_above
+        v.remove_above(7);
+        assert_eq!(v.size(), 2);
+        assert!(v.contains(5));
+        assert!(v.contains(7));
+        assert!(!v.contains(9));
+    }
+
+    #[test]
+    fn test_new_from_values_vs_new_equivalence() {
+        // Test that new_from_values with contiguous range is equivalent to new
+        let v1 = SparseSet::new(5, 8);
+        let v2 = SparseSet::new_from_values(vec![5, 6, 7, 8]);
+        
+        assert_eq!(v1.size(), v2.size());
+        assert_eq!(v1.min(), v2.min());
+        assert_eq!(v1.max(), v2.max());
+        
+        for i in 5..=8 {
+            assert_eq!(v1.contains(i), v2.contains(i));
+        }
+        
+        // Test that iterators produce same values
+        let mut vals1: Vec<i32> = v1.iter().collect();
+        let mut vals2: Vec<i32> = v2.iter().collect();
+        vals1.sort();
+        vals2.sort();
+        assert_eq!(vals1, vals2);
+    }
+
+    #[test]
+    fn test_new_from_values_memory_efficiency() {
+        // Test sparse domain - should be more memory efficient than full range
+        let v = SparseSet::new_from_values(vec![1, 1000]);
+        
+        assert_eq!(v.size(), 2);
+        assert_eq!(v.universe_size(), 1000); // Range is 1000
+        assert!(v.contains(1));
+        assert!(v.contains(1000));
+        assert!(!v.contains(500));
+        
+        // val array should only contain 2 elements, not 1000
+        let values: Vec<i32> = v.iter().collect();
+        assert_eq!(values.len(), 2);
+    }
+
+    #[test]
+    fn test_new_from_values_with_set_operations() {
+        // Test union with new_from_values
+        let mut v1 = SparseSet::new_from_values(vec![1, 3, 5]);
+        let v2 = SparseSet::new_from_values(vec![2, 4, 5]); // 5 is common
+        
+        v1.union_with(&v2);
+        
+        // v1 should now contain {1, 2, 3, 4, 5}
+        assert_eq!(v1.size(), 5);
+        for i in 1..=5 {
+            assert!(v1.contains(i));
+        }
+    }
+
+    #[test]
+    fn test_new_from_values_subset_operations() {
+        let v1 = SparseSet::new_from_values(vec![2, 4]);
+        let v2 = SparseSet::new_from_values(vec![1, 2, 3, 4, 5]);
+        let v3 = SparseSet::new_from_values(vec![2, 4, 6]);
+        
+        assert!(v1.is_subset_of(&v2)); // {2, 4} ⊆ {1, 2, 3, 4, 5}
+        assert!(v1.is_subset_of(&v3)); // {2, 4} ⊆ {2, 4, 6}
+        assert!(v1.is_subset_of(&v1)); // Set is subset of itself
+        
+        // Test empty set is subset of any set
+        let empty = SparseSet::new_from_values(vec![]);
+        assert!(empty.is_subset_of(&v1));
+        assert!(empty.is_subset_of(&v2));
+    }
+
+    #[test]
+    fn test_new_from_values_equality() {
+        let v1 = SparseSet::new_from_values(vec![1, 3, 5]);
+        let v2 = SparseSet::new_from_values(vec![5, 1, 3]); // Same values, different order
+        let v3 = SparseSet::new_from_values(vec![1, 3]);
+        
+        assert!(v1.equals(&v2));
+        assert!(!v1.equals(&v3));
+        assert!(v1 == v2); // Test PartialEq implementation
+        assert!(v1 != v3);
+    }
+
+    #[test]
+    fn test_new_from_values_backtracking() {
+        let mut set = SparseSet::new_from_values(vec![2, 4, 6, 8, 10]);
+        
+        // Save initial state
+        let initial_state = set.save_state();
+        assert_eq!(initial_state.size, 5);
+        
+        // Make some changes
+        set.remove(2);
+        set.remove(10);
+        
+        assert_eq!(set.size(), 3);
+        assert!(!set.contains(2));
+        assert!(!set.contains(10));
+        assert!(set.contains(4));
+        assert!(set.contains(6));
+        assert!(set.contains(8));
+        
+        // Restore to initial state
+        set.restore_state(&initial_state);
+        assert_eq!(set.size(), 5);
+        for val in [2, 4, 6, 8, 10] {
+            assert!(set.contains(val));
+        }
     }
 
     #[test]
@@ -728,48 +952,6 @@ mod test {
         assert!(!v1.contains(1));
         assert!(!v1.contains(3));
         assert!(!v1.contains(5));
-    }
-
-    #[test]
-    fn test_union_with() {
-        let mut v1 = SparseSet::from_values(vec![1, 3, 5]);
-        let v2 = SparseSet::from_values(vec![2, 4, 5]); // 5 is common
-        
-        v1.union_with(&v2);
-        
-        // v1 should now contain {1, 2, 3, 4, 5}
-        assert_eq!(v1.size(), 5);
-        for i in 1..=5 {
-            assert!(v1.contains(i));
-        }
-    }
-
-    #[test]
-    fn test_is_subset_of() {
-        let v1 = SparseSet::from_values(vec![2, 4]);
-        let v2 = SparseSet::from_values(vec![1, 2, 3, 4, 5]);
-        let v3 = SparseSet::from_values(vec![2, 4, 6]);
-        
-        assert!(v1.is_subset_of(&v2)); // {2, 4} ⊆ {1, 2, 3, 4, 5}
-        assert!(v1.is_subset_of(&v3)); // {2, 4} ⊆ {2, 4, 6} - mathematically correct
-        assert!(v1.is_subset_of(&v1)); // Set is subset of itself
-        
-        // Test empty set is subset of any set
-        let empty = SparseSet::from_values(vec![]);
-        assert!(empty.is_subset_of(&v1));
-        assert!(empty.is_subset_of(&v2));
-    }
-
-    #[test]
-    fn test_equals() {
-        let v1 = SparseSet::from_values(vec![1, 3, 5]);
-        let v2 = SparseSet::from_values(vec![5, 1, 3]); // Same values, different order
-        let v3 = SparseSet::from_values(vec![1, 3]);
-        
-        assert!(v1.equals(&v2));
-        assert!(!v1.equals(&v3));
-        assert!(v1 == v2); // Test PartialEq implementation
-        assert!(v1 != v3);
     }
 
     #[test]

@@ -2,6 +2,7 @@
 const TWO_COMPLEMENT: u32 = 0x8000_0000_u32;
 const TWO_COMPLEMENT_CI: i32 = TWO_COMPLEMENT as i32;
 
+#[doc(hidden)]
 // Compares two f32 values for approximate equality
 // Use ULP (Units in the Last Place) comparison.
 #[inline]
@@ -26,6 +27,7 @@ pub fn almost_equal_as_int(a: f32, b: f32, ulps: u32) -> bool {
     diff.abs() <= ulps as i64
 }
 
+#[doc(hidden)]
 pub const FLOAT_INT_EPS: u32 = 10;
 #[inline]
 #[must_use]
@@ -33,6 +35,7 @@ pub fn float_equal(a: f32, b: f32) -> bool {
     almost_equal_as_int(a, b, FLOAT_INT_EPS)
 }
 
+#[doc(hidden)]
 #[must_use]
 pub fn float_perturbed_as_int(f: f32, c: i32) -> f32 {
     debug_assert!(f.is_finite());

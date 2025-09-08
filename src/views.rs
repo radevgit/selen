@@ -1,5 +1,6 @@
 use crate::vars::{Val, Var, VarId, VarIdBin, Vars};
 
+#[doc(hidden)]
 /// Represents the result type that a view produces
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ViewType {
@@ -9,6 +10,7 @@ pub enum ViewType {
     Float,
 }
 
+#[doc(hidden)]
 /// Apply simple domain transformations on the fly to make propagators more generic.
 #[allow(private_bounds)]
 pub trait View: ViewRaw {
@@ -41,6 +43,7 @@ pub trait View: ViewRaw {
     fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val>;
 }
 
+#[doc(hidden)]
 /// Extension trait to provide helper methods on views.
 pub trait ViewExt: View {
     /// Invert the sign of the bounds of the underlying view.
@@ -76,6 +79,7 @@ pub trait ViewExt: View {
     fn prev(self) -> Prev<Self>;
 }
 
+#[doc(hidden)]
 /// Extension trait for debug formatting views with domain information.
 pub trait ViewDebugExt: View {
     /// Format view with domain bounds for debugging.
@@ -140,11 +144,13 @@ pub struct Context<'s> {
 }
 
 impl<'s> Context<'s> {
+    #[doc(hidden)]
     /// Initialize context from mutable references to outside objects.
     pub(crate) fn new(vars: &'s mut Vars, events: &'s mut Vec<VarId>) -> Self {
         Self { vars, events }
     }
 
+    #[doc(hidden)]
     /// Try to set provided value as domain minimum, failing the space on infeasibility.
     pub fn try_set_min(&mut self, v: VarId, min: Val) -> Option<Val> {
         // Access domain of variable using the provided handle
@@ -254,6 +260,7 @@ impl<'s> Context<'s> {
         }
     }
 
+    #[doc(hidden)]
     /// Try to set provided value as domain maximum, failing the space on infeasibility.
     pub fn try_set_max(&mut self, v: VarId, max: Val) -> Option<Val> {
         // Access domain of variable using the provided handle
@@ -364,6 +371,7 @@ impl<'s> Context<'s> {
     }
 }
 
+#[doc(hidden)]
 // Trait kept internal, to prevent users from declaring their own views.
 pub(crate) trait ViewRaw: Copy + core::fmt::Debug + 'static {
     /// Get the handle of the variable this view depends on.
@@ -475,6 +483,7 @@ impl View for VarIdBin {
     }
 }
 
+#[doc(hidden)]
 /// Invert the sign of the bounds of the underlying view.
 #[derive(Clone, Copy)]
 pub struct Opposite<V>(V);
@@ -485,6 +494,7 @@ impl<V: std::fmt::Debug> std::fmt::Debug for Opposite<V> {
     }
 }
 
+#[doc(hidden)]
 /// Apply next operation using ULP-based approach.
 #[derive(Clone, Copy)]
 pub struct Next<V> {
@@ -497,6 +507,7 @@ impl<V: std::fmt::Debug> std::fmt::Debug for Next<V> {
     }
 }
 
+#[doc(hidden)]
 /// Apply prev operation using ULP-based approach.
 #[derive(Clone, Copy)]
 pub struct Prev<V> {
@@ -742,6 +753,7 @@ impl<V: View> View for Plus<V> {
     }
 }
 
+#[doc(hidden)]
 /// Scale the underlying view by a constant factor.
 #[derive(Clone, Copy)]
 pub enum Times<V: View> {
@@ -860,6 +872,7 @@ impl<V: View> View for Times<V> {
     }
 }
 
+#[doc(hidden)]
 /// Scale the underlying view by a strictly positive constant factor.
 #[derive(Clone, Copy)]
 pub struct TimesPos<V> {

@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::ops::Index;
 
 #[derive(Debug, Default)]
 pub struct Model {
@@ -25,12 +26,7 @@ impl Model {
     /// All created variables will have the same starting domain bounds.
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
-    pub fn new_vars(
-        &mut self,
-        n: usize,
-        min: Val,
-        max: Val,
-    ) -> impl Iterator<Item = VarId> + '_ {
+    pub fn new_vars(&mut self, n: usize, min: Val, max: Val) -> impl Iterator<Item = VarId> + '_ {
         let (actual_min, actual_max) = if min < max { (min, max) } else { (max, min) };
         core::iter::repeat_with(move || self.new_var_unchecked(actual_min, actual_max)).take(n)
     }
@@ -53,6 +49,26 @@ impl Model {
         max: i32,
     ) -> impl Iterator<Item = VarId> + '_ {
         self.new_vars(n, Val::ValI(min), Val::ValI(max))
+    }
+
+    /// Create a new integer decision variable from a vector of specific values.
+    /// This is useful for creating variables with non-contiguous domains.
+    ///
+    /// # Arguments
+    /// * `values` - Vector of integer values that the variable can take
+    ///
+    /// # Returns
+    /// A new VarId for the created variable
+    ///
+    /// # Example
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let var = model.new_var_with_values(vec![2, 4, 6, 8]); // Even numbers only
+    /// ```
+    pub fn new_var_with_values(&mut self, values: Vec<i32>) -> VarId {
+        self.props.on_new_var();
+        self.vars.new_var_with_values(values)
     }
 
     /// Create a new float decision variable with the provided domain bounds.
@@ -179,23 +195,23 @@ impl Model {
     {
         // For optimization problems, we need a different approach since we iterate through all solutions
         let (vars, props) = self.prepare_for_search();
-        
+
         let mut search_iter = search(vars, props, mode::Minimize::new(objective));
         let mut last_solution = None;
         let mut current_count = 0;
-        
+
         // Iterate through all solutions to find the optimal one
         while let Some(solution) = search_iter.next() {
             last_solution = Some(solution);
             // Capture the count each iteration, as it might get lost when iterator is consumed
             current_count = search_iter.get_propagation_count();
         }
-        
+
         let stats = crate::solution::SolveStats {
             propagation_count: current_count,
             node_count: search_iter.get_node_count(),
         };
-        
+
         callback(&stats);
         last_solution
     }
@@ -212,28 +228,32 @@ impl Model {
     ///
     /// The callback is called with final statistics after all solutions are found.
     /// Returns a vector of all solutions found during the search.
-    pub fn minimize_and_iterate_with_callback<F>(self, objective: impl View, callback: F) -> Vec<Solution>
+    pub fn minimize_and_iterate_with_callback<F>(
+        self,
+        objective: impl View,
+        callback: F,
+    ) -> Vec<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
         let (vars, props) = self.prepare_for_search();
-        
+
         let mut search_iter = search(vars, props, mode::Minimize::new(objective));
         let mut solutions = Vec::new();
         let mut current_count = 0;
-        
+
         // Collect all solutions manually and capture count during iteration
         while let Some(solution) = search_iter.next() {
             solutions.push(solution);
             // Capture the count each iteration, as it might get lost when iterator is consumed
             current_count = search_iter.get_propagation_count();
         }
-        
+
         let stats = crate::solution::SolveStats {
             propagation_count: current_count,
             node_count: search_iter.get_node_count(),
         };
-        
+
         callback(&stats);
         solutions
     }
@@ -264,7 +284,11 @@ impl Model {
     ///
     /// The callback is called with final statistics after all solutions are found.
     /// Returns a vector of all solutions found during the search.
-    pub fn maximize_and_iterate_with_callback<F>(self, objective: impl View, callback: F) -> Vec<Solution>
+    pub fn maximize_and_iterate_with_callback<F>(
+        self,
+        objective: impl View,
+        callback: F,
+    ) -> Vec<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
@@ -272,14 +296,14 @@ impl Model {
     }
 
     /// Validate that all integer variable domains fit within the u16 optimization range.
-    /// 
+    ///
     /// This method checks that all integer variables have domains that can be represented
-    /// using u16 optimization (domain size ≤ 65535). Since we've already replaced VarI 
+    /// using u16 optimization (domain size ≤ 65535). Since we've already replaced VarI
     /// with VarSparse in the new_var_with_bounds method, this validation mainly serves
     /// as a safety check and provides clear error messages for invalid domain sizes.
     ///
     /// # Returns
-    /// 
+    ///
     /// Returns `Ok(())` if validation succeeds, or `Err(String)` with error details if validation fails.
     pub fn validate(&self) -> Result<(), String> {
         for (i, var) in self.vars.iter_with_indices() {
@@ -293,12 +317,12 @@ impl Model {
                             i, domain_size
                         ));
                     }
-                    
+
                     // Additional validation: check if domain range is reasonable
                     let min_val = sparse_set.min_universe_value();
                     let max_val = sparse_set.max_universe_value();
                     let actual_range = max_val - min_val + 1;
-                    
+
                     if actual_range < 0 || actual_range > 65535 {
                         return Err(format!(
                             "Variable {} has invalid domain range [{}, {}] which results in {} values. \
@@ -316,7 +340,7 @@ impl Model {
     }
 
     /// Optimize constraint processing order based on constraint characteristics.
-    /// 
+    ///
     /// This method analyzes constraints (particularly AllDifferent) and reorders them
     /// to prioritize constraints with more fixed values, which tend to propagate more effectively.
     /// This can significantly improve solving performance by doing more effective propagation earlier.
@@ -338,7 +362,7 @@ impl Model {
     }
 
     /// Search for assignment with a callback to capture solving statistics.
-    /// 
+    ///
     /// The callback receives the solving statistics when the search completes.
     #[must_use]
     pub fn solve_with_callback<F>(self, callback: F) -> Option<Solution>
@@ -347,20 +371,20 @@ impl Model {
     {
         // Run the solving process
         let (vars, props) = self.prepare_for_search();
-        
+
         // Create a search and run it to completion to capture final stats
         let mut search_iter = search(vars, props, mode::Enumerate);
         let result = search_iter.next();
-        
+
         // Get the final stats from the search
         let final_propagation_count = search_iter.get_propagation_count();
         let final_node_count = search_iter.get_node_count();
-        
+
         let stats = crate::solution::SolveStats {
             propagation_count: final_propagation_count,
             node_count: final_node_count,
         };
-        
+
         callback(&stats);
         result
     }
@@ -390,46 +414,53 @@ impl Model {
         F: FnOnce(&crate::solution::SolveStats),
     {
         let (vars, props) = self.prepare_for_search();
-        
+
         let mut search_iter = search(vars, props, mode::Enumerate);
         let mut solutions = Vec::new();
-        
+
         // CRITICAL: Get the stats BEFORE calling any next() methods,
         // because Search::Done(Some(space)) becomes Search::Done(None) after the first next()
         let final_count = search_iter.get_propagation_count();
         let final_node_count = search_iter.get_node_count();
-        
+
         // Collect all solutions
         while let Some(solution) = search_iter.next() {
             solutions.push(solution);
         }
-        
+
         let stats = crate::solution::SolveStats {
             propagation_count: final_count,
             node_count: final_node_count,
         };
-        
+
         callback(&stats);
         solutions
     }
 }
 
+impl Index<VarId> for Model {
+    type Output = Var;
+
+    fn index(&self, index: VarId) -> &Self::Output {
+        &self.vars[index]
+    }
+}
+
 #[test]
 fn test_fix_type_aware_greater_than() {
-    
     // Try minimize
     let mut m2 = Model::default();
     let v1_10 = m2.new_var_int(1, 10);
     m2.greater_than(v1_10, float(2.5));
-    
+
     let solution = m2.minimize(v1_10).unwrap();
-    let x = match solution[v1_10] {
-        Val::ValI(int_val) => int_val,
-        _ => panic!("Expected integer value"),
+    let Val::ValI(x) = solution[v1_10] else {
+        assert!(false, "Expected integer value");
+        return;
     };
 
     println!("Debug: Found x = {}, expected x = 3", x);
-    
+
     // Should find v0 = 3 since v0 > 2.5
     assert_eq!(x, 3);
     println!(
@@ -437,4 +468,3 @@ fn test_fix_type_aware_greater_than() {
         x
     );
 }
-
