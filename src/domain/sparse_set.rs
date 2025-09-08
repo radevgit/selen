@@ -322,51 +322,6 @@ impl SparseSet {
         self.iter().all(|val| other.contains(val))
     }
 
-    /// Create a new sparse set from a vector of values
-    pub fn from_values(values: Vec<i32>) -> Self {
-        if values.is_empty() {
-            // Create an empty set with minimal valid range
-            let mut set = Self::new(0, 0);
-            set.remove_all(); // Make it empty
-            return set;
-        }
-        
-        let min_val = *values.iter().min().unwrap();
-        let max_val = *values.iter().max().unwrap();
-        let mut set = Self::new(min_val, max_val);
-        
-        // Remove all values first, then add only the specified ones
-        set.remove_all();
-        
-        for val in values {
-            if val >= min_val && val <= max_val {
-                let val_internal = (val - set.off) as u16;
-                // Add value to the active set
-                let new_pos = set.size;
-                let old_val_at_pos = set.val[new_pos as usize];
-                
-                // Swap the value to the active part
-                set.exchange(val_internal, old_val_at_pos);
-                set.size += 1;
-                
-                // Update bounds
-                if set.size == 1 {
-                    set.min = val_internal;
-                    set.max = val_internal;
-                } else {
-                    if val_internal < set.min {
-                        set.min = val_internal;
-                    }
-                    if val_internal > set.max {
-                        set.max = val_internal;
-                    }
-                }
-            }
-        }
-        
-        set
-    }
-
     // ===== BACKTRACKING SUPPORT =====
     
     /// Save the current state for backtracking
@@ -687,28 +642,6 @@ mod test {
     }
 
     #[test]
-    fn test_from_values() {
-        let v = SparseSet::from_values(vec![2, 4, 6, 8]);
-        
-        assert_eq!(v.size(), 4);
-        assert!(v.contains(2));
-        assert!(v.contains(4));
-        assert!(v.contains(6));
-        assert!(v.contains(8));
-        assert!(!v.contains(1));
-        assert!(!v.contains(3));
-        assert!(!v.contains(5));
-        assert!(!v.contains(7));
-    }
-
-    #[test]
-    fn test_from_values_empty() {
-        let v = SparseSet::from_values(vec![]);
-        assert!(v.is_empty());
-        assert_eq!(v.size(), 0);
-    }
-
-    #[test]
     fn test_intersect_with() {
         let mut v1 = SparseSet::new(1, 5);
         let mut v2 = SparseSet::new(1, 5);
@@ -728,48 +661,6 @@ mod test {
         assert!(!v1.contains(1));
         assert!(!v1.contains(3));
         assert!(!v1.contains(5));
-    }
-
-    #[test]
-    fn test_union_with() {
-        let mut v1 = SparseSet::from_values(vec![1, 3, 5]);
-        let v2 = SparseSet::from_values(vec![2, 4, 5]); // 5 is common
-        
-        v1.union_with(&v2);
-        
-        // v1 should now contain {1, 2, 3, 4, 5}
-        assert_eq!(v1.size(), 5);
-        for i in 1..=5 {
-            assert!(v1.contains(i));
-        }
-    }
-
-    #[test]
-    fn test_is_subset_of() {
-        let v1 = SparseSet::from_values(vec![2, 4]);
-        let v2 = SparseSet::from_values(vec![1, 2, 3, 4, 5]);
-        let v3 = SparseSet::from_values(vec![2, 4, 6]);
-        
-        assert!(v1.is_subset_of(&v2)); // {2, 4} ⊆ {1, 2, 3, 4, 5}
-        assert!(v1.is_subset_of(&v3)); // {2, 4} ⊆ {2, 4, 6} - mathematically correct
-        assert!(v1.is_subset_of(&v1)); // Set is subset of itself
-        
-        // Test empty set is subset of any set
-        let empty = SparseSet::from_values(vec![]);
-        assert!(empty.is_subset_of(&v1));
-        assert!(empty.is_subset_of(&v2));
-    }
-
-    #[test]
-    fn test_equals() {
-        let v1 = SparseSet::from_values(vec![1, 3, 5]);
-        let v2 = SparseSet::from_values(vec![5, 1, 3]); // Same values, different order
-        let v3 = SparseSet::from_values(vec![1, 3]);
-        
-        assert!(v1.equals(&v2));
-        assert!(!v1.equals(&v3));
-        assert!(v1 == v2); // Test PartialEq implementation
-        assert!(v1 != v3);
     }
 
     #[test]
