@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use std::ops::Index;
 
 #[derive(Debug, Default)]
 pub struct Model {
@@ -53,6 +54,26 @@ impl Model {
         max: i32,
     ) -> impl Iterator<Item = VarId> + '_ {
         self.new_vars(n, Val::ValI(min), Val::ValI(max))
+    }
+
+    /// Create a new integer decision variable from a vector of specific values.
+    /// This is useful for creating variables with non-contiguous domains.
+    /// 
+    /// # Arguments
+    /// * `values` - Vector of integer values that the variable can take
+    /// 
+    /// # Returns
+    /// A new VarId for the created variable
+    /// 
+    /// # Example
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let var = model.new_var_with_values(vec![2, 4, 6, 8]); // Even numbers only
+    /// ```
+    pub fn new_var_with_values(&mut self, values: Vec<i32>) -> VarId {
+        self.props.on_new_var();
+        self.vars.new_var_with_values(values)
     }
 
     /// Create a new float decision variable with the provided domain bounds.
@@ -414,6 +435,14 @@ impl Model {
     }
 }
 
+impl Index<VarId> for Model {
+    type Output = Var;
+
+    fn index(&self, index: VarId) -> &Self::Output {
+        &self.vars[index]
+    }
+}
+
 #[test]
 fn test_fix_type_aware_greater_than() {
     
@@ -423,9 +452,9 @@ fn test_fix_type_aware_greater_than() {
     m2.greater_than(v1_10, float(2.5));
     
     let solution = m2.minimize(v1_10).unwrap();
-    let x = match solution[v1_10] {
-        Val::ValI(int_val) => int_val,
-        _ => panic!("Expected integer value"),
+    let Val::ValI(x) = solution[v1_10] else {
+        assert!(false, "Expected integer value");
+        return;
     };
 
     println!("Debug: Found x = {}, expected x = 3", x);

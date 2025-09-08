@@ -190,6 +190,11 @@ impl Var {
 pub struct Vars(Vec<Var>);
 
 impl Vars {
+    /// Create a new empty collection of variables.
+    pub fn new() -> Self {
+        Vars(Vec::new())
+    }
+
     /// Create a new decision variable.
     pub fn new_var_with_bounds(&mut self, min: Val, max: Val) -> VarId {
         let v = VarId(self.0.len());
@@ -212,6 +217,28 @@ impl Vars {
             }),
         }
 
+        v
+    }
+
+    /// Create a new integer decision variable from a vector of specific values.
+    /// This is useful for creating variables with non-contiguous domains.
+    /// 
+    /// # Arguments
+    /// * `values` - Vector of integer values that the variable can take
+    /// 
+    /// # Returns
+    /// A new VarId for the created variable
+    /// 
+    /// # Example
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut vars = Vars::new();
+    /// let var = vars.new_var_with_values(vec![2, 4, 6, 8]); // Even numbers only
+    /// ```
+    pub fn new_var_with_values(&mut self, values: Vec<i32>) -> VarId {
+        let v = VarId(self.0.len());
+        let sparse_set = SparseSet::new_from_values(values);
+        self.0.push(Var::VarI(sparse_set));
         v
     }
 
@@ -280,6 +307,106 @@ impl Vars {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_var_with_values_basic() {
+        let mut vars = Vars::new();
+        let var_id = vars.new_var_with_values(vec![2, 4, 6, 8]);
+        
+        let var = &vars[var_id];
+        let Var::VarI(sparse_set) = var else {
+            assert!(false, "Expected integer variable");
+            return;
+        };
+        assert_eq!(sparse_set.size(), 4);
+        assert!(sparse_set.contains(2));
+        assert!(sparse_set.contains(4));
+        assert!(sparse_set.contains(6));
+        assert!(sparse_set.contains(8));
+        assert!(!sparse_set.contains(3));
+        assert!(!sparse_set.contains(5));
+    }
+
+    #[test]
+    fn test_new_var_with_values_single() {
+        let mut vars = Vars::new();
+        let var_id = vars.new_var_with_values(vec![42]);
+        
+        let var = &vars[var_id];
+        let Var::VarI(sparse_set) = var else {
+            assert!(false, "Expected integer variable");
+            return;
+        };
+        assert_eq!(sparse_set.size(), 1);
+        assert!(sparse_set.is_fixed());
+        assert!(sparse_set.contains(42));
+        assert!(!sparse_set.contains(41));
+    }
+
+    #[test]
+    fn test_new_var_with_values_duplicates() {
+        let mut vars = Vars::new();
+        let var_id = vars.new_var_with_values(vec![1, 3, 1, 5, 3]);
+        
+        let var = &vars[var_id];
+        let Var::VarI(sparse_set) = var else {
+            assert!(false, "Expected integer variable");
+            return;
+        };
+        assert_eq!(sparse_set.size(), 3); // Should deduplicate
+        assert!(sparse_set.contains(1));
+        assert!(sparse_set.contains(3));
+        assert!(sparse_set.contains(5));
+    }
+
+    #[test]
+    fn test_var_with_values_assignment() {
+        let mut vars = Vars::new();
+        let var_id = vars.new_var_with_values(vec![10, 20, 30]);
+        
+        let var = &vars[var_id];
+        assert!(!var.is_assigned());
+        
+        // Test midpoint calculation
+        let mid = var.mid();
+        let Val::ValI(val) = mid else {
+            assert!(false, "Expected integer value");
+            return;
+        };
+        // Midpoint should be reasonable
+        assert!(val >= 10 && val <= 30);
+    }
+
+    #[test]
+    fn test_equivalence_with_range_creation() {
+        let mut vars1 = Vars::new();
+        let mut vars2 = Vars::new();
+        
+        // Create equivalent variables using different methods
+        let var1_id = vars1.new_var_with_bounds(Val::int(1), Val::int(5));
+        let var2_id = vars2.new_var_with_values(vec![1, 2, 3, 4, 5]);
+        
+        let var1 = &vars1[var1_id];
+        let var2 = &vars2[var2_id];
+        
+        // Both should have the same domain
+        let (Var::VarI(sparse1), Var::VarI(sparse2)) = (var1, var2) else {
+            assert!(false, "Expected both to be integer variables");
+            return;
+        };
+        assert_eq!(sparse1.size(), sparse2.size());
+        assert_eq!(sparse1.min(), sparse2.min());
+        assert_eq!(sparse1.max(), sparse2.max());
+        
+        // All values should be the same
+        for i in 1..=5 {
+            assert_eq!(sparse1.contains(i), sparse2.contains(i));
+        }
+    }
+}
 /// Decision variable handle that is not bound to a specific memory location.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct VarId(usize);
