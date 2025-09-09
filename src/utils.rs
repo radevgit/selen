@@ -91,3 +91,13 @@ pub fn float_next(f: f32) -> f32 {
     let eps = FLOAT_INT_EPS as i32 + 1;
     float_perturbed_as_int(f, eps)
 }
+
+
+// // Transform float interval [a,b] to integer range
+// let scale = determine_optimal_scale();
+// let int_a = (asinh(a / scale) * INT_SCALE) as i32;
+// let int_b = (asinh(b / scale) * INT_SCALE) as i32;
+
+// // Create integer variable with range [int_a, int_b]
+// // Apply integer constraints
+// // Convert back: float_result = scale * sinh(int_result / INT_SCALE)
