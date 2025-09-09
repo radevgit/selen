@@ -23,7 +23,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cspsolver = "0.3.12"
+cspsolver = "0.3.15"
 ```
 
 
