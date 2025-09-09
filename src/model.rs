@@ -1,13 +1,47 @@
 use crate::prelude::*;
+use crate::domain::float_interval::{DEFAULT_FLOAT_PRECISION_DIGITS, precision_to_step_size};
 use std::ops::Index;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Model {
     vars: Vars,
     props: Propagators,
+    /// Precision for float variables (decimal places)
+    pub float_precision_digits: i32,
+}
+
+impl Default for Model {
+    fn default() -> Self {
+        Self::with_float_precision(DEFAULT_FLOAT_PRECISION_DIGITS)
+    }
 }
 
 impl Model {
+    /// Create a new model with custom float precision
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::with_float_precision(4); // 4 decimal places
+    /// let var = model.new_var_float(0.0, 1.0);
+    /// ```
+    pub fn with_float_precision(precision_digits: i32) -> Self {
+        Self {
+            vars: Vars::default(),
+            props: Propagators::default(),
+            float_precision_digits: precision_digits,
+        }
+    }
+
+    /// Get the current float precision setting
+    pub fn float_precision_digits(&self) -> i32 {
+        self.float_precision_digits
+    }
+
+    /// Get the step size for the current float precision
+    pub fn float_step_size(&self) -> f32 {
+        precision_to_step_size(self.float_precision_digits)
+    }
+
     /// Create a new decision variable, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
@@ -165,7 +199,8 @@ impl Model {
     /// This function assumes that `min < max`.
     fn new_var_unchecked(&mut self, min: Val, max: Val) -> VarId {
         self.props.on_new_var();
-        self.vars.new_var_with_bounds(min, max)
+        let step_size = self.float_step_size();
+        self.vars.new_var_with_bounds_and_step(min, max, step_size)
     }
 
     /// Create an expression of two views added together.
@@ -703,4 +738,47 @@ fn test_fix_type_aware_greater_than() {
         "Type-aware greater_than constraint correctly found x = {}",
         x
     );
+}
+
+#[test]
+fn test_precision_configuration() {
+    // Test default precision
+    let default_model = Model::default();
+    assert_eq!(default_model.float_precision_digits(), 6);
+    assert_eq!(default_model.float_step_size(), 1e-6);
+
+    // Test custom precision
+    let high_precision_model = Model::with_float_precision(10);
+    assert_eq!(high_precision_model.float_precision_digits(), 10);
+    assert_eq!(high_precision_model.float_step_size(), 1e-10);
+
+    let low_precision_model = Model::with_float_precision(2);
+    assert_eq!(low_precision_model.float_precision_digits(), 2);
+    assert_eq!(low_precision_model.float_step_size(), 1e-2);
+
+    // Test that variables can be created with different precisions
+    let mut model1 = Model::with_float_precision(4);
+    let mut model2 = Model::with_float_precision(8);
+    
+    let _var1 = model1.new_var_float(0.0, 1.0);
+    let _var2 = model2.new_var_float(0.0, 1.0);
+    
+    // Both should succeed without errors
+    assert_eq!(model1.float_step_size(), 1e-4);
+    assert_eq!(model2.float_step_size(), 1e-8);
+}
+
+#[test]
+fn test_precision_backward_compatibility() {
+    // Verify that existing code using Model::default() continues to work
+    let mut model = Model::default();
+    
+    // These should all work as before
+    let _int_var = model.new_var_int(0, 10);
+    let _float_var = model.new_var_float(0.0, 1.0);
+    let _val_var = model.new_var(Val::int(0), Val::int(5));
+    let _values_var = model.new_var_with_values(vec![1, 3, 5, 7]);
+    
+    // Default precision should be maintained
+    assert_eq!(model.float_precision_digits(), 6);
 }

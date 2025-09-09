@@ -1,7 +1,31 @@
-/// Fixed step size for float intervals
-/// This determines the granularity of float operations
-/// For example, with 1e-4, the interval [0.0, 1.0] will have 10,000 steps
-pub const FLOAT_STEP_SIZE: f32 = 1e-4;
+/// Default precision for float intervals (decimal places)
+/// Users can override this through Model configuration
+pub const DEFAULT_FLOAT_PRECISION_DIGITS: i32 = 6;
+
+/// Calculate step size from precision digits
+pub const fn precision_to_step_size(precision_digits: i32) -> f32 {
+    // This is a const fn equivalent of 10.0_f32.powi(-precision_digits)
+    // We use a lookup table for common values since const fn has limitations
+    match precision_digits {
+        1 => 1e-1,
+        2 => 1e-2,
+        3 => 1e-3,
+        4 => 1e-4,
+        5 => 1e-5,
+        6 => 1e-6,
+        7 => 1e-7,
+        8 => 1e-8,
+        9 => 1e-9,
+        10 => 1e-10,
+        11 => 1e-11,
+        12 => 1e-12,
+        _ => 1e-6, // Default fallback
+    }
+}
+
+/// Default step size for float intervals
+/// Based on DEFAULT_FLOAT_PRECISION_DIGITS (6 decimal places)
+pub const FLOAT_STEP_SIZE: f32 = precision_to_step_size(DEFAULT_FLOAT_PRECISION_DIGITS);
 
 /// Float interval with fixed step size for predictable precision
 #[derive(Debug, Clone, PartialEq)]
@@ -18,15 +42,9 @@ impl FloatInterval {
             return Self::new(max, min);
         }
         
-        // Calculate step size based on the interval range
-        // Use the global step size scaled to this interval
-        let range = max - min;
-        let step = if range == 0.0 {
-            FLOAT_STEP_SIZE
-        } else {
-            // Scale the step size to maintain similar granularity across different ranges
-            FLOAT_STEP_SIZE * range
-        };
+        // Calculate step size - use absolute step for consistent precision
+        // This ensures the same precision regardless of interval range
+        let step = FLOAT_STEP_SIZE;
         
         FloatInterval { min, max, step }
     }
@@ -546,15 +564,25 @@ mod tests {
         let interval = FloatInterval::new(0.0, 1.0);
         assert_eq!(interval.step, FLOAT_STEP_SIZE);
         
-        // Should have reasonable granularity
-        let step_count = interval.step_count();
-        assert!(step_count > 1000); // Should be fine-grained
-        assert!(step_count < 100_000); // But not excessively so
+        // Test that step size is absolute, not range-dependent
+        let small_interval = FloatInterval::new(0.0, 0.01);
+        let large_interval = FloatInterval::new(0.0, 100.0);
+        
+        // All intervals should have the same step size
+        assert_eq!(small_interval.step, FLOAT_STEP_SIZE);
+        assert_eq!(large_interval.step, FLOAT_STEP_SIZE);
+        assert_eq!(interval.step, small_interval.step);
+        assert_eq!(interval.step, large_interval.step);
+        
+        // Different intervals will have different step counts
+        assert_eq!(interval.step_count(), 1_000_000); // (1.0 - 0.0) / 1e-6
+        assert_eq!(small_interval.step_count(), 10_000); // (0.01 - 0.0) / 1e-6  
+        assert_eq!(large_interval.step_count(), 100_000_000); // (100.0 - 0.0) / 1e-6
         
         // Operations should work correctly
         let mid = (interval.min + interval.max) / 2.0;
         let next_mid = interval.next(mid);
         assert!(next_mid > mid);
-        assert!(next_mid - mid <= interval.step + f32::EPSILON);
+        assert!((next_mid - mid - interval.step).abs() < f32::EPSILON);
     }
 }

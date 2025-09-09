@@ -235,6 +235,35 @@ impl Vars {
         v
     }
 
+    /// Create a new decision variable with custom float step size.
+    #[doc(hidden)]
+    pub fn new_var_with_bounds_and_step(&mut self, min: Val, max: Val, float_step: f32) -> VarId {
+        let v = VarId(self.0.len());
+
+        match (min, max) {
+            (Val::ValI(min), Val::ValI(max)) => {
+                // Create SparseSet for integer variables
+                let sparse_set = SparseSet::new(min, max);
+                self.0.push(Var::VarI(sparse_set))
+            },
+            (Val::ValF(min), Val::ValF(max)) => {
+                let interval = FloatInterval::with_step(min, max, float_step);
+                self.0.push(Var::VarF(interval))
+            },
+            // type coercion
+            (Val::ValI(min), Val::ValF(max)) => {
+                let interval = FloatInterval::with_step(min as f32, max, float_step);
+                self.0.push(Var::VarF(interval))
+            },
+            (Val::ValF(min), Val::ValI(max)) => {
+                let interval = FloatInterval::with_step(min, max as f32, float_step);
+                self.0.push(Var::VarF(interval))
+            },
+        }
+
+        v
+    }
+
     /// Create a new integer decision variable from a vector of specific values.
     /// This is useful for creating variables with non-contiguous domains.
     /// 
