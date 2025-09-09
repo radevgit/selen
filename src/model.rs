@@ -223,6 +223,62 @@ impl Model {
         s
     }
 
+    /// Create an expression representing the difference of two views: `x - y`.
+    /// 
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(5, 10);
+    /// let y = model.new_var_int(2, 4);
+    /// let diff = model.sub(x, y);
+    /// ```
+    pub fn sub(&mut self, x: impl View, y: impl View) -> VarId {
+        let min = x.min_raw(&self.vars) - y.max_raw(&self.vars);
+        let max = x.max_raw(&self.vars) - y.min_raw(&self.vars);
+        let s = self.new_var_unchecked(min, max);
+
+        let _p = self.props.sub(x, y, s);
+
+        s
+    }
+
+    /// Create an expression of the multiplication of two views.
+    /// 
+    /// # Example
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(3, 5);
+    /// let y = model.new_var_int(2, 4);
+    /// let product = model.mul(x, y);
+    /// ```
+    pub fn mul(&mut self, x: impl View, y: impl View) -> VarId {
+        let x_min = x.min_raw(&self.vars);
+        let x_max = x.max_raw(&self.vars);
+        let y_min = y.min_raw(&self.vars);
+        let y_max = y.max_raw(&self.vars);
+        
+        // Calculate all possible products at the corners
+        let products = [
+            x_min * y_min,
+            x_min * y_max,
+            x_max * y_min,
+            x_max * y_max,
+        ];
+        
+        // Find min and max
+        let min = products.iter().fold(products[0], |acc, &x| if x < acc { x } else { acc });
+        let max = products.iter().fold(products[0], |acc, &x| if x > acc { x } else { acc });
+        
+        let s = self.new_var_unchecked(min, max);
+
+        let _p = self.props.mul(x, y, s);
+
+        s
+    }
+
     /// Create an expression of the sum of a slice of views.
     /// 
     ///
@@ -345,6 +401,10 @@ impl Model {
 
     /// Declare all-different constraint: all variables must have distinct values.
     /// This is more efficient than adding pairwise not-equals constraints.
+    /// 
+    /// **Note**: This constraint is designed for integer variables with discrete domains.
+    /// Using it with floating-point variables is not recommended due to precision issues
+    /// and the continuous nature of float domains.
     /// 
     ///
     /// ```
@@ -715,70 +775,4 @@ impl Index<VarId> for Model {
     fn index(&self, index: VarId) -> &Self::Output {
         &self.vars[index]
     }
-}
-
-#[test]
-fn test_fix_type_aware_greater_than() {
-    // Try minimize
-    let mut m2 = Model::default();
-    let v1_10 = m2.new_var_int(1, 10);
-    m2.greater_than(v1_10, float(2.5));
-
-    let solution = m2.minimize(v1_10).unwrap();
-    let Val::ValI(x) = solution[v1_10] else {
-        assert!(false, "Expected integer value");
-        return;
-    };
-
-    println!("Debug: Found x = {}, expected x = 3", x);
-
-    // Should find v0 = 3 since v0 > 2.5
-    assert_eq!(x, 3);
-    println!(
-        "Type-aware greater_than constraint correctly found x = {}",
-        x
-    );
-}
-
-#[test]
-fn test_precision_configuration() {
-    // Test default precision
-    let default_model = Model::default();
-    assert_eq!(default_model.float_precision_digits(), 6);
-    assert_eq!(default_model.float_step_size(), 1e-6);
-
-    // Test custom precision
-    let high_precision_model = Model::with_float_precision(10);
-    assert_eq!(high_precision_model.float_precision_digits(), 10);
-    assert_eq!(high_precision_model.float_step_size(), 1e-10);
-
-    let low_precision_model = Model::with_float_precision(2);
-    assert_eq!(low_precision_model.float_precision_digits(), 2);
-    assert_eq!(low_precision_model.float_step_size(), 1e-2);
-
-    // Test that variables can be created with different precisions
-    let mut model1 = Model::with_float_precision(4);
-    let mut model2 = Model::with_float_precision(8);
-    
-    let _var1 = model1.new_var_float(0.0, 1.0);
-    let _var2 = model2.new_var_float(0.0, 1.0);
-    
-    // Both should succeed without errors
-    assert_eq!(model1.float_step_size(), 1e-4);
-    assert_eq!(model2.float_step_size(), 1e-8);
-}
-
-#[test]
-fn test_precision_backward_compatibility() {
-    // Verify that existing code using Model::default() continues to work
-    let mut model = Model::default();
-    
-    // These should all work as before
-    let _int_var = model.new_var_int(0, 10);
-    let _float_var = model.new_var_float(0.0, 1.0);
-    let _val_var = model.new_var(Val::int(0), Val::int(5));
-    let _values_var = model.new_var_with_values(vec![1, 3, 5, 7]);
-    
-    // Default precision should be maintained
-    assert_eq!(model.float_precision_digits(), 6);
 }

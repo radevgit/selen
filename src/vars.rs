@@ -55,6 +55,32 @@ impl Val {
             }
         }
     }
+
+    /// Check if this value is safe to divide by (not zero or close to zero)
+    pub fn is_safe_divisor(self) -> bool {
+        match self {
+            Val::ValI(i) => i != 0,
+            Val::ValF(f) => f.abs() >= f64::EPSILON * 1000.0, // Use a larger epsilon for safety
+        }
+    }
+
+    /// Safe division that returns None if divisor is too close to zero
+    pub fn safe_div(self, other: Val) -> Option<Val> {
+        if !other.is_safe_divisor() {
+            return None;
+        }
+        Some(self / other)
+    }
+
+    /// Check if the range [min, max] contains zero or values close to zero
+    pub fn range_contains_unsafe_divisor(min: Val, max: Val) -> bool {
+        match (min, max) {
+            (Val::ValI(min_i), Val::ValI(max_i)) => min_i <= 0 && max_i >= 0,
+            (Val::ValF(min_f), Val::ValF(max_f)) => min_f <= f64::EPSILON && max_f >= -f64::EPSILON,
+            (Val::ValI(min_i), Val::ValF(max_f)) => min_i as f64 <= f64::EPSILON && max_f >= -f64::EPSILON,
+            (Val::ValF(min_f), Val::ValI(max_i)) => min_f <= f64::EPSILON && max_i as f64 >= -f64::EPSILON,
+        }
+    }
 }
 
 impl From<i32> for Val {
@@ -193,6 +219,61 @@ impl std::ops::Sub for Val {
             (Val::ValF(a), Val::ValF(b)) => Val::ValF(a - b),
             (Val::ValI(a), Val::ValF(b)) => Val::ValF(a as f64 - b),
             (Val::ValF(a), Val::ValI(b)) => Val::ValF(a - b as f64),
+        }
+    }
+}
+
+impl std::ops::Mul for Val {
+    type Output = Val;
+
+    fn mul(self, other: Val) -> Val {
+        match (self, other) {
+            (Val::ValI(a), Val::ValI(b)) => Val::ValI(a * b),
+            (Val::ValF(a), Val::ValF(b)) => Val::ValF(a * b),
+            (Val::ValI(a), Val::ValF(b)) => Val::ValF(a as f64 * b),
+            (Val::ValF(a), Val::ValI(b)) => Val::ValF(a * b as f64),
+        }
+    }
+}
+
+impl std::ops::Div for Val {
+    type Output = Val;
+
+    fn div(self, other: Val) -> Val {
+        match (self, other) {
+            (Val::ValI(a), Val::ValI(b)) => {
+                if b == 0 {
+                    // Return infinity for division by zero
+                    if a >= 0 { Val::ValF(f64::INFINITY) } else { Val::ValF(f64::NEG_INFINITY) }
+                } else {
+                    // For integer division, convert to float to avoid truncation issues
+                    Val::ValF(a as f64 / b as f64)
+                }
+            },
+            (Val::ValF(a), Val::ValF(b)) => {
+                if b.abs() < f64::EPSILON {
+                    // Return infinity for division by value too close to zero
+                    if a >= 0.0 { Val::ValF(f64::INFINITY) } else { Val::ValF(f64::NEG_INFINITY) }
+                } else {
+                    Val::ValF(a / b)
+                }
+            },
+            (Val::ValI(a), Val::ValF(b)) => {
+                if b.abs() < f64::EPSILON {
+                    // Return infinity for division by value too close to zero
+                    if a >= 0 { Val::ValF(f64::INFINITY) } else { Val::ValF(f64::NEG_INFINITY) }
+                } else {
+                    Val::ValF(a as f64 / b)
+                }
+            },
+            (Val::ValF(a), Val::ValI(b)) => {
+                if b == 0 {
+                    // Return infinity for division by zero
+                    if a >= 0.0 { Val::ValF(f64::INFINITY) } else { Val::ValF(f64::NEG_INFINITY) }
+                } else {
+                    Val::ValF(a / b as f64)
+                }
+            },
         }
     }
 }

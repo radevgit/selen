@@ -54,17 +54,17 @@ fn main() {
     // Uncomment below for "Platinum Blonde" - extremely computationally intensive (takes ~74.3 seconds!)
     // WARNING: This puzzle will take over a minute to solve - only uncomment for research purposes
     
-    let platinum_puzzle = [
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 3, 0, 8, 5],
-        [0, 0, 1, 0, 2, 0, 0, 0, 0],
-        [0, 0, 0, 5, 0, 7, 0, 0, 0],
-        [0, 0, 4, 0, 0, 0, 1, 0, 0],
-        [0, 9, 0, 0, 0, 0, 0, 0, 0],
-        [5, 0, 0, 0, 0, 0, 0, 7, 3],
-        [0, 0, 2, 0, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 4, 0, 0, 0, 9],
-    ];
+    // let platinum_puzzle = [
+    //     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 3, 0, 8, 5],
+    //     [0, 0, 1, 0, 2, 0, 0, 0, 0],
+    //     [0, 0, 0, 5, 0, 7, 0, 0, 0],
+    //     [0, 0, 4, 0, 0, 0, 1, 0, 0],
+    //     [0, 9, 0, 0, 0, 0, 0, 0, 0],
+    //     [5, 0, 0, 0, 0, 0, 0, 7, 3],
+    //     [0, 0, 2, 0, 1, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 4, 0, 0, 0, 9],
+    // ];
     
     
     
@@ -72,7 +72,7 @@ fn main() {
     let (easy_propagations, easy_nodes) = solve_and_display("EASY", &easy_puzzle);
     let (hard_propagations, hard_nodes) = solve_and_display("HARD", &hard_puzzle);
     let (extreme_propagations, extreme_nodes) = solve_and_display("EXTREME", &extreme_puzzle);
-    let (platinum_propagations, platinum_nodes) = solve_and_display("PLATINUM", &platinum_puzzle);
+    //let (platinum_propagations, platinum_nodes) = solve_and_display("PLATINUM", &platinum_puzzle);
     
     println!("\n✨ Summary:");
     println!("Easy puzzle demonstrates solid performance with default search heuristics:");
@@ -104,15 +104,15 @@ fn main() {
     
     // Uncomment the section below if you enabled the Platinum puzzle above
     
-    println!("\nPlatinum puzzle (Platinum Blonde) - the ultimate computational challenge:");
-    println!("• {} propagations, {} nodes explored", platinum_propagations, platinum_nodes);
-    let platinum_efficiency = if platinum_nodes > 0 { 
-        format!("{:.1} propagations/node", platinum_propagations as f64 / platinum_nodes as f64)
-    } else {
-        "Pure propagation (no search)".to_string()
-    };
-    println!("• {} efficiency", platinum_efficiency);
-    println!("• WARNING: Takes approximately 74 seconds to solve!");
+    // println!("\nPlatinum puzzle (Platinum Blonde) - the ultimate computational challenge:");
+    // println!("• {} propagations, {} nodes explored", platinum_propagations, platinum_nodes);
+    // let platinum_efficiency = if platinum_nodes > 0 { 
+    //     format!("{:.1} propagations/node", platinum_propagations as f64 / platinum_nodes as f64)
+    // } else {
+    //     "Pure propagation (no search)".to_string()
+    // };
+    // println!("• {} efficiency", platinum_efficiency);
+    // println!("• WARNING: Takes approximately 74 seconds to solve!");
     
 }
 

@@ -13,9 +13,9 @@ This library provides efficient algorithms and data structures for solving const
 Type of variables: `float`, `int`, `mixed` (int and float)
 
 Constraints supported include:
-- Arithmetic: `+`, `-`, `*`, `/`
-- Comparisons: `<`, `<=`, `>`, `>=`, `==`, `!=`
-- `all_different`
+- Arithmetic: `add`, `sum`
+- Comparisons: `less_than`, `less_than_or_equals`, `greater_than`, `greater_than_or_equals`, `equals`, `not_equals`
+- Global: `all_different`
 
 ## Installation
 

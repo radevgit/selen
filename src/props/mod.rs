@@ -2,6 +2,7 @@ mod add;
 mod alldiff;
 mod eq;
 mod leq;
+mod mul;
 mod neq;
 mod noop;
 mod sum;
@@ -148,6 +149,19 @@ impl Propagators {
     /// Declare a new propagator to enforce `x + y == s`.
     pub fn add(&mut self, x: impl View, y: impl View, s: VarId) -> PropId {
         self.push_new_prop(self::add::Add::new(x, y, s))
+    }
+
+    /// Declare a new propagator to enforce `x - y == s`.
+    /// This reuses the Add propagator by transforming to `x + (-y) == s`.
+    pub fn sub(&mut self, x: impl View, y: impl View, s: VarId) -> PropId {
+        use crate::vars::Val;
+        // x - y = s  =>  x + (-y) = s
+        self.add(x, y.times_neg(Val::ValI(-1)), s)
+    }
+
+    /// Declare a new propagator to enforce `x * y == s`.
+    pub fn mul(&mut self, x: impl View, y: impl View, s: VarId) -> PropId {
+        self.push_new_prop(self::mul::Mul::new(x, y, s))
     }
 
     /// Declare a new propagator to enforce `sum(xs) == s`.
