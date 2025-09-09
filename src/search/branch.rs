@@ -1,6 +1,5 @@
 use crate::props::PropId;
 use crate::search::Space;
-use crate::utils::float_next;
 use crate::vars::{VarId, Val};
 
 /// Perform a binary split on the first unassigned decision variable.
@@ -87,22 +86,8 @@ impl Iterator for SplitOnUnassigned {
                     let mut space_right = space;
                     space_right.props.increment_node_count();
                     
-                    // Calculate the minimum value for pivot > mid
-                    let min_val = match mid {
-                        crate::vars::Val::ValI(mid_val) => crate::vars::Val::ValI(mid_val + 1),
-                        crate::vars::Val::ValF(mid_val) => {
-                            // For floats, use next representable value
-                            let next_val = if mid_val.is_finite() {
-                                float_next(mid_val)
-                            } else {
-                                mid_val
-                            };
-                            crate::vars::Val::ValF(next_val)
-                        },
-                    };
-                    
-                    // Create constraint: pivot >= min_val, let the constraint system handle domain filtering
-                    let p = space_right.props.greater_than_or_equals(pivot, min_val);
+                    // Create constraint: pivot > mid, let the constraint system handle domain filtering
+                    let p = space_right.props.greater_than(pivot, mid);
                     Some((space_right, p))
                 }
             }

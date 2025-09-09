@@ -149,6 +149,12 @@ impl<'s> Context<'s> {
     pub(crate) fn new(vars: &'s mut Vars, events: &'s mut Vec<VarId>) -> Self {
         Self { vars, events }
     }
+    
+    #[doc(hidden)]
+    /// Get access to the variables for interval context-aware operations.
+    pub fn vars(&self) -> &Vars {
+        self.vars
+    }
 
     #[doc(hidden)]
     /// Try to set provided value as domain minimum, failing the space on infeasibility.
@@ -183,26 +189,23 @@ impl<'s> Context<'s> {
                 Some(Val::ValI(sparse_set.min()))
             }
             (
-                Var::VarF {
-                    min: var_min,
-                    max: var_max,
-                },
+                Var::VarF(interval),
                 Val::ValF(min_f),
             ) => {
                 // Infeasible, fail space
-                if min_f > *var_max {
+                if min_f > interval.max {
                     return None;
                 }
 
-                if min_f > *var_min {
+                if min_f > interval.min {
                     // Set new minimum
-                    *var_min = min_f;
+                    interval.min = min_f;
 
                     // Record modification event
                     self.events.push(v);
                 }
 
-                Some(Val::ValF(*var_min))
+                Some(Val::ValF(interval.min))
             }
             (
                 Var::VarI(sparse_set),
@@ -233,29 +236,26 @@ impl<'s> Context<'s> {
                 Some(Val::ValI(sparse_set.min()))
             }
             (
-                Var::VarF {
-                    min: var_min,
-                    max: var_max,
-                },
+                Var::VarF(interval),
                 Val::ValI(min_i),
             ) => {
                 // Convert integer to float
-                let min_converted = min_i as f32;
+                let min_converted = min_i as f64;
                 
                 // Infeasible, fail space
-                if min_converted > *var_max {
+                if min_converted > interval.max {
                     return None;
                 }
 
-                if min_converted > *var_min {
+                if min_converted > interval.min {
                     // Set new minimum
-                    *var_min = min_converted;
+                    interval.min = min_converted;
 
                     // Record modification event
                     self.events.push(v);
                 }
 
-                Some(Val::ValF(*var_min))
+                Some(Val::ValF(interval.min))
             }
         }
     }
@@ -293,26 +293,23 @@ impl<'s> Context<'s> {
                 Some(Val::ValI(sparse_set.max()))
             }
             (
-                Var::VarF {
-                    min: var_min,
-                    max: var_max,
-                },
+                Var::VarF(interval),
                 Val::ValF(max_f),
             ) => {
                 // Infeasible, fail space
-                if max_f < *var_min {
+                if max_f < interval.min {
                     return None;
                 }
 
-                if max_f < *var_max {
+                if max_f < interval.max {
                     // Set new maximum
-                    *var_max = max_f;
+                    interval.max = max_f;
 
                     // Record modification event
                     self.events.push(v);
                 }
 
-                Some(Val::ValF(*var_max))
+                Some(Val::ValF(interval.max))
             }
             (
                 Var::VarI(sparse_set),
@@ -343,29 +340,26 @@ impl<'s> Context<'s> {
                 Some(Val::ValI(sparse_set.max()))
             }
             (
-                Var::VarF {
-                    min: var_min,
-                    max: var_max,
-                },
+                Var::VarF(interval),
                 Val::ValI(max_i),
             ) => {
                 // Convert integer to float
-                let max_converted = max_i as f32;
+                let max_converted = max_i as f64;
                 
                 // Infeasible, fail space
-                if max_converted < *var_min {
+                if max_converted < interval.min {
                     return None;
                 }
 
-                if max_converted < *var_max {
+                if max_converted < interval.max {
                     // Set new maximum
-                    *var_max = max_converted;
+                    interval.max = max_converted;
 
                     // Record modification event
                     self.events.push(v);
                 }
 
-                Some(Val::ValF(*var_max))
+                Some(Val::ValF(interval.max))
             }
         }
     }
@@ -423,14 +417,14 @@ impl ViewRaw for VarId {
     fn min_raw(self, vars: &Vars) -> Val {
         match vars[self] {
             Var::VarI(ref sparse_set) => Val::ValI(sparse_set.min()),
-            Var::VarF { min, .. } => Val::ValF(min),
+            Var::VarF(ref interval) => Val::ValF(interval.min),
         }
     }
 
     fn max_raw(self, vars: &Vars) -> Val {
         match vars[self] {
             Var::VarI(ref sparse_set) => Val::ValI(sparse_set.max()),
-            Var::VarF { max, .. } => Val::ValF(max),
+            Var::VarF(ref interval) => Val::ValF(interval.max),
         }
     }
 }
@@ -594,7 +588,7 @@ impl<V: View> View for Next<V> {
         let target_min = match (min, self.x.result_type(ctx)) {
             (Val::ValI(min_int), ViewType::Float) => {
                 // Convert integer to float, then take prev
-                Val::ValF(min_int as f32).prev()
+                Val::ValF(min_int as f64).prev()
             }
             _ => {
                 // Same type or float to integer conversion - use direct prev
@@ -611,7 +605,7 @@ impl<V: View> View for Next<V> {
         let target_max = match (max, self.x.result_type(ctx)) {
             (Val::ValI(max_int), ViewType::Float) => {
                 // Convert integer to float, then take prev
-                Val::ValF(max_int as f32).prev()
+                Val::ValF(max_int as f64).prev()
             }
             _ => {
                 // Same type or float to integer conversion - use direct prev
@@ -680,8 +674,8 @@ impl<V: View> ViewRaw for Plus<V> {
             (Val::ValI(min), Val::ValI(offset)) => Val::ValI(min + offset),
             (Val::ValF(min), Val::ValF(offset)) => Val::ValF(min + offset),
             // type coercion
-            (Val::ValI(min), Val::ValF(offset)) => Val::ValF(min as f32 + offset),
-            (Val::ValF(min), Val::ValI(offset)) => Val::ValF(min + offset as f32),
+            (Val::ValI(min), Val::ValF(offset)) => Val::ValF(min as f64 + offset),
+            (Val::ValF(min), Val::ValI(offset)) => Val::ValF(min + offset as f64),
         }
     }
 
@@ -690,8 +684,8 @@ impl<V: View> ViewRaw for Plus<V> {
             (Val::ValI(max), Val::ValI(offset)) => Val::ValI(max + offset),
             (Val::ValF(max), Val::ValF(offset)) => Val::ValF(max + offset),
             // type coercion
-            (Val::ValI(min), Val::ValF(max)) => Val::ValF(min as f32 + max),
-            (Val::ValF(min), Val::ValI(max)) => Val::ValF(min + max as f32),
+            (Val::ValI(min), Val::ValF(max)) => Val::ValF(min as f64 + max),
+            (Val::ValF(min), Val::ValI(max)) => Val::ValF(min + max as f64),
         }
     }
 }
@@ -722,11 +716,11 @@ impl<V: View> View for Plus<V> {
             }
             // Mixed type cases with automatic conversion
             (Val::ValI(min_val), Val::ValF(offset)) => {
-                let required_min = min_val as f32 - offset;
+                let required_min = min_val as f64 - offset;
                 self.x.try_set_min(Val::ValF(required_min), ctx)
             }
             (Val::ValF(min_val), Val::ValI(offset)) => {
-                let required_min = min_val - offset as f32;
+                let required_min = min_val - offset as f64;
                 self.x.try_set_min(Val::ValF(required_min), ctx)
             }
         }
@@ -742,11 +736,11 @@ impl<V: View> View for Plus<V> {
             }
             // Mixed type cases with automatic conversion
             (Val::ValI(max_val), Val::ValF(offset)) => {
-                let required_max = max_val as f32 - offset;
+                let required_max = max_val as f64 - offset;
                 self.x.try_set_max(Val::ValF(required_max), ctx)
             }
             (Val::ValF(max_val), Val::ValI(offset)) => {
-                let required_max = max_val - offset as f32;
+                let required_max = max_val - offset as f64;
                 self.x.try_set_max(Val::ValF(required_max), ctx)
             }
         }
@@ -909,8 +903,8 @@ impl<V: View> ViewRaw for TimesPos<V> {
             (Val::ValI(min), Val::ValI(scale)) => Val::ValI(min * scale),
             (Val::ValF(min), Val::ValF(scale)) => Val::ValF(min * scale),
             // Mixed type cases with automatic conversion to float
-            (Val::ValI(min), Val::ValF(scale)) => Val::ValF(min as f32 * scale),
-            (Val::ValF(min), Val::ValI(scale)) => Val::ValF(min * scale as f32),
+            (Val::ValI(min), Val::ValF(scale)) => Val::ValF(min as f64 * scale),
+            (Val::ValF(min), Val::ValI(scale)) => Val::ValF(min * scale as f64),
         }
     }
 
@@ -919,8 +913,8 @@ impl<V: View> ViewRaw for TimesPos<V> {
             (Val::ValI(max), Val::ValI(scale)) => Val::ValI(max * scale),
             (Val::ValF(max), Val::ValF(scale)) => Val::ValF(max * scale),
             // Mixed type cases with automatic conversion to float
-            (Val::ValI(max), Val::ValF(scale)) => Val::ValF(max as f32 * scale),
-            (Val::ValF(max), Val::ValI(scale)) => Val::ValF(max * scale as f32),
+            (Val::ValI(max), Val::ValF(scale)) => Val::ValF(max as f64 * scale),
+            (Val::ValF(max), Val::ValI(scale)) => Val::ValF(max * scale as f64),
         }
     }
 }
@@ -957,12 +951,12 @@ impl<V: View> View for TimesPos<V> {
             // Mixed type cases with automatic conversion
             (Val::ValI(min_val), Val::ValF(scale)) => {
                 // Convert to float and divide
-                let required_min = min_val as f32 / scale;
+                let required_min = min_val as f64 / scale;
                 self.x.try_set_min(Val::ValF(required_min), ctx)
             }
             (Val::ValF(min_val), Val::ValI(scale)) => {
                 // Convert scale to float and divide
-                let required_min = min_val / scale as f32;
+                let required_min = min_val / scale as f64;
                 self.x.try_set_min(Val::ValF(required_min), ctx)
             }
         }
@@ -984,12 +978,12 @@ impl<V: View> View for TimesPos<V> {
             // Mixed type cases with automatic conversion
             (Val::ValI(max_val), Val::ValF(scale)) => {
                 // Convert to float and divide
-                let required_max = max_val as f32 / scale;
+                let required_max = max_val as f64 / scale;
                 self.x.try_set_max(Val::ValF(required_max), ctx)
             }
             (Val::ValF(max_val), Val::ValI(scale)) => {
                 // Convert scale to float and divide
-                let required_max = max_val / scale as f32;
+                let required_max = max_val / scale as f64;
                 self.x.try_set_max(Val::ValF(required_max), ctx)
             }
         }

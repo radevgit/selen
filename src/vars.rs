@@ -1,13 +1,13 @@
 use crate::prelude::*;
-use crate::domain::SparseSet;
+use crate::domain::{SparseSet, FloatInterval};
 use crate::domain::sparse_set::SparseSetState;
 use std::ops::{Index, IndexMut};
 
 /// Domain for a decision variable
 #[derive(Clone, Debug)]
 pub enum Var {
-    /// interval of floating-point numbers
-    VarF { min: f32, max: f32 },
+    /// interval of floating-point numbers with fixed step size
+    VarF(FloatInterval),
     /// sparse set for integer domains
     VarI(SparseSet),
 }
@@ -18,7 +18,7 @@ pub enum Val {
     /// Single integer value
     ValI(i32),
     /// Single floating-point value
-    ValF(f32),
+    ValF(f64),
 }
 
 impl Val {
@@ -28,25 +28,31 @@ impl Val {
     }
 
     /// Create a floating-point value
-    pub const fn float(value: f32) -> Self {
+    pub const fn float(value: f64) -> Self {
         Val::ValF(value)
     }
 
-    /// Get the previous representable value using ULP-based approach
+    /// Get the previous representable value
     pub fn prev(self) -> Self {
-        use crate::utils::float_prev;
         match self {
             Val::ValI(i) => Val::ValI(i - 1),
-            Val::ValF(f) => Val::ValF(float_prev(f)),
+            Val::ValF(_f) => {
+                // For single values, we can't use prev/next without knowing the interval
+                // This would need to be handled at the variable level
+                self // Return unchanged for now
+            }
         }
     }
 
-    /// Get the next representable value using ULP-based approach
+    /// Get the next representable value
     pub fn next(self) -> Self {
-        use crate::utils::float_next;
         match self {
             Val::ValI(i) => Val::ValI(i + 1),
-            Val::ValF(f) => Val::ValF(float_next(f)),
+            Val::ValF(_f) => {
+                // For single values, we can't use prev/next without knowing the interval
+                // This would need to be handled at the variable level
+                self // Return unchanged for now
+            }
         }
     }
 }
@@ -57,20 +63,85 @@ impl From<i32> for Val {
     }
 }
 
-impl From<f32> for Val {
-    fn from(value: f32) -> Self {
+impl From<f64> for Val {
+    fn from(value: f64) -> Self {
         Val::ValF(value)
+    }
+}
+
+impl Val {
+    /// Compare two values with interval context for mathematically correct precision.
+    /// This is the preferred method for constraint propagation where interval context is available.
+    pub fn equals_with_intervals(&self, other: &Self, 
+                                self_interval: Option<&crate::domain::float_interval::FloatInterval>,
+                                other_interval: Option<&crate::domain::float_interval::FloatInterval>) -> bool {
+        match (self, other) {
+            (Val::ValI(a), Val::ValI(b)) => a == b,
+            (Val::ValF(a), Val::ValF(b)) => {
+                match (self_interval, other_interval) {
+                    (Some(int_a), Some(int_b)) => {
+                        // Use the sum of half-steps as tolerance - this ensures values that
+                        // could represent the same conceptual value are considered equal
+                        let tolerance = (int_a.step + int_b.step) / 2.0;
+                        (a - b).abs() <= tolerance
+                    }
+                    (Some(int_a), None) => {
+                        // Only one interval available, use its precision
+                        let tolerance = int_a.step / 2.0;
+                        (a - b).abs() <= tolerance
+                    }
+                    (None, Some(int_b)) => {
+                        // Only one interval available, use its precision
+                        let tolerance = int_b.step / 2.0;
+                        (a - b).abs() <= tolerance
+                    }
+                    (None, None) => {
+                        // No interval context - use direct equality for step-aligned values
+                        // This should rarely happen in practice since variables have intervals
+                        *a == *b
+                    }
+                }
+            }
+            (Val::ValI(i), Val::ValF(f)) => {
+                if let Some(f_interval) = other_interval {
+                    let tolerance = f_interval.step / 2.0;
+                    ((*i as f64) - f).abs() <= tolerance
+                } else {
+                    // No context, use direct comparison for step-aligned values
+                    (*i as f64) == *f
+                }
+            }
+            (Val::ValF(f), Val::ValI(i)) => {
+                if let Some(f_interval) = self_interval {
+                    let tolerance = f_interval.step / 2.0;
+                    (f - (*i as f64)).abs() <= tolerance
+                } else {
+                    // No context, use direct comparison for step-aligned values
+                    *f == (*i as f64)
+                }
+            }
+        }
+    }
+    
+    /// Compare two values with explicit precision tolerance.
+    /// Useful when you know the appropriate tolerance but don't have interval objects.
+    pub fn equals_with_precision(&self, other: &Self, precision: f64) -> bool {
+        match (self, other) {
+            (Val::ValI(a), Val::ValI(b)) => a == b,
+            (Val::ValF(a), Val::ValF(b)) => (a - b).abs() <= precision,
+            (Val::ValI(a), Val::ValF(b)) => ((*a as f64) - b).abs() <= precision,
+            (Val::ValF(a), Val::ValI(b)) => (a - (*b as f64)).abs() <= precision,
+        }
     }
 }
 
 impl PartialEq for Val {
     fn eq(&self, other: &Self) -> bool {
-        use crate::utils::float_equal;
         match (self, other) {
             (Val::ValI(a), Val::ValI(b)) => a == b,
-            (Val::ValF(a), Val::ValF(b)) => float_equal(*a, *b),
-            (Val::ValI(a), Val::ValF(b)) => float_equal(*a as f32, *b),
-            (Val::ValF(a), Val::ValI(b)) => float_equal(*a, *b as f32),
+            (Val::ValF(a), Val::ValF(b)) => a == b,  // Direct equality for step-aligned values
+            (Val::ValI(a), Val::ValF(b)) => (*a as f64) == *b,
+            (Val::ValF(a), Val::ValI(b)) => *a == (*b as f64),
         }
     }
 }
@@ -82,8 +153,8 @@ impl PartialOrd for Val {
         match (self, other) {
             (Val::ValI(a), Val::ValI(b)) => a.partial_cmp(b),
             (Val::ValF(a), Val::ValF(b)) => a.partial_cmp(b),
-            (Val::ValI(a), Val::ValF(b)) => (*a as f32).partial_cmp(b),
-            (Val::ValF(a), Val::ValI(b)) => a.partial_cmp(&(*b as f32)),
+            (Val::ValI(a), Val::ValF(b)) => (*a as f64).partial_cmp(b),
+            (Val::ValF(a), Val::ValI(b)) => a.partial_cmp(&(*b as f64)),
         }
     }
 }
@@ -101,8 +172,8 @@ impl std::ops::Add for Val {
         match (self, other) {
             (Val::ValI(a), Val::ValI(b)) => Val::ValI(a + b),
             (Val::ValF(a), Val::ValF(b)) => Val::ValF(a + b),
-            (Val::ValI(a), Val::ValF(b)) => Val::ValF(a as f32 + b),
-            (Val::ValF(a), Val::ValI(b)) => Val::ValF(a + b as f32),
+            (Val::ValI(a), Val::ValF(b)) => Val::ValF(a as f64 + b),
+            (Val::ValF(a), Val::ValI(b)) => Val::ValF(a + b as f64),
         }
     }
 }
@@ -120,8 +191,8 @@ impl std::ops::Sub for Val {
         match (self, other) {
             (Val::ValI(a), Val::ValI(b)) => Val::ValI(a - b),
             (Val::ValF(a), Val::ValF(b)) => Val::ValF(a - b),
-            (Val::ValI(a), Val::ValF(b)) => Val::ValF(a as f32 - b),
-            (Val::ValF(a), Val::ValI(b)) => Val::ValF(a - b as f32),
+            (Val::ValI(a), Val::ValF(b)) => Val::ValF(a as f64 - b),
+            (Val::ValF(a), Val::ValI(b)) => Val::ValF(a - b as f64),
         }
     }
 }
@@ -130,9 +201,8 @@ impl Var {
     #[doc(hidden)]
     /// Assigned variables have a domain reduced to a singleton.
     pub fn is_assigned(&self) -> bool {
-        use crate::utils::float_equal;
         match self {
-            Var::VarF { min, max } => float_equal(*min, *max),
+            Var::VarF(interval) => interval.is_fixed(),
             Var::VarI(sparse_set) => sparse_set.is_fixed(),
         }
     }
@@ -141,7 +211,7 @@ impl Var {
     /// Midpoint of domain for easier binary splits.
     pub fn mid(&self) -> Val {
         match self {
-            Var::VarF { min, max } => Val::ValF(*min + (*max - *min) / 2.0),
+            Var::VarF(interval) => Val::ValF(interval.min + (interval.max - interval.min) / 2.0),
             Var::VarI(sparse_set) => {
                 if sparse_set.is_empty() {
                     // Should not happen in a valid CSP, but provide a fallback
@@ -179,7 +249,7 @@ impl Var {
         debug_assert!(self.is_assigned());
 
         match self {
-            Var::VarF { min, .. } => Val::ValF(*min),
+            Var::VarF(interval) => Val::ValF(interval.min),
             Var::VarI(sparse_set) => {
                 debug_assert!(sparse_set.is_fixed());
                 // For a fixed sparse set, min == max, so we can use either
@@ -212,16 +282,48 @@ impl Vars {
                 let sparse_set = SparseSet::new(min, max);
                 self.0.push(Var::VarI(sparse_set))
             },
-            (Val::ValF(min), Val::ValF(max)) => self.0.push(Var::VarF { min, max }),
+            (Val::ValF(min), Val::ValF(max)) => {
+                let interval = FloatInterval::new(min as f64, max as f64);
+                self.0.push(Var::VarF(interval))
+            },
             // type coercion
-            (Val::ValI(min), Val::ValF(max)) => self.0.push(Var::VarF {
-                min: min as f32,
-                max,
-            }),
-            (Val::ValF(min), Val::ValI(max)) => self.0.push(Var::VarF {
-                min,
-                max: max as f32,
-            }),
+            (Val::ValI(min), Val::ValF(max)) => {
+                let interval = FloatInterval::new(min as f64, max as f64);
+                self.0.push(Var::VarF(interval))
+            },
+            (Val::ValF(min), Val::ValI(max)) => {
+                let interval = FloatInterval::new(min as f64, max as f64);
+                self.0.push(Var::VarF(interval))
+            },
+        }
+
+        v
+    }
+
+    /// Create a new decision variable with custom float step size.
+    #[doc(hidden)]
+    pub fn new_var_with_bounds_and_step(&mut self, min: Val, max: Val, float_step: f64) -> VarId {
+        let v = VarId(self.0.len());
+
+        match (min, max) {
+            (Val::ValI(min), Val::ValI(max)) => {
+                // Create SparseSet for integer variables
+                let sparse_set = SparseSet::new(min, max);
+                self.0.push(Var::VarI(sparse_set))
+            },
+            (Val::ValF(min), Val::ValF(max)) => {
+                let interval = FloatInterval::with_step(min as f64, max as f64, float_step);
+                self.0.push(Var::VarF(interval))
+            },
+            // type coercion
+            (Val::ValI(min), Val::ValF(max)) => {
+                let interval = FloatInterval::with_step(min as f64, max as f64, float_step);
+                self.0.push(Var::VarF(interval))
+            },
+            (Val::ValF(min), Val::ValI(max)) => {
+                let interval = FloatInterval::with_step(min as f64, max as f64, float_step);
+                self.0.push(Var::VarF(interval))
+            },
         }
 
         v
@@ -275,6 +377,25 @@ impl Vars {
     pub fn iter_with_indices(&self) -> impl Iterator<Item = (usize, &Var)> {
         self.0.iter().enumerate()
     }
+    
+    /// Get the FloatInterval for a variable if it's a float variable.
+    /// Returns None for integer variables.
+    #[doc(hidden)]
+    pub fn get_float_interval(&self, var_id: VarId) -> Option<&crate::domain::float_interval::FloatInterval> {
+        match &self.0[var_id.0] {
+            Var::VarF(interval) => Some(interval),
+            Var::VarI(_) => None,
+        }
+    }
+    
+    /// Compare two variable values with proper interval context.
+    /// This is the mathematically correct way to compare values from different variables.
+    #[doc(hidden)]
+    pub fn values_equal(&self, var_a: VarId, val_a: &Val, var_b: VarId, val_b: &Val) -> bool {
+        let interval_a = self.get_float_interval(var_a);
+        let interval_b = self.get_float_interval(var_b);
+        val_a.equals_with_intervals(val_b, interval_a, interval_b)
+    }
 
     /// Extract assignment for all decision variables.
     ///
@@ -294,7 +415,7 @@ impl Vars {
     pub fn save_sparse_states(&self) -> Vec<Option<SparseSetState>> {
         self.0.iter().map(|var| {
             match var {
-                Var::VarF { .. } => None, // Float variables don't need state saving
+                Var::VarF(_) => None, // Float variables don't need state saving
                 Var::VarI(sparse_set) => Some(sparse_set.save_state()),
             }
         }).collect()
@@ -307,7 +428,7 @@ impl Vars {
         
         for (var, state_opt) in self.0.iter_mut().zip(states.iter()) {
             match (var, state_opt) {
-                (Var::VarF { .. }, None) => {
+                (Var::VarF(_), None) => {
                     // Float variables don't have saved state - nothing to restore
                 }
                 (Var::VarI(sparse_set), Some(state)) => {

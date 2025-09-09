@@ -24,11 +24,11 @@ fn main() {
     for (i, asset) in assets.iter().enumerate() {
         let ret = match expected_returns[i] { 
             Val::ValF(r) => r, 
-            Val::ValI(r) => r as f32 
+            Val::ValI(r) => r as f64 
         };
         let risk = match risk_levels[i] { 
             Val::ValF(r) => r, 
-            Val::ValI(r) => r as f32 
+            Val::ValI(r) => r as f64 
         };
         println!("  {}: {:.1}% return, {:.1}% risk", asset, ret, risk);
     }
@@ -61,12 +61,12 @@ fn main() {
     
     let stock_allocation = match solution[stock_weight] {
         Val::ValF(w) => w,
-        Val::ValI(w) => w as f32,
+        Val::ValI(w) => w as f64,
     };
     
     let bond_allocation = match solution[bond_weight] {
         Val::ValF(w) => w,
-        Val::ValI(w) => w as f32,
+        Val::ValI(w) => w as f64,
     };
     
     println!("  Stocks: {:.1}% allocation", stock_allocation);

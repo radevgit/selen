@@ -27,12 +27,16 @@ pub fn almost_equal_as_int64(a: f64, b: f64, ulps: u64) -> bool {
 }
 
 pub const FLOAT_INT_EPS_64: u64 = 10;
-#[doc(hidden)]
-#[inline]
-#[must_use]
-pub fn float_equal_64(a: f64, b: f64) -> bool {
-    almost_equal_as_int64(a, b, FLOAT_INT_EPS_64)
-}
+
+// /// Compares two f64 values for equality, accounting for the fact that they may come 
+// /// from different FloatInterval instances with different discretizations.
+// /// Uses ULP-based comparison to handle floating-point precision issues.
+// #[doc(hidden)]
+// #[inline]
+// #[must_use]
+// pub fn float_equal_64(a: f64, b: f64) -> bool {
+//     almost_equal_as_int64(a, b, FLOAT_INT_EPS_64)
+// }
 
 #[doc(hidden)]
 #[must_use]
@@ -110,15 +114,15 @@ mod tests {
         assert!(!almost_equal_as_int64(a, c, 10));
     }
 
-    #[test]
-    fn test_float_equal_64() {
-        // Test the convenience function
-        assert!(float_equal_64(2.5, 2.5));
-        
-        let a = 2.5f64;
-        let b = 2.5000000000000004f64; // Very close to 2.5
-        assert!(float_equal_64(a, b));
-    }
+    // #[test]
+    // fn test_float_equal_64() {
+    //     // Test the convenience function
+    //     assert!(float_equal_64(2.5, 2.5));
+    //     
+    //     let a = 2.5f64;
+    //     let b = 2.5000000000000004f64; // Very close to 2.5
+    //     assert!(float_equal_64(a, b));
+    // }
 
     #[test]
     fn test_float_next_prev_64() {
@@ -133,8 +137,8 @@ mod tests {
         assert!(prev < f);
         
         // They should be different from the original
-        assert!(!float_equal_64(f, next));
-        assert!(!float_equal_64(f, prev));
+        assert!(f != next);
+        assert!(f != prev);
     }
 
     #[test]
