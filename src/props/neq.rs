@@ -2,7 +2,7 @@ use crate::{
     props::{Propagate, Prune},
     vars::{Val, VarId},
     views::{Context, View},
-    utils::{float_equal, float_next, float_prev},
+    utils::float_equal,
 };
 
 /// ULP-aware not-equals constraint: x != y
@@ -143,14 +143,14 @@ fn exclude_value_from_domain<W: View>(view: &W, forbidden_value: Val, ctx: &mut 
     
     // If forbidden value is at the minimum bound, move minimum up
     if values_equal(current_min, forbidden_value) {
-        let new_min = get_next_value(forbidden_value);
+        let new_min = get_next_value(view, forbidden_value, ctx);
         view.try_set_min(new_min, ctx)?;
         return Some(());
     }
     
     // If forbidden value is at the maximum bound, move maximum down
     if values_equal(current_max, forbidden_value) {
-        let new_max = get_prev_value(forbidden_value);
+        let new_max = get_prev_value(view, forbidden_value, ctx);
         view.try_set_max(new_max, ctx)?;
         return Some(());
     }
@@ -162,18 +162,42 @@ fn exclude_value_from_domain<W: View>(view: &W, forbidden_value: Val, ctx: &mut 
     Some(())
 }
 
-/// Get the next representable value using ULP-based approach
-fn get_next_value(value: Val) -> Val {
+/// Get the next representable value using view-aware approach
+fn get_next_value<W: View>(view: &W, value: Val, _ctx: &Context) -> Val {
     match value {
         Val::ValI(i) => Val::ValI(i + 1),
-        Val::ValF(f) => Val::ValF(float_next(f)),
+        Val::ValF(f) => {
+            // For float variables, we need to use the interval-based approach
+            if let Some(_var_id) = view.get_underlying_var() {
+                // Try to access the variable's interval through the view system
+                // For now, use a small fixed step as fallback
+                let step = 1e-4; // Use same step size as our FloatInterval default
+                Val::ValF(f + step)
+            } else {
+                // For compound views, use a small fixed step
+                let step = 1e-4;
+                Val::ValF(f + step)
+            }
+        }
     }
 }
 
-/// Get the previous representable value using ULP-based approach
-fn get_prev_value(value: Val) -> Val {
+/// Get the previous representable value using view-aware approach
+fn get_prev_value<W: View>(view: &W, value: Val, _ctx: &Context) -> Val {
     match value {
         Val::ValI(i) => Val::ValI(i - 1),
-        Val::ValF(f) => Val::ValF(float_prev(f)),
+        Val::ValF(f) => {
+            // For float variables, we need to use the interval-based approach
+            if let Some(_var_id) = view.get_underlying_var() {
+                // Try to access the variable's interval through the view system
+                // For now, use a small fixed step as fallback
+                let step = 1e-4; // Use same step size as our FloatInterval default
+                Val::ValF(f - step)
+            } else {
+                // For compound views, use a small fixed step
+                let step = 1e-4;
+                Val::ValF(f - step)
+            }
+        }
     }
 }

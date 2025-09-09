@@ -35,6 +35,10 @@ pub fn float_equal(a: f32, b: f32) -> bool {
     almost_equal_as_int(a, b, FLOAT_INT_EPS)
 }
 
+// TODO: Consider removing these ULP-based functions in favor of FloatInterval
+// Commented out for now to preserve existing functionality
+
+/*
 #[doc(hidden)]
 #[must_use]
 pub fn float_perturbed_as_int(f: f32, c: i32) -> f32 {
@@ -80,6 +84,12 @@ pub fn float_perturbed_as_int(f: f32, c: i32) -> f32 {
     f32::from_bits(result_bits)
 }
 
+//
+// DEPRECATED: Old ULP-based float stepping functions
+// Replaced with fixed-step FloatInterval for predictable precision
+//
+
+/*
 #[must_use]
 pub fn float_prev(f: f32) -> f32 {
     let eps = -(FLOAT_INT_EPS as i32) - 1;
@@ -90,6 +100,27 @@ pub fn float_prev(f: f32) -> f32 {
 pub fn float_next(f: f32) -> f32 {
     let eps = FLOAT_INT_EPS as i32 + 1;
     float_perturbed_as_int(f, eps)
+}
+*/
+*/
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_almost_equal_as_int() {
+        assert!(almost_equal_as_int(1.0, 1.0, 0));
+        assert!(almost_equal_as_int(1.0, 1.0000001, 10));
+        assert!(!almost_equal_as_int(1.0, 2.0, 10));
+    }
+
+    #[test]
+    fn test_float_equal() {
+        assert!(float_equal(1.0, 1.0));
+        assert!(float_equal(1.0, 1.0000001));
+        assert!(!float_equal(1.0, 2.0));
+    }
 }
 
 

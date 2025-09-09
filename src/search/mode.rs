@@ -1,7 +1,7 @@
 use crate::props::PropId;
 use crate::search::Space;
 use crate::vars::{Vars, Val};
-use crate::views::{View, Context};
+use crate::views::View;
 
 /// Control search behavior when a solution is found.
 pub trait Mode: core::fmt::Debug {

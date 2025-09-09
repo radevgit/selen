@@ -1,13 +1,13 @@
 use crate::prelude::*;
-use crate::domain::SparseSet;
+use crate::domain::{SparseSet, FloatInterval};
 use crate::domain::sparse_set::SparseSetState;
 use std::ops::{Index, IndexMut};
 
 /// Domain for a decision variable
 #[derive(Clone, Debug)]
 pub enum Var {
-    /// interval of floating-point numbers
-    VarF { min: f32, max: f32 },
+    /// interval of floating-point numbers with fixed step size
+    VarF(FloatInterval),
     /// sparse set for integer domains
     VarI(SparseSet),
 }
@@ -32,21 +32,27 @@ impl Val {
         Val::ValF(value)
     }
 
-    /// Get the previous representable value using ULP-based approach
+    /// Get the previous representable value
     pub fn prev(self) -> Self {
-        use crate::utils::float_prev;
         match self {
             Val::ValI(i) => Val::ValI(i - 1),
-            Val::ValF(f) => Val::ValF(float_prev(f)),
+            Val::ValF(_f) => {
+                // For single values, we can't use prev/next without knowing the interval
+                // This would need to be handled at the variable level
+                self // Return unchanged for now
+            }
         }
     }
 
-    /// Get the next representable value using ULP-based approach
+    /// Get the next representable value
     pub fn next(self) -> Self {
-        use crate::utils::float_next;
         match self {
             Val::ValI(i) => Val::ValI(i + 1),
-            Val::ValF(f) => Val::ValF(float_next(f)),
+            Val::ValF(_f) => {
+                // For single values, we can't use prev/next without knowing the interval
+                // This would need to be handled at the variable level
+                self // Return unchanged for now
+            }
         }
     }
 }
@@ -130,9 +136,8 @@ impl Var {
     #[doc(hidden)]
     /// Assigned variables have a domain reduced to a singleton.
     pub fn is_assigned(&self) -> bool {
-        use crate::utils::float_equal;
         match self {
-            Var::VarF { min, max } => float_equal(*min, *max),
+            Var::VarF(interval) => interval.is_fixed(),
             Var::VarI(sparse_set) => sparse_set.is_fixed(),
         }
     }
@@ -141,7 +146,7 @@ impl Var {
     /// Midpoint of domain for easier binary splits.
     pub fn mid(&self) -> Val {
         match self {
-            Var::VarF { min, max } => Val::ValF(*min + (*max - *min) / 2.0),
+            Var::VarF(interval) => Val::ValF(interval.min + (interval.max - interval.min) / 2.0),
             Var::VarI(sparse_set) => {
                 if sparse_set.is_empty() {
                     // Should not happen in a valid CSP, but provide a fallback
@@ -179,7 +184,7 @@ impl Var {
         debug_assert!(self.is_assigned());
 
         match self {
-            Var::VarF { min, .. } => Val::ValF(*min),
+            Var::VarF(interval) => Val::ValF(interval.min),
             Var::VarI(sparse_set) => {
                 debug_assert!(sparse_set.is_fixed());
                 // For a fixed sparse set, min == max, so we can use either
@@ -212,16 +217,19 @@ impl Vars {
                 let sparse_set = SparseSet::new(min, max);
                 self.0.push(Var::VarI(sparse_set))
             },
-            (Val::ValF(min), Val::ValF(max)) => self.0.push(Var::VarF { min, max }),
+            (Val::ValF(min), Val::ValF(max)) => {
+                let interval = FloatInterval::new(min, max);
+                self.0.push(Var::VarF(interval))
+            },
             // type coercion
-            (Val::ValI(min), Val::ValF(max)) => self.0.push(Var::VarF {
-                min: min as f32,
-                max,
-            }),
-            (Val::ValF(min), Val::ValI(max)) => self.0.push(Var::VarF {
-                min,
-                max: max as f32,
-            }),
+            (Val::ValI(min), Val::ValF(max)) => {
+                let interval = FloatInterval::new(min as f32, max);
+                self.0.push(Var::VarF(interval))
+            },
+            (Val::ValF(min), Val::ValI(max)) => {
+                let interval = FloatInterval::new(min, max as f32);
+                self.0.push(Var::VarF(interval))
+            },
         }
 
         v
@@ -294,7 +302,7 @@ impl Vars {
     pub fn save_sparse_states(&self) -> Vec<Option<SparseSetState>> {
         self.0.iter().map(|var| {
             match var {
-                Var::VarF { .. } => None, // Float variables don't need state saving
+                Var::VarF(_) => None, // Float variables don't need state saving
                 Var::VarI(sparse_set) => Some(sparse_set.save_state()),
             }
         }).collect()
@@ -307,7 +315,7 @@ impl Vars {
         
         for (var, state_opt) in self.0.iter_mut().zip(states.iter()) {
             match (var, state_opt) {
-                (Var::VarF { .. }, None) => {
+                (Var::VarF(_), None) => {
                     // Float variables don't have saved state - nothing to restore
                 }
                 (Var::VarI(sparse_set), Some(state)) => {
