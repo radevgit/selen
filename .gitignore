@@ -3,4 +3,4 @@
 /target
 **/*.rs.bk
 clippy.txt
-/debug
+

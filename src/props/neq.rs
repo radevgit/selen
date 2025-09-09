@@ -2,14 +2,13 @@ use crate::{
     props::{Propagate, Prune},
     vars::{Val, VarId},
     views::{Context, View},
-    utils::float_equal,
 };
 
-/// ULP-aware not-equals constraint: x != y
+/// Context-aware not-equals constraint: x != y
 /// 
 /// This propagator ensures that two variables cannot be assigned the same value.
-/// It uses ULP-based precision for float comparisons to avoid floating-point
-/// precision issues while maintaining exact semantics for integers.
+/// It uses interval-aware precision for float comparisons to properly handle
+/// values from different FloatInterval instances with different discretizations.
 #[derive(Clone, Debug)]
 pub struct NotEquals<U, V> {
     x: U,
@@ -19,6 +18,28 @@ pub struct NotEquals<U, V> {
 impl<U, V> NotEquals<U, V> {
     pub fn new(x: U, y: V) -> Self {
         Self { x, y }
+    }
+    
+    /// Check if a domain is a singleton (single value) using context-aware comparison
+    fn is_singleton(&self, min_val: Val, max_val: Val, target_var: impl View, ctx: &Context) -> bool {
+        self.values_equal(min_val, max_val, target_var, ctx)
+    }
+
+    /// Check if two values are equal using proper interval context
+    fn values_equal(&self, val1: Val, val2: Val, target_var: impl View, ctx: &Context) -> bool {
+        // Since View doesn't directly expose VarId, we use the target_var's result type
+        // to determine the appropriate comparison strategy
+        match target_var.result_type(ctx) {
+            crate::views::ViewType::Float => {
+                // For float variables, use precision-based comparison
+                // We use a conservative tolerance since we don't have exact interval context
+                val1.equals_with_precision(&val2, 1e-12)
+            }
+            crate::views::ViewType::Integer => {
+                // For integer variables, use exact comparison
+                val1 == val2
+            }
+        }
     }
 }
 
@@ -35,8 +56,8 @@ impl<U: View, V: View> Prune for NotEquals<U, V> {
         }
 
         // Case 1: Both variables are assigned - check constraint violation
-        if is_singleton(x_min, x_max) && is_singleton(y_min, y_max) {
-            if values_equal(x_min, y_min) {
+        if self.is_singleton(x_min, x_max, self.x, ctx) && self.is_singleton(y_min, y_max, self.y, ctx) {
+            if self.values_equal(x_min, y_min, self.x, ctx) {
                 return None; // Constraint violated: both assigned to same value
             } else {
                 return Some(()); // Both assigned to different values - constraint satisfied
@@ -44,11 +65,11 @@ impl<U: View, V: View> Prune for NotEquals<U, V> {
         }
 
         // Case 2: x is assigned (singleton domain)
-        if is_singleton(x_min, x_max) {
+        if self.is_singleton(x_min, x_max, self.x, ctx) {
             let x_value = x_min;
             
             // If y's domain contains only the forbidden value, constraint fails
-            if is_singleton(y_min, y_max) && values_equal(y_min, x_value) {
+            if self.is_singleton(y_min, y_max, self.y, ctx) && self.values_equal(y_min, x_value, self.y, ctx) {
                 return None;
             }
             
@@ -56,11 +77,11 @@ impl<U: View, V: View> Prune for NotEquals<U, V> {
             exclude_value_from_domain(&self.y, x_value, ctx)?;
         }
         // Case 3: y is assigned (singleton domain) 
-        else if is_singleton(y_min, y_max) {
+        else if self.is_singleton(y_min, y_max, self.y, ctx) {
             let y_value = y_min;
             
             // If x's domain contains only the forbidden value, constraint fails  
-            if is_singleton(x_min, x_max) && values_equal(x_min, y_value) {
+            if self.is_singleton(x_min, x_max, self.x, ctx) && self.values_equal(x_min, y_value, self.x, ctx) {
                 return None;
             }
             
@@ -93,36 +114,31 @@ fn domains_overlap(x_min: Val, x_max: Val, y_min: Val, y_max: Val) -> bool {
     !values_less_than(x_max, y_min) && !values_less_than(y_max, x_min)
 }
 
-/// Check if a domain is a singleton (single value) using ULP-aware comparison
-fn is_singleton(min_val: Val, max_val: Val) -> bool {
-    values_equal(min_val, max_val)
-}
-
-/// Check if two values are equal using ULP-aware comparison
-fn values_equal(a: Val, b: Val) -> bool {
-    match (a, b) {
-        (Val::ValI(a_int), Val::ValI(b_int)) => a_int == b_int,
-        (Val::ValF(a_float), Val::ValF(b_float)) => float_equal(a_float, b_float),
-        (Val::ValI(a_int), Val::ValF(b_float)) => float_equal(a_int as f32, b_float),
-        (Val::ValF(a_float), Val::ValI(b_int)) => float_equal(a_float, b_int as f32),
-    }
-}
-
-/// Check if a < b using ULP-aware comparison
+/// Check if a < b
 fn values_less_than(a: Val, b: Val) -> bool {
     match (a, b) {
         (Val::ValI(a_int), Val::ValI(b_int)) => a_int < b_int,
         (Val::ValF(a_float), Val::ValF(b_float)) => {
-            !float_equal(a_float, b_float) && a_float < b_float
+            a_float != b_float && a_float < b_float
         },
         (Val::ValI(a_int), Val::ValF(b_float)) => {
-            let a_as_float = a_int as f32;
-            !float_equal(a_as_float, b_float) && a_as_float < b_float
+            let a_as_float = a_int as f64;
+            a_as_float != b_float && a_as_float < b_float
         },
         (Val::ValF(a_float), Val::ValI(b_int)) => {
-            let b_as_float = b_int as f32;
-            !float_equal(a_float, b_as_float) && a_float < b_as_float
+            let b_as_float = b_int as f64;
+            a_float != b_as_float && a_float < b_as_float
         },
+    }
+}
+
+/// Simple fallback equality comparison for helper functions
+fn values_equal(a: Val, b: Val) -> bool {
+    match (a, b) {
+        (Val::ValI(a_int), Val::ValI(b_int)) => a_int == b_int,
+        (Val::ValF(a_float), Val::ValF(b_float)) => a_float == b_float,
+        (Val::ValI(a_int), Val::ValF(b_float)) => (a_int as f64) == b_float,
+        (Val::ValF(a_float), Val::ValI(b_int)) => a_float == (b_int as f64),
     }
 }
 

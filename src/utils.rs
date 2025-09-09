@@ -29,11 +29,15 @@ pub fn almost_equal_as_int(a: f32, b: f32, ulps: u32) -> bool {
 
 #[doc(hidden)]
 pub const FLOAT_INT_EPS: u32 = 10;
-#[inline]
-#[must_use]
-pub fn float_equal(a: f32, b: f32) -> bool {
-    almost_equal_as_int(a, b, FLOAT_INT_EPS)
-}
+
+/// Compares two f32 values for equality using ULP-based comparison.
+/// This is needed for backwards compatibility and mixed precision scenarios.
+// #[doc(hidden)]
+// #[inline]
+// #[must_use]
+// pub fn float_equal(a: f32, b: f32) -> bool {
+//     almost_equal_as_int(a, b, FLOAT_INT_EPS)
+// }
 
 // TODO: Consider removing these ULP-based functions in favor of FloatInterval
 // Commented out for now to preserve existing functionality
@@ -115,12 +119,12 @@ mod tests {
         assert!(!almost_equal_as_int(1.0, 2.0, 10));
     }
 
-    #[test]
-    fn test_float_equal() {
-        assert!(float_equal(1.0, 1.0));
-        assert!(float_equal(1.0, 1.0000001));
-        assert!(!float_equal(1.0, 2.0));
-    }
+    // #[test]
+    // fn test_float_equal() {
+    //     assert!(float_equal(1.0, 1.0));
+    //     assert!(float_equal(1.0, 1.0000001));
+    //     assert!(!float_equal(1.0, 2.0));
+    // }
 }
 
 

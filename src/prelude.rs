@@ -36,7 +36,7 @@ pub const fn int(value: i32) -> crate::vars::Val {
 }
 
 /// Create a floating-point value - shorthand for Val::ValF()
-pub const fn float(value: f32) -> crate::vars::Val {
+pub const fn float(value: f64) -> crate::vars::Val {
     crate::vars::Val::float(value)
 }
 

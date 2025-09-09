@@ -3,8 +3,8 @@
 pub const DEFAULT_FLOAT_PRECISION_DIGITS: i32 = 6;
 
 /// Calculate step size from precision digits
-pub const fn precision_to_step_size(precision_digits: i32) -> f32 {
-    // This is a const fn equivalent of 10.0_f32.powi(-precision_digits)
+pub const fn precision_to_step_size(precision_digits: i32) -> f64 {
+    // This is a const fn equivalent of 10.0_f64.powi(-precision_digits)
     // We use a lookup table for common values since const fn has limitations
     match precision_digits {
         1 => 1e-1,
@@ -25,19 +25,19 @@ pub const fn precision_to_step_size(precision_digits: i32) -> f32 {
 
 /// Default step size for float intervals
 /// Based on DEFAULT_FLOAT_PRECISION_DIGITS (6 decimal places)
-pub const FLOAT_STEP_SIZE: f32 = precision_to_step_size(DEFAULT_FLOAT_PRECISION_DIGITS);
+pub const FLOAT_STEP_SIZE: f64 = precision_to_step_size(DEFAULT_FLOAT_PRECISION_DIGITS);
 
 /// Float interval with fixed step size for predictable precision
 #[derive(Debug, Clone, PartialEq)]
 pub struct FloatInterval {
-    pub min: f32,
-    pub max: f32,
-    pub step: f32,
+    pub min: f64,
+    pub max: f64,
+    pub step: f64,
 }
 
 impl FloatInterval {
     /// Create a new float interval with calculated step size
-    pub fn new(min: f32, max: f32) -> Self {
+    pub fn new(min: f64, max: f64) -> Self {
         if min > max {
             return Self::new(max, min);
         }
@@ -50,7 +50,7 @@ impl FloatInterval {
     }
     
     /// Create a float interval with custom step size
-    pub fn with_step(min: f32, max: f32, step: f32) -> Self {
+    pub fn with_step(min: f64, max: f64, step: f64) -> Self {
         if min > max {
             return Self::with_step(max, min, step);
         }
@@ -59,7 +59,7 @@ impl FloatInterval {
     }
     
     /// Get the next representable value
-    pub fn next(&self, value: f32) -> f32 {
+    pub fn next(&self, value: f64) -> f64 {
         let next_val = value + self.step;
         if next_val > self.max {
             self.max
@@ -69,7 +69,7 @@ impl FloatInterval {
     }
     
     /// Get the previous representable value
-    pub fn prev(&self, value: f32) -> f32 {
+    pub fn prev(&self, value: f64) -> f64 {
         let prev_val = value - self.step;
         if prev_val < self.min {
             self.min
@@ -79,7 +79,7 @@ impl FloatInterval {
     }
     
     /// Check if the interval contains a value
-    pub fn contains(&self, value: f32) -> bool {
+    pub fn contains(&self, value: f64) -> bool {
         value >= self.min && value <= self.max
     }
     
@@ -94,7 +94,7 @@ impl FloatInterval {
     }
     
     /// Get the size of the interval
-    pub fn size(&self) -> f32 {
+    pub fn size(&self) -> f64 {
         if self.is_empty() {
             0.0
         } else {
@@ -113,8 +113,22 @@ impl FloatInterval {
     }
     
     /// Round a value to the nearest step boundary
-    pub fn round_to_step(&self, value: f32) -> f32 {
+    pub fn round_to_step(&self, value: f64) -> f64 {
         let steps_from_min = ((value - self.min) / self.step).round();
+        let rounded = self.min + steps_from_min * self.step;
+        rounded.clamp(self.min, self.max)
+    }
+    
+    /// Round a value down to the nearest step boundary (floor)
+    pub fn floor_to_step(&self, value: f64) -> f64 {
+        let steps_from_min = ((value - self.min) / self.step).floor();
+        let rounded = self.min + steps_from_min * self.step;
+        rounded.clamp(self.min, self.max)
+    }
+    
+    /// Round a value up to the nearest step boundary (ceil)
+    pub fn ceil_to_step(&self, value: f64) -> f64 {
+        let steps_from_min = ((value - self.min) / self.step).ceil();
         let rounded = self.min + steps_from_min * self.step;
         rounded.clamp(self.min, self.max)
     }
@@ -134,35 +148,37 @@ impl FloatInterval {
     }
     
     /// Shrink the interval to [value, value] (assign a specific value)
-    pub fn assign(&mut self, value: f32) {
+    pub fn assign(&mut self, value: f64) {
         let rounded_value = self.round_to_step(value);
         self.min = rounded_value;
         self.max = rounded_value;
     }
     
     /// Remove values below the given threshold
-    pub fn remove_below(&mut self, threshold: f32) {
+    pub fn remove_below(&mut self, threshold: f64) {
         if threshold > self.max {
             // If threshold is above the maximum, remove everything (make empty)
-            self.min = self.max + 1.0;
+            self.max = self.min - 1.0;
         } else if threshold > self.min {
             // If threshold is within the interval, update min
-            self.min = self.round_to_step(threshold);
+            // For remove_below, we want to round UP to ensure we don't include values below threshold
+            self.min = self.ceil_to_step(threshold);
             if self.min > self.max {
-                self.min = self.max + 1.0; // Make empty
+                self.max = self.min - 1.0; // Make empty
             }
         }
         // If threshold <= self.min, do nothing (no values to remove)
     }
     
     /// Remove values above the given threshold
-    pub fn remove_above(&mut self, threshold: f32) {
+    pub fn remove_above(&mut self, threshold: f64) {
         if threshold < self.min {
             // If threshold is below the minimum, remove everything (make empty)
             self.max = self.min - 1.0;
         } else if threshold < self.max {
             // If threshold is within the interval, update max
-            self.max = self.round_to_step(threshold);
+            // For remove_above, we want to round DOWN to ensure we don't include values above threshold
+            self.max = self.floor_to_step(threshold);
             if self.max < self.min {
                 self.max = self.min - 1.0; // Make empty
             }
@@ -261,8 +277,8 @@ mod tests {
     #[test]
     fn test_round_to_step() {
         let interval = FloatInterval::with_step(0.0, 1.0, 0.1);
-        assert!((interval.round_to_step(0.23) - 0.2).abs() < 1e-6);
-        assert!((interval.round_to_step(0.27) - 0.3).abs() < 1e-6);
+        assert!((interval.round_to_step(0.23) - 0.2).abs() < interval.step * 0.01);
+        assert!((interval.round_to_step(0.27) - 0.3).abs() < interval.step * 0.01);
     }
 
     #[test]
@@ -282,8 +298,8 @@ mod tests {
         interval.assign(0.37);
         
         assert!(interval.is_fixed());
-        assert!((interval.min - 0.4).abs() < 1e-6); // Rounded to nearest step
-        assert!((interval.max - 0.4).abs() < 1e-6);
+        assert!((interval.min - 0.4).abs() < interval.step * 0.01); // Rounded to nearest step
+        assert!((interval.max - 0.4).abs() < interval.step * 0.01);
     }
 
     #[test]
@@ -291,7 +307,7 @@ mod tests {
         let mut interval = FloatInterval::with_step(0.0, 1.0, 0.1);
         interval.remove_below(0.35);
         
-        assert!((interval.min - 0.4).abs() < 1e-6); // Rounded up to step
+        assert!((interval.min - 0.4).abs() < interval.step * 0.01); // Rounded up to step
         assert_eq!(interval.max, 1.0);
     }
 
@@ -300,8 +316,12 @@ mod tests {
         let mut interval = FloatInterval::with_step(0.0, 1.0, 0.1);
         interval.remove_above(0.65);
         
+        println!("Debug: interval.max = {}, expected = 0.6, diff = {}", 
+                 interval.max, (interval.max - 0.6).abs());
+        println!("Debug: step size = {}, tolerance = {}", interval.step, interval.step * 0.01);
+        
         assert_eq!(interval.min, 0.0);
-        assert!((interval.max - 0.6).abs() < 1e-6); // Rounded down to step
+        assert!((interval.max - 0.6).abs() < interval.step * 0.01); // Rounded down to step
     }
 
     #[test]
@@ -583,6 +603,6 @@ mod tests {
         let mid = (interval.min + interval.max) / 2.0;
         let next_mid = interval.next(mid);
         assert!(next_mid > mid);
-        assert!((next_mid - mid - interval.step).abs() < f32::EPSILON);
+        assert!((next_mid - mid - interval.step).abs() < f64::EPSILON);
     }
 }

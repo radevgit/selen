@@ -38,7 +38,7 @@ impl Model {
     }
 
     /// Get the step size for the current float precision
-    pub fn float_step_size(&self) -> f32 {
+    pub fn float_step_size(&self) -> f64 {
         precision_to_step_size(self.float_precision_digits)
     }
 
@@ -144,7 +144,7 @@ impl Model {
     /// let mut model = Model::default();
     /// let var = model.new_var_float(0.0, 10.5);
     /// ```
-    pub fn new_var_float(&mut self, min: f32, max: f32) -> VarId {
+    pub fn new_var_float(&mut self, min: f64, max: f64) -> VarId {
         self.new_var(Val::ValF(min), Val::ValF(max))
     }
 
@@ -162,8 +162,8 @@ impl Model {
     pub fn new_vars_float(
         &mut self,
         n: usize,
-        min: f32,
-        max: f32,
+        min: f64,
+        max: f64,
     ) -> impl Iterator<Item = VarId> + '_ {
         self.new_vars(n, Val::ValF(min), Val::ValF(max))
     }

@@ -2,7 +2,6 @@ use crate::{
     props::{Propagate, Prune},
     vars::{Val, VarId},
     views::{Context, View},
-    utils::{float_equal},
 };
 use std::collections::HashSet;
 
@@ -27,20 +26,18 @@ impl AllDifferent {
     fn is_singleton(&self, min_val: Val, max_val: Val) -> bool {
         match (min_val, max_val) {
             (Val::ValI(min_i), Val::ValI(max_i)) => min_i == max_i,
-            (Val::ValF(min_f), Val::ValF(max_f)) => float_equal(min_f, max_f),
-            (Val::ValI(min_i), Val::ValF(max_f)) => float_equal(min_i as f32, max_f),
-            (Val::ValF(min_f), Val::ValI(max_i)) => float_equal(min_f, max_i as f32),
+            (Val::ValF(min_f), Val::ValF(max_f)) => min_f == max_f,
+            (Val::ValI(min_i), Val::ValF(max_f)) => (min_i as f64) == max_f,
+            (Val::ValF(min_f), Val::ValI(max_i)) => min_f == (max_i as f64),
         }
     }
     
-    /// Check if two values are equal
-    fn values_equal(&self, val1: Val, val2: Val) -> bool {
-        match (val1, val2) {
-            (Val::ValI(a), Val::ValI(b)) => a == b,
-            (Val::ValF(a), Val::ValF(b)) => float_equal(a, b),
-            (Val::ValI(a), Val::ValF(b)) => float_equal(a as f32, b),
-            (Val::ValF(a), Val::ValI(b)) => float_equal(a, b as f32),
-        }
+    /// Check if two values are equal using proper interval context.
+    /// For the target variable's context, we use its interval if available.
+    /// For the forbidden value, we fall back to a conservative comparison.
+    fn values_equal(&self, val1: Val, val2: Val, target_var: VarId, ctx: &Context) -> bool {
+        let target_interval = ctx.vars().get_float_interval(target_var);
+        val1.equals_with_intervals(&val2, target_interval, None)
     }
     
     /// Exclude a specific value from a variable's domain
@@ -54,19 +51,19 @@ impl AllDifferent {
         }
         
         // If the forbidden value is the only value in the domain, domain becomes empty
-        if self.is_singleton(current_min, current_max) && self.values_equal(current_min, forbidden_value) {
+        if self.is_singleton(current_min, current_max) && self.values_equal(current_min, forbidden_value, var, ctx) {
             return None; // Domain becomes empty - constraint violation
         }
         
         // If forbidden value is at the minimum bound, move minimum up
-        if self.values_equal(current_min, forbidden_value) {
+        if self.values_equal(current_min, forbidden_value, var, ctx) {
             let new_min = self.get_next_value(forbidden_value);
             var.try_set_min(new_min, ctx)?;
             return Some(());
         }
         
         // If forbidden value is at the maximum bound, move maximum down
-        if self.values_equal(current_max, forbidden_value) {
+        if self.values_equal(current_max, forbidden_value, var, ctx) {
             let new_max = self.get_prev_value(forbidden_value);
             var.try_set_max(new_max, ctx)?;
             return Some(());
@@ -83,7 +80,7 @@ impl AllDifferent {
     fn get_next_value(&self, value: Val) -> Val {
         match value {
             Val::ValI(i) => Val::ValI(i + 1),
-            Val::ValF(f) => Val::ValF(f + f32::EPSILON), // Simple increment for floats
+            Val::ValF(f) => Val::ValF(f + f64::EPSILON), // Simple increment for floats
         }
     }
     
@@ -91,7 +88,7 @@ impl AllDifferent {
     fn get_prev_value(&self, value: Val) -> Val {
         match value {
             Val::ValI(i) => Val::ValI(i - 1),
-            Val::ValF(f) => Val::ValF(f - f32::EPSILON), // Simple decrement for floats
+            Val::ValF(f) => Val::ValF(f - f64::EPSILON), // Simple decrement for floats
         }
     }
     
@@ -116,7 +113,7 @@ impl AllDifferent {
             if self.is_singleton(min_val, max_val) {
                 // Variable is assigned
                 for existing_val in &assigned_values {
-                    if self.values_equal(min_val, *existing_val) {
+                    if self.values_equal(min_val, *existing_val, var, ctx) {
                         return None; // Conflict
                     }
                 }
@@ -151,7 +148,7 @@ impl AllDifferent {
             let max2 = var2.max(ctx);
             
             // If both variables are assigned to the same value, fail
-            if self.is_singleton(min1, max1) && self.is_singleton(min2, max2) && self.values_equal(min1, min2) {
+            if self.is_singleton(min1, max1) && self.is_singleton(min2, max2) && self.values_equal(min1, min2, var1, ctx) {
                 return None;
             }
             
@@ -269,7 +266,7 @@ impl Prune for AllDifferent {
             
             if self.is_singleton(min_val, max_val) {
                 for existing_val in &assigned_values {
-                    if self.values_equal(min_val, *existing_val) {
+                    if self.values_equal(min_val, *existing_val, var, ctx) {
                         return None; // Conflict detected
                     }
                 }
