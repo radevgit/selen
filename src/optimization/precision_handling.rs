@@ -101,9 +101,10 @@ impl PrecisionAwareOptimizer {
 
     /// Try to optimize using precision-aware constraint analysis
     /// 
-    /// Currently returns None to fall back to Step 2.3.3 for safety.
-    /// This ensures correctness while the infrastructure for proper
-    /// constraint introspection is being developed.
+    /// Currently focuses on safe optimizations that don't require constraint introspection:
+    /// - Unconstrained optimization with high precision
+    /// - Domain boundary optimization  
+    /// - Safe fallback to Step 2.3.3 for constrained cases
     fn try_precision_aware_optimization(
         &self,
         vars: &Vars,
@@ -124,8 +125,21 @@ impl PrecisionAwareOptimizer {
             }
         };
 
-        // Step 2.4: Try to analyze constraints for actual constraint values
+        // Analyze constraint patterns
         match self.analyze_constraint_patterns(vars, props, var_id) {
+            ConstraintPattern::None => {
+                // No constraints - we can safely optimize to domain boundaries
+                let optimal = if is_maximization { 
+                    original_interval.max 
+                } else { 
+                    original_interval.min 
+                };
+                Some(OptimizationResult::success(
+                    optimal,
+                    if is_maximization { OptimizationOperation::Maximization } else { OptimizationOperation::Minimization },
+                    var_id
+                ))
+            },
             ConstraintPattern::UpperBound { value } if is_maximization => {
                 // For maximization with x < value, the optimal is just below value
                 let optimal = self.compute_optimal_below(original_interval, value);
@@ -153,7 +167,7 @@ impl PrecisionAwareOptimizer {
                 ))
             },
             _ => {
-                // For other patterns, fall back to conservative analysis
+                // For complex patterns, fall back to conservative analysis
                 None
             }
         }
@@ -176,12 +190,8 @@ impl PrecisionAwareOptimizer {
         if constraint_count == 0 {
             ConstraintPattern::None
         } else if constraint_count == 1 {
-            // Single constraint case - try to determine if it's a simple upper bound
-            // For now, we'll implement a heuristic that works for the precision test pattern
-            // TODO: Implement proper constraint introspection by:
-            // 1. Adding constraint metadata to propagators during creation
-            // 2. Providing methods to query constraint types and values
-            // 3. Handling view transformations (e.g., x.next() in x < y becomes x+1 <= y)
+            // Single constraint case - we can safely try some basic pattern detection
+            // without risking constraint violations by using domain bounds as constraints
             
             // Check if this matches a known precision test scenario
             if self.is_precision_test_pattern(var_id, props) {
@@ -189,10 +199,12 @@ impl PrecisionAwareOptimizer {
                 // TODO: Implement proper constraint introspection to extract actual values
                 ConstraintPattern::Complex
             } else {
+                // For safety, treat all single constraints as complex until we have
+                // proper constraint introspection infrastructure
                 ConstraintPattern::Complex
             }
         } else {
-            // Multiple constraints - too complex for simple analysis
+            // Multiple constraints - definitely too complex for simple analysis
             ConstraintPattern::Complex
         }
     }
@@ -200,11 +212,33 @@ impl PrecisionAwareOptimizer {
     /// Heuristic to detect if this is a precision test pattern
     /// 
     /// Currently disabled for safety - returns false to ensure correctness.
-    /// The challenge of proper constraint introspection requires significant architectural work:
-    /// - Adding constraint metadata during propagator creation  
-    /// - Implementing constraint query methods to extract types and values
-    /// - Handling view transformations (e.g., x.next() becomes x + 1)
-    /// - Supporting complex constraint compositions
+    /// 
+    /// ## Future Implementation Roadmap
+    /// 
+    /// To enable reliable precision optimization, implement these architectural components:
+    /// 
+    /// ### Phase 1: Constraint Metadata Infrastructure
+    /// ```rust
+    /// struct ConstraintMetadata {
+    ///     constraint_type: ConstraintType,  // LessThan, GreaterThan, Equal, etc.
+    ///     operands: Vec<ConstraintOperand>, // Variables and constants involved
+    ///     view_transforms: Vec<ViewTransform>, // Applied transformations
+    /// }
+    /// ```
+    /// 
+    /// ### Phase 2: Propagator Query Interface  
+    /// ```rust
+    /// impl Propagators {
+    ///     fn get_constraints_for_variable(&self, var_id: VarId) -> Vec<&ConstraintMetadata>;
+    ///     fn extract_constraint_bounds(&self, var_id: VarId) -> Option<(f64, f64)>;
+    /// }
+    /// ```
+    /// 
+    /// ### Phase 3: Safe Constraint Value Extraction
+    /// - Parse constraint operands to extract constant values
+    /// - Handle view transformations (x.next() → x + 1)  
+    /// - Validate extracted values against domain bounds
+    /// - Provide fallback for complex cases
     /// 
     /// Until this infrastructure is in place, we fall back to the proven Step 2.3.3 optimizer.
     fn is_precision_test_pattern(&self, _var_id: VarId, _props: &Propagators) -> bool {
