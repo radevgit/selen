@@ -54,6 +54,11 @@ impl Propagators {
         &mut self.state[p]
     }
 
+    /// Acquire immutable reference to propagator state (for constraint analysis).
+    pub fn get_state(&self, p: PropId) -> &Box<dyn Prune> {
+        &self.state[p]
+    }
+
     /// Get list of propagators that should be scheduled when a bound of variable `v` changes.
     pub fn on_bound_change(&self, v: VarId) -> impl Iterator<Item = PropId> + '_ {
         self.dependencies[v].iter().copied()

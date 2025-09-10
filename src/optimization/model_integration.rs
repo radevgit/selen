@@ -325,11 +325,18 @@ impl OptimizationRouter {
         
         match &all_vars[var_idx].1 {
             crate::vars::Var::VarF(interval) => {
-                // For Step 2.3.2: Use a safe heuristic approach to handle constraints
+                // Step 2.3.3: Use constraint-aware optimization when constraints exist
                 let optimal_value = if props.get_prop_ids_iter().next().is_some() {
-                    // If there are constraints, be conservative and use the current lower bound
-                    // This avoids triggering expensive constraint analysis
-                    interval.min
+                    // Constraints detected - use constraint-aware optimizer
+                    let var_id = index_to_var_id(var_idx);
+                    let result = self.constraint_optimizer.minimize_with_constraints(vars, props, var_id);
+                    
+                    if result.success {
+                        result.optimal_value
+                    } else {
+                        // Constraint-aware optimization failed - use conservative fallback
+                        interval.min
+                    }
                 } else {
                     // No constraints - minimize to lower bound
                     interval.min
@@ -362,12 +369,29 @@ impl OptimizationRouter {
         
         match &all_vars[var_idx].1 {
             crate::vars::Var::VarF(interval) => {
-                // For Step 2.3.2: Conservative approach for constraints
+                // Step 2.3.3: Use constraint-aware optimization when constraints exist
                 if props.get_prop_ids_iter().next().is_some() {
-                    // If there are constraints, for now fall back to search
-                    // This ensures we don't hang, but we don't optimize either
-                    // TODO: In Step 2.3.3, implement proper constraint analysis
-                    OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
+                    // Constraints detected - use constraint-aware optimizer
+                    let var_id = index_to_var_id(var_idx);
+                    let result = self.constraint_optimizer.maximize_with_constraints(vars, props, var_id);
+                    
+                    match result.success {
+                        true => {
+                            // Constraint-aware optimization succeeded
+                            match self.create_unconstrained_solution(vars, var_idx, result.optimal_value) {
+                                Ok(solution) => OptimizationAttempt::Success(solution),
+                                Err(_) => OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
+                                    SolutionCreationError::SolutionInitializationFailed
+                                )),
+                            }
+                        },
+                        false => {
+                            // Constraint-aware optimization failed - fall back to search
+                            OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
+                                OptimizerFailure::ConstraintAnalysisFailed
+                            ))
+                        }
+                    }
                 } else {
                     // No constraints - maximize to upper bound
                     let optimal_value = interval.max;
