@@ -633,6 +633,18 @@ mod tests {
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct VarId(usize);
 
+impl VarId {
+    /// Create a VarId from a usize index (for internal use)
+    pub(crate) fn from_index(index: usize) -> Self {
+        VarId(index)
+    }
+    
+    /// Get the internal index as usize (for internal use)
+    pub(crate) fn to_index(self) -> usize {
+        self.0
+    }
+}
+
 impl std::fmt::Debug for VarId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "VarId({})", self.0)

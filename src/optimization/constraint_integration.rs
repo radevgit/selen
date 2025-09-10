@@ -7,10 +7,11 @@
 
 use crate::vars::{Vars, VarId};
 use crate::props::Propagators;
-use crate::optimization::float_direct::{FloatBoundsOptimizer, OptimizationResult};
+use crate::optimization::float_direct::{FloatBoundsOptimizer, OptimizationResult, OptimizationOperation, VariableError, DomainError};
 use crate::domain::FloatInterval;
 
 /// Extended optimizer that handles constraints by converting them to bounds
+#[derive(Debug)]
 pub struct ConstraintAwareOptimizer {
     base_optimizer: FloatBoundsOptimizer,
 }
@@ -153,22 +154,20 @@ impl ConstraintAwareOptimizer {
     ) -> OptimizationResult {
         // First, check if this is a float variable
         if !self.base_optimizer.can_optimize(vars, var_id) {
-            return OptimizationResult::failure(
-                format!("Cannot optimize variable {}: not a float variable or empty domain", var_id_to_string(var_id))
-            );
+            return OptimizationResult::variable_error(VariableError::NotFloatVariable);
         }
 
         // Analyze constraints to compute effective bounds
         let constrained_bounds = self.analyze_constraints(vars, props, var_id);
         
         if !constrained_bounds.is_feasible {
-            return OptimizationResult::failure(constrained_bounds.derivation.to_description());
+            return OptimizationResult::domain_error(DomainError::EmptyDomain);
         }
 
         // Apply the constrained bounds to create a temporary variable domain
         let mut temp_vars = vars.clone();
-        if let Err(error) = self.apply_constrained_bounds(&mut temp_vars, var_id, &constrained_bounds) {
-            return OptimizationResult::failure(error);
+        if let Err(_error) = self.apply_constrained_bounds(&mut temp_vars, var_id, &constrained_bounds) {
+            return OptimizationResult::domain_error(DomainError::InvalidBounds);
         }
 
         // Use the base optimizer on the constrained domain
@@ -178,7 +177,8 @@ impl ConstraintAwareOptimizer {
         if result.success {
             OptimizationResult::success(
                 result.optimal_value,
-                format!("{} (constrained by: {})", result.description, constrained_bounds.derivation.to_description())
+                OptimizationOperation::Maximization,
+                var_id
             )
         } else {
             result
@@ -194,22 +194,20 @@ impl ConstraintAwareOptimizer {
     ) -> OptimizationResult {
         // First, check if this is a float variable
         if !self.base_optimizer.can_optimize(vars, var_id) {
-            return OptimizationResult::failure(
-                format!("Cannot optimize variable {}: not a float variable or empty domain", var_id_to_string(var_id))
-            );
+            return OptimizationResult::variable_error(VariableError::NotFloatVariable);
         }
 
         // Analyze constraints to compute effective bounds
         let constrained_bounds = self.analyze_constraints(vars, props, var_id);
         
         if !constrained_bounds.is_feasible {
-            return OptimizationResult::failure(constrained_bounds.derivation.to_description());
+            return OptimizationResult::domain_error(DomainError::EmptyDomain);
         }
 
         // Apply the constrained bounds to create a temporary variable domain
         let mut temp_vars = vars.clone();
-        if let Err(error) = self.apply_constrained_bounds(&mut temp_vars, var_id, &constrained_bounds) {
-            return OptimizationResult::failure(error);
+        if let Err(_error) = self.apply_constrained_bounds(&mut temp_vars, var_id, &constrained_bounds) {
+            return OptimizationResult::domain_error(DomainError::InvalidBounds);
         }
 
         // Use the base optimizer on the constrained domain
@@ -219,7 +217,8 @@ impl ConstraintAwareOptimizer {
         if result.success {
             OptimizationResult::success(
                 result.optimal_value,
-                format!("{} (constrained by: {})", result.description, constrained_bounds.derivation.to_description())
+                OptimizationOperation::Minimization,
+                var_id
             )
         } else {
             result
@@ -292,7 +291,7 @@ impl ConstraintAwareOptimizer {
         if result.success {
             match self.base_optimizer.apply_result(vars, var_id, &result) {
                 Ok(()) => result,
-                Err(error) => OptimizationResult::failure(error),
+                Err(_error) => OptimizationResult::domain_error(DomainError::InvalidBounds),
             }
         } else {
             result
@@ -311,7 +310,7 @@ impl ConstraintAwareOptimizer {
         if result.success {
             match self.base_optimizer.apply_result(vars, var_id, &result) {
                 Ok(()) => result,
-                Err(error) => OptimizationResult::failure(error),
+                Err(_error) => OptimizationResult::domain_error(DomainError::InvalidBounds),
             }
         } else {
             result
@@ -323,11 +322,6 @@ impl Default for ConstraintAwareOptimizer {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Helper function to convert VarId to string for error messages
-fn var_id_to_string(var_id: VarId) -> String {
-    format!("VarId({:?})", var_id)
 }
 
 #[cfg(test)]
@@ -359,7 +353,14 @@ mod tests {
 
         assert!(result.success, "Optimization should succeed");
         assert_eq!(result.optimal_value, 8.0, "Should maximize to upper bound");
-        assert!(result.description.contains("original variable bounds"));
+        
+        // Check that we have a successful maximization outcome
+        match result.outcome {
+            crate::optimization::float_direct::OptimizationOutcome::Success { operation, .. } => {
+                assert_eq!(operation, crate::optimization::float_direct::OptimizationOperation::Maximization);
+            },
+            _ => panic!("Expected successful maximization outcome"),
+        }
     }
 
     #[test]
@@ -372,7 +373,14 @@ mod tests {
 
         assert!(result.success, "Optimization should succeed");
         assert_eq!(result.optimal_value, 1.5, "Should minimize to lower bound");
-        assert!(result.description.contains("original variable bounds"));
+        
+        // Check that we have a successful minimization outcome
+        match result.outcome {
+            crate::optimization::float_direct::OptimizationOutcome::Success { operation, .. } => {
+                assert_eq!(operation, crate::optimization::float_direct::OptimizationOperation::Minimization);
+            },
+            _ => panic!("Expected successful minimization outcome"),
+        }
     }
 
     #[test]
@@ -417,7 +425,21 @@ mod tests {
         let result = optimizer.maximize_with_constraints(&vars, &props, var_id);
 
         assert!(!result.success, "Should fail on infeasible domain");
-        assert!(result.description.contains("empty domain"));
+        
+        // Debug: let's see what we actually get
+        println!("Actual outcome: {:?}", result.outcome);
+        
+        // Check that we have a domain error outcome
+        match result.outcome {
+            crate::optimization::float_direct::OptimizationOutcome::DomainError(crate::optimization::float_direct::DomainError::EmptyDomain) => {
+                // This is expected
+            },
+            crate::optimization::float_direct::OptimizationOutcome::VariableError(crate::optimization::float_direct::VariableError::NotFloatVariable) => {
+                // This might also be valid if the base optimizer rejects empty intervals
+                println!("Got NotFloatVariable, which might be expected for empty intervals");
+            },
+            _ => panic!("Expected EmptyDomain error for infeasible case, got: {:?}", result.outcome),
+        }
     }
 
     #[test]
@@ -434,7 +456,14 @@ mod tests {
         let result = optimizer.maximize_with_constraints(&vars, &props, int_var_id);
 
         assert!(!result.success, "Should fail on integer variable");
-        assert!(result.description.contains("not a float variable"));
+        
+        // Check that we have a variable error outcome
+        match result.outcome {
+            crate::optimization::float_direct::OptimizationOutcome::VariableError(crate::optimization::float_direct::VariableError::NotFloatVariable) => {
+                // This is expected
+            },
+            _ => panic!("Expected NotFloatVariable error for integer variable"),
+        }
     }
 
     #[test]

@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use crate::domain::float_interval::{DEFAULT_FLOAT_PRECISION_DIGITS, precision_to_step_size};
+use crate::optimization::model_integration::{OptimizationRouter, OptimizationAttempt};
 use std::ops::Index;
 
 #[derive(Debug)]
@@ -8,6 +9,8 @@ pub struct Model {
     props: Propagators,
     /// Precision for float variables (decimal places)
     pub float_precision_digits: i32,
+    /// Optimization router for efficient algorithm selection
+    optimization_router: OptimizationRouter,
 }
 
 impl Default for Model {
@@ -29,6 +32,7 @@ impl Model {
             vars: Vars::default(),
             props: Propagators::default(),
             float_precision_digits: precision_digits,
+            optimization_router: OptimizationRouter::new(),
         }
     }
 
@@ -483,8 +487,18 @@ impl Model {
     /// let solutions: Vec<_> = model.minimize_and_iterate(x).collect();
     /// ```
     pub fn minimize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
-        let (vars, props) = self.prepare_for_search();
-        search(vars, props, mode::Minimize::new(objective))
+        // First try specialized optimization before falling back to search
+        match self.try_optimization_minimize(&objective) {
+            Some(solution) => {
+                // Optimization succeeded - return a single-element iterator with the optimal solution
+                Box::new(std::iter::once(solution)) as Box<dyn Iterator<Item = Solution>>
+            }
+            None => {
+                // Optimization failed or not applicable - fall back to traditional search
+                let (vars, props) = self.prepare_for_search();
+                Box::new(search(vars, props, mode::Minimize::new(objective))) as Box<dyn Iterator<Item = Solution>>
+            }
+        }
     }
 
     /// Enumerate assignments that satisfy all constraints, while minimizing objective expression, with callback.
@@ -567,7 +581,17 @@ impl Model {
     /// let solutions: Vec<_> = model.maximize_and_iterate(x).collect();
     /// ```
     pub fn maximize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
-        self.minimize_and_iterate(objective.opposite())
+        // First try specialized optimization before falling back to search
+        match self.try_optimization_maximize(&objective) {
+            Some(solution) => {
+                // Optimization succeeded - return a single-element iterator with the optimal solution
+                Box::new(std::iter::once(solution)) as Box<dyn Iterator<Item = Solution>>
+            }
+            None => {
+                // Optimization failed or not applicable - fall back to traditional search
+                Box::new(self.minimize_and_iterate(objective.opposite())) as Box<dyn Iterator<Item = Solution>>
+            }
+        }
     }
 
     /// Enumerate assignments that satisfy all constraints, while maximizing objective expression, with callback.
@@ -728,6 +752,99 @@ impl Model {
         // Automatically optimize constraint order for better performance
         self.optimize_constraint_order();
         (self.vars, self.props)
+    }
+
+    /// Try to solve minimization using specialized optimization algorithms
+    /// Returns Some(solution) if optimization succeeds, None if should fall back to search
+    fn try_optimization_minimize(&self, objective: &impl View) -> Option<Solution> {
+        // Attempt optimization using the router
+        match self.optimization_router.try_minimize(&self.vars, &self.props, objective) {
+            OptimizationAttempt::Success(solution) => Some(solution),
+            OptimizationAttempt::Fallback(_reason) => {
+                // Optimization not applicable - let search handle it
+                None
+            },
+            OptimizationAttempt::Infeasible(_reason) => {
+                // Problem is infeasible - no solution exists
+                None
+            },
+        }
+    }
+
+    /// Try to solve maximization using specialized optimization algorithms  
+    /// Returns Some(solution) if optimization succeeds, None if should fall back to search
+    fn try_optimization_maximize(&self, objective: &impl View) -> Option<Solution> {
+        // Attempt optimization using the router
+        match self.optimization_router.try_maximize(&self.vars, &self.props, objective) {
+            OptimizationAttempt::Success(solution) => Some(solution),
+            OptimizationAttempt::Fallback(_reason) => {
+                // Optimization not applicable - let search handle it
+                None
+            },
+            OptimizationAttempt::Infeasible(_reason) => {
+                // Problem is infeasible - no solution exists
+                None
+            },
+        }
+    }
+
+    /// Extract a single float variable from the objective (Step 2.3.1 heuristic)
+    fn extract_single_float_variable(&self, _objective: &impl View) -> Option<VarId> {
+        // Simple heuristic for Step 2.3.1: if exactly one float variable exists, use it
+        // TODO: In Step 2.3.2, implement proper View analysis to extract variable from objective
+        
+        let mut float_vars = Vec::new();
+        for (index, var) in self.vars.iter_with_indices() {
+            if matches!(var, crate::vars::Var::VarF(_)) {
+                // Convert index to VarId using the helper from model_integration
+                let var_id = crate::optimization::model_integration::index_to_var_id(index);
+                float_vars.push(var_id);
+            }
+        }
+        
+        // Simple heuristic: if exactly one float variable, optimize it
+        if float_vars.len() == 1 {
+            Some(float_vars[0])
+        } else {
+            None // Fallback to search for complex cases
+        }
+    }
+
+    /// Create a Solution from an OptimizationResult
+    fn create_solution_from_optimization(&self, result: crate::optimization::float_direct::OptimizationResult) -> Result<Solution, String> {
+        // Create a solution vector with all variable values
+        let mut solution_values = Vec::new();
+        
+        for (index, var) in self.vars.iter_with_indices() {
+            match var {
+                crate::vars::Var::VarF(interval) => {
+                    // For the optimized variable, use the optimal value
+                    // For others, use their current bound (this is a simplification)
+                    if result.success {
+                        let var_id = crate::optimization::model_integration::index_to_var_id(index);
+                        match &result.outcome {
+                            crate::optimization::float_direct::OptimizationOutcome::Success { variable_id, .. } => {
+                                // Compare VarIds by converting both to usize for comparison
+                                let result_var_index = crate::optimization::model_integration::var_id_to_index(*variable_id);
+                                if index == result_var_index {
+                                    solution_values.push(crate::vars::Val::float(result.optimal_value));
+                                } else {
+                                    solution_values.push(crate::vars::Val::float(interval.min));
+                                }
+                            },
+                            _ => solution_values.push(crate::vars::Val::float(interval.min)),
+                        }
+                    } else {
+                        solution_values.push(crate::vars::Val::float(interval.min));
+                    }
+                },
+                crate::vars::Var::VarI(domain) => {
+                    solution_values.push(crate::vars::Val::int(domain.min()));
+                }
+            }
+        }
+        
+        Ok(Solution::from(solution_values))
     }
 
     /// Enumerate all assignments that satisfy all constraints.

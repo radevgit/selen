@@ -19,36 +19,114 @@
 use crate::vars::{Vars, VarId};
 use crate::domain::FloatInterval;
 
+/// Types of optimization outcomes for float bounds optimization
+#[derive(Debug, Clone, PartialEq)]
+pub enum OptimizationOutcome {
+    /// Successfully found optimal value
+    Success { 
+        /// The operation performed
+        operation: OptimizationOperation,
+        /// The variable that was optimized
+        variable_id: VarId,
+    },
+    /// Failed due to variable-related issues
+    VariableError(VariableError),
+    /// Failed due to domain issues
+    DomainError(DomainError),
+}
+
+/// Types of optimization operations
+#[derive(Debug, Clone, PartialEq)]
+pub enum OptimizationOperation {
+    /// Maximization operation
+    Maximization,
+    /// Minimization operation
+    Minimization,
+}
+
+/// Variable-related optimization errors
+#[derive(Debug, Clone, PartialEq)]
+pub enum VariableError {
+    /// Variable is not a float type
+    NotFloatVariable,
+    /// Variable ID is invalid
+    InvalidVariable,
+}
+
+/// Domain-related optimization errors
+#[derive(Debug, Clone, PartialEq)]
+pub enum DomainError {
+    /// Variable has empty domain
+    EmptyDomain,
+    /// Domain bounds are invalid
+    InvalidBounds,
+}
+
 /// Core analytical optimizer for pure float problems
+#[derive(Debug)]
 pub struct FloatBoundsOptimizer;
 
 /// Result of direct float optimization
 #[derive(Debug, Clone, PartialEq)]
 pub struct OptimizationResult {
-    /// The optimal value found
+    /// The optimal value found (NaN if failed)
     pub optimal_value: f64,
     /// Whether the optimization was successful
     pub success: bool,
-    /// Human-readable description of the result
-    pub description: String,
+    /// Structured outcome information
+    pub outcome: OptimizationOutcome,
 }
 
 impl OptimizationResult {
     /// Create a successful optimization result
-    pub fn success(value: f64, description: String) -> Self {
+    pub fn success(value: f64, operation: OptimizationOperation, variable_id: VarId) -> Self {
         Self {
             optimal_value: value,
             success: true,
-            description,
+            outcome: OptimizationOutcome::Success { operation, variable_id },
         }
     }
 
-    /// Create a failed optimization result
-    pub fn failure(description: String) -> Self {
+    /// Create a failed optimization result due to variable error
+    pub fn variable_error(error: VariableError) -> Self {
         Self {
             optimal_value: f64::NAN,
             success: false,
-            description,
+            outcome: OptimizationOutcome::VariableError(error),
+        }
+    }
+
+    /// Create a failed optimization result due to domain error
+    pub fn domain_error(error: DomainError) -> Self {
+        Self {
+            optimal_value: f64::NAN,
+            success: false,
+            outcome: OptimizationOutcome::DomainError(error),
+        }
+    }
+
+    /// Get human-readable description (for debugging/logging only)
+    pub fn description(&self) -> String {
+        match &self.outcome {
+            OptimizationOutcome::Success { operation, variable_id } => {
+                let op_str = match operation {
+                    OptimizationOperation::Maximization => "Maximized",
+                    OptimizationOperation::Minimization => "Minimized",
+                };
+                format!("{} {} to {}", op_str, var_id_to_string(*variable_id), self.optimal_value)
+            },
+            OptimizationOutcome::VariableError(error) => {
+                match error {
+                    VariableError::NotFloatVariable => "Variable is not a float variable".to_string(),
+                    VariableError::InvalidVariable => "Invalid variable ID".to_string(),
+                }
+            },
+            OptimizationOutcome::DomainError(error) => {
+                match error {
+                    DomainError::EmptyDomain => "Cannot optimize: variable has empty domain".to_string(),
+                    DomainError::InvalidBounds => "Cannot optimize: invalid domain bounds".to_string(),
+                }
+            },
         }
     }
 }
@@ -79,9 +157,7 @@ impl FloatBoundsOptimizer {
         match self.get_float_bounds(vars, var_id) {
             Some(interval) => {
                 if interval.is_empty() {
-                    return OptimizationResult::failure(
-                        "Cannot maximize: variable has empty domain".to_string()
-                    );
+                    return OptimizationResult::domain_error(DomainError::EmptyDomain);
                 }
 
                 // For maximization, we want the largest possible value
@@ -89,12 +165,11 @@ impl FloatBoundsOptimizer {
                 
                 OptimizationResult::success(
                     optimal_value,
-                    format!("Maximized {} to {}", var_id_to_string(var_id), optimal_value)
+                    OptimizationOperation::Maximization,
+                    var_id
                 )
             },
-            None => OptimizationResult::failure(
-                format!("Variable {} is not a float variable", var_id_to_string(var_id))
-            ),
+            None => OptimizationResult::variable_error(VariableError::NotFloatVariable),
         }
     }
 
@@ -116,9 +191,7 @@ impl FloatBoundsOptimizer {
         match self.get_float_bounds(vars, var_id) {
             Some(interval) => {
                 if interval.is_empty() {
-                    return OptimizationResult::failure(
-                        "Cannot minimize: variable has empty domain".to_string()
-                    );
+                    return OptimizationResult::domain_error(DomainError::EmptyDomain);
                 }
 
                 // For minimization, we want the smallest possible value
@@ -126,12 +199,11 @@ impl FloatBoundsOptimizer {
                 
                 OptimizationResult::success(
                     optimal_value,
-                    format!("Minimized {} to {}", var_id_to_string(var_id), optimal_value)
+                    OptimizationOperation::Minimization,
+                    var_id
                 )
             },
-            None => OptimizationResult::failure(
-                format!("Variable {} is not a float variable", var_id_to_string(var_id))
-            ),
+            None => OptimizationResult::variable_error(VariableError::NotFloatVariable),
         }
     }
 
@@ -167,9 +239,9 @@ impl FloatBoundsOptimizer {
         vars: &mut Vars,
         var_id: VarId,
         result: &OptimizationResult
-    ) -> Result<(), String> {
+    ) -> Result<(), DomainError> {
         if !result.success {
-            return Err(format!("Cannot apply failed optimization: {}", result.description));
+            return Err(DomainError::InvalidBounds);
         }
 
         // Update the variable domain to the single optimal value
@@ -187,7 +259,7 @@ impl FloatBoundsOptimizer {
                 Ok(())
             },
             crate::vars::Var::VarI(_) => {
-                Err(format!("Variable {} is not a float variable", var_id_to_string(var_id)))
+                Err(DomainError::InvalidBounds)
             }
         }
     }
@@ -206,7 +278,9 @@ impl FloatBoundsOptimizer {
         if result.success {
             match self.apply_result(vars, var_id, &result) {
                 Ok(()) => result,
-                Err(error) => OptimizationResult::failure(error),
+                Err(error) => {
+                    OptimizationResult::domain_error(error)
+                },
             }
         } else {
             result
@@ -224,7 +298,9 @@ impl FloatBoundsOptimizer {
         if result.success {
             match self.apply_result(vars, var_id, &result) {
                 Ok(()) => result,
-                Err(error) => OptimizationResult::failure(error),
+                Err(error) => {
+                    OptimizationResult::domain_error(error)
+                },
             }
         } else {
             result
@@ -266,8 +342,14 @@ mod tests {
 
         assert!(result.success, "Optimization should succeed");
         assert_eq!(result.optimal_value, 10.0, "Should maximize to upper bound");
-        assert!(result.description.contains("Maximized"));
-        assert!(result.description.contains("10"));
+        
+        // Check that the outcome is a successful maximization
+        match result.outcome {
+            OptimizationOutcome::Success { operation, .. } => {
+                assert_eq!(operation, OptimizationOperation::Maximization);
+            },
+            _ => assert!(false, "Expected successful maximization outcome"),
+        }
     }
 
     #[test]
@@ -279,8 +361,14 @@ mod tests {
 
         assert!(result.success, "Optimization should succeed");
         assert_eq!(result.optimal_value, 2.5, "Should minimize to lower bound");
-        assert!(result.description.contains("Minimized"));
-        assert!(result.description.contains("2.5"));
+        
+        // Check that the outcome is a successful minimization
+        match result.outcome {
+            OptimizationOutcome::Success { operation, .. } => {
+                assert_eq!(operation, OptimizationOperation::Minimization);
+            },
+            _ => assert!(false, "Expected successful minimization outcome"),
+        }
     }
 
     #[test]
@@ -318,7 +406,14 @@ mod tests {
         
         let result = optimizer.maximize_variable(&vars, int_var_id);
         assert!(!result.success, "Should fail on integer variable");
-        assert!(result.description.contains("not a float variable"));
+        
+        // Check that the outcome is a variable error
+        match result.outcome {
+            OptimizationOutcome::VariableError(VariableError::NotFloatVariable) => {
+                // This is expected
+            },
+            _ => assert!(false, "Expected NotFloatVariable error"),
+        }
     }
 
     #[test]

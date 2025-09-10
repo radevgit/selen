@@ -61,6 +61,8 @@ pub enum CouplingStrength {
 }
 
 /// Problem classifier that analyzes Model structure
+/// Core classifier for analyzing CSP problem characteristics
+#[derive(Debug)]
 pub struct ProblemClassifier;
 
 impl ProblemClassifier {
