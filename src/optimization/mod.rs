@@ -14,6 +14,7 @@
 pub mod classification;
 pub mod float_direct;
 pub mod constraint_integration;
+pub mod precision_handling;
 pub mod model_integration;
 
 pub use classification::*;

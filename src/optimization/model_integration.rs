@@ -9,6 +9,7 @@ use crate::props::Propagators;
 use crate::solution::Solution;
 use crate::views::View;
 use crate::optimization::{ProblemClassifier, ProblemType, ConstraintAwareOptimizer, OptimizationResult};
+use crate::optimization::precision_handling::PrecisionAwareOptimizer;
 
 /// Helper function to extract the internal index from VarId
 /// Safe accessor using the new VarId methods
@@ -27,6 +28,7 @@ pub fn index_to_var_id(index: usize) -> VarId {
 pub struct OptimizationRouter {
     classifier: ProblemClassifier,
     constraint_optimizer: ConstraintAwareOptimizer,
+    precision_optimizer: PrecisionAwareOptimizer,
 }
 
 /// Result of attempting optimization through specialized algorithms
@@ -203,6 +205,7 @@ impl OptimizationRouter {
         Self {
             classifier: ProblemClassifier,
             constraint_optimizer: ConstraintAwareOptimizer::new(),
+            precision_optimizer: PrecisionAwareOptimizer::new(),
         }
     }
     
@@ -325,17 +328,26 @@ impl OptimizationRouter {
         
         match &all_vars[var_idx].1 {
             crate::vars::Var::VarF(interval) => {
-                // Step 2.3.3: Use constraint-aware optimization when constraints exist
+                let var_id = index_to_var_id(var_idx);
+                
+                // Step 2.4: Use precision-aware optimization when constraints exist
                 let optimal_value = if props.get_prop_ids_iter().next().is_some() {
-                    // Constraints detected - use constraint-aware optimizer
-                    let var_id = index_to_var_id(var_idx);
-                    let result = self.constraint_optimizer.minimize_with_constraints(vars, props, var_id);
+                    // Constraints detected - try precision-aware optimization first
+                    let precision_result = self.precision_optimizer.minimize_with_precision(vars, props, var_id);
                     
-                    if result.success {
-                        result.optimal_value
+                    if precision_result.success {
+                        // Step 2.4 precision optimization succeeded
+                        precision_result.optimal_value
                     } else {
-                        // Constraint-aware optimization failed - use conservative fallback
-                        interval.min
+                        // Fall back to Step 2.3.3 constraint-aware optimization
+                        let constraint_result = self.constraint_optimizer.minimize_with_constraints(vars, props, var_id);
+                        
+                        if constraint_result.success {
+                            constraint_result.optimal_value
+                        } else {
+                            // Both optimizers failed - use conservative fallback
+                            interval.min
+                        }
                     }
                 } else {
                     // No constraints - minimize to lower bound
@@ -369,27 +381,41 @@ impl OptimizationRouter {
         
         match &all_vars[var_idx].1 {
             crate::vars::Var::VarF(interval) => {
-                // Step 2.3.3: Use constraint-aware optimization when constraints exist
+                let var_id = index_to_var_id(var_idx);
+                
+                // Step 2.4: Use precision-aware optimization when constraints exist
                 if props.get_prop_ids_iter().next().is_some() {
-                    // Constraints detected - use constraint-aware optimizer
-                    let var_id = index_to_var_id(var_idx);
-                    let result = self.constraint_optimizer.maximize_with_constraints(vars, props, var_id);
+                    // Constraints detected - try precision-aware optimization first
+                    let precision_result = self.precision_optimizer.maximize_with_precision(vars, props, var_id);
                     
-                    match result.success {
-                        true => {
-                            // Constraint-aware optimization succeeded
-                            match self.create_unconstrained_solution(vars, var_idx, result.optimal_value) {
-                                Ok(solution) => OptimizationAttempt::Success(solution),
-                                Err(_) => OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
-                                    SolutionCreationError::SolutionInitializationFailed
-                                )),
+                    if precision_result.success {
+                        // Step 2.4 precision optimization succeeded
+                        match self.create_unconstrained_solution(vars, var_idx, precision_result.optimal_value) {
+                            Ok(solution) => OptimizationAttempt::Success(solution),
+                            Err(_) => OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
+                                SolutionCreationError::SolutionInitializationFailed
+                            )),
+                        }
+                    } else {
+                        // Fall back to Step 2.3.3 constraint-aware optimization
+                        let constraint_result = self.constraint_optimizer.maximize_with_constraints(vars, props, var_id);
+                        
+                        match constraint_result.success {
+                            true => {
+                                // Constraint-aware optimization succeeded
+                                match self.create_unconstrained_solution(vars, var_idx, constraint_result.optimal_value) {
+                                    Ok(solution) => OptimizationAttempt::Success(solution),
+                                    Err(_) => OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
+                                        SolutionCreationError::SolutionInitializationFailed
+                                    )),
+                                }
+                            },
+                            false => {
+                                // Constraint-aware optimization failed - fall back to search
+                                OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
+                                    OptimizerFailure::ConstraintAnalysisFailed
+                                ))
                             }
-                        },
-                        false => {
-                            // Constraint-aware optimization failed - fall back to search
-                            OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
-                                OptimizerFailure::ConstraintAnalysisFailed
-                            ))
                         }
                     }
                 } else {

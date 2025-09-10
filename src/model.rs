@@ -452,27 +452,41 @@ impl Model {
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
-        // For optimization problems, we need a different approach since we iterate through all solutions
-        let (vars, props) = self.prepare_for_search();
+        // First try specialized optimization (Step 2.4 precision handling)
+        match self.try_optimization_minimize(&objective) {
+            Some(solution) => {
+                // Optimization succeeded - report zero search statistics since no search was needed
+                let stats = crate::solution::SolveStats {
+                    propagation_count: 0,
+                    node_count: 0,
+                };
+                callback(&stats);
+                Some(solution)
+            }
+            None => {
+                // Optimization failed or not applicable - fall back to traditional search
+                let (vars, props) = self.prepare_for_search();
 
-        let mut search_iter = search(vars, props, mode::Minimize::new(objective));
-        let mut last_solution = None;
-        let mut current_count = 0;
+                let mut search_iter = search(vars, props, mode::Minimize::new(objective));
+                let mut last_solution = None;
+                let mut current_count = 0;
 
-        // Iterate through all solutions to find the optimal one
-        while let Some(solution) = search_iter.next() {
-            last_solution = Some(solution);
-            // Capture the count each iteration, as it might get lost when iterator is consumed
-            current_count = search_iter.get_propagation_count();
+                // Iterate through all solutions to find the optimal one
+                while let Some(solution) = search_iter.next() {
+                    last_solution = Some(solution);
+                    // Capture the count each iteration, as it might get lost when iterator is consumed
+                    current_count = search_iter.get_propagation_count();
+                }
+
+                let stats = crate::solution::SolveStats {
+                    propagation_count: current_count,
+                    node_count: search_iter.get_node_count(),
+                };
+
+                callback(&stats);
+                last_solution
+            }
         }
-
-        let stats = crate::solution::SolveStats {
-            propagation_count: current_count,
-            node_count: search_iter.get_node_count(),
-        };
-
-        callback(&stats);
-        last_solution
     }
 
     /// Enumerate assignments that satisfy all constraints, while minimizing objective expression.
@@ -513,26 +527,41 @@ impl Model {
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
-        let (vars, props) = self.prepare_for_search();
+        // First try specialized optimization (Step 2.4 precision handling)
+        match self.try_optimization_minimize(&objective) {
+            Some(solution) => {
+                // Optimization succeeded - report zero search statistics since no search was needed
+                let stats = crate::solution::SolveStats {
+                    propagation_count: 0,
+                    node_count: 0,
+                };
+                callback(&stats);
+                vec![solution]
+            }
+            None => {
+                // Optimization failed or not applicable - fall back to traditional search
+                let (vars, props) = self.prepare_for_search();
 
-        let mut search_iter = search(vars, props, mode::Minimize::new(objective));
-        let mut solutions = Vec::new();
-        let mut current_count = 0;
+                let mut search_iter = search(vars, props, mode::Minimize::new(objective));
+                let mut solutions = Vec::new();
+                let mut current_count = 0;
 
-        // Collect all solutions manually and capture count during iteration
-        while let Some(solution) = search_iter.next() {
-            solutions.push(solution);
-            // Capture the count each iteration, as it might get lost when iterator is consumed
-            current_count = search_iter.get_propagation_count();
+                // Collect all solutions manually and capture count during iteration
+                while let Some(solution) = search_iter.next() {
+                    solutions.push(solution);
+                    // Capture the count each iteration, as it might get lost when iterator is consumed
+                    current_count = search_iter.get_propagation_count();
+                }
+
+                let stats = crate::solution::SolveStats {
+                    propagation_count: current_count,
+                    node_count: search_iter.get_node_count(),
+                };
+
+                callback(&stats);
+                solutions
+            }
         }
-
-        let stats = crate::solution::SolveStats {
-            propagation_count: current_count,
-            node_count: search_iter.get_node_count(),
-        };
-
-        callback(&stats);
-        solutions
     }
 
     /// Find assignment that maximizes objective expression while satisfying all constraints.
