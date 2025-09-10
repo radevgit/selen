@@ -185,6 +185,24 @@ impl FloatInterval {
         }
         // If threshold >= self.max, do nothing (no values to remove)
     }
+    
+    /// Get the midpoint value for binary splitting (respects step boundaries)
+    /// This is critical for efficient divide-and-conquer search
+    pub fn mid(&self) -> f64 {
+        if self.is_empty() {
+            return self.min; // Fallback for empty intervals
+        }
+        
+        if self.is_fixed() {
+            return self.min; // Single value intervals
+        }
+        
+        // Calculate rough midpoint
+        let rough_mid = self.min + (self.max - self.min) / 2.0;
+        
+        // Round to nearest valid step boundary
+        self.round_to_step(rough_mid)
+    }
 }
 
 impl std::fmt::Display for FloatInterval {
@@ -604,5 +622,30 @@ mod tests {
         let next_mid = interval.next(mid);
         assert!(next_mid > mid);
         assert!((next_mid - mid - interval.step).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_mid_respects_step_boundaries() {
+        // Test that mid() always returns valid step-aligned values
+        let interval = FloatInterval::with_step(0.0, 1.0, 0.1);
+        let mid_val = interval.mid();
+        
+        // Mid should be step-aligned
+        assert!((mid_val - interval.round_to_step(mid_val)).abs() < 1e-10);
+        assert!(interval.contains(mid_val));
+        
+        // Test with step that doesn't divide range evenly
+        let interval2 = FloatInterval::with_step(0.0, 1.0, 0.3);
+        let mid_val2 = interval2.mid();
+        assert!((mid_val2 - interval2.round_to_step(mid_val2)).abs() < 1e-10);
+        assert!(interval2.contains(mid_val2));
+        
+        // Test edge cases
+        let single_point = FloatInterval::with_step(5.0, 5.0, 0.1);
+        assert_eq!(single_point.mid(), 5.0);
+        
+        let tiny_interval = FloatInterval::with_step(0.0, 0.1, 0.1);
+        assert!(tiny_interval.is_fixed());
+        assert_eq!(tiny_interval.mid(), 0.0); // Should return min for fixed intervals
     }
 }

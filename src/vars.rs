@@ -292,7 +292,7 @@ impl Var {
     /// Midpoint of domain for easier binary splits.
     pub fn mid(&self) -> Val {
         match self {
-            Var::VarF(interval) => Val::ValF(interval.min + (interval.max - interval.min) / 2.0),
+            Var::VarF(interval) => Val::ValF(interval.mid()),
             Var::VarI(sparse_set) => {
                 if sparse_set.is_empty() {
                     // Should not happen in a valid CSP, but provide a fallback
