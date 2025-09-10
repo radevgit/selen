@@ -585,6 +585,18 @@ impl Model {
         self.minimize_and_iterate_with_callback(objective.opposite(), callback)
     }
 
+    /// Get reference to variables for analysis (used by optimization module)
+    #[doc(hidden)]
+    pub fn get_vars(&self) -> &Vars {
+        &self.vars
+    }
+
+    /// Get reference to propagators for analysis (used by optimization module)
+    #[doc(hidden)]
+    pub fn get_props(&self) -> &Propagators {
+        &self.props
+    }
+
     /// Validate that all integer variable domains fit within the u16 optimization range.
     ///
     /// This method checks that all integer variables have domains that can be represented

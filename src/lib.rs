@@ -86,6 +86,8 @@ pub mod search;
 pub mod gac;
 #[doc(hidden)]
 pub mod domain;
+#[doc(hidden)]
+pub mod optimization;
 pub mod prelude;
 
 

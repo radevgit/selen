@@ -521,6 +521,12 @@ impl Vars {
             }
         }
     }
+
+    /// Iterator over variables for analysis
+    #[doc(hidden)]
+    pub fn iter(&self) -> std::slice::Iter<'_, Var> {
+        self.0.iter()
+    }
 }
 
 #[cfg(test)]

@@ -232,6 +232,11 @@ impl Propagators {
 
         p
     }
+
+    /// Get the number of constraints for analysis
+    pub fn constraint_count(&self) -> usize {
+        self.state.len()
+    }
 }
 
 /// Propagator handle that is not bound to a specific memory location.
