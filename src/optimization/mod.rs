@@ -13,6 +13,8 @@
 
 pub mod classification;
 pub mod float_direct;
+pub mod constraint_integration;
 
 pub use classification::*;
 pub use float_direct::*;
+pub use constraint_integration::*;
