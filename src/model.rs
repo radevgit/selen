@@ -547,7 +547,11 @@ impl Model {
     /// ```
     #[must_use]
     pub fn maximize(self, objective: impl View) -> Option<Solution> {
-        self.minimize(objective.opposite())
+        // First try specialized optimization before falling back to opposite+minimize pattern
+        match self.try_optimization_maximize(&objective) {
+            Some(solution) => Some(solution),
+            None => self.minimize(objective.opposite()),
+        }
     }
 
     /// Find assignment that maximizes objective expression with callback to capture solving statistics.
