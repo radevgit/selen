@@ -20,7 +20,7 @@ mod tests {
         // Create pure integer problem
         let x = model.new_var_int(1, 10);
         let y = model.new_var_int(1, 10);
-        model.not_equals(x, y);
+        model.ne(x, y);
         
         let solution = model.solve();
         assert!(solution.is_some());
@@ -61,7 +61,7 @@ mod tests {
         let y_float = model.new_var_float(1.0, 10.0); // Float variable
         
         // Add some constraints to make it interesting
-        model.less_than_or_equals(x_int, Val::ValI(5)); // Integer constraint
+        model.le(x_int, Val::ValI(5)); // Integer constraint
         
         let solution = model.solve();
         assert!(solution.is_some());
@@ -87,7 +87,7 @@ mod tests {
         let z_int = model.new_var_int(5, 15);
         
         // Add constraints that might create coupling
-        model.not_equals(x_int, z_int);
+        model.ne(x_int, z_int);
         
         let solution = model.solve();
         assert!(solution.is_some());
@@ -115,9 +115,9 @@ mod tests {
         let x3 = model.new_var_int(1, 4);
         
         // All different constraint
-        model.not_equals(x1, x2);
-        model.not_equals(x1, x3);
-        model.not_equals(x2, x3);
+        model.ne(x1, x2);
+        model.ne(x1, x3);
+        model.ne(x2, x3);
         
         let solution = model.solve();
         assert!(solution.is_some());
@@ -140,7 +140,7 @@ mod tests {
         
         let x = model.new_var_int(1, 10);
         let y = model.new_var_int(1, 10);
-        model.not_equals(x, y);
+        model.ne(x, y);
         
         let mut callback_called = false;
         let solution = model.solve_with_callback(|stats| {
@@ -210,7 +210,7 @@ mod tests {
         // Add contradictory constraints
         model.equals(x, Val::ValI(3));
         model.equals(y, Val::ValI(3));
-        model.not_equals(x, y); // x = 3, y = 3, but x != y (contradiction)
+        model.ne(x, y); // x = 3, y = 3, but x != y (contradiction)
         
         let solution = model.solve();
         assert!(solution.is_none()); // Should detect infeasibility

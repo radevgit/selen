@@ -5,7 +5,7 @@ fn test_basic_greater_than() {
     let mut model = Model::default();
     
     let x = model.new_var_int(1, 10);
-    model.greater_than(x, int(5));
+    model.gt(x, int(5));
     
     let solution = model.solve().expect("Should have solution");
     
@@ -19,7 +19,7 @@ fn test_greater_than_minimize() {
     let mut model = Model::default();
     
     let x = model.new_var_int(1, 10);
-    model.greater_than(x, int(5));
+    model.gt(x, int(5));
     
     let solution = model.minimize(x).expect("Should have solution");
     
@@ -32,7 +32,7 @@ fn test_greater_than_maximize() {
     let mut model = Model::default();
     
     let x = model.new_var_int(1, 10);
-    model.greater_than(x, int(5));
+    model.gt(x, int(5));
     
     let solution = model.maximize(x).expect("Should have solution");
     
@@ -48,7 +48,7 @@ fn test_type_aware_greater_than_mixed_types() {
     let v0 = model.new_var_int(1, 10);
 
     // Mixed constraint: v0 > 2.5 (should result in v0 >= 3)
-    model.greater_than(v0, float(2.5));
+    model.gt(v0, float(2.5));
     
     let solution = model.minimize(v0).expect("Should have solution");
     let Val::ValI(x) = solution[v0] else { panic!("Expected integer value") };
@@ -62,7 +62,7 @@ fn test_greater_than_with_floats() {
     let mut model = Model::default();
     
     let x = model.new_var_float(1.0, 10.0);
-    model.greater_than(x, float(5.5));
+    model.gt(x, float(5.5));
     
     let solution = model.minimize(x).expect("Should have solution");
     
@@ -77,7 +77,7 @@ fn test_greater_than_float_vs_int() {
     let mut model = Model::default();
     
     let x = model.new_var_float(2.0, 4.0);
-    model.greater_than(x, int(3));
+    model.gt(x, int(3));
     
     let solution = model.minimize(x).expect("Should have solution");
     
@@ -92,7 +92,7 @@ fn test_greater_than_negative_numbers() {
     let mut model = Model::default();
     
     let x = model.new_var_int(-10, 5);
-    model.greater_than(x, int(-3));
+    model.gt(x, int(-3));
     
     let solution = model.minimize(x).expect("Should have solution");
     
@@ -105,7 +105,7 @@ fn test_greater_than_impossible() {
     let mut model = Model::default();
     
     let x = model.new_var_int(1, 5);
-    model.greater_than(x, int(10)); // Impossible: no value in [1,5] > 10
+    model.gt(x, int(10)); // Impossible: no value in [1,5] > 10
     
     let solution = model.solve();
     assert!(solution.is_none(), "Should have no solution");
@@ -116,7 +116,7 @@ fn test_greater_than_boundary() {
     let mut model = Model::default();
     
     let x = model.new_var_int(1, 5);
-    model.greater_than(x, int(5)); // x > 5, but max is 5
+    model.gt(x, int(5)); // x > 5, but max is 5
     
     let solution = model.solve();
     assert!(solution.is_none(), "Should have no solution");
@@ -130,8 +130,8 @@ fn test_greater_than_chaining() {
     let y = model.new_var_int(1, 20);
     let z = model.new_var_int(1, 20);
     
-    model.greater_than(y, x); // y > x
-    model.greater_than(z, y); // z > y, so z > y > x
+    model.gt(y, x); // y > x
+    model.gt(z, y); // z > y, so z > y > x
     
     // Fix x to test propagation
     model.equals(x, int(5));
@@ -154,7 +154,7 @@ fn test_greater_than_with_specific_values() {
     let mut model = Model::default();
     
     let x = model.new_var_with_values(vec![1, 5, 10, 15, 20]);
-    model.greater_than(x, int(7));
+    model.gt(x, int(7));
     
     let solution = model.solve().expect("Should have solution");
     
@@ -169,7 +169,7 @@ fn test_greater_than_precision() {
     let mut model = Model::with_float_precision(4); // 1e-4 precision
     
     let x = model.new_var_float(1.0, 2.0);
-    model.greater_than(x, float(1.5));
+    model.gt(x, float(1.5));
     
     let solution = model.minimize(x).expect("Should have solution");
     
@@ -186,7 +186,7 @@ fn test_type_aware_greater_than_with_minimize() {
     // Test from model.rs - type-aware greater_than with optimization
     let mut model = Model::default();
     let v1_10 = model.new_var_int(1, 10);
-    model.greater_than(v1_10, float(2.5));
+    model.gt(v1_10, float(2.5));
 
     let solution = model.minimize(v1_10).expect("Should have solution");
     let val = match solution[v1_10] {

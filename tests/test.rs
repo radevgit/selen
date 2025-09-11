@@ -10,7 +10,7 @@ fn test_model() {
     let v = m2.new_var_int(1, 10);
 
     // Add constraint: x > 2.5
-    m2.greater_than(v, float(2.5));
+    m2.gt(v, float(2.5));
 
     // Solve the problem minimizing x
     let solution = m2.minimize(v).unwrap();
@@ -31,7 +31,7 @@ fn test_new_var_with_values() {
     let var2 = model.new_var_with_values(vec![1, 3, 5, 7]); // Odd numbers
 
     // Add constraint: variables must be different
-    model.not_equals(var1, var2);
+    model.ne(var1, var2);
 
     // Solve the problem
     let solution = model.solve().unwrap();

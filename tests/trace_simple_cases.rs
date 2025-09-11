@@ -5,7 +5,7 @@ fn trace_simple_cases() {
     println!("=== BASELINE: Simple constraint without optimization ===");
     let mut model = Model::with_float_precision(4);
     let x = model.new_var_float(1.0, 10.0);
-    model.less_than_or_equals(x, float(5.5)); // Use <= instead of <
+    model.le(x, float(5.5)); // Use <= instead of <
     
     let solution = model.solve_with_callback(|stats| {
         println!("Simple solve - Propagations: {}, Nodes: {}", 
@@ -20,7 +20,7 @@ fn trace_simple_cases() {
     println!("\n=== BASELINE: Simple maximization with <= constraint ===");
     let mut model2 = Model::with_float_precision(4);
     let x2 = model2.new_var_float(1.0, 10.0);
-    model2.less_than_or_equals(x2, float(5.5)); // Use <= instead of <
+    model2.le(x2, float(5.5)); // Use <= instead of <
     
     let solution2 = model2.maximize_with_callback(x2, |stats| {
         println!("Simple maximize <= - Propagations: {}, Nodes: {}", 
@@ -35,7 +35,7 @@ fn trace_simple_cases() {
     println!("\n=== PROBLEMATIC: Maximization with < constraint ===");
     let mut model3 = Model::with_float_precision(4);
     let x3 = model3.new_var_float(1.0, 10.0);
-    model3.less_than(x3, float(5.5)); // Use < (this creates Next view)
+    model3.lt(x3, float(5.5)); // Use < (this creates Next view)
     
     let solution3 = model3.maximize_with_callback(x3, |stats| {
         println!("Problematic maximize < - Propagations: {}, Nodes: {}", 

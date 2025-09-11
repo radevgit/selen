@@ -188,7 +188,7 @@ impl PerformanceBenchmarker {
         let x = model.new_var_float(min, max);
         
         let constraint_value = min + (max - min) * 0.55;
-        model.less_than(x, float(constraint_value));
+        model.lt(x, float(constraint_value));
 
         let start = Instant::now();
         let result = model.maximize(x);
@@ -209,7 +209,7 @@ impl PerformanceBenchmarker {
         let x = model.new_var_float(min, max);
         
         let constraint_value = min + (max - min) * 0.55;
-        model.less_than(x, float(constraint_value));
+        model.lt(x, float(constraint_value));
 
         let start = Instant::now();
         let result = model.maximize(x);

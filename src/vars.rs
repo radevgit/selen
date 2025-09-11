@@ -72,6 +72,14 @@ impl Val {
         Some(self / other)
     }
 
+    /// Safe modulo that returns None if divisor is too close to zero
+    pub fn safe_mod(self, other: Val) -> Option<Val> {
+        if !other.is_safe_divisor() {
+            return None;
+        }
+        Some(self % other)
+    }
+
     /// Check if the range [min, max] contains zero or values close to zero
     pub fn range_contains_unsafe_divisor(min: Val, max: Val) -> bool {
         match (min, max) {
@@ -272,6 +280,47 @@ impl std::ops::Div for Val {
                     if a >= 0.0 { Val::ValF(f64::INFINITY) } else { Val::ValF(f64::NEG_INFINITY) }
                 } else {
                     Val::ValF(a / b as f64)
+                }
+            },
+        }
+    }
+}
+
+impl std::ops::Rem for Val {
+    type Output = Val;
+
+    fn rem(self, other: Val) -> Val {
+        match (self, other) {
+            (Val::ValI(a), Val::ValI(b)) => {
+                if b == 0 {
+                    // Return NaN for modulo by zero (undefined behavior)
+                    Val::ValF(f64::NAN)
+                } else {
+                    Val::ValI(a % b)
+                }
+            },
+            (Val::ValF(a), Val::ValF(b)) => {
+                if b.abs() < f64::EPSILON {
+                    // Return NaN for modulo by value too close to zero
+                    Val::ValF(f64::NAN)
+                } else {
+                    Val::ValF(a % b)
+                }
+            },
+            (Val::ValI(a), Val::ValF(b)) => {
+                if b.abs() < f64::EPSILON {
+                    // Return NaN for modulo by value too close to zero
+                    Val::ValF(f64::NAN)
+                } else {
+                    Val::ValF(a as f64 % b)
+                }
+            },
+            (Val::ValF(a), Val::ValI(b)) => {
+                if b == 0 {
+                    // Return NaN for modulo by zero
+                    Val::ValF(f64::NAN)
+                } else {
+                    Val::ValF(a % b as f64)
                 }
             },
         }

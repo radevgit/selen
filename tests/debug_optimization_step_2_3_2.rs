@@ -44,7 +44,7 @@ fn debug_step_2_3_2_optimization() {
     println!("\n--- Test 2: With constraints (may fall back) ---");
     let mut model2 = Model::default();
     let x2 = model2.new_var_float(1.0, 10.0);
-    model2.less_than(x2, float(5.5));
+    model2.lt(x2, float(5.5));
     
     println!("Created model with:");
     println!("  x ∈ [1.0, 10.0]");

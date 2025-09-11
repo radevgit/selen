@@ -7,7 +7,7 @@ fn test_precision_6_detailed_metrics() {
     let mut model = Model::with_float_precision(6);
 
     let x = model.new_var_float(1.0, 10.0);
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
     
     println!("Model setup complete:");
     println!("  Variable x: [1.0, 10.0] with precision 6");

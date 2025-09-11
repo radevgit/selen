@@ -5,7 +5,7 @@ fn test_less_than_no_maximize() {
     let mut model = Model::default(); // precision 6
     let x = model.new_var_float(1.0, 10.0);
     
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
     
     // Just solve without maximizing
     let solution = model.solve().expect("Should have solution");

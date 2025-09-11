@@ -4,7 +4,7 @@ use cspsolver::prelude::*;
 fn debug_precision_constraint_analysis() {
     let mut model = Model::default();
     let x = model.new_var_float(1.0, 10.0);
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
 
     // Get access to the constraint registry
     let registry = model.get_constraint_registry();

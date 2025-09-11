@@ -14,7 +14,7 @@ fn test_hanging_issue_fix() {
     // This test was previously hanging indefinitely before Step 2.3.3
     let mut model = Model::default();
     let x = model.new_var_float(1.0, 10.0);
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
     
     println!("Testing previously hanging case: x ∈ [1.0, 10.0], x < 5.5");
     
@@ -83,7 +83,7 @@ fn test_minimization_performance() {
     
     let mut model = Model::default();
     let y = model.new_var_float(-3.2, 7.8);
-    model.less_than(y, float(5.0));
+    model.lt(y, float(5.0));
     
     let start = Instant::now();
     let solution = model.minimize(y).expect("Should have solution");
@@ -119,7 +119,7 @@ fn test_multiple_constraint_scenarios() {
         println!("\n--- Test Case 1: Single upper bound ---");
         let mut model = Model::default();
         let x = model.new_var_float(0.0, 10.0);
-        model.less_than(x, float(7.5));
+        model.lt(x, float(7.5));
         
         let start = Instant::now();
         let solution = model.maximize(x).expect("Should have solution");
@@ -137,7 +137,7 @@ fn test_multiple_constraint_scenarios() {
         println!("\n--- Test Case 2: Different precision levels ---");
         let mut model = Model::default();
         let x = model.new_var_float(1.0, 20.0);
-        model.less_than(x, float(15.0));
+        model.lt(x, float(15.0));
         
         let start = Instant::now();
         let solution = model.maximize(x).expect("Should have solution");
@@ -155,7 +155,7 @@ fn test_multiple_constraint_scenarios() {
         println!("\n--- Test Case 3: Small domain ---");
         let mut model = Model::default();
         let x = model.new_var_float(2.0, 4.0);
-        model.less_than(x, float(3.5));
+        model.lt(x, float(3.5));
         
         let start = Instant::now();
         let solution = model.maximize(x).expect("Should have solution");
@@ -200,7 +200,7 @@ fn test_performance_regression() {
             let mut model = Model::default();
             let x = model.new_var_float(min, max);
             let mid_point = min + (max - min) * 0.7; // Constraint at 70% of domain
-            model.less_than(x, float(mid_point));
+            model.lt(x, float(mid_point));
             
             let start = Instant::now();
             let _solution = model.maximize(x).expect("Should have solution");
@@ -230,7 +230,7 @@ fn test_integration_improvements() {
     // This problem was previously hanging
     let mut model = Model::default();
     let x = model.new_var_float(1.0, 10.0);
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
     
     let start = Instant::now();
     let solution = model.maximize(x);
@@ -275,7 +275,7 @@ fn test_edge_cases() {
         println!("\n--- Edge Case 1: Very tight constraint ---");
         let mut model = Model::default();
         let x = model.new_var_float(1.0, 10.0);
-        model.less_than(x, float(1.1)); // Very tight constraint
+        model.lt(x, float(1.1)); // Very tight constraint
         
         let solution = model.maximize(x);
         assert!(solution.is_some(), "Should handle tight constraints");
@@ -294,7 +294,7 @@ fn test_edge_cases() {
         println!("\n--- Edge Case 2: Constraint at boundary ---");
         let mut model = Model::default();
         let x = model.new_var_float(1.0, 10.0);
-        model.less_than(x, float(10.0)); // Constraint at upper bound
+        model.lt(x, float(10.0)); // Constraint at upper bound
         
         let solution = model.maximize(x);
         assert!(solution.is_some(), "Should handle boundary constraints");
@@ -311,7 +311,7 @@ fn test_edge_cases() {
         println!("\n--- Edge Case 3: Small domain ---");
         let mut model = Model::default();
         let x = model.new_var_float(5.0, 5.1);
-        model.less_than(x, float(5.05));
+        model.lt(x, float(5.05));
         
         let solution = model.maximize(x);
         assert!(solution.is_some(), "Should handle small domains");

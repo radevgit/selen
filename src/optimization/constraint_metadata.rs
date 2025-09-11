@@ -46,6 +46,12 @@ pub enum ConstraintType {
     Addition,
     /// Multiplication constraint (x * y = z)
     Multiplication,
+    /// Modulo constraint (x % y = z)
+    Modulo,
+    /// Division constraint (x / y = z)
+    Division,
+    /// Absolute value constraint (|x| = z)
+    AbsoluteValue,
     /// Complex constraint that couldn't be categorized
     Complex {
         /// Number of variables involved
@@ -339,6 +345,9 @@ impl ConstraintRegistry {
                 ConstraintType::Complex { .. } | 
                 ConstraintType::Addition | 
                 ConstraintType::Multiplication | 
+                ConstraintType::Modulo |
+                ConstraintType::Division |
+                ConstraintType::AbsoluteValue |
                 ConstraintType::AllDifferent | 
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;

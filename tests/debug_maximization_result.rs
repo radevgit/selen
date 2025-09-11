@@ -6,7 +6,7 @@ fn debug_maximization_result() {
     let step_size = model.float_step_size();
     
     let x = model.new_var_float(1.0, 10.0);
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
     
     let solution = model.maximize(x).expect("Should have solution");
     let Val::ValF(x_val) = solution[x] else { panic!("Expected float") };

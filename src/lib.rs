@@ -25,7 +25,7 @@
 //! let v = model.new_var_int(1, 10);
 //!
 //! // Add constraint: x > 2.5
-//! model.greater_than(v, float(2.5));
+//! model.gt(v, float(2.5));
 //!
 //! // Solve the problem minimizing x
 //! let solution = model.minimize(v).unwrap();
@@ -47,7 +47,7 @@
 //! let odd_var = model.new_var_with_values(vec![1, 3, 5, 7]);
 //!
 //! // Add constraint: variables must be different
-//! model.not_equals(even_var, odd_var);
+//! model.ne(even_var, odd_var);
 //!
 //! // Solve the problem
 //! let solution = model.solve().unwrap();

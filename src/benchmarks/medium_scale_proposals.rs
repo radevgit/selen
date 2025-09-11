@@ -17,16 +17,16 @@ pub fn test_grouped_constraints_approach() -> (Duration, bool) {
     
     // Group constraints instead of individual constraints
     for &part in &small_parts {
-        model.greater_than(part, float(0.15));  // Shared constraint
-        model.less_than(part, float(0.45));
+        model.gt(part, float(0.15));  // Shared constraint
+        model.lt(part, float(0.45));
     }
     for &part in &medium_parts {
-        model.greater_than(part, float(0.7));   // Shared constraint
-        model.less_than(part, float(1.8));
+        model.gt(part, float(0.7));   // Shared constraint
+        model.lt(part, float(1.8));
     }
     for &part in &large_parts {
-        model.greater_than(part, float(2.5));   // Shared constraint
-        model.less_than(part, float(4.5));
+        model.gt(part, float(2.5));   // Shared constraint
+        model.lt(part, float(4.5));
     }
     
     let success = model.solve().is_some();
@@ -49,8 +49,8 @@ pub fn test_hierarchical_decomposition() -> (Duration, bool) {
     // Main constraints (should trigger precision optimization)
     for (i, &pos) in main_positions.iter().enumerate() {
         let center = i as f64 + 0.5;
-        model.greater_than(pos, float(center - 0.1));
-        model.less_than(pos, float(center + 0.1));
+        model.gt(pos, float(center - 0.1));
+        model.lt(pos, float(center + 0.1));
     }
     
     // Detail variables depend on main positions (fewer constraints)
@@ -60,8 +60,8 @@ pub fn test_hierarchical_decomposition() -> (Duration, bool) {
     
     // Simpler detail constraints
     for &detail in &detail_vars {
-        model.greater_than(detail, float(0.1));
-        model.less_than(detail, float(4.9));
+        model.gt(detail, float(0.1));
+        model.lt(detail, float(4.9));
     }
     
     let success = model.solve().is_some();
@@ -85,8 +85,8 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 0.5 + (i as f64 * 0.2);
-            model.greater_than(var, float(target - 0.01));
-            model.less_than(var, float(target + 0.01));
+            model.gt(var, float(target - 0.01));
+            model.lt(var, float(target + 0.01));
         }
         
         let success = model.solve().is_some();
@@ -102,8 +102,8 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 2.0 + (i as f64 * 0.15);
-            model.greater_than(var, float(target - 0.01));
-            model.less_than(var, float(target + 0.01));
+            model.gt(var, float(target - 0.01));
+            model.lt(var, float(target + 0.01));
         }
         
         let success = model.solve().is_some();
@@ -119,8 +119,8 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 3.5 + (i as f64 * 0.15);
-            model.greater_than(var, float(target - 0.01));
-            model.less_than(var, float(target + 0.01));
+            model.gt(var, float(target - 0.01));
+            model.lt(var, float(target + 0.01));
         }
         
         let success = model.solve().is_some();
@@ -147,18 +147,18 @@ pub fn test_constraint_simplification() -> (Duration, bool) {
     
     // Group constraints by ranges
     for &var in &vars[0..8] {  // First group: 0.1-1.5m range
-        model.greater_than(var, float(0.2));
-        model.less_than(var, float(1.4));
+        model.gt(var, float(0.2));
+        model.lt(var, float(1.4));
     }
     
     for &var in &vars[8..16] { // Second group: 1.5-3.0m range  
-        model.greater_than(var, float(1.6));
-        model.less_than(var, float(2.9));
+        model.gt(var, float(1.6));
+        model.lt(var, float(2.9));
     }
     
     for &var in &vars[16..25] { // Third group: 3.0-5.0m range
-        model.greater_than(var, float(3.1));
-        model.less_than(var, float(4.9));
+        model.gt(var, float(3.1));
+        model.lt(var, float(4.9));
     }
     
     let success = model.solve().is_some();
@@ -178,8 +178,8 @@ pub fn run_medium_scale_optimization_proposals() {
     let vars: Vec<_> = (0..25).map(|_| model.new_var_float(0.01, 5.0)).collect();
     for (i, &var) in vars.iter().enumerate() {
         let target = 0.1 + (i as f64 * 0.2);
-        model.greater_than(var, float(target - 0.001));
-        model.less_than(var, float(target + 0.001));
+        model.gt(var, float(target - 0.001));
+        model.lt(var, float(target + 0.001));
     }
     let original_success = model.solve().is_some();
     let original_duration = start.elapsed();

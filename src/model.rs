@@ -288,6 +288,202 @@ impl Model {
         s
     }
 
+    /// Create a new variable that holds the result of `x % y` (modulo operation).
+    ///
+    /// For the modulo operation `x % y = result`:
+    /// - If y > 0: result is in range [0, y-1]  
+    /// - If y < 0: result is in range [y+1, 0]
+    /// - If y contains 0, the constraint may fail during solving
+    ///
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(10, 20);
+    /// let y = model.new_var_int(3, 7);
+    /// let remainder = model.modulo(x, y);
+    /// ```
+    pub fn modulo(&mut self, x: impl View, y: impl View) -> VarId {
+        let x_min = x.min_raw(&self.vars);
+        let x_max = x.max_raw(&self.vars);
+        let y_min = y.min_raw(&self.vars);
+        let y_max = y.max_raw(&self.vars);
+        
+        // Calculate bounds for modulo result
+        // This is conservative - the actual bounds depend on the signs of x and y
+        let mut min = Val::ValI(i32::MAX);
+        let mut max = Val::ValI(i32::MIN);
+        
+        // Sample corner values to estimate bounds
+        let x_samples = [x_min, x_max];
+        let y_samples = [y_min, y_max];
+        
+        for &x_val in &x_samples {
+            for &y_val in &y_samples {
+                if let Some(mod_result) = x_val.safe_mod(y_val) {
+                    if mod_result < min { min = mod_result; }
+                    if mod_result > max { max = mod_result; }
+                }
+            }
+        }
+        
+        // If we couldn't calculate any valid modulo results, use conservative bounds
+        if min == Val::ValI(i32::MAX) || max == Val::ValI(i32::MIN) {
+            // Conservative estimate: result can be as large as the largest divisor
+            let y_abs_max = match (y_min, y_max) {
+                (Val::ValI(min_i), Val::ValI(max_i)) => {
+                    let abs_min = min_i.abs();
+                    let abs_max = max_i.abs();
+                    Val::ValI(if abs_min > abs_max { abs_min } else { abs_max })
+                },
+                (Val::ValF(min_f), Val::ValF(max_f)) => {
+                    let abs_min = min_f.abs();
+                    let abs_max = max_f.abs();
+                    Val::ValF(if abs_min > abs_max { abs_min } else { abs_max })
+                },
+                _ => Val::ValI(100), // Very conservative fallback
+            };
+            
+            min = match y_abs_max {
+                Val::ValI(i) => Val::ValI(-i),
+                Val::ValF(f) => Val::ValF(-f),
+            };
+            max = y_abs_max;
+        }
+        
+        let s = self.new_var_unchecked(min, max);
+        let _p = self.props.modulo(x, y, s);
+        s
+    }
+
+    /// Create a new variable that holds the result of `|x|` (absolute value).
+    ///
+    /// The absolute value operation always produces a non-negative result:
+    /// - If x >= 0: |x| = x
+    /// - If x < 0: |x| = -x
+    ///
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(-10, 5);
+    /// let abs_x = model.abs(x);
+    /// ```
+    pub fn abs(&mut self, x: impl View) -> VarId {
+        let x_min = x.min_raw(&self.vars);
+        let x_max = x.max_raw(&self.vars);
+        
+        // Calculate bounds for absolute value result
+        // |x| is always >= 0
+        let min = match (x_min, x_max) {
+            (min_val, _) if min_val >= Val::ValI(0) => {
+                // x is entirely non-negative, so |x| = x
+                min_val
+            },
+            (_, max_val) if max_val <= Val::ValI(0) => {
+                // x is entirely non-positive, so |x| = -x
+                match max_val {
+                    Val::ValI(i) => Val::ValI(-i),
+                    Val::ValF(f) => Val::ValF(-f),
+                }
+            },
+            (_, _) => {
+                // x spans both positive and negative, so min |x| = 0
+                match x_min {
+                    Val::ValI(_) => Val::ValI(0),
+                    Val::ValF(_) => Val::ValF(0.0),
+                }
+            }
+        };
+        
+        // Maximum absolute value is the larger of |x_min| and |x_max|
+        let max = match (x_min, x_max) {
+            (Val::ValI(min_i), Val::ValI(max_i)) => {
+                let abs_min = min_i.abs();
+                let abs_max = max_i.abs();
+                Val::ValI(if abs_min > abs_max { abs_min } else { abs_max })
+            },
+            (Val::ValF(min_f), Val::ValF(max_f)) => {
+                let abs_min = min_f.abs();
+                let abs_max = max_f.abs();
+                Val::ValF(if abs_min > abs_max { abs_min } else { abs_max })
+            },
+            (Val::ValI(min_i), Val::ValF(max_f)) => {
+                let abs_min = (min_i as f64).abs();
+                let abs_max = max_f.abs();
+                Val::ValF(if abs_min > abs_max { abs_min } else { abs_max })
+            },
+            (Val::ValF(min_f), Val::ValI(max_i)) => {
+                let abs_min = min_f.abs();
+                let abs_max = (max_i as f64).abs();
+                Val::ValF(if abs_min > abs_max { abs_min } else { abs_max })
+            },
+        };
+        
+        let s = self.new_var_unchecked(min, max);
+        let _p = self.props.abs(x, s);
+        s
+    }
+
+    /// Create a new variable that holds the result of `x / y` (division).
+    ///
+    /// For the division operation `x / y = result`:
+    /// - If y contains 0, the constraint may fail during solving
+    /// - Division by values very close to 0 is also avoided for numerical stability
+    /// - The result may be converted to float even for integer inputs
+    ///
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(10, 20);
+    /// let y = model.new_var_int(2, 5);
+    /// let quotient = model.div(x, y);
+    /// ```
+    pub fn div(&mut self, x: impl View, y: impl View) -> VarId {
+        let x_min = x.min_raw(&self.vars);
+        let x_max = x.max_raw(&self.vars);
+        let y_min = y.min_raw(&self.vars);
+        let y_max = y.max_raw(&self.vars);
+        
+        // Calculate bounds for division result
+        let mut min = Val::ValF(f64::INFINITY);
+        let mut max = Val::ValF(f64::NEG_INFINITY);
+        
+        // Sample corner values to estimate bounds (similar to multiplication)
+        let x_samples = [x_min, x_max];
+        let y_samples = [y_min, y_max];
+        
+        for &x_val in &x_samples {
+            for &y_val in &y_samples {
+                if let Some(div_result) = x_val.safe_div(y_val) {
+                    match div_result {
+                        Val::ValF(f) if f.is_finite() => {
+                            if div_result < min { min = div_result; }
+                            if div_result > max { max = div_result; }
+                        },
+                        Val::ValI(i) => {
+                            let f_val = Val::ValF(i as f64);
+                            if f_val < min { min = f_val; }
+                            if f_val > max { max = f_val; }
+                        },
+                        _ => {} // Skip infinite or NaN results
+                    }
+                }
+            }
+        }
+        
+        // If we couldn't calculate any valid division results, use conservative bounds
+        if min == Val::ValF(f64::INFINITY) || max == Val::ValF(f64::NEG_INFINITY) {
+            min = Val::ValF(-1000.0); // Very conservative
+            max = Val::ValF(1000.0);
+        }
+        
+        let s = self.new_var_unchecked(min, max);
+        let _p = self.props.div(x, y, s);
+        s
+    }
+
     /// Create an expression of the sum of a slice of views.
     /// 
     ///
@@ -336,6 +532,20 @@ impl Model {
         let _p = self.props.equals(x, y);
     }
 
+    /// Short name for equals constraint: `==`
+    /// 
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let y = model.new_var_int(1, 10);
+    /// model.eq(x, y);
+    /// ```
+    pub fn eq(&mut self, x: impl View, y: impl View) {
+        self.equals(x, y);
+    }
+
     /// Declare two expressions to be not equal.
     /// 
     ///
@@ -344,9 +554,9 @@ impl Model {
     /// let mut model = Model::default();
     /// let x = model.new_var_int(1, 10);
     /// let y = model.new_var_int(1, 10);
-    /// model.not_equals(x, y);
+    /// model.ne(x, y);
     /// ```
-    pub fn not_equals(&mut self, x: impl View, y: impl View) {
+    pub fn ne(&mut self, x: impl View, y: impl View) {
         let _p = self.props.not_equals(x, y);
     }
 
@@ -358,9 +568,9 @@ impl Model {
     /// let mut model = Model::default();
     /// let x = model.new_var_int(1, 10);
     /// let y = model.new_var_int(5, 15);
-    /// model.less_than_or_equals(x, y);
+    /// model.le(x, y);
     /// ```
-    pub fn less_than_or_equals(&mut self, x: impl View, y: impl View) {
+    pub fn le(&mut self, x: impl View, y: impl View) {
         let _p = self.props.less_than_or_equals(x, y);
     }
 
@@ -371,9 +581,9 @@ impl Model {
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let x = model.new_var_int(1, 10);
-    /// model.less_than(x, Val::int(5));
+    /// model.lt(x, Val::int(5));
     /// ```
-    pub fn less_than(&mut self, x: impl View, y: impl View) {
+    pub fn lt(&mut self, x: impl View, y: impl View) {
         //let mut events = Vec::new();
         //let ctx = Context::new(&mut self.vars, &mut events);
         let _p = self.props.less_than(x, y);
@@ -387,9 +597,9 @@ impl Model {
     /// let mut model = Model::default();
     /// let x = model.new_var_int(5, 15);
     /// let y = model.new_var_int(1, 10);
-    /// model.greater_than_or_equals(x, y);
+    /// model.ge(x, y);
     /// ```
-    pub fn greater_than_or_equals(&mut self, x: impl View, y: impl View) {
+    pub fn ge(&mut self, x: impl View, y: impl View) {
         let _p = self.props.greater_than_or_equals(x, y);
     }
 
@@ -400,9 +610,9 @@ impl Model {
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let x = model.new_var_int(1, 10);
-    /// model.greater_than(x, float(2.5));
+    /// model.gt(x, float(2.5));
     /// ```
-    pub fn greater_than(&mut self, x: impl View, y: impl View) {
+    pub fn gt(&mut self, x: impl View, y: impl View) {
         //let mut events = Vec::new();
         //let ctx = Context::new(&mut self.vars, &mut events);
         let _p = self.props.greater_than(x, y);
@@ -433,7 +643,7 @@ impl Model {
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let x = model.new_var_int(1, 10);
-    /// model.greater_than(x, Val::int(3));
+    /// model.gt(x, Val::int(3));
     /// let solution = model.minimize(x);
     /// ```
     #[must_use]
@@ -576,7 +786,7 @@ impl Model {
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let x = model.new_var_int(1, 10);
-    /// model.less_than(x, Val::int(8));
+    /// model.lt(x, Val::int(8));
     /// let solution = model.maximize(x);
     /// ```
     #[must_use]
@@ -752,7 +962,7 @@ impl Model {
     /// let mut model = Model::default();
     /// let x = model.new_var_int(1, 10);
     /// let y = model.new_var_int(1, 10);
-    /// model.not_equals(x, y);
+    /// model.ne(x, y);
     /// let solution = model.solve();
     /// ```
     #[must_use]
@@ -939,7 +1149,7 @@ impl Model {
     /// let mut model = Model::default();
     /// let x = model.new_var_int(1, 3);
     /// let y = model.new_var_int(1, 3);
-    /// model.not_equals(x, y);
+    /// model.ne(x, y);
     /// let solutions: Vec<_> = model.enumerate().collect();
     /// ```
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {

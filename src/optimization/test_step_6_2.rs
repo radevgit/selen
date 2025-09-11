@@ -23,8 +23,8 @@ mod tests {
         let y = model.new_var_float(-50.0, 50.0);
         
         // Add pure float constraints
-        model.less_than_or_equals(x, Val::float(75.5));
-        model.not_equals(y, Val::float(25.25));
+        model.le(x, Val::float(75.5));
+        model.ne(y, Val::float(25.25));
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -51,8 +51,8 @@ mod tests {
         let y = model.new_var_int(-50, 50);
         
         // Add integer constraints
-        model.less_than_or_equals(x, Val::int(75));
-        model.not_equals(y, Val::int(25));
+        model.le(x, Val::int(75));
+        model.ne(y, Val::int(25));
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -85,10 +85,10 @@ mod tests {
         let int_b = model.new_var_int(1, 5);
         
         // Separate constraints - no obvious coupling
-        model.less_than_or_equals(float_x, Val::float(75.5));  // Float only
-        model.not_equals(float_y, Val::float(25.0));  // Float only
-        model.less_than_or_equals(int_a, Val::int(8));     // Integer only
-        model.not_equals(int_b, Val::int(3));     // Integer only
+        model.le(float_x, Val::float(75.5));  // Float only
+        model.ne(float_y, Val::float(25.0));  // Float only
+        model.le(int_a, Val::int(8));     // Integer only
+        model.ne(int_b, Val::int(3));     // Integer only
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -125,14 +125,14 @@ mod tests {
         
         // Add many constraints - high density suggests coupling
         for i in 0..4 {
-            model.less_than_or_equals(float_vars[i], float_vars[i + 1]);
-            model.less_than_or_equals(int_vars[i], int_vars[i + 1]);
+            model.le(float_vars[i], float_vars[i + 1]);
+            model.le(int_vars[i], int_vars[i + 1]);
         }
         
         // Add more constraints to increase density
         for i in 0..3 {
-            model.not_equals(float_vars[i], Val::float(50.0));
-            model.not_equals(int_vars[i], Val::int(50));
+            model.ne(float_vars[i], Val::float(50.0));
+            model.ne(int_vars[i], Val::int(50));
         }
         
         let result = VariablePartitioner::partition_model(&model);
@@ -162,8 +162,8 @@ mod tests {
         let y = model.new_var_float(10.0, 50.0);
         
         // Add constraints
-        model.less_than_or_equals(x, Val::float(75.0));
-        model.not_equals(y, Val::float(25.0));
+        model.le(x, Val::float(75.0));
+        model.ne(y, Val::float(25.0));
         
         let partition_result = VariablePartitioner::partition_model(&model);
         
@@ -195,8 +195,8 @@ mod tests {
         let y = model.new_var_int(10, 50);
         
         // Add constraints
-        model.less_than_or_equals(x, Val::int(75));
-        model.not_equals(y, Val::int(25));
+        model.le(x, Val::int(75));
+        model.ne(y, Val::int(25));
         
         let partition_result = VariablePartitioner::partition_model(&model);
         
@@ -260,8 +260,8 @@ mod tests {
         
         // Add various constraints
         for i in 0..24 {
-            model.less_than_or_equals(float_vars[i], float_vars[i + 1]);
-            model.less_than_or_equals(int_vars[i], int_vars[i + 1]);
+            model.le(float_vars[i], float_vars[i + 1]);
+            model.le(int_vars[i], int_vars[i + 1]);
         }
         
         let start = std::time::Instant::now();
@@ -332,8 +332,8 @@ fn create_mixed_simple_model() -> Model {
     let float_x = model.new_var_float(0.0, 100.0);
     let int_y = model.new_var_int(0, 50);
     
-    model.less_than_or_equals(float_x, Val::float(75.0));
-    model.less_than_or_equals(int_y, Val::int(25));
+    model.le(float_x, Val::float(75.0));
+    model.le(int_y, Val::int(25));
     
     model
 }
@@ -347,8 +347,8 @@ fn create_mixed_dense_model() -> Model {
     
     // Dense constraint network
     for i in 0..4 {
-        model.less_than_or_equals(float_vars[i], float_vars[i + 1]);
-        model.less_than_or_equals(int_vars[i], int_vars[i + 1]);
+        model.le(float_vars[i], float_vars[i + 1]);
+        model.le(int_vars[i], int_vars[i + 1]);
     }
     
     model
@@ -359,8 +359,8 @@ fn create_pure_float_model() -> Model {
     let mut model = Model::with_float_precision(3);
     let x = model.new_var_float(0.0, 100.0);
     let y = model.new_var_float(0.0, 50.0);
-    model.less_than_or_equals(x, Val::float(75.0));
-    model.not_equals(y, Val::float(25.0));
+    model.le(x, Val::float(75.0));
+    model.ne(y, Val::float(25.0));
     model
 }
 
@@ -368,7 +368,7 @@ fn create_pure_integer_model() -> Model {
     let mut model = Model::with_float_precision(3);
     let x = model.new_var_int(0, 100);
     let y = model.new_var_int(0, 50);
-    model.less_than_or_equals(x, Val::int(75));
-    model.not_equals(y, Val::int(25));
+    model.le(x, Val::int(75));
+    model.ne(y, Val::int(25));
     model
 }

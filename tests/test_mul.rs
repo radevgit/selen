@@ -232,7 +232,7 @@ fn test_multiplication_bounds_propagation() {
     let z = model.mul(x, y);           // z = x * y
     
     // Force z to be in a smaller range
-    model.less_than_or_equals(z, Val::ValI(10));  // z <= 10
+    model.le(z, Val::ValI(10));  // z <= 10
     
     let solution = model.solve().expect("Should find solution");
     let x_val = match solution[x] { Val::ValI(v) => v, Val::ValF(v) => v as i32 };

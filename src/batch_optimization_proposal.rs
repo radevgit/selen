@@ -66,8 +66,8 @@ pub fn example_batch_usage() {
     
     // Add constraints...
     for (i, &var) in vars.iter().enumerate() {
-        model.greater_than(var, float(i as f64));
-        model.less_than(var, float(i as f64 + 1.0));
+        model.gt(var, float(i as f64));
+        model.lt(var, float(i as f64 + 1.0));
     }
     
     // Solve with batch optimization (automatic 2.7x speedup for medium problems)

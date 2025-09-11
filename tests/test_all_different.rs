@@ -146,8 +146,8 @@ fn test_all_different_with_constraints() {
     model.all_different(vars.clone());
     
     // Add additional constraints
-    model.greater_than(vars[0], int(5)); // vars[0] > 5
-    model.less_than(vars[1], int(3));    // vars[1] < 3
+    model.gt(vars[0], int(5)); // vars[0] > 5
+    model.lt(vars[1], int(3));    // vars[1] < 3
     // vars[2] can be anything in [1,10] except vars[0] and vars[1]
     
     let solution = model.solve().expect("Should have solution");

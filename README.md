@@ -13,8 +13,8 @@ This library provides efficient algorithms and data structures for solving const
 Type of variables: `float`, `int`, `mixed` (int and float)
 
 Constraints supported include:
-- Arithmetic: `add`, `sum`
-- Comparisons: `less_than`, `less_than_or_equals`, `greater_than`, `greater_than_or_equals`, `equals`, `not_equals`
+- Arithmetic: `add`, `sub`, `mul`, `modulo`, `abs`, `div`, `sum`
+- Comparisons: `lt`, `le`, `gt`, `ge`, `eq`, `ne` (short names for < ≤ > ≥ = ≠)
 - Global: `all_different`
 
 ## Installation
@@ -76,7 +76,7 @@ fn main() {
     let v0 = m.new_var_int(1, 3);
     println!("v0 domain: [1, 3]");
 
-    m.less_than(v0.times_pos(float(1.5)), float(5.0));
+    m.lt(v0.times_pos(float(1.5)), float(5.0));
 
     let solution = m.maximize(v0).unwrap();
     let x = match solution[v0] {
@@ -86,6 +86,29 @@ fn main() {
 
     assert!(x == 3);
     println!("Found optimal value: {}", x);
+}
+```
+
+### Short Constraint Names
+
+For more concise code, you can use short method names:
+
+```rust
+use cspsolver::prelude::*;
+
+fn main() {
+    let mut model = Model::default();
+    let x = model.new_var_int(1, 10);
+    let y = model.new_var_int(5, 15);
+    
+    // Short constraint names instead of long ones
+    model.le(x, y);        // instead of less_than_or_equals
+    model.ge(x, int(3));   // instead of greater_than_or_equals
+    model.eq(y, int(8));   // instead of equals
+    model.ne(x, y);        // instead of not_equals
+    
+    let solution = model.solve().unwrap();
+    println!("x = {:?}, y = {:?}", solution[x], solution[y]);
 }
 ```
 

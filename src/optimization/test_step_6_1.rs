@@ -19,8 +19,8 @@ mod tests {
         let y = model.new_var_float(-50.0, 50.0);
         
         // Add pure float constraints
-        model.less_than_or_equals(x, Val::float(75.5));
-        model.not_equals(y, Val::float(25.25));
+        model.le(x, Val::float(75.5));
+        model.ne(y, Val::float(25.25));
         
         let result = ProblemClassifier::classify(model.get_vars(), model.get_props());
         
@@ -36,8 +36,8 @@ mod tests {
         let y = model.new_var_int(-50, 50);
         
         // Add integer constraints
-        model.less_than_or_equals(x, Val::int(75));
-        model.not_equals(y, Val::int(25));
+        model.le(x, Val::int(75));
+        model.ne(y, Val::int(25));
         
         let result = ProblemClassifier::classify(model.get_vars(), model.get_props());
         
@@ -60,10 +60,10 @@ mod tests {
         let int_b = model.new_var_int(1, 5);
         
         // Separate constraints - no obvious coupling
-        model.less_than_or_equals(float_x, Val::float(75.5));  // Float only
-        model.not_equals(float_y, Val::float(25.0));  // Float only
-        model.less_than_or_equals(int_a, Val::int(8));     // Integer only
-        model.not_equals(int_b, Val::int(3));     // Integer only
+        model.le(float_x, Val::float(75.5));  // Float only
+        model.ne(float_y, Val::float(25.0));  // Float only
+        model.le(int_a, Val::int(8));     // Integer only
+        model.ne(int_b, Val::int(3));     // Integer only
         
         let result = ProblemClassifier::classify(model.get_vars(), model.get_props());
         
@@ -93,16 +93,16 @@ mod tests {
         
         // Add many constraints - high density suggests coupling
         for i in 0..4 {
-            model.less_than_or_equals(float_vars[i], float_vars[i + 1]);
-            model.less_than_or_equals(int_vars[i], int_vars[i + 1]);
+            model.le(float_vars[i], float_vars[i + 1]);
+            model.le(int_vars[i], int_vars[i + 1]);
         }
         
         // Add cross-type constraints (mixing float and int in same constraint)
         // Note: This may not be directly supported, but the high constraint density
         // should trigger our conservative coupling detection
         for i in 0..3 {
-            model.not_equals(float_vars[i], Val::float(50.0));
-            model.not_equals(int_vars[i], Val::int(50));
+            model.ne(float_vars[i], Val::float(50.0));
+            model.ne(int_vars[i], Val::int(50));
         }
         
         let result = ProblemClassifier::classify(model.get_vars(), model.get_props());
@@ -128,8 +128,8 @@ mod tests {
         let int_var = model.new_var_int(0, 10);
         
         // Minimal constraints
-        model.less_than_or_equals(float_var, Val::float(5.5));
-        model.less_than_or_equals(int_var, Val::int(5));
+        model.le(float_var, Val::float(5.5));
+        model.le(int_var, Val::int(5));
         
         let result = ProblemClassifier::classify(model.get_vars(), model.get_props());
         
@@ -153,8 +153,8 @@ mod tests {
         
         // Add various constraints
         for i in 0..49 {
-            model.less_than_or_equals(float_vars[i], float_vars[i + 1]);
-            model.less_than_or_equals(int_vars[i], int_vars[i + 1]);
+            model.le(float_vars[i], float_vars[i + 1]);
+            model.le(int_vars[i], int_vars[i + 1]);
         }
         
         let start = std::time::Instant::now();
@@ -226,8 +226,8 @@ fn create_pure_float_model() -> Model {
     let mut model = Model::with_float_precision(3);
     let x = model.new_var_float(0.0, 100.0);
     let y = model.new_var_float(0.0, 50.0);
-    model.less_than_or_equals(x, Val::float(75.0));
-    model.not_equals(y, Val::float(25.0));
+    model.le(x, Val::float(75.0));
+    model.ne(y, Val::float(25.0));
     model
 }
 
@@ -235,8 +235,8 @@ fn create_pure_integer_model() -> Model {
     let mut model = Model::with_float_precision(3);
     let x = model.new_var_int(0, 100);
     let y = model.new_var_int(0, 50);
-    model.less_than_or_equals(x, Val::int(75));
-    model.not_equals(y, Val::int(25));
+    model.le(x, Val::int(75));
+    model.ne(y, Val::int(25));
     model
 }
 
@@ -246,14 +246,14 @@ fn create_mixed_separable_model() -> Model {
     // Float variables with float constraints
     let float_x = model.new_var_float(0.0, 100.0);
     let float_y = model.new_var_float(0.0, 50.0);
-    model.less_than_or_equals(float_x, Val::float(75.0));
-    model.not_equals(float_y, Val::float(25.0));
+    model.le(float_x, Val::float(75.0));
+    model.ne(float_y, Val::float(25.0));
     
     // Integer variables with integer constraints  
     let int_a = model.new_var_int(0, 100);
     let int_b = model.new_var_int(0, 50);
-    model.less_than_or_equals(int_a, Val::int(75));
-    model.not_equals(int_b, Val::int(25));
+    model.le(int_a, Val::int(75));
+    model.ne(int_b, Val::int(25));
     
     model
 }
@@ -267,8 +267,8 @@ fn create_mixed_dense_model() -> Model {
     
     // Dense constraint network
     for i in 0..9 {
-        model.less_than_or_equals(float_vars[i], float_vars[i + 1]);
-        model.less_than_or_equals(int_vars[i], int_vars[i + 1]);
+        model.le(float_vars[i], float_vars[i + 1]);
+        model.le(int_vars[i], int_vars[i + 1]);
     }
     
     model

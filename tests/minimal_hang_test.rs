@@ -9,7 +9,7 @@ fn minimal_hanging_test() {
     let x = model.new_var_float(5.0, 5.6);  // Smaller range around the problem area
     println!("Created variable x with bounds [5.0, 5.6]");
     
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
     println!("Added constraint x < 5.5");
     
     println!("Starting maximization...");

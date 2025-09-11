@@ -6,7 +6,7 @@ fn test_pure_float_problem_classification() {
     let mut model = Model::default();
     let x = model.new_var_float(1.0, 10.0);
     let y = model.new_var_float(2.0, 20.0);
-    model.less_than(x, y);
+    model.lt(x, y);
     
     let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
     
@@ -33,7 +33,7 @@ fn test_pure_integer_problem_classification() {
     let mut model = Model::default();
     let a = model.new_var_int(1, 10);
     let b = model.new_var_int(5, 15);
-    model.not_equals(a, b);
+    model.ne(a, b);
     
     let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
     
@@ -89,8 +89,8 @@ fn test_mixed_problem_expected_separable() {
     let float_var2 = model.new_var_float(5.0, 15.0);
     
     // Add constraints within each type only (no cross-type coupling)
-    model.not_equals(int_var1, int_var2);
-    model.less_than(float_var1, float_var2);
+    model.ne(int_var1, int_var2);
+    model.lt(float_var1, float_var2);
     
     let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
     
@@ -187,7 +187,7 @@ mod integration_tests {
         for i in 0..50 {
             let var1 = var_ids[i * 2];
             let var2 = var_ids[i * 2 + 1];
-            model.less_than(var1, var2);
+            model.lt(var1, var2);
         }
         
         // Classification should be fast

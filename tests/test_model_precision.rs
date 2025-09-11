@@ -72,8 +72,8 @@ fn test_precision_affects_domain_operations() {
     let x_low = low_precision.new_var_float(0.0, 1.0);
     let x_high = high_precision.new_var_float(0.0, 1.0);
     
-    low_precision.greater_than(x_low, float(0.5));
-    high_precision.greater_than(x_high, float(0.5));
+    low_precision.gt(x_low, float(0.5));
+    high_precision.gt(x_high, float(0.5));
     
     let sol_low = low_precision.minimize(x_low).expect("Should have solution");
     let sol_high = high_precision.minimize(x_high).expect("Should have solution");

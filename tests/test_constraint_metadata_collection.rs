@@ -10,12 +10,12 @@ fn test_constraint_metadata_collection() {
     let z = model.new_var_float(0.0, 20.0);
     
     // Create various constraints to test metadata collection
-    model.less_than(x, y);           // x < y
-    model.less_than_or_equals(y, z); // y <= z
+    model.lt(x, y);           // x < y
+    model.le(y, z); // y <= z
     let sum_result = model.add(x, y); // x + y = sum_result
     model.equals(sum_result, z);     // sum_result == z
-    model.not_equals(x, y);          // x != y
-    model.greater_than(z, x);        // z > x
+    model.ne(x, y);          // x != y
+    model.gt(z, x);        // z > x
     model.all_different(vec![x, y, z]); // all different
     
     // Test that constraints were registered
@@ -48,8 +48,8 @@ fn test_specific_constraint_types() {
     let y = model.new_var_float(5.0, 15.0);
     
     // Test specific constraint types
-    model.less_than(x, y);  // x < y
-    model.greater_than_or_equals(y, x); // y >= x
+    model.lt(x, y);  // x < y
+    model.ge(y, x); // y >= x
     
     let registry = model.get_props().get_constraint_registry();
     

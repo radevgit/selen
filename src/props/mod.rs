@@ -1,7 +1,10 @@
+mod abs;
 mod add;
 mod alldiff;
+mod div;
 mod eq;
 mod leq;
+mod modulo;
 mod mul;
 mod neq;
 mod noop;
@@ -216,6 +219,79 @@ impl Propagators {
         self.push_new_prop_with_metadata(
             self::mul::Mul::new(x, y, s),
             ConstraintType::Multiplication,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce `x % y == s`.
+    pub fn modulo(&mut self, x: impl View, y: impl View, s: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = self.analyze_view(&x);
+        let y_info = self.analyze_view(&y);
+        let s_info = ViewInfo::Variable { var_id: s };
+        
+        let variables: Vec<_> = x.get_underlying_var().into_iter()
+            .chain(y.get_underlying_var().into_iter())
+            .chain(std::iter::once(s))
+            .collect();
+            
+        let metadata = ConstraintData::NAry {
+            operands: vec![x_info, y_info, s_info],
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::modulo::Modulo::new(x, y, s),
+            ConstraintType::Modulo,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce `|x| == s`.
+    pub fn abs(&mut self, x: impl View, s: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = self.analyze_view(&x);
+        let s_info = ViewInfo::Variable { var_id: s };
+        
+        let variables: Vec<_> = x.get_underlying_var().into_iter()
+            .chain(std::iter::once(s))
+            .collect();
+            
+        let metadata = ConstraintData::NAry {
+            operands: vec![x_info, s_info],
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::abs::Abs::new(x, s),
+            ConstraintType::AbsoluteValue,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce `x / y == s`.
+    pub fn div(&mut self, x: impl View, y: impl View, s: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = self.analyze_view(&x);
+        let y_info = self.analyze_view(&y);
+        let s_info = ViewInfo::Variable { var_id: s };
+        
+        let variables: Vec<_> = x.get_underlying_var().into_iter()
+            .chain(y.get_underlying_var().into_iter())
+            .chain(std::iter::once(s))
+            .collect();
+            
+        let metadata = ConstraintData::NAry {
+            operands: vec![x_info, y_info, s_info],
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::div::Div::new(x, y, s),
+            ConstraintType::Division,
             variables,
             metadata,
         )

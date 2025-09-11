@@ -46,17 +46,17 @@ pub fn benchmark_tool_clearance_constraints() -> ManufacturingResult {
     
     // Tool clearance efficiency constraint
     let clearance_efficiency = model.new_var_float(0.0, 1.0);
-    model.greater_than(clearance_efficiency, float(0.90)); // 90% clearance efficiency
+    model.gt(clearance_efficiency, float(0.90)); // 90% clearance efficiency
     
     // Sample clearance constraints between tool positions
     for i in 0..std::cmp::min(tool_positions.len(), 30) {
         let (x, y) = tool_positions[i];
         
         // Ensure adequate clearance from edges
-        model.greater_than(x, float(tool_diameter / 2.0 + min_clearance));
-        model.less_than(x, float(plate_width - tool_diameter / 2.0 - min_clearance));
-        model.greater_than(y, float(tool_diameter / 2.0 + min_clearance));
-        model.less_than(y, float(plate_height - tool_diameter / 2.0 - min_clearance));
+        model.gt(x, float(tool_diameter / 2.0 + min_clearance));
+        model.lt(x, float(plate_width - tool_diameter / 2.0 - min_clearance));
+        model.gt(y, float(tool_diameter / 2.0 + min_clearance));
+        model.lt(y, float(plate_height - tool_diameter / 2.0 - min_clearance));
     }
     
     let success = model.solve().is_some();
@@ -95,13 +95,13 @@ pub fn benchmark_grain_direction_constraints() -> ManufacturingResult {
     
     // Grain alignment efficiency
     let grain_efficiency = model.new_var_float(0.0, 1.0);
-    model.greater_than(grain_efficiency, float(0.95)); // 95% grain alignment
+    model.gt(grain_efficiency, float(0.95)); // 95% grain alignment
     
     // Constraints for grain-critical parts
     for orientation in &part_orientations {
         // Must be within tolerance of grain direction
-        model.greater_than(*orientation, float(grain_direction - 0.05)); // ±0.05 radian tolerance
-        model.less_than(*orientation, float(grain_direction + 0.05));
+        model.gt(*orientation, float(grain_direction - 0.05)); // ±0.05 radian tolerance
+        model.lt(*orientation, float(grain_direction + 0.05));
     }
     
     let success = model.solve().is_some();
@@ -148,8 +148,8 @@ pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
             let temp_var = model.new_var_float(required_temp - 25.0, required_temp + 25.0);
             
             // Temperature must be within ±10°C of requirement
-            model.greater_than(temp_var, float(required_temp - 10.0));
-            model.less_than(temp_var, float(required_temp + 10.0));
+            model.gt(temp_var, float(required_temp - 10.0));
+            model.lt(temp_var, float(required_temp + 10.0));
             
             (x, y, temp_var)
         })
@@ -157,15 +157,15 @@ pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
     
     // Heat treatment efficiency
     let ht_efficiency = model.new_var_float(0.0, 1.0);
-    model.greater_than(ht_efficiency, float(0.88)); // 88% heat treatment efficiency
+    model.gt(ht_efficiency, float(0.88)); // 88% heat treatment efficiency
     
     // Thermal uniformity constraints
     for (x, y, _temp) in &part_positions[..std::cmp::min(part_positions.len(), 25)] {
         // Ensure parts are positioned for uniform heating
-        model.greater_than(*x, float(0.1)); // 10cm from edge
-        model.less_than(*x, float(furnace_width - 0.1));
-        model.greater_than(*y, float(0.1));
-        model.less_than(*y, float(furnace_height - 0.1));
+        model.gt(*x, float(0.1)); // 10cm from edge
+        model.lt(*x, float(furnace_width - 0.1));
+        model.gt(*y, float(0.1));
+        model.lt(*y, float(furnace_height - 0.1));
     }
     
     let success = model.solve().is_some();
@@ -212,10 +212,10 @@ pub fn benchmark_quality_control_sampling() -> ManufacturingResult {
             let y = model.new_var_float(y_center - 0.1, y_center + 0.1);
             
             // Statistical distribution constraints
-            model.greater_than(x, float(0.05)); // 5cm margin
-            model.less_than(x, float(layout_width - 0.05));
-            model.greater_than(y, float(0.05));
-            model.less_than(y, float(layout_height - 0.05));
+            model.gt(x, float(0.05)); // 5cm margin
+            model.lt(x, float(layout_width - 0.05));
+            model.gt(y, float(0.05));
+            model.lt(y, float(layout_height - 0.05));
             
             (x, y)
         })
@@ -223,11 +223,11 @@ pub fn benchmark_quality_control_sampling() -> ManufacturingResult {
     
     // Quality control efficiency
     let qc_efficiency = model.new_var_float(0.0, 1.0);
-    model.greater_than(qc_efficiency, float(0.96)); // 96% QC coverage efficiency
+    model.gt(qc_efficiency, float(0.96)); // 96% QC coverage efficiency
     
     // Statistical validity constraint
     let distribution_quality = model.new_var_float(0.0, 1.0);
-    model.greater_than(distribution_quality, float(0.92)); // 92% distribution quality
+    model.gt(distribution_quality, float(0.92)); // 92% distribution quality
     
     let success = model.solve().is_some();
     let duration = start.elapsed();

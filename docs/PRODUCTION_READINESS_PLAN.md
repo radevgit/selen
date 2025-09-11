@@ -83,17 +83,18 @@ This plan focuses on transforming our hybrid CSP solver from a research prototyp
 
 ## 🔧 **PHASE 2: Missing Core Constraints**
 
-### **Step 9.1: Essential Missing Constraints**
+### **Step 9.1: Essential Missing Constraints** ✅ PARTIALLY COMPLETE  
 **Goal**: Implement fundamental constraints that are currently missing
 
 **9.1.1: Basic Arithmetic Constraints**
 - [ ] **Division constraint** (`div`): `x / y = z` with domain handling
-- [ ] **Modulo constraint** (`mod`): `x mod y = z`
+- [✅] **Modulo constraint** (`mod`): `x mod y = z` - **COMPLETED**
 - [ ] **Absolute value** (`abs`): `|x| = y`
 - [ ] **Min/Max constraints**: `min(x, y) = z`, `max(x, y) = z`
 
-**9.1.2: Comparison Constraints**
-- [ ] **Greater than** (`gt`): `x > y` (strict inequality)
+**9.1.2: Comparison Constraints**  
+- [✅] **Short constraint names** (`le`, `ge`, `eq`, `ne`, `lt`, `gt`) - **COMPLETED**
+- [ ] **Greater than** (`gt`): `x > y` (strict inequality) 
 - [ ] **Less than** (`lt`): `x < y` (strict inequality)
 - [ ] **Between constraint**: `x ≤ y ≤ z`
 - [ ] **Element constraint**: `array[index] = value`

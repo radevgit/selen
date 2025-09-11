@@ -27,8 +27,8 @@ mod debug_tests {
         let int_a = mixed_model.new_var_int(0, 10);
         let int_b = mixed_model.new_var_int(5, 15);
 
-        mixed_model.less_than_or_equals(float_x, float_y);
-        mixed_model.less_than_or_equals(int_a, int_b);
+        mixed_model.le(float_x, float_y);
+        mixed_model.le(int_a, int_b);
 
         let mixed_result = VariablePartitioner::partition_model(&mixed_model);
         let mixed_classification = ProblemClassifier::classify(mixed_model.get_vars(), mixed_model.get_props());
@@ -46,7 +46,7 @@ mod debug_tests {
         let y = float_model.new_var_float(5.0, 15.0);
         let _int_a = float_model.new_var_int(0, 10);
 
-        float_model.less_than_or_equals(x, y);
+        float_model.le(x, y);
 
         let float_result = VariablePartitioner::partition_model(&float_model);
         let float_classification = ProblemClassifier::classify(float_model.get_vars(), float_model.get_props());

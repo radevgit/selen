@@ -10,7 +10,7 @@ fn trace_optimization_precision_4() {
     let x = model.new_var_float(1.0, 10.0);
     println!("Created variable x with initial bounds [1.0, 10.0]");
     
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
     println!("Added constraint x < 5.5 (implemented as x.next() <= 5.5)");
     println!("This means x + {} <= 5.5, so x <= {}", step_size, 5.5 - step_size);
     
@@ -35,7 +35,7 @@ fn trace_optimization_precision_6_limited() {
     let x = model.new_var_float(1.0, 10.0);
     println!("Created variable x with initial bounds [1.0, 10.0]");
     
-    model.less_than(x, float(5.5));
+    model.lt(x, float(5.5));
     println!("Added constraint x < 5.5 (implemented as x.next() <= 5.5)");
     println!("This means x + {} <= 5.5, so x <= {}", step_size, 5.5 - step_size);
     
