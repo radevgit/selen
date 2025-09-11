@@ -20,6 +20,7 @@ pub mod constraint_metadata;
 pub mod precision_optimizer;
 pub mod variable_partitioning;
 pub mod subproblem_solving;
+pub mod solution_integration;
 
 #[cfg(test)]
 mod test_step_6_1;
@@ -29,6 +30,9 @@ mod test_step_6_2_simple;
 
 #[cfg(test)]
 mod test_step_6_3;
+
+#[cfg(test)]
+mod test_step_6_4;
 
 #[cfg(test)]
 mod debug_step_6_2;
@@ -43,3 +47,4 @@ pub use precision_optimizer::*;
 pub use precision_propagator::*;
 pub use ulp_utils::*;
 pub use subproblem_solving::*;
+pub use solution_integration::*;
