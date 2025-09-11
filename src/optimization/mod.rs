@@ -17,8 +17,14 @@ pub mod constraint_integration;
 pub mod precision_handling;
 pub mod model_integration;
 pub mod constraint_metadata;
+pub mod precision_optimizer;
+pub mod precision_propagator;
+pub mod ulp_utils;
 
 pub use classification::*;
 pub use float_direct::*;
 pub use constraint_integration::*;
 pub use model_integration::*;
+pub use precision_optimizer::*;
+pub use precision_propagator::*;
+pub use ulp_utils::*;

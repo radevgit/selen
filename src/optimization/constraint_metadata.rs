@@ -330,7 +330,7 @@ pub struct VariableConstraintAnalysis {
 
 impl VariableConstraintAnalysis {
     /// Get the effective upper bound considering all constraints
-    pub fn get_effective_upper_bound(&self, step_size: f64) -> Option<f64> {
+    pub fn get_effective_upper_bound(&self, _step_size: f64) -> Option<f64> {
         let mut min_bound: Option<f64> = None;
 
         // Consider <= constraints
@@ -338,9 +338,9 @@ impl VariableConstraintAnalysis {
             min_bound = Some(min_bound.map_or(bound, |current| current.min(bound)));
         }
 
-        // Consider < constraints (subtract step_size for strict inequality)
+        // Consider < constraints (use ULP-based precision instead of step_size)
         for &bound in &self.strict_upper_bounds {
-            let strict_bound = bound - step_size;
+            let strict_bound = crate::optimization::ulp_utils::UlpUtils::strict_upper_bound(bound);
             min_bound = Some(min_bound.map_or(strict_bound, |current| current.min(strict_bound)));
         }
 
@@ -353,7 +353,7 @@ impl VariableConstraintAnalysis {
     }
 
     /// Get the effective lower bound considering all constraints
-    pub fn get_effective_lower_bound(&self, step_size: f64) -> Option<f64> {
+    pub fn get_effective_lower_bound(&self, _step_size: f64) -> Option<f64> {
         let mut max_bound: Option<f64> = None;
 
         // Consider >= constraints
@@ -361,9 +361,9 @@ impl VariableConstraintAnalysis {
             max_bound = Some(max_bound.map_or(bound, |current| current.max(bound)));
         }
 
-        // Consider > constraints (add step_size for strict inequality)
+        // Consider > constraints (use ULP-based precision instead of step_size)
         for &bound in &self.strict_lower_bounds {
-            let strict_bound = bound + step_size;
+            let strict_bound = crate::optimization::ulp_utils::UlpUtils::strict_lower_bound(bound);
             max_bound = Some(max_bound.map_or(strict_bound, |current| current.max(strict_bound)));
         }
 
