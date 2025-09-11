@@ -743,9 +743,9 @@ impl Model {
     }
 
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
-
-    /// Search for assignment that satisfies all constraints within bounds of decision variables.
     /// 
+    /// This method automatically tries optimization algorithms for suitable problems
+    /// before falling back to traditional constraint propagation search.
     ///
     /// ```
     /// use cspsolver::prelude::*;
@@ -757,7 +757,36 @@ impl Model {
     /// ```
     #[must_use]
     pub fn solve(self) -> Option<Solution> {
-        self.enumerate().next()
+        // Step 6.5: Try hybrid optimization for mixed problems first
+        match self.try_hybrid_solve() {
+            Some(solution) => Some(solution),
+            None => {
+                // Fall back to traditional constraint propagation search
+                self.enumerate().next()
+            }
+        }
+    }
+    
+    /// Step 6.5: Try hybrid optimization approach for constraint satisfaction
+    /// Returns Some(solution) if hybrid solver succeeds, None if should fall back to search
+    fn try_hybrid_solve(&self) -> Option<Solution> {
+        // Create a dummy objective (we're not optimizing, just solving constraints)
+        // Use the first variable if available, otherwise return None
+        let first_var = match self.vars.iter().next() {
+            Some(_) => {
+                // Create VarId for the first variable
+                let first_var_id = crate::optimization::model_integration::index_to_var_id(0);
+                first_var_id
+            },
+            None => return None, // No variables to solve
+        };
+        
+        // Try optimization with the dummy objective
+        match self.optimization_router.try_minimize(&self.vars, &self.props, &first_var) {
+            OptimizationAttempt::Success(solution) => Some(solution),
+            OptimizationAttempt::Fallback(_) => None, // Fall back to search
+            OptimizationAttempt::Infeasible(_) => None, // No solution exists
+        }
     }
 
     /// Search for assignment with a callback to capture solving statistics.

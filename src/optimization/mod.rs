@@ -35,6 +35,9 @@ mod test_step_6_3;
 mod test_step_6_4;
 
 #[cfg(test)]
+mod test_step_6_5;
+
+#[cfg(test)]
 mod debug_step_6_2;
 pub mod precision_propagator;
 pub mod ulp_utils;

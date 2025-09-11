@@ -160,6 +160,17 @@ impl VariablePartitioner {
         let var_analysis = Self::analyze_variable_types(vars);
         let constraint_count = Self::estimate_constraint_count(props);
         
+        // Handle empty model case - no partitions should be created
+        if var_analysis.total_count == 0 {
+            return PartitionResult {
+                float_partition: None,
+                integer_partition: None,
+                is_separable: true,
+                total_variables: 0,
+                total_constraints: constraint_count,
+            };
+        }
+        
         match problem_type {
             ProblemType::PureFloat { .. } => {
                 PartitionResult {

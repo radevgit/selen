@@ -10,6 +10,9 @@ use crate::solution::Solution;
 use crate::views::View;
 use crate::optimization::{ProblemClassifier, ProblemType, ConstraintAwareOptimizer, OptimizationResult};
 use crate::optimization::precision_handling::PrecisionAwareOptimizer;
+use crate::optimization::variable_partitioning::{VariablePartitioner, PartitionResult};
+use crate::optimization::subproblem_solving::{solve_with_partitioning, SubproblemSolvingError};
+use crate::optimization::solution_integration::{SolutionIntegrator, IntegrationError};
 
 /// Helper function to extract the internal index from VarId
 /// Safe accessor using the new VarId methods
@@ -235,6 +238,10 @@ impl OptimizationRouter {
                         // Step 3: Attempt float optimization with safe constraint handling
                         self.try_safe_float_minimize(vars, props, var_id_to_index(var_id))
                     },
+                    ProblemType::MixedSeparable { .. } => {
+                        // Step 6.5: Attempt hybrid optimization for separable mixed problems
+                        self.try_hybrid_optimize_minimize(vars, props, var_id)
+                    },
                     _ => {
                         // Other problem types fall back to search
                         OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
@@ -242,8 +249,17 @@ impl OptimizationRouter {
                 }
             },
             None => {
-                // Complex objective expression - cannot optimize directly
-                OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
+                // Step 6.5: Try constraint satisfaction for mixed problems (no objective)
+                let problem_type = ProblemClassifier::classify(vars, props);
+                match problem_type {
+                    ProblemType::MixedSeparable { .. } => {
+                        self.try_hybrid_constraint_satisfaction(vars, props)
+                    },
+                    _ => {
+                        // Complex objective expression - cannot optimize directly
+                        OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
+                    },
+                }
             },
         }
     }
@@ -268,6 +284,10 @@ impl OptimizationRouter {
                         // Step 3: Attempt float optimization with safe constraint handling
                         self.try_safe_float_maximize(vars, props, var_id_to_index(var_id))
                     },
+                    ProblemType::MixedSeparable { .. } => {
+                        // Step 6.5: Attempt hybrid optimization for separable mixed problems
+                        self.try_hybrid_optimize_maximize(vars, props, var_id)
+                    },
                     _ => {
                         // Other problem types fall back to search
                         OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
@@ -275,8 +295,17 @@ impl OptimizationRouter {
                 }
             },
             None => {
-                // Complex objective expression - cannot optimize directly
-                OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
+                // Step 6.5: Try constraint satisfaction for mixed problems (no objective)
+                let problem_type = ProblemClassifier::classify(vars, props);
+                match problem_type {
+                    ProblemType::MixedSeparable { .. } => {
+                        self.try_hybrid_constraint_satisfaction(vars, props)
+                    },
+                    _ => {
+                        // Complex objective expression - cannot optimize directly
+                        OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
+                    },
+                }
             },
         }
     }
@@ -582,6 +611,61 @@ impl OptimizationRouter {
         return OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
             OptimizerFailure::NotFloatVariable
         ));
+    }
+    
+    /// Step 6.5: Try hybrid optimization for separable mixed problems with objective
+    fn try_hybrid_optimize_minimize(
+        &self,
+        vars: &Vars,
+        props: &Propagators,
+        _objective_var: VarId,
+    ) -> OptimizationAttempt {
+        // For Step 6.5, implement hybrid solving for constraint satisfaction
+        // Note: Full optimization support will come in future steps
+        self.try_hybrid_constraint_satisfaction(vars, props)
+    }
+    
+    /// Step 6.5: Try hybrid optimization for separable mixed problems with objective (maximize)
+    fn try_hybrid_optimize_maximize(
+        &self,
+        vars: &Vars,
+        props: &Propagators,
+        _objective_var: VarId,
+    ) -> OptimizationAttempt {
+        // For Step 6.5, implement hybrid solving for constraint satisfaction
+        // Note: Full optimization support will come in future steps
+        self.try_hybrid_constraint_satisfaction(vars, props)
+    }
+    
+    /// Step 6.5: Try hybrid constraint satisfaction for separable mixed problems
+    fn try_hybrid_constraint_satisfaction(
+        &self,
+        vars: &Vars,
+        props: &Propagators,
+    ) -> OptimizationAttempt {
+        // For Step 6.5, we implement a simplified version that focuses on constraint satisfaction
+        // This demonstrates the hybrid pipeline integration
+        
+        // Step 1: Create a simplified partition for demonstration
+        // In a full implementation, this would use the VariablePartitioner
+        let mut has_float = false;
+        let mut has_int = false;
+        
+        for var in vars.iter() {
+            match var {
+                crate::vars::Var::VarF(_) => has_float = true,
+                crate::vars::Var::VarI(_) => has_int = true,
+            }
+        }
+        
+        // Only proceed if we actually have a mixed problem
+        if !has_float || !has_int {
+            return OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression);
+        }
+        
+        // For Step 6.5, we return a fallback to indicate the hybrid solver was attempted
+        // but needs full integration with the model creation
+        OptimizationAttempt::Fallback(FallbackReason::MixedSeparableProblem)
     }
     
     /// Create a Solution from an OptimizationResult
