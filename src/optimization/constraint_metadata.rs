@@ -56,6 +56,12 @@ pub enum ConstraintType {
     Minimum,
     /// Maximum constraint (max(x, y, ...) = z)
     Maximum,
+    /// Boolean AND constraint (result = a AND b AND ...)
+    BooleanAnd,
+    /// Boolean OR constraint (result = a OR b OR ...)
+    BooleanOr,
+    /// Boolean NOT constraint (result = NOT operand)
+    BooleanNot,
     /// Complex constraint that couldn't be categorized
     Complex {
         /// Number of variables involved
@@ -354,6 +360,9 @@ impl ConstraintRegistry {
                 ConstraintType::AbsoluteValue |
                 ConstraintType::Minimum |
                 ConstraintType::Maximum |
+                ConstraintType::BooleanAnd |
+                ConstraintType::BooleanOr |
+                ConstraintType::BooleanNot |
                 ConstraintType::AllDifferent | 
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;

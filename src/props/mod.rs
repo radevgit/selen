@@ -1,6 +1,7 @@
 mod abs;
 mod add;
 mod alldiff;
+mod bool_logic;
 mod div;
 mod eq;
 mod leq;
@@ -642,6 +643,75 @@ impl Propagators {
         self.push_new_prop_with_metadata(
             self::leq::LessThanOrEquals::new(x.next(), y),
             ConstraintType::LessThan,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce `result = a AND b AND c AND ...`.
+    /// All variables are treated as boolean: 0 = false, non-zero = true.
+    pub fn bool_and(&mut self, operands: Vec<VarId>, result: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operand_infos: Vec<_> = operands.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+        
+        let variables: Vec<_> = operands.iter().cloned()
+            .chain(std::iter::once(result))
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands: operand_infos };
+        
+        self.push_new_prop_with_metadata(
+            self::bool_logic::BoolAnd::new(operands, result),
+            ConstraintType::BooleanAnd,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce `result = a OR b OR c OR ...`.
+    /// All variables are treated as boolean: 0 = false, non-zero = true.
+    pub fn bool_or(&mut self, operands: Vec<VarId>, result: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operand_infos: Vec<_> = operands.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+        
+        let variables: Vec<_> = operands.iter().cloned()
+            .chain(std::iter::once(result))
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands: operand_infos };
+        
+        self.push_new_prop_with_metadata(
+            self::bool_logic::BoolOr::new(operands, result),
+            ConstraintType::BooleanOr,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce `result = NOT operand`.
+    /// Variables are treated as boolean: 0 = false, non-zero = true.
+    pub fn bool_not(&mut self, operand: VarId, result: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operand_info = ViewInfo::Variable { var_id: operand };
+        let result_info = ViewInfo::Variable { var_id: result };
+        
+        let variables = vec![operand, result];
+            
+        let metadata = ConstraintData::Binary {
+            left: operand_info,
+            right: result_info,
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::bool_logic::BoolNot::new(operand, result),
+            ConstraintType::BooleanNot,
             variables,
             metadata,
         )

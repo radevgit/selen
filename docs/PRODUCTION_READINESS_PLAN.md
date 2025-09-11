@@ -100,7 +100,7 @@ This plan focuses on transforming our hybrid CSP solver from a research prototyp
 - [ ] **Element constraint**: `array[index] = value`
 
 **9.1.3: Logical Constraints**
-- [ ] **Boolean AND/OR/NOT** for constraint combinations
+- [✅] **Boolean AND/OR/NOT** for constraint combinations - **COMPLETED**
 - [ ] **If-then-else** constraints: `if condition then constraint1 else constraint2`
 - [ ] **Reification**: convert constraints to boolean variables
 - [ ] **Cardinality constraints**: exactly/at-most/at-least N variables are true

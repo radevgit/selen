@@ -15,6 +15,7 @@ Type of variables: `float`, `int`, `mixed` (int and float)
 Constraints supported include:
 - **Arithmetic**: `add`, `sub`, `mul`, `div`, `modulo`, `abs`, `sum`
 - **Comparisons**: `lt`, `le`, `gt`, `ge`, `eq`, `ne` (short names for < ≤ > ≥ = ≠)
+- **Boolean Logic**: `bool_and`, `bool_or`, `bool_not` (logical AND/OR/NOT operations)
 - **Global**: `all_different`, `min`, `max` (vector-based)
 - **Mixed Types**: Full support for integer and float variables in all constraints
 
@@ -115,8 +116,6 @@ fn main() {
 
 
 ## Status
-
-The new implementation follows the design and implementation of [Copper](https://docs.rs/copper/0.1.0/copper/) v0.1.0.
 
 The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
 

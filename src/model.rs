@@ -736,6 +736,83 @@ impl Model {
         let _p = self.props.all_different(vars);
     }
 
+    /// Create a new variable that holds the result of a boolean AND operation.
+    /// 
+    /// The boolean AND operation computes `result = a AND b AND c AND ...`:
+    /// - All variables are treated as boolean: 0 = false, non-zero = true
+    /// - Result is 1 if and only if all operands are non-zero
+    /// - Result is 0 if any operand is 0
+    ///
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let a = model.new_var_int(0, 1);
+    /// let b = model.new_var_int(0, 1);
+    /// let c = model.new_var_int(0, 1);
+    /// let result = model.bool_and(&[a, b, c]);
+    /// ```
+    pub fn bool_and(&mut self, operands: &[VarId]) -> VarId {
+        if operands.is_empty() {
+            // Empty AND is typically true
+            return self.new_var_int(1, 1);
+        }
+
+        // Result is boolean (0 or 1)
+        let result = self.new_var_int(0, 1);
+        let _p = self.props.bool_and(operands.to_vec(), result);
+        result
+    }
+
+    /// Create a new variable that holds the result of a boolean OR operation.
+    /// 
+    /// The boolean OR operation computes `result = a OR b OR c OR ...`:
+    /// - All variables are treated as boolean: 0 = false, non-zero = true
+    /// - Result is 1 if any operand is non-zero
+    /// - Result is 0 if and only if all operands are 0
+    ///
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let a = model.new_var_int(0, 1);
+    /// let b = model.new_var_int(0, 1);
+    /// let c = model.new_var_int(0, 1);
+    /// let result = model.bool_or(&[a, b, c]);
+    /// ```
+    pub fn bool_or(&mut self, operands: &[VarId]) -> VarId {
+        if operands.is_empty() {
+            // Empty OR is typically false
+            return self.new_var_int(0, 0);
+        }
+
+        // Result is boolean (0 or 1)
+        let result = self.new_var_int(0, 1);
+        let _p = self.props.bool_or(operands.to_vec(), result);
+        result
+    }
+
+    /// Create a new variable that holds the result of a boolean NOT operation.
+    /// 
+    /// The boolean NOT operation computes `result = NOT operand`:
+    /// - Variables are treated as boolean: 0 = false, non-zero = true
+    /// - Result is 1 if operand is 0
+    /// - Result is 0 if operand is non-zero
+    ///
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let a = model.new_var_int(0, 1);
+    /// let result = model.bool_not(a);
+    /// ```
+    pub fn bool_not(&mut self, operand: VarId) -> VarId {
+        // Result is boolean (0 or 1)
+        let result = self.new_var_int(0, 1);
+        let _p = self.props.bool_not(operand, result);
+        result
+    }
+
     /// Find assignment that minimizes objective expression while satisfying all constraints.
     /// 
     ///
