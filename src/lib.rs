@@ -96,5 +96,8 @@ mod tests;
 #[cfg(test)]
 mod debug;
 
+// Benchmarks module for performance validation
+pub mod benchmarks;
+
 
 
