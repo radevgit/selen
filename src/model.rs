@@ -425,6 +425,106 @@ impl Model {
         s
     }
 
+    /// Create a new variable that holds the minimum value of the given variables.
+    ///
+    /// The minimum operation finds the smallest value among all input variables:
+    /// - `result = min(vars[0], vars[1], ..., vars[n])`
+    /// - At least one variable must be able to achieve the minimum value
+    /// - All variables must be >= result
+    ///
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let y = model.new_var_int(5, 15);
+    /// let z = model.new_var_int(3, 8);
+    /// let minimum = model.min(&[x, y, z]);
+    /// ```
+    pub fn min(&mut self, vars: &[VarId]) -> VarId {
+        if vars.is_empty() {
+            panic!("Cannot compute minimum of empty variable list");
+        }
+
+        // Calculate bounds for minimum result
+        let mut min_of_mins = None;
+        let mut min_of_maxs = None;
+
+        for &var in vars {
+            let var_min = var.min_raw(&self.vars);
+            let var_max = var.max_raw(&self.vars);
+
+            // Update minimum of minimums (lower bound for result)
+            min_of_mins = Some(match min_of_mins {
+                None => var_min,
+                Some(current) => if var_min < current { var_min } else { current },
+            });
+
+            // Update minimum of maximums (upper bound for result)
+            min_of_maxs = Some(match min_of_maxs {
+                None => var_max,
+                Some(current) => if var_max < current { var_max } else { current },
+            });
+        }
+
+        let result_min = min_of_mins.unwrap();
+        let result_max = min_of_maxs.unwrap();
+
+        let result = self.new_var_unchecked(result_min, result_max);
+        let _p = self.props.min(vars.to_vec(), result);
+        result
+    }
+
+    /// Create a new variable that holds the maximum value of the given variables.
+    ///
+    /// The maximum operation finds the largest value among all input variables:
+    /// - `result = max(vars[0], vars[1], ..., vars[n])`
+    /// - At least one variable must be able to achieve the maximum value
+    /// - All variables must be <= result
+    ///
+    /// # Examples
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.new_var_int(1, 10);
+    /// let y = model.new_var_int(5, 15);
+    /// let z = model.new_var_int(3, 8);
+    /// let maximum = model.max(&[x, y, z]);
+    /// ```
+    pub fn max(&mut self, vars: &[VarId]) -> VarId {
+        if vars.is_empty() {
+            panic!("Cannot compute maximum of empty variable list");
+        }
+
+        // Calculate bounds for maximum result
+        let mut max_of_mins = None;
+        let mut max_of_maxs = None;
+
+        for &var in vars {
+            let var_min = var.min_raw(&self.vars);
+            let var_max = var.max_raw(&self.vars);
+
+            // Update maximum of minimums (lower bound for result)
+            max_of_mins = Some(match max_of_mins {
+                None => var_min,
+                Some(current) => if var_min > current { var_min } else { current },
+            });
+
+            // Update maximum of maximums (upper bound for result)
+            max_of_maxs = Some(match max_of_maxs {
+                None => var_max,
+                Some(current) => if var_max > current { var_max } else { current },
+            });
+        }
+
+        let result_min = max_of_mins.unwrap();
+        let result_max = max_of_maxs.unwrap();
+
+        let result = self.new_var_unchecked(result_min, result_max);
+        let _p = self.props.max(vars.to_vec(), result);
+        result
+    }
+
     /// Create a new variable that holds the result of `x / y` (division).
     ///
     /// For the division operation `x / y = result`:

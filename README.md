@@ -13,9 +13,10 @@ This library provides efficient algorithms and data structures for solving const
 Type of variables: `float`, `int`, `mixed` (int and float)
 
 Constraints supported include:
-- Arithmetic: `add`, `sub`, `mul`, `modulo`, `abs`, `div`, `sum`
-- Comparisons: `lt`, `le`, `gt`, `ge`, `eq`, `ne` (short names for < ≤ > ≥ = ≠)
-- Global: `all_different`
+- **Arithmetic**: `add`, `sub`, `mul`, `div`, `modulo`, `abs`, `sum`
+- **Comparisons**: `lt`, `le`, `gt`, `ge`, `eq`, `ne` (short names for < ≤ > ≥ = ≠)
+- **Global**: `all_different`, `min`, `max` (vector-based)
+- **Mixed Types**: Full support for integer and float variables in all constraints
 
 ## Installation
 

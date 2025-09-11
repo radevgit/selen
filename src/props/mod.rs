@@ -4,6 +4,8 @@ mod alldiff;
 mod div;
 mod eq;
 mod leq;
+mod max;
+mod min;
 mod modulo;
 mod mul;
 mod neq;
@@ -267,6 +269,52 @@ impl Propagators {
         self.push_new_prop_with_metadata(
             self::abs::Abs::new(x, s),
             ConstraintType::AbsoluteValue,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce `min(vars...) == result`.
+    pub fn min(&mut self, vars: Vec<VarId>, result: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var| ViewInfo::Variable { var_id: var })
+            .chain(std::iter::once(ViewInfo::Variable { var_id: result }))
+            .collect();
+        
+        let variables: Vec<_> = vars.iter().cloned()
+            .chain(std::iter::once(result))
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::min::Min::new(vars, result),
+            ConstraintType::Minimum,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce `max(vars...) == result`.
+    pub fn max(&mut self, vars: Vec<VarId>, result: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var| ViewInfo::Variable { var_id: var })
+            .chain(std::iter::once(ViewInfo::Variable { var_id: result }))
+            .collect();
+        
+        let variables: Vec<_> = vars.iter().cloned()
+            .chain(std::iter::once(result))
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::max::Max::new(vars, result),
+            ConstraintType::Maximum,
             variables,
             metadata,
         )

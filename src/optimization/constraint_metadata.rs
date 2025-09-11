@@ -52,6 +52,10 @@ pub enum ConstraintType {
     Division,
     /// Absolute value constraint (|x| = z)
     AbsoluteValue,
+    /// Minimum constraint (min(x, y, ...) = z)
+    Minimum,
+    /// Maximum constraint (max(x, y, ...) = z)
+    Maximum,
     /// Complex constraint that couldn't be categorized
     Complex {
         /// Number of variables involved
@@ -348,6 +352,8 @@ impl ConstraintRegistry {
                 ConstraintType::Modulo |
                 ConstraintType::Division |
                 ConstraintType::AbsoluteValue |
+                ConstraintType::Minimum |
+                ConstraintType::Maximum |
                 ConstraintType::AllDifferent | 
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;
