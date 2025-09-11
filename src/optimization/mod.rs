@@ -18,6 +18,9 @@ pub mod precision_handling;
 pub mod model_integration;
 pub mod constraint_metadata;
 pub mod precision_optimizer;
+
+#[cfg(test)]
+mod test_step_6_1;
 pub mod precision_propagator;
 pub mod ulp_utils;
 

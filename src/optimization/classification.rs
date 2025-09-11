@@ -9,7 +9,7 @@
 //!
 //! The classifier enables automatic algorithm selection without user intervention.
 
-use crate::vars::{Vars, Var};
+use crate::vars::{Vars, Var, VarId};
 use crate::props::Propagators;
 
 /// Classification of constraint satisfaction problems for algorithm selection
@@ -107,34 +107,93 @@ impl ProblemClassifier {
     
     /// Analyze constraint patterns to detect coupling
     fn analyze_constraints(props: &Propagators, var_analysis: &VariableAnalysis) -> ConstraintAnalysis {
-        // For now, we'll implement a simple heuristic
-        // TODO: In future steps, we'll analyze actual constraint types and dependencies
-        
         let has_constraints = props.constraint_count() > 0;
-        let appears_linear = true; // Conservative assumption for now
         
-        // Determine if constraints couple different variable types
-        let has_coupling = if var_analysis.integer_count > 0 && var_analysis.float_count > 0 {
-            // Mixed variables - assume coupling exists if there are constraints
-            // In reality, we'd analyze the constraint dependency graph
-            has_constraints
-        } else {
-            false // Pure problems can't have cross-type coupling
-        };
+        if var_analysis.integer_count == 0 || var_analysis.float_count == 0 {
+            // Pure problems can't have cross-type coupling
+            return ConstraintAnalysis {
+                has_constraints,
+                appears_linear: true,
+                has_coupling: false,
+                coupling_strength: CouplingStrength::Linear,
+            };
+        }
+        
+        // Mixed problem - analyze constraint registry for cross-type dependencies
+        let constraint_registry = props.get_constraint_registry();
+        let coupling_analysis = Self::analyze_variable_coupling(constraint_registry, var_analysis);
         
         ConstraintAnalysis {
             has_constraints,
-            appears_linear,
+            appears_linear: coupling_analysis.appears_linear,
+            has_coupling: coupling_analysis.has_coupling,
+            coupling_strength: coupling_analysis.coupling_strength,
+        }
+    }
+
+    /// Analyze variable coupling in mixed problems by examining constraint patterns
+    fn analyze_variable_coupling(
+        constraint_registry: &crate::optimization::constraint_metadata::ConstraintRegistry,
+        var_analysis: &VariableAnalysis,
+    ) -> CouplingAnalysisResult {
+        // For Step 6.1, we'll implement a conservative heuristic approach
+        // In future steps, we can enhance this with detailed constraint analysis
+        
+        let has_constraints = constraint_registry.constraint_count() > 0;
+        
+        // Conservative heuristic: If we have both integer and float variables AND constraints,
+        // assume coupling exists until we can prove otherwise
+        let has_coupling = if var_analysis.integer_count > 0 && var_analysis.float_count > 0 && has_constraints {
+            // TODO: In future enhancement, analyze actual constraint dependencies
+            // For now, assume mixed problems with constraints have coupling
+            true
+        } else {
+            false
+        };
+        
+        // Conservative assumption about coupling strength
+        let coupling_strength = if has_coupling {
+            CouplingStrength::Linear // Start with linear assumption
+        } else {
+            CouplingStrength::Linear
+        };
+        
+        CouplingAnalysisResult {
             has_coupling,
-            coupling_strength: if has_coupling {
-                if appears_linear {
-                    CouplingStrength::Linear
-                } else {
-                    CouplingStrength::Nonlinear
-                }
-            } else {
-                CouplingStrength::Linear // Default for no coupling
-            },
+            coupling_strength,
+            appears_linear: true, // Conservative assumption
+        }
+    }
+
+    /// Build a mapping from VarId to variable type (integer vs float)
+    /// For Step 6.1, we'll use a simplified approach based on variable indices
+    fn build_variable_type_map(
+        _constraint_registry: &crate::optimization::constraint_metadata::ConstraintRegistry,
+    ) -> std::collections::HashMap<VarId, VariableType> {
+        // For now, return empty map - we'll enhance this in future steps
+        // The main classification still works based on variable counting
+        std::collections::HashMap::new()
+    }
+
+    /// Infer variable type from constraint data
+    fn infer_variable_type_from_constraint(
+        _constraint_data: &crate::optimization::constraint_metadata::ConstraintData,
+    ) -> VariableType {
+        // For Step 6.1, return unknown - we'll enhance this later
+        VariableType::Unknown
+    }
+
+    /// Analyze the variable types involved in a single constraint
+    fn get_constraint_variable_types(
+        _variables: &[VarId],
+        _var_types: &std::collections::HashMap<VarId, VariableType>,
+    ) -> ConstraintVariableTypes {
+        // For Step 6.1, conservative approach - assume no cross-type constraints
+        ConstraintVariableTypes {
+            has_integer: false,
+            has_float: false,
+            has_unknown: true,
+            has_both_types: false,
         }
     }
     
@@ -193,6 +252,31 @@ struct ConstraintAnalysis {
     appears_linear: bool,
     has_coupling: bool,
     coupling_strength: CouplingStrength,
+}
+
+/// Result of coupling analysis for mixed problems
+#[derive(Debug, Clone)]
+struct CouplingAnalysisResult {
+    has_coupling: bool,
+    coupling_strength: CouplingStrength,
+    appears_linear: bool,
+}
+
+/// Variable type classification for coupling detection
+#[derive(Debug, Clone, PartialEq)]
+enum VariableType {
+    Integer,
+    Float,
+    Unknown,
+}
+
+/// Analysis of variable types in a constraint
+#[derive(Debug, Clone)]
+struct ConstraintVariableTypes {
+    has_integer: bool,
+    has_float: bool,
+    has_unknown: bool,
+    has_both_types: bool,
 }
 
 impl ProblemType {
