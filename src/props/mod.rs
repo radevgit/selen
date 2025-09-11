@@ -340,30 +340,22 @@ impl Propagators {
     /// This version uses ULP-based precision by implementing x > y as x >= y + 1 for integers
     /// and appropriate ULP-based bounds for floats.
     pub fn greater_than(&mut self, x: impl View, y: impl View) -> PropId {
-        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo, TransformationType};
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData};
         
         let x_info = self.analyze_view(&x);
         let y_info = self.analyze_view(&y);
         
-        // For x > y implemented as x >= y.next(), we need to track the transformation
-        let transformed_y_info = if let ViewInfo::Variable { var_id } = y_info {
-            ViewInfo::Transformed {
-                base_var: var_id,
-                transformation: TransformationType::Next,
-            }
-        } else {
-            ViewInfo::Complex
+        // For constraint metadata, we want to preserve the original relationship x > y
+        // The metadata represents the logical constraint, not the implementation details
+        let metadata = ConstraintData::Binary {
+            left: x_info,
+            right: y_info,
         };
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
             .chain(y.get_underlying_var().into_iter())
             .collect();
             
-        let metadata = ConstraintData::Binary {
-            left: x_info,
-            right: transformed_y_info,
-        };
-        
         self.push_new_prop_with_metadata(
             self::leq::LessThanOrEquals::new(y.next(), x), // x > y  =>  y.next() <= x
             ConstraintType::GreaterThan,
@@ -443,14 +435,32 @@ impl Propagators {
     
     /// Analyze a view to extract constraint information
     fn analyze_view<T: View>(&self, view: &T) -> crate::optimization::constraint_metadata::ViewInfo {
-        use crate::optimization::constraint_metadata::ViewInfo;
+        use crate::optimization::constraint_metadata::{ViewInfo, ConstraintValue};
         
         if let Some(var_id) = view.get_underlying_var() {
             ViewInfo::Variable { var_id }
         } else {
-            // For now, mark as complex - a full implementation would 
-            // try to extract constant values or detect transformations
-            ViewInfo::Complex
+            // Check if this is a constant value by creating a dummy context
+            // Constants will have the same min and max values
+            let mut vars = crate::vars::Vars::default();
+            let mut events = Vec::new();
+            let ctx = crate::views::Context::new(&mut vars, &mut events);
+            
+            let min_val = view.min(&ctx);
+            let max_val = view.max(&ctx);
+            
+            if min_val == max_val {
+                // This is a constant value
+                let value = match min_val {
+                    crate::vars::Val::ValI(i) => ConstraintValue::Integer(i),
+                    crate::vars::Val::ValF(f) => ConstraintValue::Float(f),
+                };
+                ViewInfo::Constant { value }
+            } else {
+                // For now, mark complex views as such
+                // A full implementation would detect transformations
+                ViewInfo::Complex
+            }
         }
     }
 

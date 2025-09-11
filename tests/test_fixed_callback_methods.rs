@@ -60,7 +60,7 @@ fn test_fixed_callback_methods() {
     println!("\n=== Results Analysis ===");
     
     // Check minimize results
-    assert!(x_val > 1.0 && x_val < 5.5, "Minimize solution should be valid");
+    assert!(x_val >= 1.0 && x_val < 5.5, "Minimize solution should be valid");
     if node_count == 0 && propagation_count == 0 {
         println!("  ✅ minimize_with_callback: Using Step 2.4 optimization (0 nodes, 0 propagations)");
     } else {

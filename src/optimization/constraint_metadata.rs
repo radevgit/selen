@@ -236,16 +236,43 @@ impl ConstraintRegistry {
                     }
                 }
                 ConstraintType::LessThan => {
-                    // x < y implemented as x.next() <= y, so we need to account for that
+                    // x < y can be implemented as x.next() <= y or direct comparison
+                    // Handle x.next() <= constant pattern (most common)
                     if let (ViewInfo::Transformed { base_var, transformation }, ViewInfo::Constant { value }) = (left, right) {
                         if *base_var == var_id && *transformation == TransformationType::Next {
                             match value {
                                 ConstraintValue::Float(f) => {
-                                    // x < f means x <= f - step_size (approximately)
+                                    // x.next() <= f means x < f (strict upper bound)
                                     analysis.strict_upper_bounds.push(*f);
                                 }
                                 ConstraintValue::Integer(i) => {
                                     analysis.strict_upper_bounds.push(*i as f64);
+                                }
+                            }
+                        }
+                    }
+                    // Handle direct x < constant pattern
+                    if let (ViewInfo::Variable { var_id: left_var }, ViewInfo::Constant { value }) = (left, right) {
+                        if *left_var == var_id {
+                            match value {
+                                ConstraintValue::Float(f) => {
+                                    analysis.strict_upper_bounds.push(*f);
+                                }
+                                ConstraintValue::Integer(i) => {
+                                    analysis.strict_upper_bounds.push(*i as f64);
+                                }
+                            }
+                        }
+                    }
+                    // Handle constant < x pattern (uncommon but possible)
+                    if let (ViewInfo::Constant { value }, ViewInfo::Variable { var_id: right_var }) = (left, right) {
+                        if *right_var == var_id {
+                            match value {
+                                ConstraintValue::Float(f) => {
+                                    analysis.strict_lower_bounds.push(*f);
+                                }
+                                ConstraintValue::Integer(i) => {
+                                    analysis.strict_lower_bounds.push(*i as f64);
                                 }
                             }
                         }
@@ -270,11 +297,28 @@ impl ConstraintRegistry {
                     }
                 }
                 ConstraintType::GreaterThan => {
-                    if let (ViewInfo::Variable { var_id: left_var }, ViewInfo::Transformed { base_var, transformation }) = (left, right) {
-                        if *left_var == var_id && *base_var == var_id && *transformation == TransformationType::Next {
-                            // This is a complex case, mark as complex for now
-                            analysis.has_complex_constraints = true;
+                    // Handle x > y patterns
+                    if let (ViewInfo::Variable { var_id: left_var }, ViewInfo::Constant { value }) = (left, right) {
+                        if *left_var == var_id {
+                            // x > constant
+                            let bound_value = match value {
+                                ConstraintValue::Float(f) => *f,
+                                ConstraintValue::Integer(i) => *i as f64,
+                            };
+                            analysis.strict_lower_bounds.push(bound_value);
                         }
+                    } else if let (ViewInfo::Constant { value }, ViewInfo::Variable { var_id: right_var }) = (left, right) {
+                        if *right_var == var_id {
+                            // constant > x  =>  x < constant
+                            let bound_value = match value {
+                                ConstraintValue::Float(f) => *f,
+                                ConstraintValue::Integer(i) => *i as f64,
+                            };
+                            analysis.strict_upper_bounds.push(bound_value);
+                        }
+                    } else {
+                        // Complex patterns involving multiple variables or transformations
+                        analysis.has_complex_constraints = true;
                     }
                 }
                 ConstraintType::Equals => {

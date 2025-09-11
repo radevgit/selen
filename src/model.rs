@@ -46,6 +46,11 @@ impl Model {
         precision_to_step_size(self.float_precision_digits)
     }
 
+    /// Get access to constraint registry for debugging/analysis
+    pub fn get_constraint_registry(&self) -> &crate::optimization::constraint_metadata::ConstraintRegistry {
+        self.props.get_constraint_registry()
+    }
+
     /// Create a new decision variable, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
@@ -599,7 +604,22 @@ impl Model {
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
-        self.minimize_with_callback(objective.opposite(), callback)
+        // First try specialized optimization (Step 2.4 precision handling)
+        match self.try_optimization_maximize(&objective) {
+            Some(solution) => {
+                // Optimization succeeded - report zero search statistics since no search was needed
+                let stats = crate::solution::SolveStats {
+                    propagation_count: 0,
+                    node_count: 0,
+                };
+                callback(&stats);
+                Some(solution)
+            }
+            None => {
+                // Optimization failed or not applicable - fall back to traditional search
+                self.minimize_with_callback(objective.opposite(), callback)
+            }
+        }
     }
 
     /// Enumerate assignments that satisfy all constraints, while maximizing objective expression.

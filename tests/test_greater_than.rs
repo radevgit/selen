@@ -175,8 +175,10 @@ fn test_greater_than_precision() {
     
     let Val::ValF(x_val) = solution[x] else { panic!("Expected float") };
     assert!(x_val > 1.5);
-    // Should be 1.5 + step_size = 1.5 + 1e-4 = 1.5001
-    assert!((x_val - 1.5001).abs() < 1e-5);
+    
+    // With ULP-based precision optimization, should be the exact next float after 1.5
+    let expected = 1.5_f64.next_up(); // 1.5000000000000002
+    assert_eq!(x_val, expected, "Should be the exact next float after 1.5 (ULP-precise)");
 }
 
 #[test]
