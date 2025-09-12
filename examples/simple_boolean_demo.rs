@@ -1,48 +1,55 @@
-//! Simple Boolean Operators Demo
+//! Ultra-Clean Boolean Syntax Demo
 //! 
-//! This demonstrates clean boolean syntax options:
-//! 1. Using bitwise operators & and | (if we implement them)
-//! 2. Using short method names .and(), .or(), .not()
+//! This demonstrates the new ultra-clean boolean syntax:
+//! ✅ model.bool() for clean variable creation
+//! ✅ Direct & | ! operators on VarId 
+//! ✅ No wrapper types needed
+//! ✅ Complex expressions supported
 
 use cspsolver::prelude::*;
 
 fn main() {
     let mut model = Model::default();
     
-    println!("🚀 Simple Boolean Syntax Options");
-    println!("================================\n");
+    println!("🚀 Ultra-Clean Boolean Syntax");
+    println!("==============================\n");
     
-    let a = model.int(0, 1);  // Boolean variable
-    let b = model.int(0, 1);  // Boolean variable
+    // Ultra-clean variable creation
+    let a = model.bool();  // Clean!
+    let b = model.bool();  // Clean!
+    let c = model.bool();  // Clean!
     
-    println!("Current verbose syntax:");
-    println!("  let and_result = model.bool_and(&[a, b]);     // Verbose!");
-    println!("  let or_result = model.bool_or(&[a, b]);       // Verbose!");
-    println!("  let not_result = model.bool_not(a);           // Verbose!");
+    println!("✅ NEW: Ultra-clean syntax achieved!");
+    println!("  let a = model.bool();                         // Clean variable creation");
+    println!("  model.post(a & b);                            // Direct boolean AND");
+    println!("  model.post(a | c);                            // Direct boolean OR");
+    println!("  model.post(!a);                               // Direct boolean NOT");
+    println!("  model.post((a & b) | c);                      // Complex expressions");
     
-    // Current verbose way
-    let and_result = model.bool_and(&[a, b]);
-    let or_result = model.bool_or(&[a, b]); 
-    let not_result = model.bool_not(a);
+    // Ultra-clean boolean operations
+    model.post(a & b);           // Clean AND
+    model.post(a | c);           // Clean OR  
+    model.post(!a);              // Clean NOT
+    model.post((a & b) | c);     // Complex expression
     
-    println!("\nWhat we WANT (but can't have with || &&):");
-    println!("  let and_result = a && b;                      // Can't do this!");
-    println!("  let or_result = a || b;                       // Can't do this!");
+    // Demonstrate batch operations
+    model.post_all(vec![a & b, !c, a | (b & c)]);
     
-    println!("\nOption 1 - Bitwise operators (we could implement):");
-    println!("  let and_result = a & b;                       // Could work!");
-    println!("  let or_result = a | b;                        // Could work!");
-    println!("  let not_result = !a;                          // Could work!");
+    println!("\n🎯 Before vs After Comparison:");
+    println!("  BEFORE: model.int(0, 1)              ❌ Verbose");
+    println!("  AFTER:  model.bool()                         ✅ Clean");
+    println!();
+    println!("  BEFORE: model.bool_and(&[a, b])              ❌ Verbose");
+    println!("  AFTER:  model.post(a & b)                    ✅ Clean");
+    println!();
+    println!("  BEFORE: No batch boolean operations          ❌ Limited");
+    println!("  AFTER:  model.post_all(vec![a & b, !c])      ✅ Powerful");
     
-    println!("\nOption 2 - Short method names:");
-    println!("  let and_result = a.and(b);                    // Much cleaner!");
-    println!("  let or_result = a.or(b);                      // Much cleaner!");
-    println!("  let not_result = a.not();                     // Much cleaner!");
-    
-    // Set up constraints
-    model.post(vec![
+    // Set up some constraints to test
+    model.post_all(vec![
         a.eq_int(1),
-        b.eq_int(0)
+        b.eq_int(0),
+        c.eq_int(1)
     ]);
     
     match model.solve() {
@@ -50,24 +57,23 @@ fn main() {
             println!("\n✅ Solution found!");
             let a_val = if let Val::ValI(v) = solution[a] { v } else { 0 };
             let b_val = if let Val::ValI(v) = solution[b] { v } else { 0 };
-            let and_val = if let Val::ValI(v) = solution[and_result] { v } else { 0 };
-            let or_val = if let Val::ValI(v) = solution[or_result] { v } else { 0 };
-            let not_val = if let Val::ValI(v) = solution[not_result] { v } else { 0 };
+            let c_val = if let Val::ValI(v) = solution[c] { v } else { 0 };
             
             println!("  a = {} ({})", a_val, if a_val == 1 { "true" } else { "false" });
             println!("  b = {} ({})", b_val, if b_val == 1 { "true" } else { "false" });
-            println!("  a AND b = {}", and_val);
-            println!("  a OR b = {}", or_val);
-            println!("  NOT a = {}", not_val);
+            println!("  c = {} ({})", c_val, if c_val == 1 { "true" } else { "false" });
+            println!("  All boolean constraints satisfied! 🎉");
         }
         None => {
             println!("❌ No solution found");
         }
     }
     
-    println!("\n📝 Summary:");
-    println!("  • Can't use && || (they're for immediate evaluation)");
-    println!("  • CAN use & | (bitwise operators can be overloaded)");
-    println!("  • CAN use .and() .or() .not() (method syntax)");
-    println!("  • Both options are MUCH cleaner than model.bool_and(&[a, b])!");
+    println!("\n📝 Ultra-Clean API Summary:");
+    println!("  ✅ model.bool() - Clean variable creation");
+    println!("  ✅ a & b, a | c, !a - Direct boolean operators on VarId");
+    println!("  ✅ (a & b) | c - Complex expressions work seamlessly");
+    println!("  ✅ model.post_all(vec![...]) - True batch operations");
+    println!("  ✅ No BoolVar wrapper needed - everything is internal!");
+    println!("  🎉 MISSION ACCOMPLISHED: Ultra-clean boolean syntax achieved!");
 }

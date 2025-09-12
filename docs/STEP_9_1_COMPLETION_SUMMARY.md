@@ -87,7 +87,7 @@ Started migration from long constraint names to short names:
 
 ### ✅ Updated Files:
 - `examples/pc_builder.rs`: `less_than_or_equals` → `le`
-- `examples/test_classification.rs`: Multiple replacements with short names
+- `examples/classification_demo.rs`: Multiple replacements with short names
 - `examples/step_2_4_performance_benchmarks.rs`: `less_than` → `lt`
 - `tests/test_modulo.rs`: `less_than_or_equals`, `greater_than_or_equals` → `le`, `ge`
 - `tests/test_operators.rs`: Updated demonstration examples

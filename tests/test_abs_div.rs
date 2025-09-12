@@ -5,7 +5,7 @@ fn test_abs_positive() {
     let mut model = Model::default();
     
     // Test: |5| = 5
-    let x = model.new_var_int(5, 5);
+    let x = model.int(5, 5);
     let result = model.abs(x);
     
     let solution = model.solve().unwrap();
@@ -17,7 +17,7 @@ fn test_abs_negative() {
     let mut model = Model::default();
     
     // Test: |-7| = 7
-    let x = model.new_var_int(-7, -7);
+    let x = model.int(-7, -7);
     let result = model.abs(x);
     
     let solution = model.solve().unwrap();
@@ -29,7 +29,7 @@ fn test_abs_range() {
     let mut model = Model::default();
     
     // Test: |x| where x in [-5, 3] should give |x| in [0, 5]
-    let x = model.new_var_int(-5, 3);
+    let x = model.int(-5, 3);
     let result = model.abs(x);
     
     // Constrain the result to be exactly 4
@@ -51,7 +51,7 @@ fn test_abs_float() {
     let mut model = Model::default();
     
     // Test: |-3.5| = 3.5
-    let x = model.new_var_float(-3.5, -3.5);
+    let x = model.float(-3.5, -3.5);
     let result = model.abs(x);
     
     let solution = model.solve().unwrap();
@@ -66,8 +66,8 @@ fn test_div_basic() {
     let mut model = Model::default();
     
     // Test: 12 / 3 = 4
-    let x = model.new_var_int(12, 12);
-    let y = model.new_var_int(3, 3);
+    let x = model.int(12, 12);
+    let y = model.int(3, 3);
     let result = model.div(x, y);
     
     let solution = model.solve().unwrap();
@@ -82,8 +82,8 @@ fn test_div_float() {
     let mut model = Model::default();
     
     // Test: 7.5 / 2.5 = 3.0
-    let x = model.new_var_float(7.5, 7.5);
-    let y = model.new_var_float(2.5, 2.5);
+    let x = model.float(7.5, 7.5);
+    let y = model.float(2.5, 2.5);
     let result = model.div(x, y);
     
     let solution = model.solve().unwrap();
@@ -98,8 +98,8 @@ fn test_div_with_constraint() {
     let mut model = Model::default();
     
     // Find x such that x / 4 = 3, so x should be 12
-    let x = model.new_var_int(1, 20);
-    let four = model.new_var_int(4, 4);
+    let x = model.int(1, 20);
+    let four = model.int(4, 4);
     let quotient = model.div(x, four);
     
     model.eq(quotient, float(3.0));
@@ -118,9 +118,9 @@ fn test_combined_abs_div() {
     let mut model = Model::default();
     
     // Test: |x| / 2 = 3, so |x| = 6, so x = 6 or x = -6
-    let x = model.new_var_int(-10, 10);
+    let x = model.int(-10, 10);
     let abs_x = model.abs(x);
-    let two = model.new_var_int(2, 2);
+    let two = model.int(2, 2);
     let result = model.div(abs_x, two);
     
     model.eq(result, float(3.0));

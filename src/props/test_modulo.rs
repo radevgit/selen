@@ -5,8 +5,8 @@ fn test_modulo_basic() {
     let mut model = Model::default();
     
     // Test: 7 % 3 = 1
-    let x = model.new_var_int(7, 7);
-    let y = model.new_var_int(3, 3);
+    let x = model.int(7, 7);
+    let y = model.int(3, 3);
     let result = model.modulo(x, y);
     
     let solution = model.solve().unwrap();
@@ -18,8 +18,8 @@ fn test_modulo_range() {
     let mut model = Model::default();
     
     // Test: x % 5 where x in [10, 14] should give results in [0, 4]
-    let x = model.new_var_int(10, 14);
-    let y = model.new_var_int(5, 5);
+    let x = model.int(10, 14);
+    let y = model.int(5, 5);
     let result = model.modulo(x, y);
     
     // The result should be constrained to [0, 4]
@@ -40,8 +40,8 @@ fn test_modulo_negative() {
     let mut model = Model::default();
     
     // Test: -7 % 3 should equal -1 (in Rust's definition)
-    let x = model.new_var_int(-7, -7);
-    let y = model.new_var_int(3, 3);
+    let x = model.int(-7, -7);
+    let y = model.int(3, 3);
     let result = model.modulo(x, y);
     
     let solution = model.solve().unwrap();
@@ -53,8 +53,8 @@ fn test_modulo_with_constraint() {
     let mut model = Model::default();
     
     // Find x such that x % 7 = 3 and x is in [10, 30]
-    let x = model.new_var_int(10, 30);
-    let seven = model.new_var_int(7, 7);
+    let x = model.int(10, 30);
+    let seven = model.int(7, 7);
     let remainder = model.modulo(x, seven);
     
     model.equals(remainder, int(3));
@@ -75,8 +75,8 @@ fn test_modulo_float() {
     let mut model = Model::default();
     
     // Test: 7.5 % 2.0 = 1.5
-    let x = model.new_var_float(7.5, 7.5);
-    let y = model.new_var_float(2.0, 2.0);
+    let x = model.float(7.5, 7.5);
+    let y = model.float(2.0, 2.0);
     let result = model.modulo(x, y);
     
     let solution = model.solve().unwrap();

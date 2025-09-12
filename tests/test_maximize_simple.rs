@@ -3,7 +3,7 @@ use cspsolver::prelude::*;
 #[test] 
 fn test_maximize_simple_constraint() {
     let mut model = Model::default(); // precision 6
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     
     // Use less_than_or_equals instead of less_than
     model.le(x, float(5.5));

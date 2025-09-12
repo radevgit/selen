@@ -1,14 +1,14 @@
 use cspsolver::prelude::*;
 
 fn main() {
-    println!("🧮 Testing Multiplication Constraint");
-    println!("====================================");
+    println!("🧮 Multiplication Constraint Demo");
+    println!("=================================");
     
     // Test: x * y = z where x=3, y=4, solve for z
     let mut model = Model::default();
     
-    let x = model.new_var_int(3, 3); // x = 3
-    let y = model.new_var_int(4, 4); // y = 4
+    let x = model.int(3, 3); // x = 3
+    let y = model.int(4, 4); // y = 4
     let z = model.mul(x, y);         // z = x * y = 3 * 4 = 12
     
     if let Some(solution) = model.solve() {
@@ -25,9 +25,9 @@ fn main() {
     // Test: x * y = z where z=15, y=3, solve for x
     let mut model2 = Model::default();
     
-    let x2 = model2.new_var_int(1, 10);  // x unknown
-    let y2 = model2.new_var_int(3, 3);   // y = 3
-    let z2 = model2.new_var_int(15, 15); // z = 15
+    let x2 = model2.int(1, 10);  // x unknown
+    let y2 = model2.int(3, 3);   // y = 3
+    let z2 = model2.int(15, 15); // z = 15
     
     // Create the constraint: x * y = z, so x = z / y = 15 / 3 = 5
     let product = model2.mul(x2, y2);
@@ -47,8 +47,8 @@ fn main() {
     // Test: negative multiplication
     let mut model3 = Model::default();
     
-    let x3 = model3.new_var_int(-2, -2); // x = -2
-    let y3 = model3.new_var_int(6, 6);   // y = 6
+    let x3 = model3.int(-2, -2); // x = -2
+    let y3 = model3.int(6, 6);   // y = 6
     let z3 = model3.mul(x3, y3);         // z = -2 * 6 = -12
     
     if let Some(solution) = model3.solve() {

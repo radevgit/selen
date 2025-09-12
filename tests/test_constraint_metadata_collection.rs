@@ -5,9 +5,9 @@ fn test_constraint_metadata_collection() {
     let mut model = Model::default();
     
     // Create variables
-    let x = model.new_var_float(0.0, 10.0);
-    let y = model.new_var_float(0.0, 10.0);
-    let z = model.new_var_float(0.0, 20.0);
+    let x = model.float(0.0, 10.0);
+    let y = model.float(0.0, 10.0);
+    let z = model.float(0.0, 20.0);
     
     // Create various constraints to test metadata collection
     model.lt(x, y);           // x < y
@@ -44,8 +44,8 @@ fn test_specific_constraint_types() {
     let mut model = Model::default();
     
     // Create variables
-    let x = model.new_var_float(0.0, 10.0);
-    let y = model.new_var_float(5.0, 15.0);
+    let x = model.float(0.0, 10.0);
+    let y = model.float(5.0, 15.0);
     
     // Test specific constraint types
     model.lt(x, y);  // x < y

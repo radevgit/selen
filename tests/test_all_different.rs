@@ -6,7 +6,7 @@ fn test_all_different_integer_only_recommended() {
     // Using it with float variables is not recommended due to precision issues
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, 1, 5).collect();
+    let vars: Vec<_> = model.int_vars(3, 1, 5).collect();
     model.all_different(vars.clone());
     
     let solution = model.solve().expect("Should have solution");
@@ -36,7 +36,7 @@ fn test_all_different_exact_fit() {
     let mut model = Model::default();
     
     // 4 variables, domain [1,4] - should use all values exactly once
-    let vars: Vec<_> = model.new_vars_int(4, 1, 4).collect();
+    let vars: Vec<_> = model.int_vars(4, 1, 4).collect();
     model.all_different(vars.clone());
     
     let solution = model.solve().expect("Should have solution");
@@ -59,7 +59,7 @@ fn test_all_different_impossible() {
     let mut model = Model::default();
     
     // 5 variables, domain [1,4] - impossible since we need 5 different values
-    let vars: Vec<_> = model.new_vars_int(5, 1, 4).collect();
+    let vars: Vec<_> = model.int_vars(5, 1, 4).collect();
     model.all_different(vars.clone());
     
     let solution = model.solve();
@@ -72,8 +72,8 @@ fn test_all_different_mixed_types_should_fail() {
     // in all_different is problematic and should be avoided
     let mut model = Model::default();
     
-    let int_vars: Vec<_> = model.new_vars_int(2, 1, 10).collect();
-    let float_vars: Vec<_> = model.new_vars_float(2, 1.5, 10.5).collect();
+    let int_vars: Vec<_> = model.int_vars(2, 1, 10).collect();
+    let float_vars: Vec<_> = model.float_vars(2, 1.5, 10.5).collect();
     
     let mut all_vars = Vec::new();
     all_vars.extend(int_vars);
@@ -117,7 +117,7 @@ fn test_all_different_with_specific_values() {
 fn test_all_different_single_variable() {
     let mut model = Model::default();
     
-    let var = model.new_var_int(1, 5);
+    let var = model.int(1, 5);
     model.all_different(vec![var]);
     
     let solution = model.solve().expect("Should have solution");
@@ -142,7 +142,7 @@ fn test_all_different_empty() {
 fn test_all_different_with_constraints() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, 1, 10).collect();
+    let vars: Vec<_> = model.int_vars(3, 1, 10).collect();
     model.all_different(vars.clone());
     
     // Add additional constraints
@@ -169,7 +169,7 @@ fn test_all_different_sudoku_style() {
     
     // Create a 3x3 grid, each row must have different values
     let grid: Vec<Vec<_>> = (0..3)
-        .map(|_| model.new_vars_int(3, 1, 3).collect())
+        .map(|_| model.int_vars(3, 1, 3).collect())
         .collect();
     
     // Each row must have all different values
@@ -198,7 +198,7 @@ fn test_all_different_sudoku_style() {
 fn test_all_different_large_domain() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(5, 1, 100).collect();
+    let vars: Vec<_> = model.int_vars(5, 1, 100).collect();
     model.all_different(vars.clone());
     
     let solution = model.solve().expect("Should have solution");
@@ -227,7 +227,7 @@ fn test_all_different_large_domain() {
 fn test_all_different_minimize_sum() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, 1, 10).collect();
+    let vars: Vec<_> = model.int_vars(3, 1, 10).collect();
     model.all_different(vars.clone());
     
     let total = model.sum(&vars);

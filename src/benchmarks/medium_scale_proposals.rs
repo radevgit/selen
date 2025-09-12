@@ -9,11 +9,11 @@ pub fn test_grouped_constraints_approach() -> (Duration, bool) {
     
     // Instead of 25 independent variables, create groups of related variables
     // Group 1: Small parts (5 variables with shared constraint pattern)
-    let small_parts: Vec<_> = (0..5).map(|_| model.new_var_float(0.1, 0.5)).collect();
+    let small_parts: Vec<_> = (0..5).map(|_| model.float(0.1, 0.5)).collect();
     // Group 2: Medium parts (5 variables with shared constraint pattern)  
-    let medium_parts: Vec<_> = (0..5).map(|_| model.new_var_float(0.5, 2.0)).collect();
+    let medium_parts: Vec<_> = (0..5).map(|_| model.float(0.5, 2.0)).collect();
     // Group 3: Large parts (5 variables with shared constraint pattern)
-    let large_parts: Vec<_> = (0..5).map(|_| model.new_var_float(2.0, 5.0)).collect();
+    let large_parts: Vec<_> = (0..5).map(|_| model.float(2.0, 5.0)).collect();
     
     // Group constraints instead of individual constraints
     for &part in &small_parts {
@@ -43,7 +43,7 @@ pub fn test_hierarchical_decomposition() -> (Duration, bool) {
     // Hierarchical approach: Solve main constraints first, details later
     // Main positioning variables (fewer, high-level)
     let main_positions: Vec<_> = (0..5).map(|i| {
-        model.new_var_float(i as f64, (i + 1) as f64) // 0-1m, 1-2m, etc.
+        model.float(i as f64, (i + 1) as f64) // 0-1m, 1-2m, etc.
     }).collect();
     
     // Main constraints (should trigger precision optimization)
@@ -55,7 +55,7 @@ pub fn test_hierarchical_decomposition() -> (Duration, bool) {
     
     // Detail variables depend on main positions (fewer constraints)
     let detail_vars: Vec<_> = (0..10).map(|_| {
-        model.new_var_float(0.0, 5.0)
+        model.float(0.0, 5.0)
     }).collect();
     
     // Simpler detail constraints
@@ -81,7 +81,7 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
     {
         let batch_start = Instant::now();
         let mut model = Model::default();
-        let vars: Vec<_> = (0..8).map(|_| model.new_var_float(0.1, 2.0)).collect();
+        let vars: Vec<_> = (0..8).map(|_| model.float(0.1, 2.0)).collect();
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 0.5 + (i as f64 * 0.2);
@@ -98,7 +98,7 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
     {
         let batch_start = Instant::now();
         let mut model = Model::default();
-        let vars: Vec<_> = (0..8).map(|_| model.new_var_float(1.5, 3.5)).collect();
+        let vars: Vec<_> = (0..8).map(|_| model.float(1.5, 3.5)).collect();
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 2.0 + (i as f64 * 0.15);
@@ -115,7 +115,7 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
     {
         let batch_start = Instant::now();
         let mut model = Model::default();
-        let vars: Vec<_> = (0..9).map(|_| model.new_var_float(3.0, 5.0)).collect();
+        let vars: Vec<_> = (0..9).map(|_| model.float(3.0, 5.0)).collect();
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 3.5 + (i as f64 * 0.15);
@@ -140,7 +140,7 @@ pub fn test_constraint_simplification() -> (Duration, bool) {
     let mut model = Model::default();
     
     // Use fewer, more effective constraints instead of many tight constraints
-    let vars: Vec<_> = (0..25).map(|_| model.new_var_float(0.1, 5.0)).collect();
+    let vars: Vec<_> = (0..25).map(|_| model.float(0.1, 5.0)).collect();
     
     // Instead of individual tight constraints, use broader range constraints
     // that are more likely to trigger precision optimization
@@ -175,7 +175,7 @@ pub fn run_medium_scale_optimization_proposals() {
     // Test original approach for baseline
     let start = Instant::now();
     let mut model = Model::default();
-    let vars: Vec<_> = (0..25).map(|_| model.new_var_float(0.01, 5.0)).collect();
+    let vars: Vec<_> = (0..25).map(|_| model.float(0.01, 5.0)).collect();
     for (i, &var) in vars.iter().enumerate() {
         let target = 0.1 + (i as f64 * 0.2);
         model.gt(var, float(target - 0.001));

@@ -10,8 +10,8 @@ fn main() {
         println!("Problem: Access granted only if user has BOTH badge AND PIN correct");
         
         let mut model = Model::default();
-        let has_badge = model.new_var_int(0, 1);  // 0 = no badge, 1 = has badge
-        let correct_pin = model.new_var_int(0, 1); // 0 = wrong PIN, 1 = correct PIN
+        let has_badge = model.int(0, 1);  // 0 = no badge, 1 = has badge
+        let correct_pin = model.int(0, 1); // 0 = wrong PIN, 1 = correct PIN
         let access_granted = model.bool_and(&[has_badge, correct_pin]);
         
         // Scenario: User has badge but wrong PIN
@@ -34,8 +34,8 @@ fn main() {
         println!("Problem: Emergency exit opens if EITHER fire alarm OR manual override");
         
         let mut model = Model::default();
-        let fire_alarm = model.new_var_int(0, 1);      // 0 = no fire, 1 = fire detected
-        let manual_override = model.new_var_int(0, 1); // 0 = not pressed, 1 = pressed
+        let fire_alarm = model.int(0, 1);      // 0 = no fire, 1 = fire detected
+        let manual_override = model.int(0, 1); // 0 = not pressed, 1 = pressed
         let exit_open = model.bool_or(&[fire_alarm, manual_override]);
         
         // Scenario: No fire but manual override pressed
@@ -58,7 +58,7 @@ fn main() {
         println!("Problem: Output signal is opposite of input signal");
         
         let mut model = Model::default();
-        let input_signal = model.new_var_int(0, 1);   // 0 = low, 1 = high
+        let input_signal = model.int(0, 1);   // 0 = low, 1 = high
         let output_signal = model.bool_not(input_signal);
         
         // Scenario: High input
@@ -79,9 +79,9 @@ fn main() {
         println!("Problem: Alarm triggers if (motion AND night_mode) OR manual_panic");
         
         let mut model = Model::default();
-        let motion_detected = model.new_var_int(0, 1);
-        let night_mode = model.new_var_int(0, 1);
-        let manual_panic = model.new_var_int(0, 1);
+        let motion_detected = model.int(0, 1);
+        let night_mode = model.int(0, 1);
+        let manual_panic = model.int(0, 1);
         
         // Build expression: (motion AND night_mode) OR manual_panic
         let motion_and_night = model.bool_and(&[motion_detected, night_mode]);
@@ -112,10 +112,10 @@ fn main() {
         println!("Problem: Server starts only if ALL conditions are met");
         
         let mut model = Model::default();
-        let power_stable = model.new_var_int(0, 1);
-        let network_ready = model.new_var_int(0, 1);
-        let disk_healthy = model.new_var_int(0, 1);
-        let memory_test_passed = model.new_var_int(0, 1);
+        let power_stable = model.int(0, 1);
+        let network_ready = model.int(0, 1);
+        let disk_healthy = model.int(0, 1);
+        let memory_test_passed = model.int(0, 1);
         
         let server_start = model.bool_and(&[power_stable, network_ready, disk_healthy, memory_test_passed]);
         
@@ -144,9 +144,9 @@ fn main() {
         println!("Problem: If result must be true, what constraints apply to inputs?");
         
         let mut model = Model::default();
-        let a = model.new_var_int(0, 1);
-        let b = model.new_var_int(0, 1);
-        let c = model.new_var_int(0, 1);
+        let a = model.int(0, 1);
+        let b = model.int(0, 1);
+        let c = model.int(0, 1);
         
         // Create expression: a AND (b OR c) must be true
         let b_or_c = model.bool_or(&[b, c]);

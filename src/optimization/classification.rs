@@ -386,7 +386,7 @@ mod tests {
     fn test_pure_float_classification() {
         // Create a model to properly add variables
         let mut model = Model::default();
-        let _var_id = model.new_var_float(1.0, 10.0);
+        let _var_id = model.float(1.0, 10.0);
         
         let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
         
@@ -404,7 +404,7 @@ mod tests {
     #[test]
     fn test_pure_integer_classification() {
         let mut model = Model::default();
-        let _var_id = model.new_var_int(1, 10);
+        let _var_id = model.int(1, 10);
         
         let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
         
@@ -422,8 +422,8 @@ mod tests {
     #[test]
     fn test_mixed_separable_classification() {
         let mut model = Model::default();
-        let _int_var = model.new_var_int(1, 5);
-        let _float_var = model.new_var_float(1.0, 10.0);
+        let _int_var = model.int(1, 5);
+        let _float_var = model.float(1.0, 10.0);
         
         let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
         
@@ -468,9 +468,9 @@ mod tests {
         
         // Test with actual variables from a model
         let mut model = Model::default();
-        let _int_var1 = model.new_var_int(1, 5);
-        let _int_var2 = model.new_var_int(1, 3);
-        let _float_var = model.new_var_float(1.0, 10.0);
+        let _int_var1 = model.int(1, 5);
+        let _int_var2 = model.int(1, 3);
+        let _float_var = model.float(1.0, 10.0);
         
         let analysis = ProblemClassifier::analyze_variables(model.get_vars());
         assert_eq!(analysis.integer_count, 2);

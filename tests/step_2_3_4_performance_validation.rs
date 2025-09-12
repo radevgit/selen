@@ -13,7 +13,7 @@ fn test_hanging_issue_fix() {
     
     // This test was previously hanging indefinitely before Step 2.3.3
     let mut model = Model::default();
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
     
     println!("Testing previously hanging case: x ∈ [1.0, 10.0], x < 5.5");
@@ -52,7 +52,7 @@ fn test_constraint_free_performance() {
     println!("=== Step 2.3.4: Verify Constraint-Free Optimization ===");
     
     let mut model = Model::default();
-    let x = model.new_var_float(2.5, 8.7);
+    let x = model.float(2.5, 8.7);
     // No constraints
     
     let start = Instant::now();
@@ -82,7 +82,7 @@ fn test_minimization_performance() {
     println!("=== Step 2.3.4: Verify Minimization Performance ===");
     
     let mut model = Model::default();
-    let y = model.new_var_float(-3.2, 7.8);
+    let y = model.float(-3.2, 7.8);
     model.lt(y, float(5.0));
     
     let start = Instant::now();
@@ -118,7 +118,7 @@ fn test_multiple_constraint_scenarios() {
     {
         println!("\n--- Test Case 1: Single upper bound ---");
         let mut model = Model::default();
-        let x = model.new_var_float(0.0, 10.0);
+        let x = model.float(0.0, 10.0);
         model.lt(x, float(7.5));
         
         let start = Instant::now();
@@ -136,7 +136,7 @@ fn test_multiple_constraint_scenarios() {
     {
         println!("\n--- Test Case 2: Different precision levels ---");
         let mut model = Model::default();
-        let x = model.new_var_float(1.0, 20.0);
+        let x = model.float(1.0, 20.0);
         model.lt(x, float(15.0));
         
         let start = Instant::now();
@@ -154,7 +154,7 @@ fn test_multiple_constraint_scenarios() {
     {
         println!("\n--- Test Case 3: Small domain ---");
         let mut model = Model::default();
-        let x = model.new_var_float(2.0, 4.0);
+        let x = model.float(2.0, 4.0);
         model.lt(x, float(3.5));
         
         let start = Instant::now();
@@ -189,7 +189,7 @@ fn test_performance_regression() {
         // Test both constraint-free and constrained cases
         let constraint_free_time = {
             let mut model = Model::default();
-            let x = model.new_var_float(min, max);
+            let x = model.float(min, max);
             
             let start = Instant::now();
             let _solution = model.maximize(x).expect("Should have solution");
@@ -198,7 +198,7 @@ fn test_performance_regression() {
         
         let constrained_time = {
             let mut model = Model::default();
-            let x = model.new_var_float(min, max);
+            let x = model.float(min, max);
             let mid_point = min + (max - min) * 0.7; // Constraint at 70% of domain
             model.lt(x, float(mid_point));
             
@@ -229,7 +229,7 @@ fn test_integration_improvements() {
     
     // This problem was previously hanging
     let mut model = Model::default();
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
     
     let start = Instant::now();
@@ -274,7 +274,7 @@ fn test_edge_cases() {
     {
         println!("\n--- Edge Case 1: Very tight constraint ---");
         let mut model = Model::default();
-        let x = model.new_var_float(1.0, 10.0);
+        let x = model.float(1.0, 10.0);
         model.lt(x, float(1.1)); // Very tight constraint
         
         let solution = model.maximize(x);
@@ -293,7 +293,7 @@ fn test_edge_cases() {
     {
         println!("\n--- Edge Case 2: Constraint at boundary ---");
         let mut model = Model::default();
-        let x = model.new_var_float(1.0, 10.0);
+        let x = model.float(1.0, 10.0);
         model.lt(x, float(10.0)); // Constraint at upper bound
         
         let solution = model.maximize(x);
@@ -310,7 +310,7 @@ fn test_edge_cases() {
     {
         println!("\n--- Edge Case 3: Small domain ---");
         let mut model = Model::default();
-        let x = model.new_var_float(5.0, 5.1);
+        let x = model.float(5.0, 5.1);
         model.lt(x, float(5.05));
         
         let solution = model.maximize(x);

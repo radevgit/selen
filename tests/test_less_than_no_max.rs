@@ -3,7 +3,7 @@ use cspsolver::prelude::*;
 #[test]
 fn test_less_than_no_maximize() {
     let mut model = Model::default(); // precision 6
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     
     model.lt(x, float(5.5));
     

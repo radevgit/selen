@@ -3,7 +3,7 @@ use cspsolver::prelude::*;
 #[test]
 fn debug_precision_constraint_analysis() {
     let mut model = Model::default();
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
 
     // Get access to the constraint registry

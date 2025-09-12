@@ -4,7 +4,7 @@ use cspsolver::prelude::*;
 fn test_basic_less_than_or_equals() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
     model.le(x, int(6));
     
     let solution = model.solve().expect("Should have solution");
@@ -17,7 +17,7 @@ fn test_basic_less_than_or_equals() {
 fn test_less_than_or_equals_maximize() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
     model.le(x, int(6));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -30,7 +30,7 @@ fn test_less_than_or_equals_maximize() {
 fn test_less_than_or_equals_minimize() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
     model.le(x, int(6));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -43,7 +43,7 @@ fn test_less_than_or_equals_minimize() {
 fn test_less_than_or_equals_with_floats() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.le(x, float(5.5));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -57,7 +57,7 @@ fn test_less_than_or_equals_with_floats() {
 fn test_less_than_or_equals_mixed_types() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
     model.le(x, float(5.5));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -70,7 +70,7 @@ fn test_less_than_or_equals_mixed_types() {
 fn test_less_than_or_equals_float_vs_int() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(2.0, 6.0);
+    let x = model.float(2.0, 6.0);
     model.le(x, int(5));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -84,7 +84,7 @@ fn test_less_than_or_equals_float_vs_int() {
 fn test_less_than_or_equals_negative_numbers() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(-10, 5);
+    let x = model.int(-10, 5);
     model.le(x, int(-3));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -97,7 +97,7 @@ fn test_less_than_or_equals_negative_numbers() {
 fn test_less_than_or_equals_impossible() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(6, 10);
+    let x = model.int(6, 10);
     model.le(x, int(5)); // Impossible: no value in [6,10] <= 5
     
     let solution = model.solve();
@@ -108,7 +108,7 @@ fn test_less_than_or_equals_impossible() {
 fn test_less_than_or_equals_boundary_exact() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(5, 10);
+    let x = model.int(5, 10);
     model.le(x, int(5)); // Only x = 5 is valid
     
     let solution = model.solve().expect("Should have solution");
@@ -121,9 +121,9 @@ fn test_less_than_or_equals_boundary_exact() {
 fn test_less_than_or_equals_chaining() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 20);
-    let y = model.new_var_int(1, 20);
-    let z = model.new_var_int(1, 20);
+    let x = model.int(1, 20);
+    let y = model.int(1, 20);
+    let z = model.int(1, 20);
     
     model.le(x, y); // x <= y
     model.le(y, z); // y <= z, so x <= y <= z
@@ -161,8 +161,8 @@ fn test_less_than_or_equals_with_specific_values() {
 fn test_less_than_or_equals_with_expressions() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
+    let y = model.int(1, 5);
     let sum = model.add(x, y);
     
     model.le(sum, int(7));
@@ -181,8 +181,8 @@ fn test_less_than_or_equals_vs_less_than() {
     let mut model1 = Model::default();
     let mut model2 = Model::default();
     
-    let x1 = model1.new_var_int(1, 10);
-    let x2 = model2.new_var_int(1, 10);
+    let x1 = model1.int(1, 10);
+    let x2 = model2.int(1, 10);
     
     model1.le(x1, int(5));
     model2.lt(x2, int(5));
@@ -201,7 +201,7 @@ fn test_less_than_or_equals_vs_less_than() {
 fn test_less_than_or_equals_precision() {
     let mut model = Model::with_float_precision(4); // 1e-4 precision
     
-    let x = model.new_var_float(1.0, 2.0);
+    let x = model.float(1.0, 2.0);
     model.le(x, float(1.5));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -215,7 +215,7 @@ fn test_less_than_or_equals_precision() {
 fn test_less_than_or_equals_ordering_non_strict() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, 1, 3).collect();
+    let vars: Vec<_> = model.int_vars(3, 1, 3).collect();
     
     // Create non-strict ordering: vars[0] <= vars[1] <= vars[2]
     model.le(vars[0], vars[1]);
@@ -240,8 +240,8 @@ fn test_less_than_or_equals_ordering_non_strict() {
 fn test_less_than_or_equals_all_equal() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
+    let y = model.int(1, 10);
     
     model.le(x, y);
     model.le(y, x);

@@ -20,8 +20,8 @@ fn test_precision_configuration() {
     let mut model1 = Model::with_float_precision(4);
     let mut model2 = Model::with_float_precision(8);
     
-    let _var1 = model1.new_var_float(0.0, 1.0);
-    let _var2 = model2.new_var_float(0.0, 1.0);
+    let _var1 = model1.float(0.0, 1.0);
+    let _var2 = model2.float(0.0, 1.0);
     
     // Both should succeed without errors
     assert_eq!(model1.float_step_size(), 1e-4);
@@ -34,8 +34,8 @@ fn test_precision_backward_compatibility() {
     let mut model = Model::default();
     
     // These should all work as before
-    let _int_var = model.new_var_int(0, 10);
-    let _float_var = model.new_var_float(0.0, 1.0);
+    let _int_var = model.int(0, 10);
+    let _float_var = model.float(0.0, 1.0);
     let _val_var = model.new_var(Val::int(0), Val::int(5));
     let _values_var = model.new_var_with_values(vec![1, 3, 5, 7]);
     
@@ -47,8 +47,8 @@ fn test_precision_backward_compatibility() {
 fn test_precision_with_constraints() {
     let mut model = Model::with_float_precision(3); // 1e-3 precision
     
-    let x = model.new_var_float(0.0, 1.0);
-    let y = model.new_var_float(0.0, 1.0);
+    let x = model.float(0.0, 1.0);
+    let y = model.float(0.0, 1.0);
     let sum = model.add(x, y);
     
     model.equals(sum, float(1.5));
@@ -69,8 +69,8 @@ fn test_precision_affects_domain_operations() {
     let mut low_precision = Model::with_float_precision(1); // 1e-1 precision
     let mut high_precision = Model::with_float_precision(8); // 1e-8 precision
     
-    let x_low = low_precision.new_var_float(0.0, 1.0);
-    let x_high = high_precision.new_var_float(0.0, 1.0);
+    let x_low = low_precision.float(0.0, 1.0);
+    let x_high = high_precision.float(0.0, 1.0);
     
     low_precision.gt(x_low, float(0.5));
     high_precision.gt(x_high, float(0.5));
@@ -109,8 +109,8 @@ fn test_precision_configuration_detailed() {
     let mut model1 = Model::with_float_precision(4);
     let mut model2 = Model::with_float_precision(8);
     
-    let _var1 = model1.new_var_float(0.0, 1.0);
-    let _var2 = model2.new_var_float(0.0, 1.0);
+    let _var1 = model1.float(0.0, 1.0);
+    let _var2 = model2.float(0.0, 1.0);
     
     // Both should succeed without errors
     assert_eq!(model1.float_step_size(), 1e-4);
@@ -124,8 +124,8 @@ fn test_precision_backward_compatibility_detailed() {
     let mut model = Model::default();
     
     // These should all work as before
-    let _int_var = model.new_var_int(0, 10);
-    let _float_var = model.new_var_float(0.0, 1.0);
+    let _int_var = model.int(0, 10);
+    let _float_var = model.float(0.0, 1.0);
     let _val_var = model.new_var(Val::int(0), Val::int(5));
     let _values_var = model.new_var_with_values(vec![1, 3, 5, 7]);
     

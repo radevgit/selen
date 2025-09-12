@@ -6,7 +6,7 @@ fn test_direct_constraint_propagation() {
     
     // Test 1: Simple <= constraint should require minimal propagation
     let mut model = Model::with_float_precision(4);
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.le(x, float(5.5));
     
     let solution = model.solve_with_callback(|stats| {
@@ -24,7 +24,7 @@ fn test_direct_constraint_propagation() {
     
     // Test 2: Maximization requires search - this is where propagations should come from
     let mut model2 = Model::with_float_precision(4);
-    let x2 = model2.new_var_float(1.0, 10.0);
+    let x2 = model2.float(1.0, 10.0);
     model2.le(x2, float(5.5));
     
     let solution2 = model2.maximize_with_callback(x2, |stats| {
@@ -41,7 +41,7 @@ fn test_direct_constraint_propagation() {
     
     // Test 3: < constraint with maximization (the hanging case)
     let mut model3 = Model::with_float_precision(4);
-    let x3 = model3.new_var_float(1.0, 10.0);
+    let x3 = model3.float(1.0, 10.0);
     model3.lt(x3, float(5.5)); // This creates Next view
     
     let solution3 = model3.maximize_with_callback(x3, |stats| {

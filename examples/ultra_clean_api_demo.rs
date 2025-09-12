@@ -65,9 +65,9 @@ fn main() {
     
     // 5. Summary of short variable creation
     println!("\n5. Short Variable Creation:");
-    println!("   ❌ OLD: model.new_var_int(0, 10)     // 25 characters");
+    println!("   ❌ OLD: model.int(0, 10)     // 25 characters");
     println!("   ✅ NEW: model.int(0, 10)             // 16 characters (36% shorter!)");
-    println!("   ❌ OLD: model.new_var_float(0.0, 5.0) // 30 characters");
+    println!("   ❌ OLD: model.float(0.0, 5.0) // 30 characters");
     println!("   ✅ NEW: model.float(0.0, 5.0)        // 18 characters (40% shorter!)");
     
     // 6. Benefits explanation
@@ -97,13 +97,13 @@ fn main() {
     
     println!("\n=== API Evolution Comparison ===");
     println!("🔴 Original verbose API:");
-    println!("   model.new_var_int(0, 10);");
+    println!("   model.int(0, 10);");
     println!("   model.equals(x, int(5));");
     println!("   model.le(x, y);");
     println!();
     println!("🟡 Previous clean API (with imports):");
     println!("   use cspsolver::constraint_builder::*;");
-    println!("   model.new_var_int(0, 10);");
+    println!("   model.int(0, 10);");
     println!("   model.post(x.eq_val(5.into()));");
     println!();
     println!("🟢 New ultra-clean API (no imports needed!):");

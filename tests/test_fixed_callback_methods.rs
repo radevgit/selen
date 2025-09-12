@@ -6,7 +6,7 @@ fn test_fixed_callback_methods() {
     
     let mut model = Model::with_float_precision(6);
 
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
     
     println!("Model setup complete:");
@@ -36,7 +36,7 @@ fn test_fixed_callback_methods() {
     // Test maximize_with_callback (calls our fixed minimize_with_callback)
     println!("\n=== Testing maximize_with_callback ===");
     let mut model2 = Model::with_float_precision(6);
-    let x2 = model2.new_var_float(1.0, 10.0);
+    let x2 = model2.float(1.0, 10.0);
     model2.lt(x2, float(5.5));
     
     let start_time2 = std::time::Instant::now();

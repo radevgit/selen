@@ -25,7 +25,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::with_float_precision(4); // 4 decimal places
-    /// let var = model.new_var_float(0.0, 1.0);
+    /// let var = model.float(0.0, 1.0);
     /// ```
     pub fn with_float_precision(precision_digits: i32) -> Self {
         Self {
@@ -97,12 +97,6 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let var = model.new_var_int(1, 10);
-    /// ```
-    pub fn new_var_int(&mut self, min: i32, max: i32) -> VarId {
-        self.new_var(Val::ValI(min), Val::ValI(max))
-    }
-
     /// Create new integer decision variables, with the provided domain bounds.
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
@@ -111,9 +105,9 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.new_vars_int(5, 0, 9).collect();
+    /// let vars: Vec<_> = model.int_vars(5, 0, 9).collect();
     /// ```
-    pub fn new_vars_int(
+    pub fn int_vars(
         &mut self,
         n: usize,
         min: i32,
@@ -151,12 +145,6 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let var = model.new_var_float(0.0, 10.5);
-    /// ```
-    pub fn new_var_float(&mut self, min: f64, max: f64) -> VarId {
-        self.new_var(Val::ValF(min), Val::ValF(max))
-    }
-
     /// Create new float decision variables, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
@@ -166,9 +154,9 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.new_vars_float(3, 0.0, 1.0).collect();
+    /// let vars: Vec<_> = model.float_vars(3, 0.0, 1.0).collect();
     /// ```
-    pub fn new_vars_float(
+    pub fn float_vars(
         &mut self,
         n: usize,
         min: f64,
@@ -180,14 +168,27 @@ impl Model {
     /// Create a new boolean decision variable (0 or 1).
     ///
     /// This is a convenience method equivalent to `new_var_int(0, 1)`.
+    /// Boolean variables can be used with the ultra-clean boolean operators.
     /// 
+    /// # Examples
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
+    /// let a = model.bool();
     /// let b = model.bool();
+    /// let c = model.bool();
+    /// 
+    /// // Ultra-clean boolean operations:
+    /// model.post(a & b);           // AND
+    /// model.post(a | c);           // OR  
+    /// model.post(!a);              // NOT
+    /// model.post((a & b) | c);     // Complex expressions
+    /// 
+    /// // Batch operations:
+    /// model.post_all(vec![a & b, !c, a | (b & c)]);
     /// ```
     pub fn bool(&mut self) -> VarId {
-        self.new_var_int(0, 1)
+        self.int(0, 1)
     }
 
     /// Create a new binary decision variable.
@@ -222,11 +223,11 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.int(0, 10);    // Instead of model.new_var_int(0, 10)
+    /// let x = model.int(0, 10);    // Instead of model.int(0, 10)
     /// let y = model.int(-5, 5);    // Clean and concise
     /// ```
     pub fn int(&mut self, min: i32, max: i32) -> VarId {
-        self.new_var_int(min, max)
+        self.new_var(Val::ValI(min), Val::ValI(max))
     }
 
     /// Short method to create a float variable.
@@ -235,11 +236,11 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.float(0.0, 10.0);    // Instead of model.new_var_float(0.0, 10.0)
+    /// let x = model.float(0.0, 10.0);    // Instead of model.float(0.0, 10.0)
     /// let y = model.float(-1.5, 3.14);   // Clean and concise
     /// ```
     pub fn float(&mut self, min: f64, max: f64) -> VarId {
-        self.new_var_float(min, max)
+        self.new_var(Val::ValF(min), Val::ValF(max))
     }
 
     /// Short method to create a binary variable.
@@ -271,8 +272,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 5);
-    /// let y = model.new_var_int(2, 8);
+    /// let x = model.int(1, 5);
+    /// let y = model.int(2, 8);
     /// let sum = model.add(x, y);
     /// ```
     pub fn add(&mut self, x: impl View, y: impl View) -> VarId {
@@ -291,8 +292,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(5, 10);
-    /// let y = model.new_var_int(2, 4);
+    /// let x = model.int(5, 10);
+    /// let y = model.int(2, 4);
     /// let diff = model.sub(x, y);
     /// ```
     pub fn sub(&mut self, x: impl View, y: impl View) -> VarId {
@@ -312,8 +313,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(3, 5);
-    /// let y = model.new_var_int(2, 4);
+    /// let x = model.int(3, 5);
+    /// let y = model.int(2, 4);
     /// let product = model.mul(x, y);
     /// ```
     pub fn mul(&mut self, x: impl View, y: impl View) -> VarId {
@@ -352,8 +353,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(10, 20);
-    /// let y = model.new_var_int(3, 7);
+    /// let x = model.int(10, 20);
+    /// let y = model.int(3, 7);
     /// let remainder = model.modulo(x, y);
     /// ```
     pub fn modulo(&mut self, x: impl View, y: impl View) -> VarId {
@@ -419,7 +420,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(-10, 5);
+    /// let x = model.int(-10, 5);
     /// let abs_x = model.abs(x);
     /// ```
     pub fn abs(&mut self, x: impl View) -> VarId {
@@ -489,9 +490,9 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
-    /// let y = model.new_var_int(5, 15);
-    /// let z = model.new_var_int(3, 8);
+    /// let x = model.int(1, 10);
+    /// let y = model.int(5, 15);
+    /// let z = model.int(3, 8);
     /// let minimum = model.min(&[x, y, z]);
     /// ```
     pub fn min(&mut self, vars: &[VarId]) -> VarId {
@@ -539,9 +540,9 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
-    /// let y = model.new_var_int(5, 15);
-    /// let z = model.new_var_int(3, 8);
+    /// let x = model.int(1, 10);
+    /// let y = model.int(5, 15);
+    /// let z = model.int(3, 8);
     /// let maximum = model.max(&[x, y, z]);
     /// ```
     pub fn max(&mut self, vars: &[VarId]) -> VarId {
@@ -589,8 +590,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(10, 20);
-    /// let y = model.new_var_int(2, 5);
+    /// let x = model.int(10, 20);
+    /// let y = model.int(2, 5);
     /// let quotient = model.div(x, y);
     /// ```
     pub fn div(&mut self, x: impl View, y: impl View) -> VarId {
@@ -643,7 +644,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.new_vars_int(3, 1, 10).collect();
+    /// let vars: Vec<_> = model.int_vars(3, 1, 10).collect();
     /// let total = model.sum(&vars);
     /// ```
     pub fn sum(&mut self, xs: &[impl View]) -> VarId {
@@ -656,7 +657,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.new_vars_int(3, 1, 10).collect();
+    /// let vars: Vec<_> = model.int_vars(3, 1, 10).collect();
     /// let total = model.sum_iter(vars.iter().copied());
     /// ```
     pub fn sum_iter(&mut self, xs: impl IntoIterator<Item = impl View>) -> VarId {
@@ -677,8 +678,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
-    /// let y = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
+    /// let y = model.int(1, 10);
     /// model.equals(x, y);
     /// ```
     pub fn equals(&mut self, x: impl View, y: impl View) {
@@ -691,8 +692,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
-    /// let y = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
+    /// let y = model.int(1, 10);
     /// model.eq(x, y);
     /// ```
     pub fn eq(&mut self, x: impl View, y: impl View) {
@@ -705,8 +706,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
-    /// let y = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
+    /// let y = model.int(1, 10);
     /// model.ne(x, y);
     /// ```
     pub fn ne(&mut self, x: impl View, y: impl View) {
@@ -719,8 +720,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
-    /// let y = model.new_var_int(5, 15);
+    /// let x = model.int(1, 10);
+    /// let y = model.int(5, 15);
     /// model.le(x, y);
     /// ```
     pub fn le(&mut self, x: impl View, y: impl View) {
@@ -733,7 +734,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
     /// model.lt(x, Val::int(5));
     /// ```
     pub fn lt(&mut self, x: impl View, y: impl View) {
@@ -748,8 +749,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(5, 15);
-    /// let y = model.new_var_int(1, 10);
+    /// let x = model.int(5, 15);
+    /// let y = model.int(1, 10);
     /// model.ge(x, y);
     /// ```
     pub fn ge(&mut self, x: impl View, y: impl View) {
@@ -762,7 +763,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
     /// model.gt(x, float(2.5));
     /// ```
     pub fn gt(&mut self, x: impl View, y: impl View) {
@@ -782,7 +783,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.new_vars_int(4, 1, 4).collect();
+    /// let vars: Vec<_> = model.int_vars(4, 1, 4).collect();
     /// model.all_different(vars);
     /// ```
     pub fn all_different(&mut self, vars: Vec<VarId>) {
@@ -794,7 +795,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.new_vars_int(4, 1, 4).collect();
+    /// let vars: Vec<_> = model.int_vars(4, 1, 4).collect();
     /// model.alldifferent(vars);  // Shorter than all_different
     /// ```
     pub fn alldifferent(&mut self, vars: Vec<VarId>) {
@@ -812,19 +813,24 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let a = model.new_var_int(0, 1);
-    /// let b = model.new_var_int(0, 1);
-    /// let c = model.new_var_int(0, 1);
+    /// let a = model.bool();
+    /// let b = model.bool();
+    /// let c = model.bool();
+    /// 
+    /// // Modern clean syntax (recommended):
+    /// model.post(a & b & c);
+    /// 
+    /// // Or using the direct method:
     /// let result = model.bool_and(&[a, b, c]);
     /// ```
     pub fn bool_and(&mut self, operands: &[VarId]) -> VarId {
         if operands.is_empty() {
             // Empty AND is typically true
-            return self.new_var_int(1, 1);
+            return self.int(1, 1);
         }
 
         // Result is boolean (0 or 1)
-        let result = self.new_var_int(0, 1);
+        let result = self.int(0, 1);
         let _p = self.props.bool_and(operands.to_vec(), result);
         result
     }
@@ -840,19 +846,24 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let a = model.new_var_int(0, 1);
-    /// let b = model.new_var_int(0, 1);
-    /// let c = model.new_var_int(0, 1);
+    /// let a = model.bool();
+    /// let b = model.bool();
+    /// let c = model.bool();
+    /// 
+    /// // Modern clean syntax (recommended):
+    /// model.post(a | b | c);
+    /// 
+    /// // Or using the direct method:
     /// let result = model.bool_or(&[a, b, c]);
     /// ```
     pub fn bool_or(&mut self, operands: &[VarId]) -> VarId {
         if operands.is_empty() {
             // Empty OR is typically false
-            return self.new_var_int(0, 0);
+            return self.int(0, 0);
         }
 
         // Result is boolean (0 or 1)
-        let result = self.new_var_int(0, 1);
+        let result = self.int(0, 1);
         let _p = self.props.bool_or(operands.to_vec(), result);
         result
     }
@@ -868,12 +879,17 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let a = model.new_var_int(0, 1);
+    /// let a = model.bool();
+    /// 
+    /// // Modern clean syntax (recommended):
+    /// model.post(!a);
+    /// 
+    /// // Or using the direct method:
     /// let result = model.bool_not(a);
     /// ```
     pub fn bool_not(&mut self, operand: VarId) -> VarId {
         // Result is boolean (0 or 1)
-        let result = self.new_var_int(0, 1);
+        let result = self.int(0, 1);
         let _p = self.props.bool_not(operand, result);
         result
     }
@@ -884,7 +900,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
     /// model.gt(x, Val::int(3));
     /// let solution = model.minimize(x);
     /// ```
@@ -899,7 +915,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
     /// let solution = model.minimize_with_callback(x, |stats| {
     ///     println!("Propagations: {}", stats.propagation_count);
     /// });
@@ -954,7 +970,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 5);
+    /// let x = model.int(1, 5);
     /// let solutions: Vec<_> = model.minimize_and_iterate(x).collect();
     /// ```
     pub fn minimize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
@@ -1027,7 +1043,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
     /// model.lt(x, Val::int(8));
     /// let solution = model.maximize(x);
     /// ```
@@ -1046,7 +1062,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
     /// let solution = model.maximize_with_callback(x, |stats| {
     ///     println!("Nodes explored: {}", stats.node_count);
     /// });
@@ -1082,7 +1098,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 5);
+    /// let x = model.int(1, 5);
     /// let solutions: Vec<_> = model.maximize_and_iterate(x).collect();
     /// ```
     pub fn maximize_and_iterate(self, objective: impl View) -> impl Iterator<Item = Solution> {
@@ -1183,7 +1199,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.new_vars_int(4, 1, 4).collect();
+    /// let vars: Vec<_> = model.int_vars(4, 1, 4).collect();
     /// model.all_different(vars);
     /// model.optimize_constraint_order();
     /// ```
@@ -1202,8 +1218,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
-    /// let y = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
+    /// let y = model.int(1, 10);
     /// model.ne(x, y);
     /// let solution = model.solve();
     /// ```
@@ -1249,7 +1265,7 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 10);
+    /// let x = model.int(1, 10);
     /// let solution = model.solve_with_callback(|stats| {
     ///     println!("Search completed with {} propagations", stats.propagation_count);
     /// });
@@ -1389,8 +1405,8 @@ impl Model {
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_var_int(1, 3);
-    /// let y = model.new_var_int(1, 3);
+    /// let x = model.int(1, 3);
+    /// let y = model.int(1, 3);
     /// model.ne(x, y);
     /// let solutions: Vec<_> = model.enumerate().collect();
     /// ```

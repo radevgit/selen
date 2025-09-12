@@ -34,7 +34,7 @@ pub fn test_small_scale_precision() -> LimitResult {
     
     // Small precision: millimeter-level constraints (0.001m to 0.1m)
     let parts: Vec<_> = (0..10).map(|i| {
-        model.new_var_float(0.001, 0.1) // 1mm to 10cm
+        model.float(0.001, 0.1) // 1mm to 10cm
     }).collect();
     
     // Tight precision constraints at small scale
@@ -57,7 +57,7 @@ pub fn test_medium_scale_precision() -> LimitResult {
     
     // Medium scale: centimeter to meter level (0.01m to 5m)
     let dimensions: Vec<_> = (0..25).map(|i| {
-        model.new_var_float(0.01, 5.0) // 1cm to 5m
+        model.float(0.01, 5.0) // 1cm to 5m
     }).collect();
     
     // Engineering tolerances at medium scale
@@ -80,7 +80,7 @@ pub fn test_large_scale_precision() -> LimitResult {
     
     // Large scale: meter level (0.1m to 10m)
     let plates: Vec<_> = (0..50).map(|i| {
-        model.new_var_float(0.1, 10.0) // 10cm to 10m
+        model.float(0.1, 10.0) // 10cm to 10m
     }).collect();
     
     // Large-scale engineering constraints
@@ -104,7 +104,7 @@ pub fn test_high_quantity_constraints() -> LimitResult {
     // Simulate high-quantity optimization: many parts with similar constraints
     let quantity = 100;
     let parts: Vec<_> = (0..quantity).map(|_| {
-        model.new_var_float(0.05, 2.0) // 5cm to 2m parts
+        model.float(0.05, 2.0) // 5cm to 2m parts
     }).collect();
     
     // Each part has positioning constraints
@@ -127,7 +127,7 @@ pub fn test_precision_boundary_limits() -> LimitResult {
     
     // Test very tight precision boundaries
     let precision_parts: Vec<_> = (0..20).map(|i| {
-        model.new_var_float(1.0, 2.0) // 1m to 2m range
+        model.float(1.0, 2.0) // 1m to 2m range
     }).collect();
     
     // Extremely tight constraints - testing ULP precision limits
@@ -149,9 +149,9 @@ pub fn test_mixed_scale_complexity() -> LimitResult {
     let mut model = Model::default();
     
     // Mix of different scales in one problem
-    let small_parts: Vec<_> = (0..10).map(|_| model.new_var_float(0.001, 0.01)).collect(); // mm scale
-    let medium_parts: Vec<_> = (0..15).map(|_| model.new_var_float(0.1, 1.0)).collect();   // dm scale  
-    let large_parts: Vec<_> = (0..5).map(|_| model.new_var_float(1.0, 10.0)).collect();    // m scale
+    let small_parts: Vec<_> = (0..10).map(|_| model.float(0.001, 0.01)).collect(); // mm scale
+    let medium_parts: Vec<_> = (0..15).map(|_| model.float(0.1, 1.0)).collect();   // dm scale  
+    let large_parts: Vec<_> = (0..5).map(|_| model.float(1.0, 10.0)).collect();    // m scale
     
     // Cross-scale constraints
     for &small in &small_parts {

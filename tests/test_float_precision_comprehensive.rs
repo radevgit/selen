@@ -7,7 +7,7 @@ use cspsolver::prelude::*;
 fn test_less_than_precision_simple() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -22,7 +22,7 @@ fn test_less_than_precision_simple() {
 fn test_less_than_precision_complex() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.132415232356));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -38,7 +38,7 @@ fn test_less_than_precision_complex() {
 fn test_less_than_precision_very_small() {
     let mut model = Model::with_float_precision(8);
     
-    let x = model.new_var_float(0.0, 1.0);
+    let x = model.float(0.0, 1.0);
     model.lt(x, float(0.0000012345));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -54,7 +54,7 @@ fn test_less_than_precision_very_small() {
 fn test_greater_than_precision_simple() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.gt(x, float(3.7));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -70,7 +70,7 @@ fn test_greater_than_precision_simple() {
 fn test_greater_than_precision_complex() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.gt(x, float(2.987654321098765));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -86,7 +86,7 @@ fn test_greater_than_precision_complex() {
 fn test_greater_than_precision_near_zero() {
     let mut model = Model::with_float_precision(8);
     
-    let x = model.new_var_float(-1.0, 1.0);
+    let x = model.float(-1.0, 1.0);
     model.gt(x, float(0.00000789123));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -102,7 +102,7 @@ fn test_greater_than_precision_near_zero() {
 fn test_less_than_or_equals_precision() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.le(x, float(4.333333333333333));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -117,7 +117,7 @@ fn test_less_than_or_equals_precision() {
 fn test_greater_than_or_equals_precision() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.ge(x, float(6.777777777777778));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -132,7 +132,7 @@ fn test_greater_than_or_equals_precision() {
 fn test_precision_chain_constraints() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(5.12345678, 5.12345679);  // Narrow initial domain
+    let x = model.float(5.12345678, 5.12345679);  // Narrow initial domain
     // Create a narrow window using both < and >
     model.gt(x, float(5.123456789));
     model.lt(x, float(5.123456790));
@@ -151,7 +151,7 @@ fn test_precision_chain_constraints() {
 fn test_precision_multiple_variables() {
     // Test x maximization
     let mut model1 = Model::with_float_precision(4);
-    let x = model1.new_var_float(1.0, 10.0);
+    let x = model1.float(1.0, 10.0);
     model1.lt(x, float(3.14159265359));
     
     let solution_x = model1.maximize(x).expect("Should have solution");
@@ -159,7 +159,7 @@ fn test_precision_multiple_variables() {
     
     // Test y minimization with separate model
     let mut model2 = Model::with_float_precision(4);
-    let y = model2.new_var_float(1.0, 10.0);
+    let y = model2.float(1.0, 10.0);
     model2.gt(y, float(2.71828182846));
     
     let solution_y = model2.minimize(y).expect("Should have solution");
@@ -180,7 +180,7 @@ fn test_precision_multiple_variables() {
 fn test_precision_edge_cases() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(0.0, 1.0);
+    let x = model.float(0.0, 1.0);
     
     // Test with very small numbers near machine epsilon
     model.lt(x, float(std::f64::EPSILON * 2.0));
@@ -198,7 +198,7 @@ fn test_precision_edge_cases() {
 fn test_precision_large_numbers() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1e6, 1e8);
+    let x = model.float(1e6, 1e8);
     model.lt(x, float(1234567.89012345));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -215,7 +215,7 @@ fn test_precision_large_numbers() {
 fn test_precision_negative_numbers() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(-10.0, 0.0);
+    let x = model.float(-10.0, 0.0);
     model.gt(x, float(-3.14159265359));
     
     let solution = model.minimize(x).expect("Should have solution");

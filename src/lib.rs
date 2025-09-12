@@ -22,7 +22,7 @@
 //! let mut model = Model::default();
 //!
 //! // Create a variable x in [1, 10]
-//! let v = model.new_var_int(1, 10);
+//! let v = model.int(1, 10);
 //!
 //! // Add constraint: x > 2.5
 //! model.gt(v, float(2.5));

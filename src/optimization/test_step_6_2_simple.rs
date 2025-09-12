@@ -15,8 +15,8 @@ mod tests {
     fn test_pure_float_problem_no_partitioning() {
         // Test that pure float problems don't need partitioning
         let mut model = Model::with_float_precision(6);
-        let x = model.new_var_float(0.0, 10.0);
-        let y = model.new_var_float(5.0, 15.0);
+        let x = model.float(0.0, 10.0);
+        let y = model.float(5.0, 15.0);
         
         // Add a simple constraint
         model.le(x, y);
@@ -38,8 +38,8 @@ mod tests {
     fn test_pure_integer_problem_no_partitioning() {
         // Test that pure integer problems don't need partitioning
         let mut model = Model::with_float_precision(6);
-        let x = model.new_var_int(0, 10);
-        let y = model.new_var_int(5, 15);
+        let x = model.int(0, 10);
+        let y = model.int(5, 15);
         
         // Add a simple constraint
         model.le(x, y);
@@ -61,10 +61,10 @@ mod tests {
     fn test_mixed_separable_problem_partitioning() {
         // Test partitioning of a separable mixed problem
         let mut model = Model::with_float_precision(6);
-        let float_x = model.new_var_float(0.0, 10.0);
-        let float_y = model.new_var_float(5.0, 15.0);
-        let int_a = model.new_var_int(0, 10);
-        let int_b = model.new_var_int(5, 15);
+        let float_x = model.float(0.0, 10.0);
+        let float_y = model.float(5.0, 15.0);
+        let int_a = model.int(0, 10);
+        let int_b = model.int(5, 15);
         
         // Add constraints within each type (simulating separable problem)
         model.le(float_x, float_y);
@@ -90,9 +90,9 @@ mod tests {
     fn test_float_subproblem_creation() {
         // Test creating a float subproblem from a partition
         let mut model = Model::with_float_precision(6);
-        let float_x = model.new_var_float(0.0, 10.0);
-        let float_y = model.new_var_float(5.0, 15.0);
-        let _int_a = model.new_var_int(0, 10);
+        let float_x = model.float(0.0, 10.0);
+        let float_y = model.float(5.0, 15.0);
+        let _int_a = model.int(0, 10);
         
         model.le(float_x, float_y);
         

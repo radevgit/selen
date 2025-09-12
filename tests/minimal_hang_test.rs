@@ -6,7 +6,7 @@ fn minimal_hanging_test() {
     let mut model = Model::default();
     println!("Created model with step size: {}", model.float_step_size());
     
-    let x = model.new_var_float(5.0, 5.6);  // Smaller range around the problem area
+    let x = model.float(5.0, 5.6);  // Smaller range around the problem area
     println!("Created variable x with bounds [5.0, 5.6]");
     
     model.lt(x, float(5.5));

@@ -160,15 +160,15 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     
     // OPTIMIZATION 1: Create variables more efficiently
     // For clues, create singleton variables directly; for empty cells, create full domain
-    let mut grid = [[model.new_var_int(1, 9); 9]; 9];
+    let mut grid = [[model.int(1, 9); 9]; 9];
     for row in 0..9 {
         for col in 0..9 {
             if puzzle[row][col] != 0 {
                 // Create singleton variable for clues (much more efficient than equals constraint)
                 let clue_val = puzzle[row][col];
-                grid[row][col] = model.new_var_int(clue_val, clue_val);
+                grid[row][col] = model.int(clue_val, clue_val);
             } else {
-                grid[row][col] = model.new_var_int(1, 9);
+                grid[row][col] = model.int(1, 9);
             }
         }
     }

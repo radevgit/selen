@@ -4,8 +4,8 @@ use cspsolver::prelude::*;
 fn test_basic_not_equals() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 3);
-    let y = model.new_var_int(1, 3);
+    let x = model.int(1, 3);
+    let y = model.int(1, 3);
     
     model.ne(x, y);
     
@@ -21,7 +21,7 @@ fn test_basic_not_equals() {
 fn test_not_equals_with_constant() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
     model.ne(x, int(3));
     
     let solution = model.solve().expect("Should have solution");
@@ -35,8 +35,8 @@ fn test_not_equals_with_constant() {
 fn test_not_equals_with_floats() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(1.0, 5.0);
-    let y = model.new_var_float(1.0, 5.0);
+    let x = model.float(1.0, 5.0);
+    let y = model.float(1.0, 5.0);
     
     model.ne(x, y);
     
@@ -52,8 +52,8 @@ fn test_not_equals_with_floats() {
 fn test_not_equals_mixed_types() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_float(2.5, 4.5);
+    let x = model.int(1, 5);
+    let y = model.float(2.5, 4.5);
     
     model.ne(x, y);
     
@@ -72,9 +72,9 @@ fn test_not_equals_mixed_types() {
 fn test_not_equals_multiple_constraints() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_int(1, 5);
-    let z = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
+    let y = model.int(1, 5);
+    let z = model.int(1, 5);
     
     model.ne(x, y);
     model.ne(y, z);
@@ -96,7 +96,7 @@ fn test_not_equals_multiple_constraints() {
 fn test_not_equals_impossible_single_value() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(5, 5); // Fixed to 5
+    let x = model.int(5, 5); // Fixed to 5
     model.ne(x, int(5));     // But cannot be 5
     
     let solution = model.solve();
@@ -134,8 +134,8 @@ fn test_not_equals_with_specific_values() {
 fn test_not_equals_narrow_domain() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 2);
-    let y = model.new_var_int(1, 2);
+    let x = model.int(1, 2);
+    let y = model.int(1, 2);
     
     model.ne(x, y);
     
@@ -155,8 +155,8 @@ fn test_not_equals_narrow_domain() {
 fn test_not_equals_with_expressions() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
+    let y = model.int(1, 5);
     let sum = model.add(x, y);
     
     model.ne(sum, int(6));
@@ -173,7 +173,7 @@ fn test_not_equals_with_expressions() {
 fn test_not_equals_all_different_pattern() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(4, 1, 4).collect();
+    let vars: Vec<_> = model.int_vars(4, 1, 4).collect();
     
     // Manually implement all_different using not_equals
     for i in 0..vars.len() {
@@ -208,7 +208,7 @@ fn test_not_equals_all_different_pattern() {
 fn test_not_equals_precision() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1.4999, 1.5001);
+    let x = model.float(1.4999, 1.5001);
     model.ne(x, float(1.5));
     
     let solution = model.solve().expect("Should have solution");
@@ -222,16 +222,16 @@ fn test_not_equals_impossible_over_constraint() {
     let mut model = Model::default();
     
     // 3 variables, 3 values, all must be different - possible
-    let x = model.new_var_int(1, 3);
-    let y = model.new_var_int(1, 3);
-    let z = model.new_var_int(1, 3);
+    let x = model.int(1, 3);
+    let y = model.int(1, 3);
+    let z = model.int(1, 3);
     
     model.ne(x, y);
     model.ne(y, z);
     model.ne(x, z);
     
     // Now add 4th variable - impossible since only 3 values available
-    let w = model.new_var_int(1, 3);
+    let w = model.int(1, 3);
     model.ne(w, x);
     model.ne(w, y);
     model.ne(w, z);

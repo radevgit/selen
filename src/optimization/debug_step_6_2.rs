@@ -22,10 +22,10 @@ mod debug_tests {
 
         println!("\n=== Testing Mixed Model ===");
         let mut mixed_model = Model::with_float_precision(6);
-        let float_x = mixed_model.new_var_float(0.0, 10.0);
-        let float_y = mixed_model.new_var_float(5.0, 15.0);
-        let int_a = mixed_model.new_var_int(0, 10);
-        let int_b = mixed_model.new_var_int(5, 15);
+        let float_x = mixed_model.float(0.0, 10.0);
+        let float_y = mixed_model.float(5.0, 15.0);
+        let int_a = mixed_model.int(0, 10);
+        let int_b = mixed_model.int(5, 15);
 
         mixed_model.le(float_x, float_y);
         mixed_model.le(int_a, int_b);
@@ -42,9 +42,9 @@ mod debug_tests {
 
         println!("\n=== Testing Float-Only Model ===");
         let mut float_model = Model::with_float_precision(6);
-        let x = float_model.new_var_float(0.0, 10.0);
-        let y = float_model.new_var_float(5.0, 15.0);
-        let _int_a = float_model.new_var_int(0, 10);
+        let x = float_model.float(0.0, 10.0);
+        let y = float_model.float(5.0, 15.0);
+        let _int_a = float_model.int(0, 10);
 
         float_model.le(x, y);
 

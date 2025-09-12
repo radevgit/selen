@@ -10,8 +10,8 @@
 //! use cspsolver::operators::*;
 //!
 //! let mut model = Model::default();
-//! let x = model.new_var_int(1, 10);
-//! let y = model.new_var_int(1, 10);
+//! let x = model.int(1, 10);
+//! let y = model.int(1, 10);
 //! 
 //! // Comparison operations
 //! model.eq_op(x, y);         // x == y
@@ -22,8 +22,8 @@
 //! model.ge_op(x, y);         // x >= y
 //!
 //! // Boolean operations (for boolean variables)
-//! let a = model.new_var_bool();
-//! let b = model.new_var_bool();
+//! let a = model.bool();
+//! let b = model.bool();
 //! model.and_op(a, b);        // a AND b
 //! model.or_op(a, b);         // a OR b
 //! model.not_op(a);           // NOT a
@@ -167,8 +167,8 @@ mod tests {
     #[test]
     fn test_comparison_operators() {
         let mut model = Model::default();
-        let x = model.new_var_int(1, 10);
-        let y = model.new_var_int(1, 10);
+        let x = model.int(1, 10);
+        let y = model.int(1, 10);
         
         // Test that operator methods work without panicking
         x.eq_op(&mut model, y);
@@ -182,8 +182,8 @@ mod tests {
     #[test]
     fn test_boolean_operators() {
         let mut model = Model::default();
-        let a = model.new_var_int(0, 1); // Boolean variable
-        let b = model.new_var_int(0, 1); // Boolean variable
+        let a = model.int(0, 1); // Boolean variable
+        let b = model.int(0, 1); // Boolean variable
         
         // Test that boolean operator methods work without panicking
         a.and_op(&mut model, b);
@@ -194,8 +194,8 @@ mod tests {
     #[test]
     fn test_model_operator_extensions() {
         let mut model = Model::default();
-        let x = model.new_var_int(1, 10);
-        let y = model.new_var_int(1, 10);
+        let x = model.int(1, 10);
+        let y = model.int(1, 10);
         
         // Test Model extension methods
         model.eq_op(x, y);
@@ -205,8 +205,8 @@ mod tests {
         model.gt_op(x, y);
         model.ge_op(x, y);
         
-        let a = model.new_var_int(0, 1); // Boolean variable
-        let b = model.new_var_int(0, 1); // Boolean variable
+        let a = model.int(0, 1); // Boolean variable
+        let b = model.int(0, 1); // Boolean variable
         model.and_op(a, b);
         model.or_op(a, b);
         model.not_op(a);

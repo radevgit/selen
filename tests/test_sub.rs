@@ -6,8 +6,8 @@ use cspsolver::prelude::*;
 fn test_basic_subtraction() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(10, 10);
-    let y = model.new_var_int(3, 3);
+    let x = model.int(10, 10);
+    let y = model.int(3, 3);
     let z = model.sub(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -24,9 +24,9 @@ fn test_subtraction_solve_for_minuend() {
     // Test: x - y = z where z=5, y=2, solve for x
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 20);
-    let y = model.new_var_int(2, 2);
-    let z = model.new_var_int(5, 5);
+    let x = model.int(1, 20);
+    let y = model.int(2, 2);
+    let z = model.int(5, 5);
     
     let sub_result = model.sub(x, y);
     model.equals(sub_result, z);
@@ -45,9 +45,9 @@ fn test_subtraction_solve_for_subtrahend() {
     // Test: x - y = z where x=15, z=8, solve for y
     let mut model = Model::default();
     
-    let x = model.new_var_int(15, 15);
-    let y = model.new_var_int(1, 20);
-    let z = model.new_var_int(8, 8);
+    let x = model.int(15, 15);
+    let y = model.int(1, 20);
+    let z = model.int(8, 8);
     
     let sub_result = model.sub(x, y);
     model.equals(sub_result, z);
@@ -65,8 +65,8 @@ fn test_subtraction_solve_for_subtrahend() {
 fn test_subtraction_with_ranges() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(5, 10);
-    let y = model.new_var_int(2, 4);
+    let x = model.int(5, 10);
+    let y = model.int(2, 4);
     let z = model.sub(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -91,8 +91,8 @@ fn test_subtraction_with_ranges() {
 fn test_subtraction_with_negative_result() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(3, 3);
-    let y = model.new_var_int(7, 7);
+    let x = model.int(3, 3);
+    let y = model.int(7, 7);
     let z = model.sub(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -108,8 +108,8 @@ fn test_subtraction_with_negative_result() {
 fn test_subtraction_with_floats() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(10.5, 10.5);
-    let y = model.new_var_float(3.2, 3.2);
+    let x = model.float(10.5, 10.5);
+    let y = model.float(3.2, 3.2);
     let z = model.sub(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -125,8 +125,8 @@ fn test_subtraction_with_floats() {
 fn test_subtraction_mixed_types() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(10, 10);
-    let y = model.new_var_float(3.5, 3.5);
+    let x = model.int(10, 10);
+    let y = model.float(3.5, 3.5);
     let z = model.sub(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -142,9 +142,9 @@ fn test_subtraction_mixed_types() {
 fn test_subtraction_chaining() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(20, 20);
-    let y = model.new_var_int(5, 5);
-    let z = model.new_var_int(3, 3);
+    let x = model.int(20, 20);
+    let y = model.int(5, 5);
+    let z = model.int(3, 3);
     
     let temp = model.sub(x, y);  // temp = 20 - 5 = 15
     let result = model.sub(temp, z);  // result = 15 - 3 = 12
@@ -162,9 +162,9 @@ fn test_subtraction_chaining() {
 fn test_subtraction_bounds_propagation() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(10, 15);
-    let y = model.new_var_int(3, 5);
-    let z = model.new_var_int(6, 8);
+    let x = model.int(10, 15);
+    let y = model.int(3, 5);
+    let z = model.int(6, 8);
     
     let sub_result = model.sub(x, y);
     model.equals(sub_result, z);
@@ -191,9 +191,9 @@ fn test_subtraction_bounds_propagation() {
 fn test_impossible_subtraction() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_int(10, 15);
-    let z = model.new_var_int(20, 25);  // Impossible: x - y cannot equal 20-25 when x is 1-5 and y is 10-15
+    let x = model.int(1, 5);
+    let y = model.int(10, 15);
+    let z = model.int(20, 25);  // Impossible: x - y cannot equal 20-25 when x is 1-5 and y is 10-15
     
     let sub_result = model.sub(x, y);
     model.equals(sub_result, z);
@@ -206,8 +206,8 @@ fn test_impossible_subtraction() {
 fn test_subtraction_zero() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(7, 7);
-    let y = model.new_var_int(7, 7);
+    let x = model.int(7, 7);
+    let y = model.int(7, 7);
     let z = model.sub(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -223,8 +223,8 @@ fn test_subtraction_zero() {
 fn test_subtraction_large_numbers() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1000000, 1000000);
-    let y = model.new_var_int(999999, 999999);
+    let x = model.int(1000000, 1000000);
+    let y = model.int(999999, 999999);
     let z = model.sub(x, y);
     
     let solution = model.solve().expect("Should find solution");

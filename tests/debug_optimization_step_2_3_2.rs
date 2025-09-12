@@ -11,7 +11,7 @@ fn debug_step_2_3_2_optimization() {
     // First test: constraint-free case (should work)
     println!("\n--- Test 1: Constraint-free maximization ---");
     let mut model1 = Model::default();
-    let x1 = model1.new_var_float(1.0, 10.0);
+    let x1 = model1.float(1.0, 10.0);
     // NO constraints
     
     println!("Created model with:");
@@ -43,7 +43,7 @@ fn debug_step_2_3_2_optimization() {
     // Second test: with constraints (may fall back, but shouldn't hang)
     println!("\n--- Test 2: With constraints (may fall back) ---");
     let mut model2 = Model::default();
-    let x2 = model2.new_var_float(1.0, 10.0);
+    let x2 = model2.float(1.0, 10.0);
     model2.lt(x2, float(5.5));
     
     println!("Created model with:");

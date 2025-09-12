@@ -10,9 +10,9 @@ use cspsolver::view_constraints::*;
 
 fn main() {
     let mut model = Model::default();
-    let x = model.new_var_int(0, 10);
-    let y = model.new_var_int(0, 10);
-    let z = model.new_var_int(1, 5);
+    let x = model.int(0, 10);
+    let y = model.int(0, 10);
+    let z = model.int(1, 5);
     
     println!("=== Clean Constraint API Demo ===\n");
     
@@ -109,8 +109,8 @@ mod tests {
     #[test]
     fn test_basic_constraint_creation() {
         let mut model = Model::default();
-        let x = model.new_var_int(0, 10);
-        let y = model.new_var_int(0, 10);
+        let x = model.int(0, 10);
+        let y = model.int(0, 10);
         
         // Test that constraints can be created and applied
         let constraint = x.le(y);
@@ -123,9 +123,9 @@ mod tests {
     #[test]
     fn test_batch_constraints() {
         let mut model = Model::default();
-        let x = model.new_var_int(0, 10);
-        let y = model.new_var_int(0, 10);
-        let z = model.new_var_int(0, 10);
+        let x = model.int(0, 10);
+        let y = model.int(0, 10);
+        let z = model.int(0, 10);
         
         // Test batch constraint addition using vec! instead of constraints! macro
         model.add_constraints(vec![
@@ -140,7 +140,7 @@ mod tests {
     #[test]
     fn test_view_constraints() {
         let mut model = Model::default();
-        let x = model.new_var_int(-10, 10);
+        let x = model.int(-10, 10);
         
         // Test view-based constraint creation
         let abs_constraint = x.view().abs().eq_val(5.into());

@@ -53,7 +53,7 @@ fn main() {
 
     // Example 4: Comparison with range-based variable
     println!("\nExample 4: Comparing with range-based variable creation");
-    let range_var = model.new_var_int(1, 5);
+    let range_var = model.int(1, 5);
     let values_var = model.new_var_with_values(vec![1, 2, 3, 4, 5]);
     
     let range_var_ref = &model[range_var];

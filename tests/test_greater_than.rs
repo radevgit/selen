@@ -4,7 +4,7 @@ use cspsolver::prelude::*;
 fn test_basic_greater_than() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
     model.gt(x, int(5));
     
     let solution = model.solve().expect("Should have solution");
@@ -18,7 +18,7 @@ fn test_basic_greater_than() {
 fn test_greater_than_minimize() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
     model.gt(x, int(5));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -31,7 +31,7 @@ fn test_greater_than_minimize() {
 fn test_greater_than_maximize() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
     model.gt(x, int(5));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -45,7 +45,7 @@ fn test_type_aware_greater_than_mixed_types() {
     // Test the type-aware greater_than method with mixed types
     let mut model = Model::default();
 
-    let v0 = model.new_var_int(1, 10);
+    let v0 = model.int(1, 10);
 
     // Mixed constraint: v0 > 2.5 (should result in v0 >= 3)
     model.gt(v0, float(2.5));
@@ -61,7 +61,7 @@ fn test_type_aware_greater_than_mixed_types() {
 fn test_greater_than_with_floats() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.gt(x, float(5.5));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -76,7 +76,7 @@ fn test_greater_than_with_floats() {
 fn test_greater_than_float_vs_int() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(2.0, 4.0);
+    let x = model.float(2.0, 4.0);
     model.gt(x, int(3));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -91,7 +91,7 @@ fn test_greater_than_float_vs_int() {
 fn test_greater_than_negative_numbers() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(-10, 5);
+    let x = model.int(-10, 5);
     model.gt(x, int(-3));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -104,7 +104,7 @@ fn test_greater_than_negative_numbers() {
 fn test_greater_than_impossible() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
     model.gt(x, int(10)); // Impossible: no value in [1,5] > 10
     
     let solution = model.solve();
@@ -115,7 +115,7 @@ fn test_greater_than_impossible() {
 fn test_greater_than_boundary() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
     model.gt(x, int(5)); // x > 5, but max is 5
     
     let solution = model.solve();
@@ -126,9 +126,9 @@ fn test_greater_than_boundary() {
 fn test_greater_than_chaining() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 20);
-    let y = model.new_var_int(1, 20);
-    let z = model.new_var_int(1, 20);
+    let x = model.int(1, 20);
+    let y = model.int(1, 20);
+    let z = model.int(1, 20);
     
     model.gt(y, x); // y > x
     model.gt(z, y); // z > y, so z > y > x
@@ -168,7 +168,7 @@ fn test_greater_than_with_specific_values() {
 fn test_greater_than_precision() {
     let mut model = Model::with_float_precision(4); // 1e-4 precision
     
-    let x = model.new_var_float(1.0, 2.0);
+    let x = model.float(1.0, 2.0);
     model.gt(x, float(1.5));
     
     let solution = model.minimize(x).expect("Should have solution");
@@ -185,7 +185,7 @@ fn test_greater_than_precision() {
 fn test_type_aware_greater_than_with_minimize() {
     // Test from model.rs - type-aware greater_than with optimization
     let mut model = Model::default();
-    let v1_10 = model.new_var_int(1, 10);
+    let v1_10 = model.int(1, 10);
     model.gt(v1_10, float(2.5));
 
     let solution = model.minimize(v1_10).expect("Should have solution");

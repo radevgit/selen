@@ -6,8 +6,8 @@ use cspsolver::prelude::*;
 fn test_basic_multiplication() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(3, 3);
-    let y = model.new_var_int(4, 4);
+    let x = model.int(3, 3);
+    let y = model.int(4, 4);
     let z = model.mul(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -23,8 +23,8 @@ fn test_basic_multiplication() {
 fn test_multiplication_with_ranges() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(2, 4);  // x ∈ [2, 4]
-    let y = model.new_var_int(3, 5);  // y ∈ [3, 5]
+    let x = model.int(2, 4);  // x ∈ [2, 4]
+    let y = model.int(3, 5);  // y ∈ [3, 5]
     let z = model.mul(x, y);          // z = x * y
     
     let solution = model.solve().expect("Should find solution");
@@ -41,9 +41,9 @@ fn test_multiplication_with_ranges() {
 fn test_inverse_propagation_solve_for_x() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);  // x unknown
-    let y = model.new_var_int(3, 3);   // y = 3
-    let z = model.new_var_int(15, 15); // z = 15
+    let x = model.int(1, 10);  // x unknown
+    let y = model.int(3, 3);   // y = 3
+    let z = model.int(15, 15); // z = 15
     
     // x * y = z, so x = z / y = 15 / 3 = 5
     let product = model.mul(x, y);
@@ -62,9 +62,9 @@ fn test_inverse_propagation_solve_for_x() {
 fn test_inverse_propagation_solve_for_y() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(7, 7);   // x = 7
-    let y = model.new_var_int(1, 10);  // y unknown
-    let z = model.new_var_int(21, 21); // z = 21
+    let x = model.int(7, 7);   // x = 7
+    let y = model.int(1, 10);  // y unknown
+    let z = model.int(21, 21); // z = 21
     
     // x * y = z, so y = z / x = 21 / 7 = 3
     let product = model.mul(x, y);
@@ -83,8 +83,8 @@ fn test_inverse_propagation_solve_for_y() {
 fn test_negative_multiplication() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(-3, -3);
-    let y = model.new_var_int(4, 4);
+    let x = model.int(-3, -3);
+    let y = model.int(4, 4);
     let z = model.mul(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -100,8 +100,8 @@ fn test_negative_multiplication() {
 fn test_both_negative_multiplication() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(-5, -5);
-    let y = model.new_var_int(-2, -2);
+    let x = model.int(-5, -5);
+    let y = model.int(-2, -2);
     let z = model.mul(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -117,8 +117,8 @@ fn test_both_negative_multiplication() {
 fn test_multiplication_by_zero() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(5, 5);
-    let y = model.new_var_int(0, 0);
+    let x = model.int(5, 5);
+    let y = model.int(0, 0);
     let z = model.mul(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -134,8 +134,8 @@ fn test_multiplication_by_zero() {
 fn test_multiplication_range_with_zero() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(-2, 3);  // x ∈ [-2, 3] (includes 0)
-    let y = model.new_var_int(4, 4);   // y = 4
+    let x = model.int(-2, 3);  // x ∈ [-2, 3] (includes 0)
+    let y = model.int(4, 4);   // y = 4
     let z = model.mul(x, y);           // z = x * 4
     
     let solution = model.solve().expect("Should find solution");
@@ -152,8 +152,8 @@ fn test_multiplication_range_with_zero() {
 fn test_multiplication_with_floats() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(2.5, 2.5);
-    let y = model.new_var_float(4.0, 4.0);
+    let x = model.float(2.5, 2.5);
+    let y = model.float(4.0, 4.0);
     let z = model.mul(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -169,8 +169,8 @@ fn test_multiplication_with_floats() {
 fn test_multiplication_mixed_types() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(3, 3);      // integer
-    let y = model.new_var_float(2.5, 2.5); // float
+    let x = model.int(3, 3);      // integer
+    let y = model.float(2.5, 2.5); // float
     let z = model.mul(x, y);               // mixed multiplication
     
     let solution = model.solve().expect("Should find solution");
@@ -187,8 +187,8 @@ fn test_complex_multiplication_constraint() {
     let mut model = Model::default();
     
     // Two unknowns with constraints: x * y = 12, x + y = 7
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
+    let y = model.int(1, 10);
     
     let product = model.mul(x, y);
     model.equals(product, Val::ValI(12));  // x * y = 12
@@ -211,9 +211,9 @@ fn test_complex_multiplication_constraint() {
 fn test_impossible_multiplication() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(2, 3);   // x ∈ [2, 3]
-    let y = model.new_var_int(2, 3);   // y ∈ [2, 3]
-    let z = model.new_var_int(20, 30); // z ∈ [20, 30]
+    let x = model.int(2, 3);   // x ∈ [2, 3]
+    let y = model.int(2, 3);   // y ∈ [2, 3]
+    let z = model.int(20, 30); // z ∈ [20, 30]
     
     let product = model.mul(x, y);
     model.equals(product, z);   // x * y ∈ [20, 30], but max(x)*max(y) = 9
@@ -227,8 +227,8 @@ fn test_impossible_multiplication() {
 fn test_multiplication_bounds_propagation() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(2, 5);   // x ∈ [2, 5]
-    let y = model.new_var_int(3, 4);   // y ∈ [3, 4]
+    let x = model.int(2, 5);   // x ∈ [2, 5]
+    let y = model.int(3, 4);   // y ∈ [3, 4]
     let z = model.mul(x, y);           // z = x * y
     
     // Force z to be in a smaller range
@@ -251,8 +251,8 @@ fn test_multiplication_bounds_propagation() {
 fn test_large_number_multiplication() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(100, 100);
-    let y = model.new_var_int(200, 200);
+    let x = model.int(100, 100);
+    let y = model.int(200, 200);
     let z = model.mul(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -269,8 +269,8 @@ fn test_multiplication_precision_with_floats() {
     let mut model = Model::default();
     
     // Use slightly larger numbers to avoid extreme precision issues
-    let x = model.new_var_float(0.5, 0.5);
-    let y = model.new_var_float(0.4, 0.4);
+    let x = model.float(0.5, 0.5);
+    let y = model.float(0.4, 0.4);
     let z = model.mul(x, y);
     
     let solution = model.solve().expect("Should find solution");
@@ -288,9 +288,9 @@ fn test_zero_in_range_division_safety() {
     let mut model = Model::default();
     
     // Test case where one variable's range includes zero
-    let x = model.new_var_int(-1, 2);   // x ∈ [-1, 2] (includes 0)
-    let y = model.new_var_int(5, 5);    // y = 5
-    let z = model.new_var_int(10, 10);  // z = 10
+    let x = model.int(-1, 2);   // x ∈ [-1, 2] (includes 0)
+    let y = model.int(5, 5);    // y = 5
+    let z = model.int(10, 10);  // z = 10
     
     let product = model.mul(x, y);
     model.equals(product, z);   // x * 5 = 10, so x = 2
@@ -306,11 +306,11 @@ fn test_multiplication_chaining() {
     let mut model = Model::default();
     
     // Test chaining: a * b = c, c * d = e
-    let a = model.new_var_int(2, 2);
-    let b = model.new_var_int(3, 3);
+    let a = model.int(2, 2);
+    let b = model.int(3, 3);
     let c = model.mul(a, b);  // c = 2 * 3 = 6
     
-    let d = model.new_var_int(4, 4);
+    let d = model.int(4, 4);
     let e = model.mul(c, d);  // e = c * 4 = 6 * 4 = 24
     
     let solution = model.solve().expect("Should find solution");

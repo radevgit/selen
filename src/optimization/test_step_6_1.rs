@@ -15,8 +15,8 @@ mod tests {
     #[test]
     fn test_pure_float_classification() {
         let mut model = Model::with_float_precision(3);
-        let x = model.new_var_float(0.0, 100.0);
-        let y = model.new_var_float(-50.0, 50.0);
+        let x = model.float(0.0, 100.0);
+        let y = model.float(-50.0, 50.0);
         
         // Add pure float constraints
         model.le(x, Val::float(75.5));
@@ -32,8 +32,8 @@ mod tests {
     #[test]
     fn test_pure_integer_classification() {
         let mut model = Model::with_float_precision(3);
-        let x = model.new_var_int(0, 100);
-        let y = model.new_var_int(-50, 50);
+        let x = model.int(0, 100);
+        let y = model.int(-50, 50);
         
         // Add integer constraints
         model.le(x, Val::int(75));
@@ -52,12 +52,12 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Float variables
-        let float_x = model.new_var_float(0.0, 100.0);
-        let float_y = model.new_var_float(0.0, 50.0);
+        let float_x = model.float(0.0, 100.0);
+        let float_y = model.float(0.0, 50.0);
         
         // Integer variables  
-        let int_a = model.new_var_int(1, 10);
-        let int_b = model.new_var_int(1, 5);
+        let int_a = model.int(1, 10);
+        let int_b = model.int(1, 5);
         
         // Separate constraints - no obvious coupling
         model.le(float_x, Val::float(75.5));  // Float only
@@ -88,8 +88,8 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create many variables of mixed types
-        let float_vars: Vec<_> = (0..5).map(|_| model.new_var_float(0.0, 100.0)).collect();
-        let int_vars: Vec<_> = (0..5).map(|_| model.new_var_int(0, 100)).collect();
+        let float_vars: Vec<_> = (0..5).map(|_| model.float(0.0, 100.0)).collect();
+        let int_vars: Vec<_> = (0..5).map(|_| model.int(0, 100)).collect();
         
         // Add many constraints - high density suggests coupling
         for i in 0..4 {
@@ -124,8 +124,8 @@ mod tests {
     #[test]
     fn test_minimal_mixed_problem() {
         let mut model = Model::with_float_precision(3);
-        let float_var = model.new_var_float(0.0, 10.0);
-        let int_var = model.new_var_int(0, 10);
+        let float_var = model.float(0.0, 10.0);
+        let int_var = model.int(0, 10);
         
         // Minimal constraints
         model.le(float_var, Val::float(5.5));
@@ -148,8 +148,8 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create a moderately sized problem
-        let float_vars: Vec<_> = (0..50).map(|_| model.new_var_float(0.0, 100.0)).collect();
-        let int_vars: Vec<_> = (0..50).map(|_| model.new_var_int(0, 100)).collect();
+        let float_vars: Vec<_> = (0..50).map(|_| model.float(0.0, 100.0)).collect();
+        let int_vars: Vec<_> = (0..50).map(|_| model.int(0, 100)).collect();
         
         // Add various constraints
         for i in 0..49 {
@@ -224,8 +224,8 @@ fn test_step_6_1_integration() {
 
 fn create_pure_float_model() -> Model {
     let mut model = Model::with_float_precision(3);
-    let x = model.new_var_float(0.0, 100.0);
-    let y = model.new_var_float(0.0, 50.0);
+    let x = model.float(0.0, 100.0);
+    let y = model.float(0.0, 50.0);
     model.le(x, Val::float(75.0));
     model.ne(y, Val::float(25.0));
     model
@@ -233,8 +233,8 @@ fn create_pure_float_model() -> Model {
 
 fn create_pure_integer_model() -> Model {
     let mut model = Model::with_float_precision(3);
-    let x = model.new_var_int(0, 100);
-    let y = model.new_var_int(0, 50);
+    let x = model.int(0, 100);
+    let y = model.int(0, 50);
     model.le(x, Val::int(75));
     model.ne(y, Val::int(25));
     model
@@ -244,14 +244,14 @@ fn create_mixed_separable_model() -> Model {
     let mut model = Model::with_float_precision(3);
     
     // Float variables with float constraints
-    let float_x = model.new_var_float(0.0, 100.0);
-    let float_y = model.new_var_float(0.0, 50.0);
+    let float_x = model.float(0.0, 100.0);
+    let float_y = model.float(0.0, 50.0);
     model.le(float_x, Val::float(75.0));
     model.ne(float_y, Val::float(25.0));
     
     // Integer variables with integer constraints  
-    let int_a = model.new_var_int(0, 100);
-    let int_b = model.new_var_int(0, 50);
+    let int_a = model.int(0, 100);
+    let int_b = model.int(0, 50);
     model.le(int_a, Val::int(75));
     model.ne(int_b, Val::int(25));
     
@@ -262,8 +262,8 @@ fn create_mixed_dense_model() -> Model {
     let mut model = Model::with_float_precision(3);
     
     // Many variables of mixed types
-    let float_vars: Vec<_> = (0..10).map(|_| model.new_var_float(0.0, 100.0)).collect();
-    let int_vars: Vec<_> = (0..10).map(|_| model.new_var_int(0, 100)).collect();
+    let float_vars: Vec<_> = (0..10).map(|_| model.float(0.0, 100.0)).collect();
+    let int_vars: Vec<_> = (0..10).map(|_| model.int(0, 100)).collect();
     
     // Dense constraint network
     for i in 0..9 {

@@ -4,7 +4,7 @@ use cspsolver::prelude::*;
 fn test_basic_sum() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, 1, 5).collect();
+    let vars: Vec<_> = model.int_vars(3, 1, 5).collect();
     let total = model.sum(&vars);
     
     let solution = model.solve().expect("Should have solution");
@@ -27,7 +27,7 @@ fn test_basic_sum() {
 fn test_sum_with_constraint() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(4, 1, 10).collect();
+    let vars: Vec<_> = model.int_vars(4, 1, 10).collect();
     let total = model.sum(&vars);
     
     // Constrain sum to be exactly 20
@@ -55,7 +55,7 @@ fn test_sum_with_constraint() {
 fn test_sum_minimize() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, 2, 8).collect();
+    let vars: Vec<_> = model.int_vars(3, 2, 8).collect();
     let total = model.sum(&vars);
     
     let solution = model.minimize(total).expect("Should have solution");
@@ -78,7 +78,7 @@ fn test_sum_minimize() {
 fn test_sum_maximize() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, 2, 8).collect();
+    let vars: Vec<_> = model.int_vars(3, 2, 8).collect();
     let total = model.sum(&vars);
     
     let solution = model.maximize(total).expect("Should have solution");
@@ -101,7 +101,7 @@ fn test_sum_maximize() {
 fn test_sum_with_floats() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_float(3, 1.0, 5.0).collect();
+    let vars: Vec<_> = model.float_vars(3, 1.0, 5.0).collect();
     let total = model.sum(&vars);
     
     let solution = model.solve().expect("Should have solution");
@@ -125,8 +125,8 @@ fn test_sum_with_floats() {
 fn test_sum_mixed_types() {
     let mut model = Model::default();
     
-    let int_vars: Vec<_> = model.new_vars_int(2, 1, 5).collect();
-    let float_vars: Vec<_> = model.new_vars_float(2, 1.5, 3.5).collect();
+    let int_vars: Vec<_> = model.int_vars(2, 1, 5).collect();
+    let float_vars: Vec<_> = model.float_vars(2, 1.5, 3.5).collect();
     
     let mut all_vars = Vec::new();
     all_vars.extend(int_vars);
@@ -155,7 +155,7 @@ fn test_sum_mixed_types() {
 fn test_sum_with_negative_numbers() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, -5, 5).collect();
+    let vars: Vec<_> = model.int_vars(3, -5, 5).collect();
     let total = model.sum(&vars);
     
     let solution = model.solve().expect("Should have solution");
@@ -178,7 +178,7 @@ fn test_sum_with_negative_numbers() {
 fn test_sum_single_variable() {
     let mut model = Model::default();
     
-    let var = model.new_var_int(3, 7);
+    let var = model.int(3, 7);
     let total = model.sum(&[var]);
     
     let solution = model.solve().expect("Should have solution");
@@ -207,7 +207,7 @@ fn test_sum_empty_vector() {
 fn test_sum_large_number_of_variables() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(10, 1, 3).collect();
+    let vars: Vec<_> = model.int_vars(10, 1, 3).collect();
     let total = model.sum(&vars);
     
     // Constrain sum to be exactly 25
@@ -263,7 +263,7 @@ fn test_sum_with_specific_values() {
 fn test_sum_impossible_constraint() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(3, 5, 10).collect();
+    let vars: Vec<_> = model.int_vars(3, 5, 10).collect();
     let total = model.sum(&vars);
     
     // Impossible: sum must be 5 but minimum is 15 (5+5+5)
@@ -277,7 +277,7 @@ fn test_sum_impossible_constraint() {
 fn test_sum_iter_method() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(4, 1, 6).collect();
+    let vars: Vec<_> = model.int_vars(4, 1, 6).collect();
     
     // Test sum_iter with iterator
     let total = model.sum_iter(vars.iter().copied());

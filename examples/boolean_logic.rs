@@ -26,8 +26,8 @@ fn security_system_example() {
     let mut model = Model::default();
     
     // Create boolean variables (0 = false, 1 = true)
-    let has_badge = model.new_var_int(0, 1);
-    let correct_pin = model.new_var_int(0, 1);
+    let has_badge = model.int(0, 1);
+    let correct_pin = model.int(0, 1);
     let access_granted = model.bool_and(&[has_badge, correct_pin]);
     
     // Test scenario: User has badge but wrong PIN
@@ -51,9 +51,9 @@ fn smart_home_example() {
     
     let mut model = Model::default();
     
-    let motion_detected = model.new_var_int(0, 1);
-    let night_mode = model.new_var_int(0, 1);
-    let manual_panic = model.new_var_int(0, 1);
+    let motion_detected = model.int(0, 1);
+    let night_mode = model.int(0, 1);
+    let manual_panic = model.int(0, 1);
     
     // Build logical expression: (motion AND night) OR panic
     let motion_and_night = model.bool_and(&[motion_detected, night_mode]);
@@ -84,9 +84,9 @@ fn logic_circuit_example() {
     let mut model = Model::default();
     
     // Input signals
-    let input_a = model.new_var_int(0, 1);
-    let input_b = model.new_var_int(0, 1);
-    let input_c = model.new_var_int(0, 1);
+    let input_a = model.int(0, 1);
+    let input_b = model.int(0, 1);
+    let input_c = model.int(0, 1);
     
     // Logic gates
     let not_a = model.bool_not(input_a);           // NOT gate

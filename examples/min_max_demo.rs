@@ -13,9 +13,9 @@ fn main() {
     {
         let mut model = Model::default();
         
-        let a = model.new_var_int(1, 10);
-        let b = model.new_var_int(5, 15);
-        let c = model.new_var_int(3, 8);
+        let a = model.int(1, 10);
+        let b = model.int(5, 15);
+        let c = model.int(3, 8);
         
         let minimum = model.min(&[a, b, c]);
         let maximum = model.max(&[a, b, c]);
@@ -40,10 +40,10 @@ fn main() {
         let mut model = Model::default();
         
         // Represent resource capacities for different departments
-        let engineering = model.new_var_int(50, 100);  // 50-100 engineers
-        let marketing = model.new_var_int(20, 80);     // 20-80 marketing people  
-        let sales = model.new_var_int(30, 90);         // 30-90 sales people
-        let support = model.new_var_int(10, 40);       // 10-40 support staff
+        let engineering = model.int(50, 100);  // 50-100 engineers
+        let marketing = model.int(20, 80);     // 20-80 marketing people  
+        let sales = model.int(30, 90);         // 30-90 sales people
+        let support = model.int(10, 40);       // 10-40 support staff
         
         // Find the department with minimum resources (bottleneck)
         let bottleneck = model.min(&[engineering, marketing, sales, support]);
@@ -78,10 +78,10 @@ fn main() {
         let mut model = Model::default();
         
         // Performance scores for different systems (0-100 scale)
-        let latency_score = model.new_var_int(60, 95);     // Lower latency = higher score
-        let throughput_score = model.new_var_int(70, 90);  // Higher throughput = higher score
-        let reliability_score = model.new_var_int(80, 98); // Higher reliability = higher score
-        let cost_score = model.new_var_int(40, 85);        // Lower cost = higher score
+        let latency_score = model.int(60, 95);     // Lower latency = higher score
+        let throughput_score = model.int(70, 90);  // Higher throughput = higher score
+        let reliability_score = model.int(80, 98); // Higher reliability = higher score
+        let cost_score = model.int(40, 85);        // Lower cost = higher score
         
         let scores = [latency_score, throughput_score, reliability_score, cost_score];
         
@@ -117,9 +117,9 @@ fn main() {
         let mut model = Model::default();
         
         // Temperature readings from different sensors (in Celsius)
-        let sensor1 = model.new_var_float(18.5, 25.5);  // Room temperature
-        let sensor2 = model.new_var_int(20, 28);        // Thermostat (integer)
-        let sensor3 = model.new_var_float(19.0, 26.0);  // Outside sensor
+        let sensor1 = model.float(18.5, 25.5);  // Room temperature
+        let sensor2 = model.int(20, 28);        // Thermostat (integer)
+        let sensor3 = model.float(19.0, 26.0);  // Outside sensor
         
         let sensors = [sensor1, sensor2, sensor3];
         

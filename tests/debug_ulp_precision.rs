@@ -4,7 +4,7 @@ use cspsolver::prelude::*;
 fn debug_ulp_precision() {
     let mut model = Model::with_float_precision(4); // 1e-4 precision
     
-    let x = model.new_var_float(1.0, 2.0);
+    let x = model.float(1.0, 2.0);
     model.gt(x, float(1.5));
     
     let solution = model.minimize(x).expect("Should have solution");

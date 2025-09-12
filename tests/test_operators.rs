@@ -5,38 +5,38 @@ use cspsolver::operators::*;
 fn test_comparison_trait_usage() {
     // Test ComparisonOp trait methods individually to avoid conflicts
     let mut model1 = Model::default();
-    let x1 = model1.new_var_int(1, 10);
-    let y1 = model1.new_var_int(5, 15);
+    let x1 = model1.int(1, 10);
+    let y1 = model1.int(5, 15);
     x1.eq_op(&mut model1, y1);
     assert!(model1.solve().is_some());
     
     let mut model2 = Model::default();
-    let x2 = model2.new_var_int(1, 10);
-    let y2 = model2.new_var_int(5, 15);
+    let x2 = model2.int(1, 10);
+    let y2 = model2.int(5, 15);
     x2.ne_op(&mut model2, y2);
     assert!(model2.solve().is_some());
     
     let mut model3 = Model::default();
-    let x3 = model3.new_var_int(1, 10);
-    let y3 = model3.new_var_int(5, 15);
+    let x3 = model3.int(1, 10);
+    let y3 = model3.int(5, 15);
     x3.lt_op(&mut model3, y3);
     assert!(model3.solve().is_some());
     
     let mut model4 = Model::default();
-    let x4 = model4.new_var_int(1, 10);
-    let y4 = model4.new_var_int(5, 15);
+    let x4 = model4.int(1, 10);
+    let y4 = model4.int(5, 15);
     x4.le_op(&mut model4, y4);
     assert!(model4.solve().is_some());
     
     let mut model5 = Model::default();
-    let x5 = model5.new_var_int(1, 10);
-    let y5 = model5.new_var_int(5, 15);
+    let x5 = model5.int(1, 10);
+    let y5 = model5.int(5, 15);
     x5.gt_op(&mut model5, y5);
     // This might be unsatisfiable since x5 ∈ [1,10], y5 ∈ [5,15], so we don't assert
     
     let mut model6 = Model::default();
-    let x6 = model6.new_var_int(1, 10);
-    let y6 = model6.new_var_int(5, 15);
+    let x6 = model6.int(1, 10);
+    let y6 = model6.int(5, 15);
     x6.ge_op(&mut model6, y6);
     // This might be unsatisfiable since x6 ∈ [1,10], y6 ∈ [5,15], so we don't assert
 }
@@ -44,8 +44,8 @@ fn test_comparison_trait_usage() {
 #[test]
 fn test_boolean_trait_usage() {
     let mut model = Model::default();
-    let a = model.new_var_int(0, 1); // Boolean variable
-    let b = model.new_var_int(0, 1); // Boolean variable
+    let a = model.int(0, 1); // Boolean variable
+    let b = model.int(0, 1); // Boolean variable
     
     // Test BooleanOp trait methods
     a.and_op(&mut model, b);
@@ -59,8 +59,8 @@ fn test_boolean_trait_usage() {
 #[test]
 fn test_model_extension_methods() {
     let mut model = Model::default();
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
+    let y = model.int(1, 10);
     
     // Test Model extension methods for comparison
     model.eq_op(x, y);
@@ -76,8 +76,8 @@ fn test_model_extension_methods() {
 #[test]
 fn test_model_boolean_extension_methods() {
     let mut model = Model::default();
-    let a = model.new_var_int(0, 1); // Boolean variable
-    let b = model.new_var_int(0, 1); // Boolean variable
+    let a = model.int(0, 1); // Boolean variable
+    let b = model.int(0, 1); // Boolean variable
     
     // Test Model extension methods for boolean operations
     model.and_op(a, b);
@@ -90,8 +90,8 @@ fn test_model_boolean_extension_methods() {
 #[test]
 fn test_equality_constraint_with_operators() {
     let mut model = Model::default();
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
+    let y = model.int(1, 10);
     
     // Add equality constraint using operator
     x.eq_op(&mut model, y);
@@ -106,8 +106,8 @@ fn test_equality_constraint_with_operators() {
 #[test]
 fn test_inequality_constraint_with_operators() {
     let mut model = Model::default();
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
+    let y = model.int(1, 5);
     
     // Add inequality constraint using operator
     x.ne_op(&mut model, y);
@@ -122,8 +122,8 @@ fn test_inequality_constraint_with_operators() {
 #[test]
 fn test_less_than_constraint_with_operators() {
     let mut model = Model::default();
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_int(3, 10);
+    let x = model.int(1, 5);
+    let y = model.int(3, 10);
     
     // Add less-than constraint using operator
     x.lt_op(&mut model, y);
@@ -138,8 +138,8 @@ fn test_less_than_constraint_with_operators() {
 #[test]
 fn test_boolean_and_constraint_with_operators() {
     let mut model = Model::default();
-    let a = model.new_var_int(0, 1); // Boolean variable
-    let b = model.new_var_int(0, 1); // Boolean variable
+    let a = model.int(0, 1); // Boolean variable
+    let b = model.int(0, 1); // Boolean variable
     
     // Create AND constraint using operator
     a.and_op(&mut model, b);
@@ -151,8 +151,8 @@ fn test_boolean_and_constraint_with_operators() {
 #[test]
 fn test_boolean_or_constraint_with_operators() {
     let mut model = Model::default();
-    let a = model.new_var_int(0, 1); // Boolean variable
-    let b = model.new_var_int(0, 1); // Boolean variable
+    let a = model.int(0, 1); // Boolean variable
+    let b = model.int(0, 1); // Boolean variable
     
     // Use operator to create OR constraint
     a.or_op(&mut model, b);
@@ -164,7 +164,7 @@ fn test_boolean_or_constraint_with_operators() {
 #[test]
 fn test_boolean_not_constraint_with_operators() {
     let mut model = Model::default();
-    let a = model.new_var_int(0, 1); // Boolean variable
+    let a = model.int(0, 1); // Boolean variable
     
     // Use operator to create NOT constraint
     a.not_op(&mut model);
@@ -176,9 +176,9 @@ fn test_boolean_not_constraint_with_operators() {
 #[test]
 fn test_mixed_constraints_with_operators() {
     let mut model = Model::default();
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(1, 10);
-    let z = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
+    let y = model.int(1, 10);
+    let z = model.int(1, 10);
     
     // Mix different operator constraints
     x.lt_op(&mut model, y);    // x < y

@@ -7,7 +7,7 @@ fn test_model() {
     let mut m2 = Model::default();
 
     // Create a variable x in [1, 10]
-    let v = m2.new_var_int(1, 10);
+    let v = m2.int(1, 10);
 
     // Add constraint: x > 2.5
     m2.gt(v, float(2.5));

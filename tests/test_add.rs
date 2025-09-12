@@ -4,8 +4,8 @@ use cspsolver::prelude::*;
 fn test_basic_addition() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_int(2, 8);
+    let x = model.int(1, 5);
+    let y = model.int(2, 8);
     let z = model.add(x, y); // z = x + y
     
     let solution = model.solve().expect("Should have solution");
@@ -21,8 +21,8 @@ fn test_basic_addition() {
 fn test_addition_with_constraint() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
+    let y = model.int(1, 10);
     let z = model.add(x, y);
     
     // Constrain the sum to be exactly 15
@@ -44,8 +44,8 @@ fn test_addition_with_constraint() {
 fn test_addition_with_floats() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(1.0, 5.0);
-    let y = model.new_var_float(2.0, 8.0);
+    let x = model.float(1.0, 5.0);
+    let y = model.float(2.0, 8.0);
     let z = model.add(x, y);
     
     let solution = model.solve().expect("Should have solution");
@@ -63,8 +63,8 @@ fn test_addition_with_floats() {
 fn test_addition_mixed_types() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_float(2.5, 3.5);
+    let x = model.int(1, 5);
+    let y = model.float(2.5, 3.5);
     let z = model.add(x, y);
     
     let solution = model.solve().expect("Should have solution");
@@ -85,8 +85,8 @@ fn test_addition_mixed_types() {
 fn test_addition_negative_numbers() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(-5, -1);
-    let y = model.new_var_int(-3, 2);
+    let x = model.int(-5, -1);
+    let y = model.int(-3, 2);
     let z = model.add(x, y);
     
     let solution = model.solve().expect("Should have solution");
@@ -104,8 +104,8 @@ fn test_addition_negative_numbers() {
 fn test_addition_with_zero() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(-5, 5);
-    let y = model.new_var_int(0, 0); // Fixed to 0
+    let x = model.int(-5, 5);
+    let y = model.int(0, 0); // Fixed to 0
     let z = model.add(x, y);
     
     let solution = model.solve().expect("Should have solution");
@@ -120,9 +120,9 @@ fn test_addition_with_zero() {
 fn test_multiple_addition_constraints() {
     let mut model = Model::default();
     
-    let a = model.new_var_int(1, 3);
-    let b = model.new_var_int(1, 3);
-    let c = model.new_var_int(1, 3);
+    let a = model.int(1, 3);
+    let b = model.int(1, 3);
+    let c = model.int(1, 3);
     let sum_ab = model.add(a, b);
     let total = model.add(sum_ab, c);
     
@@ -145,9 +145,9 @@ fn test_multiple_addition_constraints() {
 fn test_addition_chaining() {
     let mut model = Model::default();
     
-    let x1 = model.new_var_int(1, 2);
-    let x2 = model.new_var_int(1, 2);
-    let x3 = model.new_var_int(1, 2);
+    let x1 = model.int(1, 2);
+    let x2 = model.int(1, 2);
+    let x3 = model.int(1, 2);
     let sum12 = model.add(x1, x2);
     let sum123 = model.add(sum12, x3);
     
@@ -175,8 +175,8 @@ fn test_addition_chaining() {
 fn test_large_number_addition() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1000000, 2000000);
-    let y = model.new_var_int(500000, 1500000);
+    let x = model.int(1000000, 2000000);
+    let y = model.int(500000, 1500000);
     let z = model.add(x, y);
     
     let solution = model.solve().expect("Should have solution");
@@ -194,8 +194,8 @@ fn test_large_number_addition() {
 fn test_addition_minimize_result() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(5, 10);
-    let y = model.new_var_int(3, 8);
+    let x = model.int(5, 10);
+    let y = model.int(3, 8);
     let z = model.add(x, y);
     
     let solution = model.minimize(z).expect("Should have solution");
@@ -214,8 +214,8 @@ fn test_addition_minimize_result() {
 fn test_addition_maximize_result() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(5, 10);
-    let y = model.new_var_int(3, 8);
+    let x = model.int(5, 10);
+    let y = model.int(3, 8);
     let z = model.add(x, y);
     
     let solution = model.maximize(z).expect("Should have solution");

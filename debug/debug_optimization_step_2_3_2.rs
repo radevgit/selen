@@ -10,7 +10,7 @@ fn main() {
     
     // Reproduce the exact test scenario
     let mut model = Model::default();
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.less_than(x, 5.5);
     
     println!("Created model with:");

@@ -62,7 +62,7 @@ pub fn example_batch_usage() {
     let mut model = Model::default();
     
     // Create 25 variables with constraints
-    let vars: Vec<_> = (0..25).map(|_| model.new_var_float(0.0, 10.0)).collect();
+    let vars: Vec<_> = (0..25).map(|_| model.float(0.0, 10.0)).collect();
     
     // Add constraints...
     for (i, &var) in vars.iter().enumerate() {

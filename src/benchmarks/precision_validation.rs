@@ -30,7 +30,7 @@ pub fn validate_tolerance_precision() -> PrecisionResult {
     let start = Instant::now();
     
     let mut model = Model::default();
-    let dimension = model.new_var_float(9.95, 10.05);  // Manufacturing tolerance ±0.05mm
+    let dimension = model.float(9.95, 10.05);  // Manufacturing tolerance ±0.05mm
     
     // Tight tolerance constraint
     model.gt(dimension, float(9.98));
@@ -46,8 +46,8 @@ pub fn validate_placement_precision() -> PrecisionResult {
     let start = Instant::now();
     
     let mut model = Model::default();
-    let x_coord = model.new_var_float(0.0, 1000.0);  // Placement coordinate
-    let y_coord = model.new_var_float(0.0, 500.0);   // Placement coordinate
+    let x_coord = model.float(0.0, 1000.0);  // Placement coordinate
+    let y_coord = model.float(0.0, 500.0);   // Placement coordinate
     
     // Precision placement constraints
     model.gt(x_coord, float(100.5));
@@ -65,7 +65,7 @@ pub fn validate_quantity_optimization() -> PrecisionResult {
     let start = Instant::now();
     
     let mut model = Model::default();
-    let efficiency = model.new_var_float(0.0, 1.0);  // Material efficiency
+    let efficiency = model.float(0.0, 1.0);  // Material efficiency
     
     // Efficiency constraints for high-quantity optimization
     model.gt(efficiency, float(0.85));  // Minimum 85% efficiency

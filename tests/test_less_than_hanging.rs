@@ -4,7 +4,7 @@ use cspsolver::prelude::*;
 fn test_less_than_with_floats_precision_4() {
     let mut model = Model::with_float_precision(4);
 
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
     
     let solution = model.maximize(x).expect("Should have solution");
@@ -20,7 +20,7 @@ fn test_less_than_with_floats_precision_4() {
 fn test_less_than_with_floats_precision_6() {
     let mut model = Model::with_float_precision(6);
 
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
     
     let solution = model.maximize(x).expect("Should have solution");

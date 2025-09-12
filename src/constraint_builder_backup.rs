@@ -495,8 +495,8 @@ impl ModelConstraints for Model {
 /// use cspsolver::constraint_builder::*;
 /// 
 /// let mut model = Model::default();
-/// let x = model.new_var_int(0, 10);
-/// let y = model.new_var_int(0, 10);
+/// let x = model.int(0, 10);
+/// let y = model.int(0, 10);
 /// 
 /// // Clean constraint creation with syntactic sugar
 /// model.post(x.le(y));           // x <= y

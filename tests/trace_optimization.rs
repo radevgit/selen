@@ -7,7 +7,7 @@ fn trace_optimization_precision_4() {
     let step_size = model.float_step_size();
     println!("Step size: {}", step_size);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     println!("Created variable x with initial bounds [1.0, 10.0]");
     
     model.lt(x, float(5.5));
@@ -32,7 +32,7 @@ fn trace_optimization_precision_6_limited() {
     let step_size = model.float_step_size();
     println!("Step size: {}", step_size);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     println!("Created variable x with initial bounds [1.0, 10.0]");
     
     model.lt(x, float(5.5));

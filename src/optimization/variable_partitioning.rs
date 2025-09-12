@@ -257,7 +257,7 @@ impl SubproblemBuilder {
             match var {
                 Var::VarF(float_interval) => {
                     // Create corresponding variable in subproblem
-                    let _new_var = subproblem.new_var_float(
+                    let _new_var = subproblem.float(
                         float_interval.min,
                         float_interval.max
                     );
@@ -291,7 +291,7 @@ impl SubproblemBuilder {
             match var {
                 Var::VarI(sparse_set) => {
                     // Create corresponding variable in subproblem
-                    let _new_var = subproblem.new_var_int(
+                    let _new_var = subproblem.int(
                         sparse_set.min(),
                         sparse_set.max()
                     );

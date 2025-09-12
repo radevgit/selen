@@ -3,7 +3,7 @@ use cspsolver::prelude::*;
 #[test]
 fn test_simple_float_constraint() {
     let mut model = Model::default();
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     
     // Just set a simple constraint without using less_than
     model.le(x, float(5.5));

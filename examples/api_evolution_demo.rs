@@ -24,9 +24,9 @@ fn main() {
 
 fn old_verbose_api() {
     let mut model = Model::default();
-    let x = model.new_var_int(0, 10);
-    let y = model.new_var_float(0.0, 10.0);
-    let z = model.new_var_int(-5, 5);
+    let x = model.int(0, 10);
+    let y = model.float(0.0, 10.0);
+    let z = model.int(-5, 5);
     
     println!("   // Creating constraints the old way:");
     println!("   model.equals(x, int(5));                    // x = 5");
@@ -52,9 +52,9 @@ fn old_verbose_api() {
 
 fn new_clean_api() {
     let mut model = Model::default();
-    let x = model.new_var_int(0, 10);
-    let y = model.new_var_float(0.0, 10.0);
-    let z = model.new_var_int(-5, 5);
+    let x = model.int(0, 10);
+    let y = model.float(0.0, 10.0);
+    let z = model.int(-5, 5);
     
     println!("   // Creating constraints the new way:");
     println!("   model.post(x.eq_int(5));                   // x = 5 (clean!)");

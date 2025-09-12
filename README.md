@@ -15,7 +15,7 @@ Type of variables: `float`, `int`, `mixed` (int and float)
 Constraints supported include:
 - **Arithmetic**: `add`, `sub`, `mul`, `div`, `modulo`, `abs`, `sum`
 - **Comparisons**: `lt`, `le`, `gt`, `ge`, `eq`, `ne` (short names for < ≤ > ≥ = ≠)
-- **Boolean Logic**: `bool_and`, `bool_or`, `bool_not` (logical AND/OR/NOT operations)
+- **Boolean Logic**: Cean syntax with `&`, `|`, `!` operators (AND/OR/NOT operations)
 - **Global**: `all_different`, `min`, `max` (vector-based)
 - **Mixed Types**: Full support for integer and float variables in all constraints
 
@@ -71,41 +71,70 @@ Puzzle:                                 Solution:
 use cspsolver::prelude::*;
 
 fn main() {
-    // constraint: v0(int) * 1.5 < 5.0
-    // solving for maximum v0
-    let mut m = Model::default();
+    let mut model = Model::default();
 
-    let v0 = m.new_var_int(1, 3);
-    println!("v0 domain: [1, 3]");
+    // Create variables with clean syntax
+    let x = model.int(1, 10);       // Integer variable
+    let y = model.int(5, 15);       // Integer variable  
+    let flag = model.bool();        // Boolean variable (NEW!)
 
-    m.lt(v0.times_pos(float(1.5)), float(5.0));
+    // Arithmetic and comparison constraints
+    model.post(x.lt(y));            // x < y
+    model.post(x.ge(3));            // x >= 3
+    
+    // ✨ NEW: Ultra-clean boolean constraints
+    model.post(flag & (x.gt(5)));   // Boolean AND
+    model.post(flag | (y.lt(12)));  // Boolean OR
+    model.post(!flag);              // Boolean NOT
+    
+    // Complex boolean expressions work seamlessly
+    model.post((flag & (x.eq(7))) | (!flag & (y.eq(10))));
+    
+    // Batch operations for multiple constraints
+    model.post_all(vec![
+        x.ne(y),                    // x ≠ y
+        flag & (x.lt(8)),          // Boolean constraint
+        y.ge(6)                     // y ≥ 6
+    ]);
 
-    let solution = m.maximize(v0).unwrap();
-    let x = match solution[v0] {
-        Val::ValI(int_val) => int_val,
-        _ => panic!("Expected integer value"),
-    };
-
-    assert!(x == 3);
-    println!("Found optimal value: {}", x);
+    if let Some(solution) = model.solve() {
+        println!("x = {:?}", solution[x]);
+        println!("y = {:?}", solution[y]);
+        println!("flag = {:?}", solution[flag]);
+    }
 }
 ```
 
-### Short Constraint Names
+### Ultra-Clean Boolean Logic
 
-For more concise code, you can use short method names:
+The new boolean syntax is incredibly clean and intuitive:
 
 ```rust
 use cspsolver::prelude::*;
 
 fn main() {
     let mut model = Model::default();
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(5, 15);
+    let a = model.bool();           // Clean variable creation
+    let b = model.bool();
+    let c = model.bool();
     
-    // Short constraint names instead of long ones
-    model.le(x, y);        // instead of less_than_or_equals
-    model.ge(x, int(3));   // instead of greater_than_or_equals
+    // Direct boolean operations - no verbose method calls!
+    model.post(a & b);              // Boolean AND
+    model.post(a | c);              // Boolean OR  
+    model.post(!a);                 // Boolean NOT
+    model.post((a & b) | (!c));     // Complex expressions
+    
+    // True batch operations
+    model.post_all(vec![
+        a & b,                      // Clean boolean expressions
+        !c,                         // No .into() needed!
+        a | (b & c)                 // Complex expressions work
+    ]);
+    
+    // Before: model.bool_and(&[a, b])     ❌ Verbose
+    // After:  model.post(a & b)           ✅ Clean!
+}
+```
     model.eq(y, int(8));   // instead of equals
     model.ne(x, y);        // instead of not_equals
     

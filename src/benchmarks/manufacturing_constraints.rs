@@ -38,14 +38,14 @@ pub fn benchmark_tool_clearance_constraints() -> ManufacturingResult {
     // Multiple cutting tool paths need clearance constraints
     let tool_positions: Vec<_> = (0..50)
         .map(|_| {
-            let x = model.new_var_float(tool_diameter / 2.0, plate_width - tool_diameter / 2.0);
-            let y = model.new_var_float(tool_diameter / 2.0, plate_height - tool_diameter / 2.0);
+            let x = model.float(tool_diameter / 2.0, plate_width - tool_diameter / 2.0);
+            let y = model.float(tool_diameter / 2.0, plate_height - tool_diameter / 2.0);
             (x, y)
         })
         .collect();
     
     // Tool clearance efficiency constraint
-    let clearance_efficiency = model.new_var_float(0.0, 1.0);
+    let clearance_efficiency = model.float(0.0, 1.0);
     model.gt(clearance_efficiency, float(0.90)); // 90% clearance efficiency
     
     // Sample clearance constraints between tool positions
@@ -89,12 +89,12 @@ pub fn benchmark_grain_direction_constraints() -> ManufacturingResult {
     let part_orientations: Vec<_> = (0..critical_parts)
         .map(|_| {
             // Orientation variable: 0 = aligned with grain, π/2 = perpendicular
-            model.new_var_float(-0.1, 0.1) // Allow ±0.1 radian tolerance
+            model.float(-0.1, 0.1) // Allow ±0.1 radian tolerance
         })
         .collect();
     
     // Grain alignment efficiency
-    let grain_efficiency = model.new_var_float(0.0, 1.0);
+    let grain_efficiency = model.float(0.0, 1.0);
     model.gt(grain_efficiency, float(0.95)); // 95% grain alignment
     
     // Constraints for grain-critical parts
@@ -137,15 +137,15 @@ pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
     let ht_parts = 40;
     let part_positions: Vec<_> = (0..ht_parts)
         .map(|i| {
-            let x = model.new_var_float(0.05, furnace_width - 0.05);  // 5cm margin
-            let y = model.new_var_float(0.05, furnace_height - 0.05); // 5cm margin
+            let x = model.float(0.05, furnace_width - 0.05);  // 5cm margin
+            let y = model.float(0.05, furnace_height - 0.05); // 5cm margin
             
             // Temperature requirement for this part
             let required_temp = if i < ht_parts / 3 { zone_1_temp }
                               else if i < 2 * ht_parts / 3 { zone_2_temp }
                               else { zone_3_temp };
             
-            let temp_var = model.new_var_float(required_temp - 25.0, required_temp + 25.0);
+            let temp_var = model.float(required_temp - 25.0, required_temp + 25.0);
             
             // Temperature must be within ±10°C of requirement
             model.gt(temp_var, float(required_temp - 10.0));
@@ -156,7 +156,7 @@ pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
         .collect();
     
     // Heat treatment efficiency
-    let ht_efficiency = model.new_var_float(0.0, 1.0);
+    let ht_efficiency = model.float(0.0, 1.0);
     model.gt(ht_efficiency, float(0.88)); // 88% heat treatment efficiency
     
     // Thermal uniformity constraints
@@ -208,8 +208,8 @@ pub fn benchmark_quality_control_sampling() -> ManufacturingResult {
             let y_center = (grid_y + 0.5) * layout_height / 5.0;
             
             // Allow ±10cm variation from grid center
-            let x = model.new_var_float(x_center - 0.1, x_center + 0.1);
-            let y = model.new_var_float(y_center - 0.1, y_center + 0.1);
+            let x = model.float(x_center - 0.1, x_center + 0.1);
+            let y = model.float(y_center - 0.1, y_center + 0.1);
             
             // Statistical distribution constraints
             model.gt(x, float(0.05)); // 5cm margin
@@ -222,11 +222,11 @@ pub fn benchmark_quality_control_sampling() -> ManufacturingResult {
         .collect();
     
     // Quality control efficiency
-    let qc_efficiency = model.new_var_float(0.0, 1.0);
+    let qc_efficiency = model.float(0.0, 1.0);
     model.gt(qc_efficiency, float(0.96)); // 96% QC coverage efficiency
     
     // Statistical validity constraint
-    let distribution_quality = model.new_var_float(0.0, 1.0);
+    let distribution_quality = model.float(0.0, 1.0);
     model.gt(distribution_quality, float(0.92)); // 92% distribution quality
     
     let success = model.solve().is_some();

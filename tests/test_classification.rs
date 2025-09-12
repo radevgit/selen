@@ -4,8 +4,8 @@ use cspsolver::optimization::classification::ProblemClassifier;
 #[test]
 fn test_pure_float_problem_classification() {
     let mut model = Model::default();
-    let x = model.new_var_float(1.0, 10.0);
-    let y = model.new_var_float(2.0, 20.0);
+    let x = model.float(1.0, 10.0);
+    let y = model.float(2.0, 20.0);
     model.lt(x, y);
     
     let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
@@ -31,8 +31,8 @@ fn test_pure_float_problem_classification() {
 #[test]
 fn test_pure_integer_problem_classification() {
     let mut model = Model::default();
-    let a = model.new_var_int(1, 10);
-    let b = model.new_var_int(5, 15);
+    let a = model.int(1, 10);
+    let b = model.int(5, 15);
     model.ne(a, b);
     
     let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
@@ -57,8 +57,8 @@ fn test_pure_integer_problem_classification() {
 #[test]
 fn test_mixed_problem_with_coupling() {
     let mut model = Model::default();
-    let int_var = model.new_var_int(1, 5);
-    let float_var = model.new_var_float(1.0, 10.0);
+    let int_var = model.int(1, 5);
+    let float_var = model.float(1.0, 10.0);
     model.equals(int_var, float_var); // This creates coupling
     
     let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
@@ -83,10 +83,10 @@ fn test_mixed_problem_expected_separable() {
     // This test shows the current conservative behavior
     // In the future, we may refine this to detect true separability
     let mut model = Model::default();
-    let int_var1 = model.new_var_int(1, 5);
-    let int_var2 = model.new_var_int(3, 8);
-    let float_var1 = model.new_var_float(1.0, 10.0);
-    let float_var2 = model.new_var_float(5.0, 15.0);
+    let int_var1 = model.int(1, 5);
+    let int_var2 = model.int(3, 8);
+    let float_var1 = model.float(1.0, 10.0);
+    let float_var2 = model.float(5.0, 15.0);
     
     // Add constraints within each type only (no cross-type coupling)
     model.ne(int_var1, int_var2);
@@ -134,7 +134,7 @@ fn test_empty_model_classification() {
 fn test_single_variable_problems() {
     // Single float variable
     let mut model1 = Model::default();
-    let _x = model1.new_var_float(0.0, 100.0);
+    let _x = model1.float(0.0, 100.0);
     let problem_type1 = ProblemClassifier::classify(model1.get_vars(), model1.get_props());
     
     match problem_type1 {
@@ -149,7 +149,7 @@ fn test_single_variable_problems() {
     
     // Single integer variable
     let mut model2 = Model::default();
-    let _a = model2.new_var_int(1, 100);
+    let _a = model2.int(1, 100);
     let problem_type2 = ProblemClassifier::classify(model2.get_vars(), model2.get_props());
     
     match problem_type2 {
@@ -175,10 +175,10 @@ mod integration_tests {
         // Create a model with many variables
         for i in 0..100 {
             if i % 2 == 0 {
-                let var_id = model.new_var_int(1, 100);
+                let var_id = model.int(1, 100);
                 var_ids.push(var_id);
             } else {
-                let var_id = model.new_var_float(0.0, 100.0);
+                let var_id = model.float(0.0, 100.0);
                 var_ids.push(var_id);
             }
         }

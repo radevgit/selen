@@ -4,8 +4,8 @@ use cspsolver::prelude::*;
 fn test_basic_equals() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
+    let y = model.int(1, 10);
     
     model.equals(x, y);
     
@@ -21,7 +21,7 @@ fn test_basic_equals() {
 fn test_equals_with_constant() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
     model.equals(x, int(5));
     
     let solution = model.solve().expect("Should have solution");
@@ -34,8 +34,8 @@ fn test_equals_with_constant() {
 fn test_equals_with_floats() {
     let mut model = Model::default();
     
-    let x = model.new_var_float(1.0, 10.0);
-    let y = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
+    let y = model.float(1.0, 10.0);
     
     model.equals(x, y);
     
@@ -51,8 +51,8 @@ fn test_equals_with_floats() {
 fn test_equals_mixed_types() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_float(1.0, 10.0);
+    let x = model.int(1, 10);
+    let y = model.float(1.0, 10.0);
     
     model.equals(x, y);
     
@@ -71,9 +71,9 @@ fn test_equals_mixed_types() {
 fn test_equals_chaining() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 10);
-    let y = model.new_var_int(1, 10);
-    let z = model.new_var_int(1, 10);
+    let x = model.int(1, 10);
+    let y = model.int(1, 10);
+    let z = model.int(1, 10);
     
     model.equals(x, y);
     model.equals(y, z);
@@ -93,7 +93,7 @@ fn test_equals_chaining() {
 fn test_equals_impossible() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
     model.equals(x, int(10)); // Impossible: 10 not in [1,5]
     
     let solution = model.solve();
@@ -104,8 +104,8 @@ fn test_equals_impossible() {
 fn test_equals_with_expressions() {
     let mut model = Model::default();
     
-    let x = model.new_var_int(1, 5);
-    let y = model.new_var_int(1, 5);
+    let x = model.int(1, 5);
+    let y = model.int(1, 5);
     let sum = model.add(x, y);
     
     model.equals(sum, int(8));
@@ -154,7 +154,7 @@ fn test_equals_no_common_values() {
 fn test_equals_precision() {
     let mut model = Model::with_float_precision(4);
     
-    let x = model.new_var_float(1.0, 2.0);
+    let x = model.float(1.0, 2.0);
     model.equals(x, float(1.5));
     
     let solution = model.solve().expect("Should have solution");
@@ -167,7 +167,7 @@ fn test_equals_precision() {
 fn test_multiple_equals_constraints() {
     let mut model = Model::default();
     
-    let vars: Vec<_> = model.new_vars_int(5, 1, 10).collect();
+    let vars: Vec<_> = model.int_vars(5, 1, 10).collect();
     
     // Make all variables equal
     for i in 1..vars.len() {
@@ -189,10 +189,10 @@ fn test_multiple_equals_constraints() {
 fn test_equals_transitivity() {
     let mut model = Model::default();
     
-    let a = model.new_var_int(1, 10);
-    let b = model.new_var_int(1, 10);
-    let c = model.new_var_int(1, 10);
-    let d = model.new_var_int(1, 10);
+    let a = model.int(1, 10);
+    let b = model.int(1, 10);
+    let c = model.int(1, 10);
+    let d = model.int(1, 10);
     
     // Create chain: a = b, b = c, c = d
     model.equals(a, b);

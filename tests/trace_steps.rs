@@ -7,7 +7,7 @@ fn trace_optimization_steps_precision_4() {
     let step_size = model.float_step_size();
     println!("Step size: {}", step_size);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
     
     println!("Using maximize_with_callback to track progress...");
@@ -31,7 +31,7 @@ fn trace_optimization_steps_precision_6() {
     let step_size = model.float_step_size();
     println!("Step size: {}", step_size);
     
-    let x = model.new_var_float(1.0, 10.0);
+    let x = model.float(1.0, 10.0);
     model.lt(x, float(5.5));
     
     println!("Using maximize_with_callback to track progress...");

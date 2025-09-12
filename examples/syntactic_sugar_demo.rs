@@ -5,9 +5,9 @@ use cspsolver::constraint_builder::{ModelConstraints, VarConstraints};
 
 fn main() {
     let mut model = Model::default();
-    let x = model.new_var_int(0, 20);
-    let y = model.new_var_float(0.0, 10.0);
-    let z = model.new_var_int(-5, 15);
+    let x = model.int(0, 20);
+    let y = model.float(0.0, 10.0);
+    let z = model.int(-5, 15);
     
     println!("=== Syntactic Sugar Demo ===\n");
     
@@ -92,8 +92,8 @@ mod tests {
     #[test]
     fn test_syntactic_sugar() {
         let mut model = Model::default();
-        let x = model.new_var_int(0, 10);
-        let y = model.new_var_float(0.0, 10.0);
+        let x = model.int(0, 10);
+        let y = model.float(0.0, 10.0);
         
         // Test all the new syntactic sugar methods
         model.post(vec![
