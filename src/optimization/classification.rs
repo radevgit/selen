@@ -136,22 +136,18 @@ impl ProblemClassifier {
         constraint_registry: &crate::optimization::constraint_metadata::ConstraintRegistry,
         var_analysis: &VariableAnalysis,
     ) -> CouplingAnalysisResult {
-        // For Step 6.1, we'll implement a conservative heuristic approach
-        // In future steps, we can enhance this with detailed constraint analysis
-        
+        // If no constraints or not a mixed problem, there can't be coupling
         let has_constraints = constraint_registry.constraint_count() > 0;
+        if !has_constraints || var_analysis.integer_count == 0 || var_analysis.float_count == 0 {
+            return CouplingAnalysisResult {
+                has_coupling: false,
+                coupling_strength: CouplingStrength::Linear,
+                appears_linear: true,
+            };
+        }
         
-        // For Step 6.2 integration: Use a more optimistic heuristic for testing
-        // In practice, many mixed problems are actually separable when constraints
-        // only involve variables of the same type
-        let has_coupling = if var_analysis.integer_count > 0 && var_analysis.float_count > 0 && has_constraints {
-            // For Step 6.2, assume problems are separable unless we have clear evidence of coupling
-            // TODO: In future enhancement, analyze actual constraint dependencies
-            // For now, assume most mixed problems are separable to enable testing
-            false
-        } else {
-            false
-        };
+        // Check all constraints to see if any involve both integer and float variables
+        let has_coupling = Self::detect_cross_type_coupling(constraint_registry);
         
         // Conservative assumption about coupling strength
         let coupling_strength = if has_coupling {
@@ -165,6 +161,51 @@ impl ProblemClassifier {
             coupling_strength,
             appears_linear: true, // Conservative assumption
         }
+    }
+
+    /// Detect if any constraints involve both integer and float variables
+    fn detect_cross_type_coupling(
+        constraint_registry: &crate::optimization::constraint_metadata::ConstraintRegistry,
+    ) -> bool {
+        // Iterate through all constraints and check if any involve mixed variable types
+        for constraint_type in [
+            crate::optimization::constraint_metadata::ConstraintType::Equals,
+            crate::optimization::constraint_metadata::ConstraintType::LessThanOrEquals,
+            crate::optimization::constraint_metadata::ConstraintType::NotEquals,
+            crate::optimization::constraint_metadata::ConstraintType::BooleanAnd,
+            crate::optimization::constraint_metadata::ConstraintType::BooleanOr,
+            crate::optimization::constraint_metadata::ConstraintType::BooleanNot,
+        ] {
+            let constraint_ids = constraint_registry.get_constraints_by_type(&constraint_type);
+            
+            for constraint_id in constraint_ids {
+                if let Some(metadata) = constraint_registry.get_constraint(constraint_id) {
+                    // Check if this constraint involves both integer and float variables
+                    if Self::constraint_has_mixed_types(&metadata.variables) {
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        false
+    }
+
+    /// Check if a list of variables contains both integer and float types
+    fn constraint_has_mixed_types(variables: &[VarId]) -> bool {
+        if variables.len() < 2 {
+            return false;
+        }
+        
+        // For now, we can't easily determine variable types from VarId alone
+        // without access to the Vars collection. This is a limitation of the current design.
+        // We'll return false for now and enhance this later when we have access to the model.
+        // 
+        // TODO: Enhance this by either:
+        // 1. Passing the Vars collection to this function
+        // 2. Encoding type information in VarId itself
+        // 3. Using a different approach for type detection
+        false
     }
 
     /// Build a mapping from VarId to variable type (integer vs float)

@@ -177,6 +177,19 @@ impl Model {
         self.new_vars(n, Val::ValF(min), Val::ValF(max))
     }
 
+    /// Create a new boolean decision variable (0 or 1).
+    ///
+    /// This is a convenience method equivalent to `new_var_int(0, 1)`.
+    /// 
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let b = model.bool();
+    /// ```
+    pub fn bool(&mut self) -> VarId {
+        self.new_var_int(0, 1)
+    }
+
     /// Create a new binary decision variable.
     /// 
     ///
@@ -199,6 +212,46 @@ impl Model {
     /// ```
     pub fn new_vars_binary(&mut self, n: usize) -> impl Iterator<Item = VarIdBin> + '_ {
         core::iter::repeat_with(|| self.new_var_binary()).take(n)
+    }
+
+    // === SHORT VARIABLE CREATION METHODS ===
+    
+    /// Short method to create an integer variable.
+    /// Alias for `new_var_int()` - more concise and readable.
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.int(0, 10);    // Instead of model.new_var_int(0, 10)
+    /// let y = model.int(-5, 5);    // Clean and concise
+    /// ```
+    pub fn int(&mut self, min: i32, max: i32) -> VarId {
+        self.new_var_int(min, max)
+    }
+
+    /// Short method to create a float variable.
+    /// Alias for `new_var_float()` - more concise and readable.
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.float(0.0, 10.0);    // Instead of model.new_var_float(0.0, 10.0)
+    /// let y = model.float(-1.5, 3.14);   // Clean and concise
+    /// ```
+    pub fn float(&mut self, min: f64, max: f64) -> VarId {
+        self.new_var_float(min, max)
+    }
+
+    /// Short method to create a binary variable.
+    /// Alias for `new_var_binary()` - more concise and readable.
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let x = model.binary();    // Instead of model.new_var_binary()
+    /// ```
+    pub fn binary(&mut self) -> VarIdBin {
+        self.new_var_binary()
     }
 
     /// Create a new integer decision variable, with the provided domain bounds.
@@ -734,6 +787,18 @@ impl Model {
     /// ```
     pub fn all_different(&mut self, vars: Vec<VarId>) {
         let _p = self.props.all_different(vars);
+    }
+
+    /// Short alias for `all_different` - cleaner and more concise.
+    /// 
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut model = Model::default();
+    /// let vars: Vec<_> = model.new_vars_int(4, 1, 4).collect();
+    /// model.alldifferent(vars);  // Shorter than all_different
+    /// ```
+    pub fn alldifferent(&mut self, vars: Vec<VarId>) {
+        self.all_different(vars);
     }
 
     /// Create a new variable that holds the result of a boolean AND operation.

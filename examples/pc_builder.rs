@@ -8,6 +8,7 @@
 //! - Real-world constraint satisfaction problem
 
 use cspsolver::prelude::*;
+use cspsolver::constraint_builder::*;
 
 fn main() {
     // Create a model for our PC building problem
@@ -45,8 +46,8 @@ fn main() {
     
     // Constraints
     let n_gpus = m.sum(&gpus);
-    m.equals(n_gpus, int(1)); // Exactly one GPU
-    m.le(total_price, int(600)); // Budget constraint
+    m.post(n_gpus.eq_int(1)); // Exactly one GPU
+    m.post(total_price.le_int(600)); // Budget constraint
     
     // Find optimal solution
     let solution = m.maximize(total_score).unwrap();

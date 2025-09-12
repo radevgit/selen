@@ -68,6 +68,7 @@
 pub mod model;
 pub mod vars;
 pub mod solution;
+pub mod operators;
 
 #[doc(hidden)]
 pub mod utils;
@@ -89,6 +90,11 @@ pub mod domain;
 #[doc(hidden)]
 pub mod optimization;
 pub mod prelude;
+
+// Clean constraint API modules
+pub mod constraint_builder;
+pub mod view_constraints;
+pub mod boolean_operators;
 
 
 #[cfg(test)]
