@@ -95,6 +95,8 @@ pub mod prelude;
 pub mod constraint_builder;
 pub mod view_constraints;
 pub mod boolean_operators;
+pub mod math_syntax;
+pub mod constraint_macros;
 
 
 #[cfg(test)]
