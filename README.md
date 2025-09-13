@@ -112,8 +112,8 @@ fn main() {
     post!(m, max([vars[0]]) >= min([vars[1]]));
     
     // Boolean logic with traditional syntax  
-    let a = m.int(0, 1);
-    let b = m.int(0, 1);
+    let a = m.bool();
+    let b = m.bool();
     post!(m, and(a, b));        // Boolean AND
     post!(m, or(a, not(b)));    // Boolean OR with NOT
     
