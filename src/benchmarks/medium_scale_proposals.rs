@@ -5,31 +5,31 @@ use crate::prelude::*;
 pub fn test_grouped_constraints_approach() -> (Duration, bool) {
     let start = Instant::now();
     
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Instead of 25 independent variables, create groups of related variables
     // Group 1: Small parts (5 variables with shared constraint pattern)
-    let small_parts: Vec<_> = (0..5).map(|_| model.float(0.1, 0.5)).collect();
+    let small_parts: Vec<_> = (0..5).map(|_| m.float(0.1, 0.5)).collect();
     // Group 2: Medium parts (5 variables with shared constraint pattern)  
-    let medium_parts: Vec<_> = (0..5).map(|_| model.float(0.5, 2.0)).collect();
+    let medium_parts: Vec<_> = (0..5).map(|_| m.float(0.5, 2.0)).collect();
     // Group 3: Large parts (5 variables with shared constraint pattern)
-    let large_parts: Vec<_> = (0..5).map(|_| model.float(2.0, 5.0)).collect();
+    let large_parts: Vec<_> = (0..5).map(|_| m.float(2.0, 5.0)).collect();
     
     // Group constraints instead of individual constraints
     for &part in &small_parts {
-        post!(model, part > 0.15);  // Shared constraint
-        post!(model, part < 0.45);
+        post!(m, part > 0.15);  // Shared constraint
+        post!(m, part < 0.45);
     }
     for &part in &medium_parts {
-        post!(model, part > 0.7);   // Shared constraint
-        post!(model, part < 1.8);
+        post!(m, part > 0.7);   // Shared constraint
+        post!(m, part < 1.8);
     }
     for &part in &large_parts {
-        post!(model, part > 2.5);   // Shared constraint
-        post!(model, part < 4.5);
+        post!(m, part > 2.5);   // Shared constraint
+        post!(m, part < 4.5);
     }
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     (duration, success)
@@ -38,33 +38,33 @@ pub fn test_grouped_constraints_approach() -> (Duration, bool) {
 pub fn test_hierarchical_decomposition() -> (Duration, bool) {
     let start = Instant::now();
     
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Hierarchical approach: Solve main constraints first, details later
     // Main positioning variables (fewer, high-level)
     let main_positions: Vec<_> = (0..5).map(|i| {
-        model.float(i as f64, (i + 1) as f64) // 0-1m, 1-2m, etc.
+        m.float(i as f64, (i + 1) as f64) // 0-1m, 1-2m, etc.
     }).collect();
     
     // Main constraints (should trigger precision optimization)
     for (i, &pos) in main_positions.iter().enumerate() {
         let center = i as f64 + 0.5;
-        post!(model, pos > (center - 0.1));
-        post!(model, pos < (center + 0.1));
+        post!(m, pos > (center - 0.1));
+        post!(m, pos < (center + 0.1));
     }
     
     // Detail variables depend on main positions (fewer constraints)
     let detail_vars: Vec<_> = (0..10).map(|_| {
-        model.float(0.0, 5.0)
+        m.float(0.0, 5.0)
     }).collect();
     
     // Simpler detail constraints
     for &detail in &detail_vars {
-        post!(model, detail > 0.1);
-        post!(model, detail < 4.9);
+        post!(m, detail > 0.1);
+        post!(m, detail < 4.9);
     }
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     (duration, success)
@@ -80,16 +80,16 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
     // Batch 1: Variables 0-7
     {
         let batch_start = Instant::now();
-        let mut model = Model::default();
-        let vars: Vec<_> = (0..8).map(|_| model.float(0.1, 2.0)).collect();
+        let mut m = Model::default();
+        let vars: Vec<_> = (0..8).map(|_| m.float(0.1, 2.0)).collect();
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 0.5 + (i as f64 * 0.2);
-            post!(model, var > (target - 0.01));
-            post!(model, var < (target + 0.01));
+            post!(m, var > (target - 0.01));
+            post!(m, var < (target + 0.01));
         }
         
-        let success = model.solve().is_some();
+        let success = m.solve().is_some();
         total_success &= success;
         batch_durations.push(batch_start.elapsed());
     }
@@ -97,16 +97,16 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
     // Batch 2: Variables 8-15
     {
         let batch_start = Instant::now();
-        let mut model = Model::default();
-        let vars: Vec<_> = (0..8).map(|_| model.float(1.5, 3.5)).collect();
+        let mut m = Model::default();
+        let vars: Vec<_> = (0..8).map(|_| m.float(1.5, 3.5)).collect();
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 2.0 + (i as f64 * 0.15);
-            post!(model, var > (target - 0.01));
-            post!(model, var < (target + 0.01));
+            post!(m, var > (target - 0.01));
+            post!(m, var < (target + 0.01));
         }
         
-        let success = model.solve().is_some();
+        let success = m.solve().is_some();
         total_success &= success;
         batch_durations.push(batch_start.elapsed());
     }
@@ -114,16 +114,16 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
     // Batch 3: Variables 16-24
     {
         let batch_start = Instant::now();
-        let mut model = Model::default();
-        let vars: Vec<_> = (0..9).map(|_| model.float(3.0, 5.0)).collect();
+        let mut m = Model::default();
+        let vars: Vec<_> = (0..9).map(|_| m.float(3.0, 5.0)).collect();
         
         for (i, &var) in vars.iter().enumerate() {
             let target = 3.5 + (i as f64 * 0.15);
-            post!(model, var > (target - 0.01));
-            post!(model, var < (target + 0.01));
+            post!(m, var > (target - 0.01));
+            post!(m, var < (target + 0.01));
         }
         
-        let success = model.solve().is_some();
+        let success = m.solve().is_some();
         total_success &= success;
         batch_durations.push(batch_start.elapsed());
     }
@@ -137,31 +137,31 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
 pub fn test_constraint_simplification() -> (Duration, bool) {
     let start = Instant::now();
     
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Use fewer, more effective constraints instead of many tight constraints
-    let vars: Vec<_> = (0..25).map(|_| model.float(0.1, 5.0)).collect();
+    let vars: Vec<_> = (0..25).map(|_| m.float(0.1, 5.0)).collect();
     
     // Instead of individual tight constraints, use broader range constraints
     // that are more likely to trigger precision optimization
     
     // Group constraints by ranges
     for &var in &vars[0..8] {  // First group: 0.1-1.5m range
-        post!(model, var > 0.2);
-        post!(model, var < 1.4);
+        post!(m, var > 0.2);
+        post!(m, var < 1.4);
     }
     
     for &var in &vars[8..16] { // Second group: 1.5-3.0m range  
-        post!(model, var > 1.6);
-        post!(model, var < 2.9);
+        post!(m, var > 1.6);
+        post!(m, var < 2.9);
     }
     
     for &var in &vars[16..25] { // Third group: 3.0-5.0m range
-        post!(model, var > 3.1);
-        post!(model, var < 4.9);
+        post!(m, var > 3.1);
+        post!(m, var < 4.9);
     }
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     (duration, success)
@@ -174,14 +174,14 @@ pub fn run_medium_scale_optimization_proposals() {
     
     // Test original approach for baseline
     let start = Instant::now();
-    let mut model = Model::default();
-    let vars: Vec<_> = (0..25).map(|_| model.float(0.01, 5.0)).collect();
+    let mut m = Model::default();
+    let vars: Vec<_> = (0..25).map(|_| m.float(0.01, 5.0)).collect();
     for (i, &var) in vars.iter().enumerate() {
         let target = 0.1 + (i as f64 * 0.2);
-        post!(model, var > (target - 0.001));
-        post!(model, var < (target + 0.001));
+        post!(m, var > (target - 0.001));
+        post!(m, var < (target + 0.001));
     }
-    let original_success = model.solve().is_some();
+    let original_success = m.solve().is_some();
     let original_duration = start.elapsed();
     
     println!("Baseline (Original): {} μs ({})", 

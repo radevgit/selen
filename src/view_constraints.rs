@@ -138,7 +138,7 @@ impl From<VarId> for VarWrapper {
 }
 
 impl ViewConstraint {
-    /// Apply this view constraint to a model.
+    /// Apply this view constraint to a m.
     /// Note: This is a simplified implementation - full implementation would
     /// need to create appropriate view objects and propagators.
     pub fn apply_to(self, model: &mut crate::model::Model) {
@@ -150,29 +150,29 @@ impl ViewConstraint {
                 match target {
                     AbsTarget::Var(target_var) => {
                         // Create |var| == target_var constraint
-                        // model.abs_eq(var, target_var);
+                        // m.abs_eq(var, target_var);
                         println!("TODO: Implement abs_eq({:?}, {:?})", var, target_var);
                     }
                     AbsTarget::Val(value) => {
                         // Create |var| == value constraint  
-                        // model.abs_eq_val(var, value);
+                        // m.abs_eq_val(var, value);
                         println!("TODO: Implement abs_eq_val({:?}, {:?})", var, value);
                     }
                 }
             }
             ViewConstraint::ModuloEq(var, divisor, remainder) => {
                 // TODO: Implement modulo constraint creation
-                // model.modulo_eq(var, divisor, remainder);
+                // m.modulo_eq(var, divisor, remainder);
                 println!("TODO: Implement modulo_eq({:?}, {:?}, {:?})", var, divisor, remainder);
             }
             ViewConstraint::PlusEq(var, offset, target) => {
                 // TODO: Implement arithmetic constraint creation
-                // model.plus_eq(var, offset, target);  
+                // m.plus_eq(var, offset, target);  
                 println!("TODO: Implement plus_eq({:?}, {:?}, {:?})", var, offset, target);
             }
             ViewConstraint::TimesEq(var, scale, target) => {
                 // TODO: Implement arithmetic constraint creation
-                // model.times_eq(var, scale, target);
+                // m.times_eq(var, scale, target);
                 println!("TODO: Implement times_eq({:?}, {:?}, {:?})", var, scale, target);
             }
         }

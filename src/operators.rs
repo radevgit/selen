@@ -9,24 +9,24 @@
 //! use cspsolver::prelude::*;
 //! use cspsolver::operators::*;
 //!
-//! let mut model = Model::default();
-//! let x = model.int(1, 10);
-//! let y = model.int(1, 10);
+//! let mut m = Model::default();
+//! let x = m.int(1, 10);
+//! let y = m.int(1, 10);
 //! 
 //! // Comparison operations
-//! model.eq_op(x, y);         // x == y
-//! model.ne_op(x, y);         // x != y
-//! model.lt_op(x, y);         // x < y
-//! model.le_op(x, y);         // x <= y
-//! model.gt_op(x, y);         // x > y
-//! model.ge_op(x, y);         // x >= y
+//! m.eq_op(x, y);         // x == y
+//! m.ne_op(x, y);         // x != y
+//! m.lt_op(x, y);         // x < y
+//! m.le_op(x, y);         // x <= y
+//! m.gt_op(x, y);         // x > y
+//! m.ge_op(x, y);         // x >= y
 //!
 //! // Boolean operations (for boolean variables)
-//! let a = model.bool();
-//! let b = model.bool();
-//! model.and_op(a, b);        // a AND b
-//! model.or_op(a, b);         // a OR b
-//! model.not_op(a);           // NOT a
+//! let a = m.bool();
+//! let b = m.bool();
+//! m.and_op(a, b);        // a AND b
+//! m.or_op(a, b);         // a OR b
+//! m.not_op(a);           // NOT a
 //! ```
 
 use crate::vars::VarId;
@@ -166,49 +166,49 @@ mod tests {
 
     #[test]
     fn test_comparison_operators() {
-        let mut model = Model::default();
-        let x = model.int(1, 10);
-        let y = model.int(1, 10);
+        let mut m = Model::default();
+        let x = m.int(1, 10);
+        let y = m.int(1, 10);
         
         // Test that operator methods work without panicking
-        x.eq_op(&mut model, y);
-        x.ne_op(&mut model, y);
-        x.lt_op(&mut model, y);
-        x.le_op(&mut model, y);
-        x.gt_op(&mut model, y);
-        x.ge_op(&mut model, y);
+        x.eq_op(&mut m, y);
+        x.ne_op(&mut m, y);
+        x.lt_op(&mut m, y);
+        x.le_op(&mut m, y);
+        x.gt_op(&mut m, y);
+        x.ge_op(&mut m, y);
     }
     
     #[test]
     fn test_boolean_operators() {
-        let mut model = Model::default();
-        let a = model.int(0, 1); // Boolean variable
-        let b = model.int(0, 1); // Boolean variable
+        let mut m = Model::default();
+        let a = m.int(0, 1); // Boolean variable
+        let b = m.int(0, 1); // Boolean variable
         
         // Test that boolean operator methods work without panicking
-        a.and_op(&mut model, b);
-        a.or_op(&mut model, b);
-        a.not_op(&mut model);
+        a.and_op(&mut m, b);
+        a.or_op(&mut m, b);
+        a.not_op(&mut m);
     }
     
     #[test]
     fn test_model_operator_extensions() {
-        let mut model = Model::default();
-        let x = model.int(1, 10);
-        let y = model.int(1, 10);
+        let mut m = Model::default();
+        let x = m.int(1, 10);
+        let y = m.int(1, 10);
         
         // Test Model extension methods
-        model.eq_op(x, y);
-        model.ne_op(x, y);
-        model.lt_op(x, y);
-        model.le_op(x, y);
-        model.gt_op(x, y);
-        model.ge_op(x, y);
+        m.eq_op(x, y);
+        m.ne_op(x, y);
+        m.lt_op(x, y);
+        m.le_op(x, y);
+        m.gt_op(x, y);
+        m.ge_op(x, y);
         
-        let a = model.int(0, 1); // Boolean variable
-        let b = model.int(0, 1); // Boolean variable
-        model.and_op(a, b);
-        model.or_op(a, b);
-        model.not_op(a);
+        let a = m.int(0, 1); // Boolean variable
+        let b = m.int(0, 1); // Boolean variable
+        m.and_op(a, b);
+        m.or_op(a, b);
+        m.not_op(a);
     }
 }

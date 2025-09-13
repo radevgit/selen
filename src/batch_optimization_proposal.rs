@@ -59,17 +59,17 @@ impl Model {
 
 // Usage example:
 pub fn example_batch_usage() {
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Create 25 variables with constraints
-    let vars: Vec<_> = (0..25).map(|_| model.float(0.0, 10.0)).collect();
+    let vars: Vec<_> = (0..25).map(|_| m.float(0.0, 10.0)).collect();
     
     // Add constraints...
     for (i, &var) in vars.iter().enumerate() {
-        model.gt(var, float(i as f64));
-        model.lt(var, float(i as f64 + 1.0));
+        m.gt(var, float(i as f64));
+        m.lt(var, float(i as f64 + 1.0));
     }
     
     // Solve with batch optimization (automatic 2.7x speedup for medium problems)
-    let solution = model.solve_batch_optimized(Some(8));
+    let solution = m.solve_batch_optimized(Some(8));
 }

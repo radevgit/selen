@@ -7,42 +7,42 @@ use cspsolver::prelude::*;
 use cspsolver::vars::Val;
 
 fn main() {
-    let mut model = Model::default();
-    let x = model.int(0, 10);
-    let y = model.int(0, 10);
-    let z = model.int(1, 5);
+    let mut m = Model::default();
+    let x = m.int(0, 10);
+    let y = m.int(0, 10);
+    let z = m.int(1, 5);
     
     println!("=== Clean Mathematical Constraint API Demo ===\n");
     
     // 1. Basic comparison constraints with mathematical syntax
     println!("1. Mathematical Comparison Syntax:");
-    println!("   post!(model, x <= y);  // x <= y");
-    post!(model, x <= y);
+    println!("   post!(m, x <= y);  // x <= y");
+    post!(m, x <= y);
     
-    println!("   post!(model, x != y);  // x != y");  
-    post!(model, x != y);
+    println!("   post!(m, x != y);  // x != y");  
+    post!(m, x != y);
     
-    println!("   post!(model, x == 5);  // x == 5");
-    post!(model, x == 5);
+    println!("   post!(m, x == 5);  // x == 5");
+    post!(m, x == 5);
     
     // 2. Batch constraint addition with postall!
     println!("\n2. Batch Constraints with postall!:");
-    println!("   postall!(model, x >= z, z < y);");
-    postall!(model, x >= z, z < y);
+    println!("   postall!(m, x >= z, z < y);");
+    postall!(m, x >= z, z < y);
     
     // 3. Clean batch syntax with more constraints
     println!("\n3. Complex Mathematical Expressions:");
-    println!("   postall!(model, x <= y, x != z, y > z);");
-    postall!(model, x <= y, x != z, y > z);
+    println!("   postall!(m, x <= y, x != z, y > z);");
+    postall!(m, x <= y, x != z, y > z);
     
     // 4. Mathematical operations and functions
     println!("\n4. Mathematical Operations:");
-    println!("   post!(model, alldiff([x, y, z]));  // All different");
-    post!(model, alldiff([x, y, z]));
+    println!("   post!(m, alldiff([x, y, z]));  // All different");
+    post!(m, alldiff([x, y, z]));
     
     // 5. Solving
     println!("\n5. Solving:");
-    match model.solve() {
+    match m.solve() {
         Some(solution) => {
             println!("   Solution found!");
             println!("   x = {:?}", solution[x]);

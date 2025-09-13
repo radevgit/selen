@@ -146,11 +146,11 @@ impl PerformanceBenchmarker {
 
     /// Time traditional maximization approach
     fn time_traditional_maximize(&self, min: f64, max: f64) -> (Duration, f64) {
-        let mut model = Model::default();
-        let x = model.float(min, max);
+        let mut m = Model::default();
+        let x = m.float(min, max);
 
         let start = Instant::now();
-        let result = model.maximize(x);
+        let result = m.maximize(x);
         let duration = start.elapsed();
 
         let optimal_value = if let Some(solution) = result {
@@ -166,11 +166,11 @@ impl PerformanceBenchmarker {
     fn time_step_2_4_maximize(&self, min: f64, max: f64) -> (Duration, f64) {
         // For now, this uses the same Model::maximize approach since that's what
         // currently routes through the optimization system including Step 2.4
-        let mut model = Model::default();
-        let x = model.float(min, max);
+        let mut m = Model::default();
+        let x = m.float(min, max);
 
         let start = Instant::now();
-        let result = model.maximize(x);
+        let result = m.maximize(x);
         let duration = start.elapsed();
 
         let optimal_value = if let Some(solution) = result {
@@ -184,14 +184,14 @@ impl PerformanceBenchmarker {
 
     /// Time traditional constrained maximization
     fn time_traditional_constrained_maximize(&self, min: f64, max: f64) -> (Duration, f64) {
-        let mut model = Model::default();
-        let x = model.float(min, max);
+        let mut m = Model::default();
+        let x = m.float(min, max);
         
         let constraint_value = min + (max - min) * 0.55;
-        model.lt(x, float(constraint_value));
+        m.lt(x, float(constraint_value));
 
         let start = Instant::now();
-        let result = model.maximize(x);
+        let result = m.maximize(x);
         let duration = start.elapsed();
 
         let optimal_value = if let Some(solution) = result {
@@ -205,14 +205,14 @@ impl PerformanceBenchmarker {
 
     /// Time Step 2.4 constrained maximization
     fn time_step_2_4_constrained_maximize(&self, min: f64, max: f64) -> (Duration, f64) {
-        let mut model = Model::default();
-        let x = model.float(min, max);
+        let mut m = Model::default();
+        let x = m.float(min, max);
         
         let constraint_value = min + (max - min) * 0.55;
-        model.lt(x, float(constraint_value));
+        m.lt(x, float(constraint_value));
 
         let start = Instant::now();
-        let result = model.maximize(x);
+        let result = m.maximize(x);
         let duration = start.elapsed();
 
         let optimal_value = if let Some(solution) = result {

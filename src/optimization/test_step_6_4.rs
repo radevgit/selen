@@ -17,10 +17,10 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create a mix of variables
-        let var0 = model.float(0.0, 10.0);   // float
-        let var1 = model.int(1, 5);          // integer
-        let var2 = model.float(-1.0, 1.0);   // float
-        let var3 = model.int(10, 20);        // integer
+        let var0 = m.float(0.0, 10.0);   // float
+        let var1 = m.int(1, 5);          // integer
+        let var2 = m.float(-1.0, 1.0);   // float
+        let var3 = m.int(10, 20);        // integer
         
         (model, vec![var0, var1, var2, var3])
     }

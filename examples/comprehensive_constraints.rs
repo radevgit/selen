@@ -278,60 +278,60 @@ fn api_evolution_comparison() {
 }
 
 fn enhanced_features_demo() {
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Sum function support
     println!("🔢 Sum Function Support:");
-    let vars = vec![model.int(1, 10), model.int(1, 10), model.int(1, 10)];
-    post!(model, sum(vars) == int(15));
+    let vars = vec![m.int(1, 10), m.int(1, 10), m.int(1, 10)];
+    post!(m, sum(vars) == int(15));
     
-    let x = model.int(1, 5);
-    let y = model.int(1, 5);
-    post!(model, sum([x, y]) <= int(8));
+    let x = m.int(1, 5);
+    let y = m.int(1, 5);
+    post!(m, sum([x, y]) <= int(8));
     println!("   post!(model, sum([x, y, z]) == int(15));");
     println!("   post!(model, sum(vars) <= target);");
     
     // Float constants with math functions
     println!("\n🌊 Float Constants with Math Functions:");
-    let fx = model.float(1.0, 10.0);
-    let fy = model.float(1.0, 10.0);
-    post!(model, abs(fx) <= float(5.5));
-    post!(model, min([fx]) == fy);
-    post!(model, max([fx]) >= float(1.0));
+    let fx = m.float(1.0, 10.0);
+    let fy = m.float(1.0, 10.0);
+    post!(m, abs(fx) <= float(5.5));
+    post!(m, min([fx]) == fy);
+    post!(m, max([fx]) >= float(1.0));
     println!("   post!(model, abs(x) <= float(5.5));");
     println!("   post!(model, min([x]) == y);");
     println!("   post!(model, max([x]) >= float(1.0));");
     
     // Boolean logic functions (using traditional syntax)
     println!("\n🔗 Boolean Logic Functions:");
-    let a = model.int(0, 1);
-    let b = model.int(0, 1);
-    let c = model.int(0, 1);
-    post!(model, and(a, b));
-    post!(model, or(a, b));
-    post!(model, not(a));
+    let a = m.int(0, 1);
+    let b = m.int(0, 1);
+    let c = m.int(0, 1);
+    post!(m, and(a, b));
+    post!(m, or(a, b));
+    post!(m, not(a));
     println!("   post!(model, and(a, b));");
     println!("   post!(model, or(a, b));");
     println!("   post!(model, not(a));");
     
     // Enhanced modulo operations
     println!("\n➗ Enhanced Modulo Operations:");
-    let mx = model.int(1, 100);
-    let my = model.int(1, 50);
-    let mz = model.int(0, 10);
-    post!(model, mx % my <= mz);
-    post!(model, mx % my == mz);
+    let mx = m.int(1, 100);
+    let my = m.int(1, 50);
+    let mz = m.int(0, 10);
+    post!(m, mx % my <= mz);
+    post!(m, mx % my == mz);
     println!("   post!(model, x % y <= z);");
     println!("   post!(model, x % y == z);");
     
     // Simple feature demonstrations
     println!("\n🎯 Feature Demonstrations:");
-    let nums = vec![model.int(1, 5), model.int(1, 5), model.int(1, 5)];
-    let float_var = model.float(1.0, 5.0);
-    let target = model.int(0, 20);
+    let nums = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
+    let float_var = m.float(1.0, 5.0);
+    let target = m.int(0, 20);
     
-    post!(model, sum(nums.clone()) <= target);
-    post!(model, abs(float_var) <= float(10.0));
+    post!(m, sum(nums.clone()) <= target);
+    post!(m, abs(float_var) <= float(10.0));
     println!("   post!(model, sum(nums) <= target);");
     println!("   post!(model, abs(float_var) <= float(10.0));");
     

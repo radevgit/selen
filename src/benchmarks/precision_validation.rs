@@ -30,14 +30,14 @@ impl PrecisionResult {
 pub fn validate_tolerance_precision() -> PrecisionResult {
     let start = Instant::now();
     
-    let mut model = Model::default();
-    let dimension = model.float(9.95, 10.05);  // Manufacturing tolerance ±0.05mm
+    let mut m = Model::default();
+    let dimension = m.float(9.95, 10.05);  // Manufacturing tolerance ±0.05mm
     
     // Tight tolerance constraint
-    post!(model, dimension > float(9.98));
-    post!(model, dimension < float(10.02));
+    post!(m, dimension > float(9.98));
+    post!(m, dimension < float(10.02));
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     PrecisionResult::new("Manufacturing Tolerance".to_string(), duration, success)
@@ -46,17 +46,17 @@ pub fn validate_tolerance_precision() -> PrecisionResult {
 pub fn validate_placement_precision() -> PrecisionResult {
     let start = Instant::now();
     
-    let mut model = Model::default();
-    let x_coord = model.float(0.0, 1000.0);  // Placement coordinate
-    let y_coord = model.float(0.0, 500.0);   // Placement coordinate
+    let mut m = Model::default();
+    let x_coord = m.float(0.0, 1000.0);  // Placement coordinate
+    let y_coord = m.float(0.0, 500.0);   // Placement coordinate
     
     // Precision placement constraints
-    post!(model, x_coord > float(100.5));
-    post!(model, x_coord < float(899.5));
-    post!(model, y_coord > float(50.25));
-    post!(model, y_coord < float(449.75));
+    post!(m, x_coord > float(100.5));
+    post!(m, x_coord < float(899.5));
+    post!(m, y_coord > float(50.25));
+    post!(m, y_coord < float(449.75));
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     PrecisionResult::new("Part Placement".to_string(), duration, success)
@@ -65,14 +65,14 @@ pub fn validate_placement_precision() -> PrecisionResult {
 pub fn validate_quantity_optimization() -> PrecisionResult {
     let start = Instant::now();
     
-    let mut model = Model::default();
-    let efficiency = model.float(0.0, 1.0);  // Material efficiency
+    let mut m = Model::default();
+    let efficiency = m.float(0.0, 1.0);  // Material efficiency
     
     // Efficiency constraints for high-quantity optimization
-    post!(model, efficiency > float(0.85));  // Minimum 85% efficiency
-    post!(model, efficiency < float(0.98));     // Maximum realistic efficiency
+    post!(m, efficiency > float(0.85));  // Minimum 85% efficiency
+    post!(m, efficiency < float(0.98));     // Maximum realistic efficiency
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     PrecisionResult::new("Quantity Efficiency".to_string(), duration, success)

@@ -25,7 +25,7 @@ impl ManufacturingResult {
 pub fn benchmark_tool_clearance_constraints() -> ManufacturingResult {
     let start = Instant::now();
     
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // CNC tool parameters (in meters)
     let tool_diameter = 0.008; // 8mm end mill
@@ -38,28 +38,28 @@ pub fn benchmark_tool_clearance_constraints() -> ManufacturingResult {
     // Multiple cutting tool paths need clearance constraints
     let tool_positions: Vec<_> = (0..50)
         .map(|_| {
-            let x = model.float(tool_diameter / 2.0, plate_width - tool_diameter / 2.0);
-            let y = model.float(tool_diameter / 2.0, plate_height - tool_diameter / 2.0);
+            let x = m.float(tool_diameter / 2.0, plate_width - tool_diameter / 2.0);
+            let y = m.float(tool_diameter / 2.0, plate_height - tool_diameter / 2.0);
             (x, y)
         })
         .collect();
     
     // Tool clearance efficiency constraint
-    let clearance_efficiency = model.float(0.0, 1.0);
-    model.gt(clearance_efficiency, float(0.90)); // 90% clearance efficiency
+    let clearance_efficiency = m.float(0.0, 1.0);
+    m.gt(clearance_efficiency, float(0.90)); // 90% clearance efficiency
     
     // Sample clearance constraints between tool positions
     for i in 0..std::cmp::min(tool_positions.len(), 30) {
         let (x, y) = tool_positions[i];
         
         // Ensure adequate clearance from edges
-        model.gt(x, float(tool_diameter / 2.0 + min_clearance));
-        model.lt(x, float(plate_width - tool_diameter / 2.0 - min_clearance));
-        model.gt(y, float(tool_diameter / 2.0 + min_clearance));
-        model.lt(y, float(plate_height - tool_diameter / 2.0 - min_clearance));
+        m.gt(x, float(tool_diameter / 2.0 + min_clearance));
+        m.lt(x, float(plate_width - tool_diameter / 2.0 - min_clearance));
+        m.gt(y, float(tool_diameter / 2.0 + min_clearance));
+        m.lt(y, float(plate_height - tool_diameter / 2.0 - min_clearance));
     }
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     let score = if success { 9.0 } else { 0.0 };
@@ -77,7 +77,7 @@ pub fn benchmark_tool_clearance_constraints() -> ManufacturingResult {
 pub fn benchmark_grain_direction_constraints() -> ManufacturingResult {
     let start = Instant::now();
     
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Material properties: 2m x 3m steel sheet with rolling direction
     let sheet_width = 2.0;
@@ -89,22 +89,22 @@ pub fn benchmark_grain_direction_constraints() -> ManufacturingResult {
     let part_orientations: Vec<_> = (0..critical_parts)
         .map(|_| {
             // Orientation variable: 0 = aligned with grain, π/2 = perpendicular
-            model.float(-0.1, 0.1) // Allow ±0.1 radian tolerance
+            m.float(-0.1, 0.1) // Allow ±0.1 radian tolerance
         })
         .collect();
     
     // Grain alignment efficiency
-    let grain_efficiency = model.float(0.0, 1.0);
-    model.gt(grain_efficiency, float(0.95)); // 95% grain alignment
+    let grain_efficiency = m.float(0.0, 1.0);
+    m.gt(grain_efficiency, float(0.95)); // 95% grain alignment
     
     // Constraints for grain-critical parts
     for orientation in &part_orientations {
         // Must be within tolerance of grain direction
-        model.gt(*orientation, float(grain_direction - 0.05)); // ±0.05 radian tolerance
-        model.lt(*orientation, float(grain_direction + 0.05));
+        m.gt(*orientation, float(grain_direction - 0.05)); // ±0.05 radian tolerance
+        m.lt(*orientation, float(grain_direction + 0.05));
     }
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     let score = if success { 9.5 } else { 0.0 };
@@ -122,7 +122,7 @@ pub fn benchmark_grain_direction_constraints() -> ManufacturingResult {
 pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
     let start = Instant::now();
     
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Heat treatment furnace: 1.8m x 1.2m working area
     let furnace_width = 1.8;
@@ -137,38 +137,38 @@ pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
     let ht_parts = 40;
     let part_positions: Vec<_> = (0..ht_parts)
         .map(|i| {
-            let x = model.float(0.05, furnace_width - 0.05);  // 5cm margin
-            let y = model.float(0.05, furnace_height - 0.05); // 5cm margin
+            let x = m.float(0.05, furnace_width - 0.05);  // 5cm margin
+            let y = m.float(0.05, furnace_height - 0.05); // 5cm margin
             
             // Temperature requirement for this part
             let required_temp = if i < ht_parts / 3 { zone_1_temp }
                               else if i < 2 * ht_parts / 3 { zone_2_temp }
                               else { zone_3_temp };
             
-            let temp_var = model.float(required_temp - 25.0, required_temp + 25.0);
+            let temp_var = m.float(required_temp - 25.0, required_temp + 25.0);
             
             // Temperature must be within ±10°C of requirement
-            model.gt(temp_var, float(required_temp - 10.0));
-            model.lt(temp_var, float(required_temp + 10.0));
+            m.gt(temp_var, float(required_temp - 10.0));
+            m.lt(temp_var, float(required_temp + 10.0));
             
             (x, y, temp_var)
         })
         .collect();
     
     // Heat treatment efficiency
-    let ht_efficiency = model.float(0.0, 1.0);
-    model.gt(ht_efficiency, float(0.88)); // 88% heat treatment efficiency
+    let ht_efficiency = m.float(0.0, 1.0);
+    m.gt(ht_efficiency, float(0.88)); // 88% heat treatment efficiency
     
     // Thermal uniformity constraints
     for (x, y, _temp) in &part_positions[..std::cmp::min(part_positions.len(), 25)] {
         // Ensure parts are positioned for uniform heating
-        model.gt(*x, float(0.1)); // 10cm from edge
-        model.lt(*x, float(furnace_width - 0.1));
-        model.gt(*y, float(0.1));
-        model.lt(*y, float(furnace_height - 0.1));
+        m.gt(*x, float(0.1)); // 10cm from edge
+        m.lt(*x, float(furnace_width - 0.1));
+        m.gt(*y, float(0.1));
+        m.lt(*y, float(furnace_height - 0.1));
     }
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     let score = if success { 8.8 } else { 0.0 };
@@ -186,7 +186,7 @@ pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
 pub fn benchmark_quality_control_sampling() -> ManufacturingResult {
     let start = Instant::now();
     
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Production batch: 500 parts across 4m x 6m layout area
     let layout_width = 4.0;
@@ -208,28 +208,28 @@ pub fn benchmark_quality_control_sampling() -> ManufacturingResult {
             let y_center = (grid_y + 0.5) * layout_height / 5.0;
             
             // Allow ±10cm variation from grid center
-            let x = model.float(x_center - 0.1, x_center + 0.1);
-            let y = model.float(y_center - 0.1, y_center + 0.1);
+            let x = m.float(x_center - 0.1, x_center + 0.1);
+            let y = m.float(y_center - 0.1, y_center + 0.1);
             
             // Statistical distribution constraints
-            model.gt(x, float(0.05)); // 5cm margin
-            model.lt(x, float(layout_width - 0.05));
-            model.gt(y, float(0.05));
-            model.lt(y, float(layout_height - 0.05));
+            m.gt(x, float(0.05)); // 5cm margin
+            m.lt(x, float(layout_width - 0.05));
+            m.gt(y, float(0.05));
+            m.lt(y, float(layout_height - 0.05));
             
             (x, y)
         })
         .collect();
     
     // Quality control efficiency
-    let qc_efficiency = model.float(0.0, 1.0);
-    model.gt(qc_efficiency, float(0.96)); // 96% QC coverage efficiency
+    let qc_efficiency = m.float(0.0, 1.0);
+    m.gt(qc_efficiency, float(0.96)); // 96% QC coverage efficiency
     
     // Statistical validity constraint
-    let distribution_quality = model.float(0.0, 1.0);
-    model.gt(distribution_quality, float(0.92)); // 92% distribution quality
+    let distribution_quality = m.float(0.0, 1.0);
+    m.gt(distribution_quality, float(0.92)); // 92% distribution quality
     
-    let success = model.solve().is_some();
+    let success = m.solve().is_some();
     let duration = start.elapsed();
     
     let score = if success { 9.2 } else { 0.0 };

@@ -15,14 +15,14 @@ mod tests {
     /// Test that pure integer problems fall back to traditional search
     #[test]
     fn test_pure_integer_fallback() {
-        let mut model = Model::default();
+        let mut m = Model::default();
         
         // Create pure integer problem
-        let x = model.int(1, 10);
-        let y = model.int(1, 10);
-        model.ne(x, y);
+        let x = m.int(1, 10);
+        let y = m.int(1, 10);
+        m.ne(x, y);
         
-        let solution = model.solve();
+        let solution = m.solve();
         assert!(solution.is_some());
         
         let sol = solution.unwrap();
@@ -35,10 +35,10 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create pure float problem
-        let x = model.float(1.0, 10.0);
-        let y = model.float(2.0, 8.0);
+        let x = m.float(1.0, 10.0);
+        let y = m.float(2.0, 8.0);
         
-        let solution = model.solve();
+        let solution = m.solve();
         assert!(solution.is_some());
         
         let sol = solution.unwrap();
@@ -57,13 +57,13 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create mixed problem (both integer and float variables)
-        let x_int = model.int(1, 10);      // Integer variable
-        let y_float = model.float(1.0, 10.0); // Float variable
+        let x_int = m.int(1, 10);      // Integer variable
+        let y_float = m.float(1.0, 10.0); // Float variable
         
         // Add some constraints to make it interesting
-        model.le(x_int, Val::ValI(5)); // Integer constraint
+        m.le(x_int, Val::ValI(5)); // Integer constraint
         
-        let solution = model.solve();
+        let solution = m.solve();
         assert!(solution.is_some());
         
         let sol = solution.unwrap();
@@ -82,14 +82,14 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create a complex mixed problem with potential coupling
-        let x_int = model.int(1, 10);
-        let y_float = model.float(1.0, 10.0);
-        let z_int = model.int(5, 15);
+        let x_int = m.int(1, 10);
+        let y_float = m.float(1.0, 10.0);
+        let z_int = m.int(5, 15);
         
         // Add constraints that might create coupling
-        model.ne(x_int, z_int);
+        m.ne(x_int, z_int);
         
-        let solution = model.solve();
+        let solution = m.solve();
         assert!(solution.is_some());
         
         let sol = solution.unwrap();
@@ -107,19 +107,19 @@ mod tests {
     /// Test backward compatibility - existing code should work unchanged
     #[test]
     fn test_backward_compatibility() {
-        let mut model = Model::default();
+        let mut m = Model::default();
         
         // Create a classic CSP problem (N-Queens style constraint)
-        let x1 = model.int(1, 4);
-        let x2 = model.int(1, 4);
-        let x3 = model.int(1, 4);
+        let x1 = m.int(1, 4);
+        let x2 = m.int(1, 4);
+        let x3 = m.int(1, 4);
         
         // All different constraint
-        model.ne(x1, x2);
-        model.ne(x1, x3);
-        model.ne(x2, x3);
+        m.ne(x1, x2);
+        m.ne(x1, x3);
+        m.ne(x2, x3);
         
-        let solution = model.solve();
+        let solution = m.solve();
         assert!(solution.is_some());
         
         let sol = solution.unwrap();
@@ -136,14 +136,14 @@ mod tests {
     /// Test that the solve_with_callback method still works
     #[test]
     fn test_solve_with_callback_compatibility() {
-        let mut model = Model::default();
+        let mut m = Model::default();
         
-        let x = model.int(1, 10);
-        let y = model.int(1, 10);
-        model.ne(x, y);
+        let x = m.int(1, 10);
+        let y = m.int(1, 10);
+        m.ne(x, y);
         
         let mut callback_called = false;
-        let solution = model.solve_with_callback(|stats| {
+        let solution = m.solve_with_callback(|stats| {
             callback_called = true;
             // Just check that stats are provided
             println!("Search stats - propagations: {}, nodes: {}", 
@@ -163,10 +163,10 @@ mod tests {
             let mut model = Model::with_float_precision(3);
             
             // Create mixed separable problem
-            let x_int = model.int(1, 100);
-            let y_float = model.float(1.0, 100.0);
+            let x_int = m.int(1, 100);
+            let y_float = m.float(1.0, 100.0);
             
-            let solution = model.solve();
+            let solution = m.solve();
             assert!(solution.is_some());
         }
         
@@ -181,17 +181,17 @@ mod tests {
     #[test]
     fn test_empty_model() {
         let model = Model::default();
-        let solution = model.solve();
+        let solution = m.solve();
         assert!(solution.is_some()); // Empty model should have empty solution
     }
     
     /// Test single variable model
     #[test]
     fn test_single_variable() {
-        let mut model = Model::default();
-        let x = model.int(5, 5); // Fixed value
+        let mut m = Model::default();
+        let x = m.int(5, 5); // Fixed value
         
-        let solution = model.solve();
+        let solution = m.solve();
         assert!(solution.is_some());
         
         let sol = solution.unwrap();
@@ -204,15 +204,15 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create an infeasible problem
-        let x = model.int(1, 5);
-        let y = model.int(1, 5);
+        let x = m.int(1, 5);
+        let y = m.int(1, 5);
         
         // Add contradictory constraints
-        model.equals(x, Val::ValI(3));
-        model.equals(y, Val::ValI(3));
-        model.ne(x, y); // x = 3, y = 3, but x != y (contradiction)
+        m.equals(x, Val::ValI(3));
+        m.equals(y, Val::ValI(3));
+        m.ne(x, y); // x = 3, y = 3, but x != y (contradiction)
         
-        let solution = model.solve();
+        let solution = m.solve();
         assert!(solution.is_none()); // Should detect infeasibility
     }
     
@@ -222,8 +222,8 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Test that the optimization router is being used
-        let x_float = model.float(0.0, 1.0);
-        let solution = model.solve();
+        let x_float = m.float(0.0, 1.0);
+        let solution = m.solve();
         
         assert!(solution.is_some());
         let sol = solution.unwrap();

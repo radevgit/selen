@@ -19,12 +19,12 @@ mod tests {
     #[test]
     fn test_pure_float_partitioning() {
         let mut model = Model::with_float_precision(3);
-        let x = model.float(0.0, 100.0);
-        let y = model.float(-50.0, 50.0);
+        let x = m.float(0.0, 100.0);
+        let y = m.float(-50.0, 50.0);
         
         // Add pure float constraints
-        model.le(x, Val::float(75.5));
-        model.ne(y, Val::float(25.25));
+        m.le(x, Val::float(75.5));
+        m.ne(y, Val::float(25.25));
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -47,12 +47,12 @@ mod tests {
     #[test]
     fn test_pure_integer_partitioning() {
         let mut model = Model::with_float_precision(3);
-        let x = model.int(0, 100);
-        let y = model.int(-50, 50);
+        let x = m.int(0, 100);
+        let y = m.int(-50, 50);
         
         // Add integer constraints
-        model.le(x, Val::int(75));
-        model.ne(y, Val::int(25));
+        m.le(x, Val::int(75));
+        m.ne(y, Val::int(25));
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -77,18 +77,18 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Float variables
-        let float_x = model.float(0.0, 100.0);
-        let float_y = model.float(0.0, 50.0);
+        let float_x = m.float(0.0, 100.0);
+        let float_y = m.float(0.0, 50.0);
         
         // Integer variables  
-        let int_a = model.int(1, 10);
-        let int_b = model.int(1, 5);
+        let int_a = m.int(1, 10);
+        let int_b = m.int(1, 5);
         
         // Separate constraints - no obvious coupling
-        model.le(float_x, Val::float(75.5));  // Float only
-        model.ne(float_y, Val::float(25.0));  // Float only
-        model.le(int_a, Val::int(8));     // Integer only
-        model.ne(int_b, Val::int(3));     // Integer only
+        m.le(float_x, Val::float(75.5));  // Float only
+        m.ne(float_y, Val::float(25.0));  // Float only
+        m.le(int_a, Val::int(8));     // Integer only
+        m.ne(int_b, Val::int(3));     // Integer only
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -120,19 +120,19 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create many variables of mixed types (triggers coupling classification)
-        let float_vars: Vec<_> = (0..5).map(|_| model.float(0.0, 100.0)).collect();
-        let int_vars: Vec<_> = (0..5).map(|_| model.int(0, 100)).collect();
+        let float_vars: Vec<_> = (0..5).map(|_| m.float(0.0, 100.0)).collect();
+        let int_vars: Vec<_> = (0..5).map(|_| m.int(0, 100)).collect();
         
         // Add many constraints - high density suggests coupling
         for i in 0..4 {
-            model.le(float_vars[i], float_vars[i + 1]);
-            model.le(int_vars[i], int_vars[i + 1]);
+            m.le(float_vars[i], float_vars[i + 1]);
+            m.le(int_vars[i], int_vars[i + 1]);
         }
         
         // Add more constraints to increase density
         for i in 0..3 {
-            model.ne(float_vars[i], Val::float(50.0));
-            model.ne(int_vars[i], Val::int(50));
+            m.ne(float_vars[i], Val::float(50.0));
+            m.ne(int_vars[i], Val::int(50));
         }
         
         let result = VariablePartitioner::partition_model(&model);
@@ -158,12 +158,12 @@ mod tests {
     #[test]
     fn test_float_subproblem_creation() {
         let mut model = Model::with_float_precision(3);
-        let x = model.float(0.0, 100.0);
-        let y = model.float(10.0, 50.0);
+        let x = m.float(0.0, 100.0);
+        let y = m.float(10.0, 50.0);
         
         // Add constraints
-        model.le(x, Val::float(75.0));
-        model.ne(y, Val::float(25.0));
+        m.le(x, Val::float(75.0));
+        m.ne(y, Val::float(25.0));
         
         let partition_result = VariablePartitioner::partition_model(&model);
         
@@ -191,12 +191,12 @@ mod tests {
     #[test]
     fn test_integer_subproblem_creation() {
         let mut model = Model::with_float_precision(3);
-        let x = model.int(0, 100);
-        let y = model.int(10, 50);
+        let x = m.int(0, 100);
+        let y = m.int(10, 50);
         
         // Add constraints
-        model.le(x, Val::int(75));
-        model.ne(y, Val::int(25));
+        m.le(x, Val::int(75));
+        m.ne(y, Val::int(25));
         
         let partition_result = VariablePartitioner::partition_model(&model);
         
@@ -255,13 +255,13 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Create a moderately sized mixed problem
-        let float_vars: Vec<_> = (0..25).map(|_| model.float(0.0, 100.0)).collect();
-        let int_vars: Vec<_> = (0..25).map(|_| model.int(0, 100)).collect();
+        let float_vars: Vec<_> = (0..25).map(|_| m.float(0.0, 100.0)).collect();
+        let int_vars: Vec<_> = (0..25).map(|_| m.int(0, 100)).collect();
         
         // Add various constraints
         for i in 0..24 {
-            model.le(float_vars[i], float_vars[i + 1]);
-            model.le(int_vars[i], int_vars[i + 1]);
+            m.le(float_vars[i], float_vars[i + 1]);
+            m.le(int_vars[i], int_vars[i + 1]);
         }
         
         let start = std::time::Instant::now();
@@ -329,11 +329,11 @@ fn create_mixed_simple_model() -> Model {
     let mut model = Model::with_float_precision(3);
     
     // Simple mixed problem
-    let float_x = model.float(0.0, 100.0);
-    let int_y = model.int(0, 50);
+    let float_x = m.float(0.0, 100.0);
+    let int_y = m.int(0, 50);
     
-    model.le(float_x, Val::float(75.0));
-    model.le(int_y, Val::int(25));
+    m.le(float_x, Val::float(75.0));
+    m.le(int_y, Val::int(25));
     
     model
 }
@@ -342,13 +342,13 @@ fn create_mixed_dense_model() -> Model {
     let mut model = Model::with_float_precision(3);
     
     // Dense mixed problem
-    let float_vars: Vec<_> = (0..5).map(|_| model.float(0.0, 100.0)).collect();
-    let int_vars: Vec<_> = (0..5).map(|_| model.int(0, 100)).collect();
+    let float_vars: Vec<_> = (0..5).map(|_| m.float(0.0, 100.0)).collect();
+    let int_vars: Vec<_> = (0..5).map(|_| m.int(0, 100)).collect();
     
     // Dense constraint network
     for i in 0..4 {
-        model.le(float_vars[i], float_vars[i + 1]);
-        model.le(int_vars[i], int_vars[i + 1]);
+        m.le(float_vars[i], float_vars[i + 1]);
+        m.le(int_vars[i], int_vars[i + 1]);
     }
     
     model
@@ -357,18 +357,18 @@ fn create_mixed_dense_model() -> Model {
 // Reuse helper functions from Step 6.1 tests
 fn create_pure_float_model() -> Model {
     let mut model = Model::with_float_precision(3);
-    let x = model.float(0.0, 100.0);
-    let y = model.float(0.0, 50.0);
-    model.le(x, Val::float(75.0));
-    model.ne(y, Val::float(25.0));
+    let x = m.float(0.0, 100.0);
+    let y = m.float(0.0, 50.0);
+    m.le(x, Val::float(75.0));
+    m.ne(y, Val::float(25.0));
     model
 }
 
 fn create_pure_integer_model() -> Model {
     let mut model = Model::with_float_precision(3);
-    let x = model.int(0, 100);
-    let y = model.int(0, 50);
-    model.le(x, Val::int(75));
-    model.ne(y, Val::int(25));
+    let x = m.int(0, 100);
+    let y = m.int(0, 50);
+    m.le(x, Val::int(75));
+    m.ne(y, Val::int(25));
     model
 }

@@ -10,15 +10,15 @@
 //! ```rust
 //! use cspsolver::prelude::*;
 //! 
-//! let mut model = Model::default();
-//! let x = model.int(1, 10);
-//! let y = model.int(1, 10);
-//! let five = model.int(5, 5);
+//! let mut m = Model::default();
+//! let x = m.int(1, 10);
+//! let y = m.int(1, 10);
+//! let five = m.int(5, 5);
 //! 
 //! // Mathematical constraint syntax:
-//! post!(model, x < y);
-//! post!(model, y > five);
-//! post!(model, x + y <= five);
+//! post!(m, x < y);
+//! post!(m, y > five);
+//! post!(m, x + y <= five);
 //! 
 //! // Multiple constraints at once:
 //! postall!(model, x < y, y != five);
@@ -62,14 +62,14 @@ impl ConstraintRef {
 /// ```rust
 /// use cspsolver::prelude::*;
 /// 
-/// let mut model = Model::default();
-/// let x = model.int(1, 10);
-/// let y = model.int(1, 10);
-/// let one = model.int(1, 1);
+/// let mut m = Model::default();
+/// let x = m.int(1, 10);
+/// let y = m.int(1, 10);
+/// let one = m.int(1, 1);
 /// 
 /// // Mathematical constraint syntax
-/// post!(model, x < y);
-/// post!(model, abs(x) >= one);
+/// post!(m, x < y);
+/// post!(m, abs(x) >= one);
 /// ```
 #[macro_export]
 macro_rules! post {
@@ -1351,11 +1351,11 @@ macro_rules! post {
 /// ```rust
 /// use cspsolver::prelude::*;
 /// 
-/// let mut model = Model::default();
-/// let x = model.int(1, 10);
-/// let y = model.int(1, 10);
-/// let z = model.int(1, 20);
-/// let five = model.int(5, 5);
+/// let mut m = Model::default();
+/// let x = m.int(1, 10);
+/// let y = m.int(1, 10);
+/// let z = m.int(1, 20);
+/// let five = m.int(5, 5);
 /// 
 /// // Post multiple constraints directly
 /// postall!(model, x < y, y > five, x + y <= z);

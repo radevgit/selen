@@ -137,7 +137,7 @@ impl SolutionIntegrator {
     /// Integrate and validate a combined solution from subproblems
     ///
     /// This is the main entry point for Step 6.4. It takes the results from
-    /// Step 6.3 subproblem solving and creates a validated solution for the original model.
+    /// Step 6.3 subproblem solving and creates a validated solution for the original m.
     pub fn integrate_solution(
         &self,
         model: &Model,

@@ -8,7 +8,7 @@ use crate::vars::{VarId, Val};
 use crate::model::Model;
 use crate::boolean_operators::{BoolExpr, BooleanModel};
 
-/// Represents a constraint that can be added to a model.
+/// Represents a constraint that can be added to a m.
 #[derive(Debug, Clone)]
 pub enum Constraint {
     /// Equality constraint: x == y
@@ -38,23 +38,23 @@ pub enum Constraint {
 }
 
 impl Constraint {
-    /// Apply this constraint to a model.
+    /// Apply this constraint to a m.
     pub fn apply_to(self, model: &mut Model) {
         match self {
-            Constraint::Eq(x, y) => model.eq(x, y),
-            Constraint::Ne(x, y) => model.ne(x, y),
-            Constraint::Lt(x, y) => model.lt(x, y),
-            Constraint::Le(x, y) => model.le(x, y),
-            Constraint::Gt(x, y) => model.gt(x, y),
-            Constraint::Ge(x, y) => model.ge(x, y),
-            Constraint::EqVal(x, val) => model.eq(x, val),
-            Constraint::LeVal(x, val) => model.le(x, val),
-            Constraint::GeVal(x, val) => model.ge(x, val),
-            Constraint::GtVal(x, val) => model.gt(x, val),
-            Constraint::LtVal(x, val) => model.lt(x, val),
+            Constraint::Eq(x, y) => m.eq(x, y),
+            Constraint::Ne(x, y) => m.ne(x, y),
+            Constraint::Lt(x, y) => m.lt(x, y),
+            Constraint::Le(x, y) => m.le(x, y),
+            Constraint::Gt(x, y) => m.gt(x, y),
+            Constraint::Ge(x, y) => m.ge(x, y),
+            Constraint::EqVal(x, val) => m.eq(x, val),
+            Constraint::LeVal(x, val) => m.le(x, val),
+            Constraint::GeVal(x, val) => m.ge(x, val),
+            Constraint::GtVal(x, val) => m.gt(x, val),
+            Constraint::LtVal(x, val) => m.lt(x, val),
             Constraint::BoolTrue(expr) => {
-                let result_var = model.bool_expr(expr);
-                model.eq(result_var, Val::ValI(1));
+                let result_var = m.bool_expr(expr);
+                m.eq(result_var, Val::ValI(1));
             }
         }
     }

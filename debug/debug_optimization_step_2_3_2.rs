@@ -9,9 +9,9 @@ fn main() {
     println!("=== Debug Step 2.3.2 Optimization ===");
     
     // Reproduce the exact test scenario
-    let mut model = Model::default();
-    let x = model.float(1.0, 10.0);
-    model.less_than(x, 5.5);
+    let mut m = Model::default();
+    let x = m.float(1.0, 10.0);
+    m.less_than(x, 5.5);
     
     println!("Created model with:");
     println!("  x ∈ [1.0, 10.0]");
@@ -21,7 +21,7 @@ fn main() {
     // Try to maximize x
     println!("Attempting to maximize x...");
     
-    match model.maximize(x).last() {
+    match m.maximize(x).last() {
         Some(solution) => {
             let x_value = solution[x].as_float();
             println!("✅ Optimization succeeded!");

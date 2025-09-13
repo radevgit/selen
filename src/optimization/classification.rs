@@ -199,7 +199,7 @@ impl ProblemClassifier {
         
         // For now, we can't easily determine variable types from VarId alone
         // without access to the Vars collection. This is a limitation of the current design.
-        // We'll return false for now and enhance this later when we have access to the model.
+        // We'll return false for now and enhance this later when we have access to the m.
         // 
         // TODO: Enhance this by either:
         // 1. Passing the Vars collection to this function
@@ -385,10 +385,10 @@ mod tests {
     #[test]
     fn test_pure_float_classification() {
         // Create a model to properly add variables
-        let mut model = Model::default();
-        let _var_id = model.float(1.0, 10.0);
+        let mut m = Model::default();
+        let _var_id = m.float(1.0, 10.0);
         
-        let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
+        let problem_type = ProblemClassifier::classify(m.get_vars(), m.get_props());
         
         match problem_type {
             ProblemType::PureFloat { float_var_count: 1, has_linear_bounds_only: true } => {
@@ -403,10 +403,10 @@ mod tests {
     
     #[test]
     fn test_pure_integer_classification() {
-        let mut model = Model::default();
-        let _var_id = model.int(1, 10);
+        let mut m = Model::default();
+        let _var_id = m.int(1, 10);
         
-        let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
+        let problem_type = ProblemClassifier::classify(m.get_vars(), m.get_props());
         
         match problem_type {
             ProblemType::PureInteger { integer_var_count: 1 } => {
@@ -421,11 +421,11 @@ mod tests {
     
     #[test]
     fn test_mixed_separable_classification() {
-        let mut model = Model::default();
-        let _int_var = model.int(1, 5);
-        let _float_var = model.float(1.0, 10.0);
+        let mut m = Model::default();
+        let _int_var = m.int(1, 5);
+        let _float_var = m.float(1.0, 10.0);
         
-        let problem_type = ProblemClassifier::classify(model.get_vars(), model.get_props());
+        let problem_type = ProblemClassifier::classify(m.get_vars(), m.get_props());
         
         // With no constraints, should be classified as separable
         match problem_type {
@@ -467,12 +467,12 @@ mod tests {
         assert_eq!(analysis.total_count, 0);
         
         // Test with actual variables from a model
-        let mut model = Model::default();
-        let _int_var1 = model.int(1, 5);
-        let _int_var2 = model.int(1, 3);
-        let _float_var = model.float(1.0, 10.0);
+        let mut m = Model::default();
+        let _int_var1 = m.int(1, 5);
+        let _int_var2 = m.int(1, 3);
+        let _float_var = m.float(1.0, 10.0);
         
-        let analysis = ProblemClassifier::analyze_variables(model.get_vars());
+        let analysis = ProblemClassifier::analyze_variables(m.get_vars());
         assert_eq!(analysis.integer_count, 2);
         assert_eq!(analysis.float_count, 1);
         assert_eq!(analysis.total_count, 3);

@@ -15,9 +15,9 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Add some float variables
-        let var0 = model.float(-10.0, 10.0);
-        let var1 = model.float(0.0, 100.0);
-        let var2 = model.float(-5.0, 5.0);
+        let var0 = m.float(-10.0, 10.0);
+        let var1 = m.float(0.0, 100.0);
+        let var2 = m.float(-5.0, 5.0);
         
         (model, vec![var0, var1, var2])
     }
@@ -26,9 +26,9 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Add some integer variables
-        let var0 = model.int(1, 10);
-        let var1 = model.int(-5, 5);
-        let var2 = model.int(0, 100);
+        let var0 = m.int(1, 10);
+        let var1 = m.int(-5, 5);
+        let var2 = m.int(0, 100);
         
         (model, vec![var0, var1, var2])
     }
@@ -37,10 +37,10 @@ mod tests {
         let mut model = Model::with_float_precision(3);
         
         // Add mixed variables
-        let var0 = model.float(0.0, 10.0);  // float
-        let var1 = model.int(1, 5);         // integer
-        let var2 = model.float(-1.0, 1.0);  // float
-        let var3 = model.int(10, 20);       // integer
+        let var0 = m.float(0.0, 10.0);  // float
+        let var1 = m.int(1, 5);         // integer
+        let var2 = m.float(-1.0, 1.0);  // float
+        let var3 = m.int(10, 20);       // integer
         
         (model, vec![var0, var1, var2, var3])
     }

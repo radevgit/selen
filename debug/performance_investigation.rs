@@ -48,12 +48,12 @@ fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration
     
     // Build the model with timing
     let model_start = Instant::now();
-    let mut model = Model::default();
-    let mut grid = [[model.int(1, 9); 9]; 9];
+    let mut m = Model::default();
+    let mut grid = [[m.int(1, 9); 9]; 9];
     
     for row in 0..9 {
         for col in 0..9 {
-            grid[row][col] = model.int(1, 9);
+            grid[row][col] = m.int(1, 9);
         }
     }
     
@@ -61,19 +61,19 @@ fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration
     for row in 0..9 {
         for col in 0..9 {
             if puzzle[row][col] != 0 {
-                model.equals(grid[row][col], Val::int(puzzle[row][col]));
+                m.equals(grid[row][col], Val::int(puzzle[row][col]));
             }
         }
     }
     
     // Add sudoku constraints
     for row in 0..9 {
-        model.all_different(grid[row].to_vec());
+        m.all_different(grid[row].to_vec());
     }
     
     for col in 0..9 {
         let column: Vec<VarId> = (0..9).map(|row| grid[row][col]).collect();
-        model.all_different(column);
+        m.all_different(column);
     }
     
     for box_row in 0..3 {
@@ -84,7 +84,7 @@ fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration
                     box_vars.push(grid[box_row * 3 + r][box_col * 3 + c]);
                 }
             }
-            model.all_different(box_vars);
+            m.all_different(box_vars);
         }
     }
     
@@ -94,7 +94,7 @@ fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration
     let solve_start = Instant::now();
     let mut stats = cspsolver::solution::SolveStats::default();
     
-    let solution = model.solve_with_callback(|solve_stats| {
+    let solution = m.solve_with_callback(|solve_stats| {
         stats = solve_stats.clone();
         // Print progress every few seconds to see if it's stuck
         if solve_stats.node_count % 5 == 0 && solve_stats.node_count > 0 {

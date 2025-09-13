@@ -1,20 +1,20 @@
 use cspsolver::prelude::*;
 
 fn main() {
-    println!("CSP Solver - Model API with new_var_with_values\n");
+    println!("CSP Solver - Model API with ints\n");
 
     // Create a simple constraint satisfaction problem
     // We have three variables with predefined domains and they must all be different
     let mut m = Model::default();
 
     // Variable 1: Can only be even numbers
-    let var1 = m.new_var_with_values(vec![2, 4, 6, 8]);
+    let var1 = m.ints(vec![2, 4, 6, 8]);
     
     // Variable 2: Can only be prime numbers  
-    let var2 = m.new_var_with_values(vec![2, 3, 5, 7]);
+    let var2 = m.ints(vec![2, 3, 5, 7]);
     
     // Variable 3: Can only be odd numbers
-    let var3 = m.new_var_with_values(vec![1, 3, 5, 7, 9]);
+    let var3 = m.ints(vec![1, 3, 5, 7, 9]);
 
     // All variables must be different
     post!(m, alldiff([var1, var2, var3]));

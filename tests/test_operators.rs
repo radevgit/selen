@@ -43,61 +43,61 @@ fn test_comparison_trait_usage() {
 
 #[test]
 fn test_boolean_trait_usage() {
-    let mut model = Model::default();
-    let a = model.int(0, 1); // Boolean variable
-    let b = model.int(0, 1); // Boolean variable
+    let mut m = Model::default();
+    let a = m.int(0, 1); // Boolean variable
+    let b = m.int(0, 1); // Boolean variable
     
     // Test BooleanOp trait methods
-    a.and_op(&mut model, b);
-    a.or_op(&mut model, b);
-    a.not_op(&mut model);
+    a.and_op(&mut m, b);
+    a.or_op(&mut m, b);
+    a.not_op(&mut m);
     
     // Should not panic and model should be valid
-    assert!(model.solve().is_some());
+    assert!(m.solve().is_some());
 }
 
 #[test]
 fn test_model_extension_methods() {
-    let mut model = Model::default();
-    let x = model.int(1, 10);
-    let y = model.int(1, 10);
+    let mut m = Model::default();
+    let x = m.int(1, 10);
+    let y = m.int(1, 10);
     
     // Test Model extension methods for comparison
-    model.eq_op(x, y);
-    model.ne_op(x, y);
-    model.lt_op(x, y);
-    model.le_op(x, y);
-    model.gt_op(x, y);
-    model.ge_op(x, y);
+    m.eq_op(x, y);
+    m.ne_op(x, y);
+    m.lt_op(x, y);
+    m.le_op(x, y);
+    m.gt_op(x, y);
+    m.ge_op(x, y);
     
     // Should not panic
 }
 
 #[test]
 fn test_model_boolean_extension_methods() {
-    let mut model = Model::default();
-    let a = model.int(0, 1); // Boolean variable
-    let b = model.int(0, 1); // Boolean variable
+    let mut m = Model::default();
+    let a = m.int(0, 1); // Boolean variable
+    let b = m.int(0, 1); // Boolean variable
     
     // Test Model extension methods for boolean operations
-    model.and_op(a, b);
-    model.or_op(a, b);
-    model.not_op(a);
+    m.and_op(a, b);
+    m.or_op(a, b);
+    m.not_op(a);
     
     // Should not panic
 }
 
 #[test]
 fn test_equality_constraint_with_operators() {
-    let mut model = Model::default();
-    let x = model.int(1, 10);
-    let y = model.int(1, 10);
+    let mut m = Model::default();
+    let x = m.int(1, 10);
+    let y = m.int(1, 10);
     
     // Add equality constraint using operator
-    x.eq_op(&mut model, y);
+    x.eq_op(&mut m, y);
     
     // Solve and verify both variables have same value
-    let solution = model.solve().unwrap();
+    let solution = m.solve().unwrap();
     if let (Val::ValI(x_val), Val::ValI(y_val)) = (solution[x], solution[y]) {
         assert_eq!(x_val, y_val);
     }
@@ -105,15 +105,15 @@ fn test_equality_constraint_with_operators() {
 
 #[test]
 fn test_inequality_constraint_with_operators() {
-    let mut model = Model::default();
-    let x = model.int(1, 5);
-    let y = model.int(1, 5);
+    let mut m = Model::default();
+    let x = m.int(1, 5);
+    let y = m.int(1, 5);
     
     // Add inequality constraint using operator
-    x.ne_op(&mut model, y);
+    x.ne_op(&mut m, y);
     
     // Solve and verify variables have different values
-    let solution = model.solve().unwrap();
+    let solution = m.solve().unwrap();
     if let (Val::ValI(x_val), Val::ValI(y_val)) = (solution[x], solution[y]) {
         assert_ne!(x_val, y_val);
     }
@@ -121,15 +121,15 @@ fn test_inequality_constraint_with_operators() {
 
 #[test]
 fn test_less_than_constraint_with_operators() {
-    let mut model = Model::default();
-    let x = model.int(1, 5);
-    let y = model.int(3, 10);
+    let mut m = Model::default();
+    let x = m.int(1, 5);
+    let y = m.int(3, 10);
     
     // Add less-than constraint using operator
-    x.lt_op(&mut model, y);
+    x.lt_op(&mut m, y);
     
     // Solve and verify x < y
-    let solution = model.solve().unwrap();
+    let solution = m.solve().unwrap();
     if let (Val::ValI(x_val), Val::ValI(y_val)) = (solution[x], solution[y]) {
         assert!(x_val < y_val);
     }
@@ -137,56 +137,56 @@ fn test_less_than_constraint_with_operators() {
 
 #[test]
 fn test_boolean_and_constraint_with_operators() {
-    let mut model = Model::default();
-    let a = model.int(0, 1); // Boolean variable
-    let b = model.int(0, 1); // Boolean variable
+    let mut m = Model::default();
+    let a = m.int(0, 1); // Boolean variable
+    let b = m.int(0, 1); // Boolean variable
     
     // Create AND constraint using operator
-    a.and_op(&mut model, b);
+    a.and_op(&mut m, b);
     
     // Should be solvable
-    assert!(model.solve().is_some());
+    assert!(m.solve().is_some());
 }
 
 #[test]
 fn test_boolean_or_constraint_with_operators() {
-    let mut model = Model::default();
-    let a = model.int(0, 1); // Boolean variable
-    let b = model.int(0, 1); // Boolean variable
+    let mut m = Model::default();
+    let a = m.int(0, 1); // Boolean variable
+    let b = m.int(0, 1); // Boolean variable
     
     // Use operator to create OR constraint
-    a.or_op(&mut model, b);
+    a.or_op(&mut m, b);
     
     // Should be solvable
-    assert!(model.solve().is_some());
+    assert!(m.solve().is_some());
 }
 
 #[test]
 fn test_boolean_not_constraint_with_operators() {
-    let mut model = Model::default();
-    let a = model.int(0, 1); // Boolean variable
+    let mut m = Model::default();
+    let a = m.int(0, 1); // Boolean variable
     
     // Use operator to create NOT constraint
-    a.not_op(&mut model);
+    a.not_op(&mut m);
     
     // Should be solvable
-    assert!(model.solve().is_some());
+    assert!(m.solve().is_some());
 }
 
 #[test]
 fn test_mixed_constraints_with_operators() {
-    let mut model = Model::default();
-    let x = model.int(1, 10);
-    let y = model.int(1, 10);
-    let z = model.int(1, 10);
+    let mut m = Model::default();
+    let x = m.int(1, 10);
+    let y = m.int(1, 10);
+    let z = m.int(1, 10);
     
     // Mix different operator constraints
-    x.lt_op(&mut model, y);    // x < y
-    y.le_op(&mut model, z);    // y <= z
-    x.ne_op(&mut model, z);    // x != z
+    x.lt_op(&mut m, y);    // x < y
+    y.le_op(&mut m, z);    // y <= z
+    x.ne_op(&mut m, z);    // x != z
     
     // Should be solvable
-    let solution = model.solve().unwrap();
+    let solution = m.solve().unwrap();
     if let (Val::ValI(x_val), Val::ValI(y_val), Val::ValI(z_val)) = 
         (solution[x], solution[y], solution[z]) {
         assert!(x_val < y_val);

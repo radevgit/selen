@@ -2,12 +2,12 @@ use cspsolver::prelude::*;
 
 #[test]
 fn debug_step_alignment() {
-    let mut model = Model::default();
-    let step_size = model.float_step_size();
+    let mut m = Model::default();
+    let step_size = m.float_step_size();
     println!("Step size: {}", step_size);
     
     // Check if 5.5 is properly aligned with the step grid
-    let x = model.float(1.0, 10.0);
+    let x = m.float(1.0, 10.0);
     
     // The interval should be [1.0, 10.0] with step size 1e-6
     // Let's see what values are actually on the grid

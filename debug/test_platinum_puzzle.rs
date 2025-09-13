@@ -36,13 +36,13 @@ fn main() {
 }
 
 fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)> {
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Create variables for each cell (1-9)
-    let mut grid = [[model.int(1, 9); 9]; 9];
+    let mut grid = [[m.int(1, 9); 9]; 9];
     for row in 0..9 {
         for col in 0..9 {
-            grid[row][col] = model.int(1, 9);
+            grid[row][col] = m.int(1, 9);
         }
     }
     
@@ -50,20 +50,20 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     for row in 0..9 {
         for col in 0..9 {
             if puzzle[row][col] != 0 {
-                model.equals(grid[row][col], Val::int(puzzle[row][col]));
+                m.equals(grid[row][col], Val::int(puzzle[row][col]));
             }
         }
     }
     
     // Row constraints
     for row in 0..9 {
-        model.all_different(grid[row].to_vec());
+        m.all_different(grid[row].to_vec());
     }
     
     // Column constraints
     for col in 0..9 {
         let column: Vec<VarId> = (0..9).map(|row| grid[row][col]).collect();
-        model.all_different(column);
+        m.all_different(column);
     }
     
     // Box constraints
@@ -75,7 +75,7 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
                     box_vars.push(grid[box_row * 3 + r][box_col * 3 + c]);
                 }
             }
-            model.all_different(box_vars);
+            m.all_different(box_vars);
         }
     }
     
@@ -83,7 +83,7 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     let mut propagation_count = 0;
     let mut node_count = 0;
     
-    let solution = model.solve_with_callback(|stats| {
+    let solution = m.solve_with_callback(|stats| {
         propagation_count = stats.propagation_count;
         node_count = stats.node_count;
         

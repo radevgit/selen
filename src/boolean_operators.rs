@@ -35,16 +35,16 @@ impl BoolExpr {
             BoolOperation::And(left, right) => {
                 let left_var = left.apply_to(model);
                 let right_var = right.apply_to(model);
-                model.bool_and(&[left_var, right_var])
+                m.bool_and(&[left_var, right_var])
             }
             BoolOperation::Or(left, right) => {
                 let left_var = left.apply_to(model);
                 let right_var = right.apply_to(model);
-                model.bool_or(&[left_var, right_var])
+                m.bool_or(&[left_var, right_var])
             }
             BoolOperation::Not(operand) => {
                 let operand_var = operand.apply_to(model);
-                model.bool_not(operand_var)
+                m.bool_not(operand_var)
             }
         }
     }
@@ -236,26 +236,26 @@ mod tests {
     
     #[test]
     fn test_bitwise_boolean_operators() {
-        let mut model = Model::default();
+        let mut m = Model::default();
         
-        let a = model.bool();
-        let b = model.bool();
-        let c = model.bool();
+        let a = m.bool();
+        let b = m.bool();
+        let c = m.bool();
         
         // Test bitwise operators with VarId directly
-        let and_result = model.bool_expr(a & b);        // a & b
-        let or_result = model.bool_expr(a | b);         // a | b  
-        let not_result = model.bool_expr(!a);           // !a
+        let and_result = m.bool_expr(a & b);        // a & b
+        let or_result = m.bool_expr(a | b);         // a | b  
+        let not_result = m.bool_expr(!a);           // !a
         
         // Test complex expression: (a | b) & !c
-        let complex = model.bool_expr((a | b) & !c);
+        let complex = m.bool_expr((a | b) & !c);
         
         // Set up constraints using new API
-        model.eq(a, crate::vars::Val::ValI(1));
-        model.eq(b, crate::vars::Val::ValI(0)); 
-        model.eq(c, crate::vars::Val::ValI(0));
+        m.eq(a, crate::vars::Val::ValI(1));
+        m.eq(b, crate::vars::Val::ValI(0)); 
+        m.eq(c, crate::vars::Val::ValI(0));
         
-        let solution = model.solve().unwrap();
+        let solution = m.solve().unwrap();
         let a_val = if let crate::vars::Val::ValI(v) = solution[a] { v } else { 0 };
         let b_val = if let crate::vars::Val::ValI(v) = solution[b] { v } else { 0 };
         let and_val = if let crate::vars::Val::ValI(v) = solution[and_result] { v } else { 0 };

@@ -2,59 +2,74 @@
 //!
 //! A constraint satisfaction problem (CSP) solver library.
 //!
-//! This library provides tools for solving constraint satisfaction problems,
-//! including constraint propagation and search algorithms.
+//! ## Variable Types
 //!
-//! ## Features
+//! - **Integer variables**: `m.int(min, max)` - continuous range
+//! - **Float variables**: `m.float(min, max)` - continuous range with precision control
+//! - **Custom domains**: `m.ints(vec![values])` - specific integer values only
+//! - **Boolean variables**: `m.bool()` - equivalent to `m.int(0, 1)`
 //!
-//! - Constraint propagation
-//! - Backtracking search
-//! - Domain filtering
-//! - Support for various constraint types: `+`, `-`, `*`, `/`, `==`, `!=`, `<`, `<=`, `>`, `>=`, all_different
-//! - Type of variables: `float`, `int`, `mixed` (int and float)
+//! ## Constraint Types
 //!
-//! ## Basic Example
+//! - **Arithmetic**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
+//! - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=`
+//! - **Boolean logic**: `and()`, `or()`, `not()`
+//! - **Global constraints**: `alldiff()`
+//!
+//! ## Example 1: Basic Integer Problem
 //!
 //! ```rust
 //! use cspsolver::prelude::*;
 //!
-//! // Create a new model
-//! let mut model = Model::default();
+//! let mut m = Model::default();
+//! let x = m.int(1, 10);
+//! let y = m.int(1, 10);
 //!
-//! // Create a variable x in [1, 10]
-//! let v = model.int(1, 10);
+//! post!(m, x + y == int(12));
+//! post!(m, x > y);
 //!
-//! // Add constraint: x > 2 (using post! macro)
-//! post!(model, v > 2);
-//!
-//! // Solve the problem minimizing x
-//! let solution = model.minimize(v).unwrap();
-//! if let Val::ValI(x) = solution[v] {
-//!     assert_eq!(x, 3);
+//! if let Some(solution) = m.solve() {
+//!     println!("x = {:?}, y = {:?}", solution[x], solution[y]);
 //! }
 //! ```
 //!
-//! ## Variables with Predefined Values
+//! ## Example 2: Mixed Integer-Float Optimization
 //!
 //! ```rust
 //! use cspsolver::prelude::*;
 //!
-//! // Create a new model  
-//! let mut model = Model::default();
+//! let mut m = Model::default();
+//! let items = m.int(1, 100);        // Number of items
+//! let cost = m.float(0.0, 1000.0);  // Total cost
 //!
-//! // Create variables with specific allowed values
-//! let even_var = model.new_var_with_values(vec![2, 4, 6, 8]);
-//! let odd_var = model.new_var_with_values(vec![1, 3, 5, 7]);
+//! post!(m, cost == items * float(12.5));  // $12.50 per item
+//! post!(m, cost <= float(500.0));         // Budget constraint
 //!
-//! // Add constraint: variables must be different (using post! macro)
-//! post!(model, even_var != odd_var);
+//! // Maximize number of items within budget
+//! if let Some(solution) = m.maximize(items) {
+//!     println!("Optimal: {} items, cost: {:?}", 
+//!              solution[items], solution[cost]);
+//! }
+//! ```
 //!
-//! // Solve the problem
-//! let solution = model.solve().unwrap();
-//! if let (Val::ValI(even), Val::ValI(odd)) = (solution[even_var], solution[odd_var]) {
-//!     assert!(even % 2 == 0);  // even number
-//!     assert!(odd % 2 == 1);   // odd number  
-//!     assert_ne!(even, odd);   // different values
+//! ## Example 3: Custom Domains and Global Constraints
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//!
+//! let mut m = Model::default();
+//! 
+//! // Variables with custom domains
+//! let red = m.ints(vec![1, 3, 5, 7]);      // Odd numbers
+//! let blue = m.ints(vec![2, 4, 6, 8]);     // Even numbers  
+//! let green = m.ints(vec![2, 3, 5, 7]);    // Prime numbers
+//!
+//! // All must be different
+//! post!(m, alldiff([red, blue, green]));
+//!
+//! if let Some(solution) = m.solve() {
+//!     println!("Red: {:?}, Blue: {:?}, Green: {:?}",
+//!              solution[red], solution[blue], solution[green]);
 //! }
 //! ```
 
