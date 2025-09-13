@@ -6,7 +6,7 @@ use std::ops::Index;
 #[derive(Debug)]
 pub struct Model {
     vars: Vars,
-    props: Propagators,
+    pub props: Propagators,
     /// Precision for float variables (decimal places)
     pub float_precision_digits: i32,
     /// Optimization router for efficient algorithm selection
@@ -672,143 +672,11 @@ impl Model {
         s
     }
 
-    /// Declare two expressions to be equal.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let x = model.int(1, 10);
-    /// let y = model.int(1, 10);
-    /// model.equals(x, y);
-    /// ```
-    pub fn equals(&mut self, x: impl View, y: impl View) {
-        let _p = self.props.equals(x, y);
-    }
+    // === BOOLEAN OPERATORS ===
 
-    /// Short name for equals constraint: `==`
+    /// Create a variable representing the boolean AND of multiple operands.
+    /// Returns a variable that is 1 if ALL operands are non-zero, 0 otherwise.
     /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let x = model.int(1, 10);
-    /// let y = model.int(1, 10);
-    /// model.eq(x, y);
-    /// ```
-    pub fn eq(&mut self, x: impl View, y: impl View) {
-        self.equals(x, y);
-    }
-
-    /// Declare two expressions to be not equal.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let x = model.int(1, 10);
-    /// let y = model.int(1, 10);
-    /// model.ne(x, y);
-    /// ```
-    pub fn ne(&mut self, x: impl View, y: impl View) {
-        let _p = self.props.not_equals(x, y);
-    }
-
-    /// Declare constraint `x <= y`.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let x = model.int(1, 10);
-    /// let y = model.int(5, 15);
-    /// model.le(x, y);
-    /// ```
-    pub fn le(&mut self, x: impl View, y: impl View) {
-        let _p = self.props.less_than_or_equals(x, y);
-    }
-
-    /// Declare constraint `x < y`.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let x = model.int(1, 10);
-    /// model.lt(x, Val::int(5));
-    /// ```
-    pub fn lt(&mut self, x: impl View, y: impl View) {
-        //let mut events = Vec::new();
-        //let ctx = Context::new(&mut self.vars, &mut events);
-        let _p = self.props.less_than(x, y);
-    }
-
-    /// Declare constraint `x >= y`.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let x = model.int(5, 15);
-    /// let y = model.int(1, 10);
-    /// model.ge(x, y);
-    /// ```
-    pub fn ge(&mut self, x: impl View, y: impl View) {
-        let _p = self.props.greater_than_or_equals(x, y);
-    }
-
-    /// Declare constraint `x > y`.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let x = model.int(1, 10);
-    /// model.gt(x, float(2.5));
-    /// ```
-    pub fn gt(&mut self, x: impl View, y: impl View) {
-        //let mut events = Vec::new();
-        //let ctx = Context::new(&mut self.vars, &mut events);
-        let _p = self.props.greater_than(x, y);
-    }
-
-    /// Declare all-different constraint: all variables must have distinct values.
-    /// This is more efficient than adding pairwise not-equals constraints.
-    /// 
-    /// **Note**: This constraint is designed for integer variables with discrete domains.
-    /// Using it with floating-point variables is not recommended due to precision issues
-    /// and the continuous nature of float domains.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.int_vars(4, 1, 4).collect();
-    /// model.all_different(vars);
-    /// ```
-    pub fn all_different(&mut self, vars: Vec<VarId>) {
-        let _p = self.props.all_different(vars);
-    }
-
-    /// Short alias for `all_different` - cleaner and more concise.
-    /// 
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
-    /// let vars: Vec<_> = model.int_vars(4, 1, 4).collect();
-    /// model.alldifferent(vars);  // Shorter than all_different
-    /// ```
-    pub fn alldifferent(&mut self, vars: Vec<VarId>) {
-        self.all_different(vars);
-    }
-
-    /// Create a new variable that holds the result of a boolean AND operation.
-    /// 
-    /// The boolean AND operation computes `result = a AND b AND c AND ...`:
-    /// - All variables are treated as boolean: 0 = false, non-zero = true
-    /// - Result is 1 if and only if all operands are non-zero
-    /// - Result is 0 if any operand is 0
-    ///
     /// # Examples
     /// ```
     /// use cspsolver::prelude::*;
@@ -816,81 +684,44 @@ impl Model {
     /// let a = model.bool();
     /// let b = model.bool();
     /// let c = model.bool();
-    /// 
-    /// // Modern clean syntax (recommended):
-    /// model.post(a & b & c);
-    /// 
-    /// // Or using the direct method:
-    /// let result = model.bool_and(&[a, b, c]);
+    /// let and_result = model.bool_and(&[a, b, c]);
     /// ```
     pub fn bool_and(&mut self, operands: &[VarId]) -> VarId {
-        if operands.is_empty() {
-            // Empty AND is typically true
-            return self.int(1, 1);
-        }
-
-        // Result is boolean (0 or 1)
-        let result = self.int(0, 1);
-        let _p = self.props.bool_and(operands.to_vec(), result);
+        let result = self.bool(); // Create a boolean variable (0 or 1)
+        self.props.bool_and(operands.to_vec(), result);
         result
     }
 
-    /// Create a new variable that holds the result of a boolean OR operation.
+    /// Create a variable representing the boolean OR of multiple operands.
+    /// Returns a variable that is 1 if ANY operand is non-zero, 0 otherwise.
     /// 
-    /// The boolean OR operation computes `result = a OR b OR c OR ...`:
-    /// - All variables are treated as boolean: 0 = false, non-zero = true
-    /// - Result is 1 if any operand is non-zero
-    /// - Result is 0 if and only if all operands are 0
-    ///
     /// # Examples
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let a = model.bool();
     /// let b = model.bool();
-    /// let c = model.bool();
-    /// 
-    /// // Modern clean syntax (recommended):
-    /// model.post(a | b | c);
-    /// 
-    /// // Or using the direct method:
-    /// let result = model.bool_or(&[a, b, c]);
+    /// let or_result = model.bool_or(&[a, b]);
     /// ```
     pub fn bool_or(&mut self, operands: &[VarId]) -> VarId {
-        if operands.is_empty() {
-            // Empty OR is typically false
-            return self.int(0, 0);
-        }
-
-        // Result is boolean (0 or 1)
-        let result = self.int(0, 1);
-        let _p = self.props.bool_or(operands.to_vec(), result);
+        let result = self.bool(); // Create a boolean variable (0 or 1)
+        self.props.bool_or(operands.to_vec(), result);
         result
     }
 
-    /// Create a new variable that holds the result of a boolean NOT operation.
+    /// Create a variable representing the boolean NOT of an operand.
+    /// Returns a variable that is 1 if the operand is 0, and 0 if the operand is non-zero.
     /// 
-    /// The boolean NOT operation computes `result = NOT operand`:
-    /// - Variables are treated as boolean: 0 = false, non-zero = true
-    /// - Result is 1 if operand is 0
-    /// - Result is 0 if operand is non-zero
-    ///
     /// # Examples
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let a = model.bool();
-    /// 
-    /// // Modern clean syntax (recommended):
-    /// model.post(!a);
-    /// 
-    /// // Or using the direct method:
-    /// let result = model.bool_not(a);
+    /// let not_a = model.bool_not(a);
     /// ```
     pub fn bool_not(&mut self, operand: VarId) -> VarId {
-        // Result is boolean (0 or 1)
-        let result = self.int(0, 1);
-        let _p = self.props.bool_not(operand, result);
+        let result = self.bool(); // Create a boolean variable (0 or 1)
+        self.props.bool_not(operand, result);
         result
     }
 

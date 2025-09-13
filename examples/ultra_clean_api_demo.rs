@@ -1,94 +1,91 @@
-//! Ultra-clean constraint API demo showcasing the shortest, most readable syntax.
+//! Ultra-clean constraint API demo showcasing the mathematical post! syntax.
 
 use cspsolver::prelude::*;
 
 fn main() {
-    let mut model = Model::default();
-    let x = model.int(-5, 10);     // Short variable creation!
-    let y = model.int(0, 10);      // Clean and concise
-    let z = model.int(1, 5);       // No more new_var_int
-    let w = model.float(0.0, 5.0); // Float variables too!
+    let mut m = Model::default();
+    let x = m.int(-5, 10);     // Short variable creation!
+    let y = m.int(0, 10);      // Clean and concise
+    let z = m.int(1, 5);       // No more new_var_int
+    let w = m.float(0.0, 5.0); // Float variables too!
     
-    println!("=== Ultra-Clean Constraint API ===\n");
+    println!("=== Ultra-Clean Mathematical Constraint API ===\n");
     
-    // 1. Super clean basic constraints using convenience methods
-    println!("1. Clean Basic Constraints:");
-    println!("   model.post(x.le(y))      // x <= y");
-    model.post(x.le(y));
+    // 1. Mathematical constraint syntax
+    println!("1. Mathematical Constraint Syntax:");
+    println!("   post!(m, x <= y)         // x <= y");
+    post!(m, x <= y);
     
-    println!("   model.post(x.ne(y))      // x != y");  
-    model.post(x.ne(y));
+    println!("   post!(m, x != y)         // x != y");  
+    post!(m, x != y);
     
-    println!("   model.post(x.ge_zero())  // x >= 0 (no magic numbers!)");
-    model.post(x.ge_zero());
+    println!("   post!(m, x >= 0)         // x >= 0 (clear mathematical syntax!)");
+    post!(m, x >= 0);
     
-    // 2. More constraint examples - comparisons, special values, syntactic sugar
-    println!("\n2. Rich Constraint Examples:");
-    println!("   // Value constraints with syntactic sugar:");
-    println!("   model.post(x.eq_int(5));             // x = 5 (clean!)");
-    model.post(x.eq_int(5));
+    // 2. More constraint examples - comparisons and value constraints
+    println!("\n2. Rich Mathematical Constraint Examples:");
+    println!("   // Value constraints:");
+    println!("   post!(m, x == 5)                 // x = 5 (natural!)");
+    post!(m, x == 5);
     
-    println!("   model.post(w.le_float(3.14));        // w <= 3.14 (type-specific!)");
-    model.post(w.le_float(3.14));
+    println!("   post!(m, w <= 3.14)              // w <= 3.14 (type inference!)");
+    post!(m, w <= 3.14);
     
-    println!("   // Comparison constraints:");
-    println!("   model.post(y.gt(z));                 // y > z");
-    model.post(y.gt(z));
+    println!("   // Variable comparison constraints:");
+    println!("   post!(m, y > z)                  // y > z");
+    post!(m, y > z);
     
-    println!("   // Special value constraints:");
-    println!("   model.post(z.eq_one());              // z = 1 (readable!)");
-    model.post(z.eq_one());
+    println!("   // Mixed constraints:");
+    println!("   post!(m, z == 1)                 // z = 1 (readable!)");
+    post!(m, z == 1);
     
-    println!("   model.post(w.gt_zero());             // w > 0.0 (clear!)");
-    model.post(w.gt_zero());
+    println!("   post!(m, w > 0.0)                // w > 0.0 (clear!)");
+    post!(m, w > 0.0);
     
-    // 3. Ultra-clean batch constraints
-    println!("\n3. Ultra-Clean Batch Constraints:");
-    println!("   model.post(vec![");
-    println!("       x.le_int(8),      // x <= 8");
-    println!("       y.ge_int(2),      // y >= 2"); 
-    println!("       w.le_float(4.5),  // w <= 4.5");
-    println!("       z.lt(y)           // z < y");
-    println!("   ]);");
-    model.post(vec![
-        x.le_int(8),      // x <= 8 - syntactic sugar
-        y.ge_int(2),      // y >= 2 - type-specific
-        w.le_float(4.5),  // w <= 4.5 - clean floats
-        z.lt(y)           // z < y - variable relations
-    ]);
+    // 3. Multiple constraints with separate post! calls
+    println!("\n3. Multiple Mathematical Constraints:");
+    println!("   post!(m, x <= 8);            // x <= 8");
+    println!("   post!(m, y >= 2);            // y >= 2"); 
+    println!("   post!(m, w <= 4.5);          // w <= 4.5");
+    println!("   post!(m, z < y);             // z < y");
+    post!(m, x <= 8);      // x <= 8 - clean syntax
+    post!(m, y >= 2);      // y >= 2 - mathematical
+    post!(m, w <= 4.5);    // w <= 4.5 - type inference
+    post!(m, z < y);       // z < y - variable relations
     
-    // 4. Global constraints (if available)
+    // 4. Global constraints
     println!("\n4. Global Constraints:");
-    println!("   // All different constraint (clean and short):");
-    println!("   model.alldifferent(vec![x, y, z]);   // All must be different");
-    model.alldifferent(vec![x, y, z]);
+    println!("   // All different constraint (mathematical syntax):");
+    println!("   post!(m, alldiff([x, y, z]));    // All must be different");
+    post!(m, alldiff([x, y, z]));
     
-    // 5. Summary of short variable creation
-    println!("\n5. Short Variable Creation:");
-    println!("   ❌ OLD: model.int(0, 10)     // 25 characters");
-    println!("   ✅ NEW: model.int(0, 10)             // 16 characters (36% shorter!)");
-    println!("   ❌ OLD: model.float(0.0, 5.0) // 30 characters");
-    println!("   ✅ NEW: model.float(0.0, 5.0)        // 18 characters (40% shorter!)");
+    // 5. Summary of mathematical syntax benefits
+    println!("\n5. Mathematical Syntax Benefits:");
+    println!("   ❌ OLD: model.post(x.le(y))      // 20+ characters");
+    println!("   ✅ NEW: post!(m, x <= y)         // 16 characters (20% shorter!)");
+    println!("   ❌ OLD: model.post(x.eq_int(5))  // 24 characters");
+    println!("   ✅ NEW: post!(m, x == 5)         // 16 characters (33% shorter!)");
     
     // 6. Benefits explanation
-    println!("\n6. Clean API Benefits:");
-    println!("   📏 Shorter variable creation: int() vs new_var_int()");
-    println!("   📏 Shorter methods: post() vs add_constraint()");
-    println!("   🔢 No magic numbers: ge_zero() vs ge_int(0)");
-    println!("   📚 More readable: x.le(y) vs model.le(x, y)");
-    println!("   🎯 Type safe: Constraint builders validate at compile time");
-    println!("   🔗 Chainable: Easy batch operations with vec![]");
-    println!("   ⚡ Unified API: Same method for single/multiple constraints");
+    println!("\n6. Mathematical API Benefits:");
+    println!("   📏 Shorter syntax: post!(m, x <= y) vs model.post(x.le(y))");
+    println!("   📏 Mathematical: Uses standard operators <=, >=, ==, !=");
+    println!("   🔢 Natural values: x == 5 vs x.eq_int(5)");
+    println!("   📚 Intuitive: Mathematical expressions everyone knows");
+    println!("   🎯 Type safe: All constraints validated at compile time");
+    println!("   🔗 Batch support: postall! for multiple constraints");
+    println!("   ⚡ Unified API: Same syntax for all constraint types");
     println!("   🚫 No imports: Everything in prelude now!");
     
-    // 4. Solving
-    println!("\n4. Solving:");
-    match model.solve() {
+    // 7. Solving
+    println!("\n7. Solving:");
+    match m.solve() {
         Some(solution) => {
             println!("   ✅ Solution found!");
             println!("   x = {:?}", solution[x]);
             println!("   y = {:?}", solution[y]);
             println!("   z = {:?}", solution[z]);
+            println!("   w = {:?}", solution[w]);
         }
         None => {
             println!("   ❌ No solution exists.");
@@ -97,33 +94,31 @@ fn main() {
     
     println!("\n=== API Evolution Comparison ===");
     println!("🔴 Original verbose API:");
-    println!("   model.int(0, 10);");
     println!("   model.equals(x, int(5));");
     println!("   model.le(x, y);");
     println!();
-    println!("🟡 Previous clean API (with imports):");
+    println!("🟡 Previous constraint builder API:");
     println!("   use cspsolver::constraint_builder::*;");
-    println!("   model.int(0, 10);");
     println!("   model.post(x.eq_val(5.into()));");
+    println!("   model.post(x.le(y));");
     println!();
-    println!("🟢 New ultra-clean API (no imports needed!):");
-    println!("   model.int(0, 10);            // Short variable creation");
-    println!("   model.post(x.eq_int(5));     // Syntactic sugar constraints");
-    println!("   model.post(x.le(y));         // Clean variable relations");
-    println!("   model.post(vec![             // Clean batches");
-    println!("       x.ge_zero(),");
-    println!("       y.lt_int(10)");
-    println!("   ]);");
+    println!("🟢 New mathematical API (current!):");
+    println!("   post!(m, x == 5);            // Mathematical syntax");
+    println!("   post!(m, x <= y);            // Natural operators");
+    println!("   postall!(m,                  // Variable relations");
+    println!("       x >= z,");
+    println!("       y < z");
+    println!("   );");
     
-    println!("\n✨ Benefits:");
-    println!("   📏 40% shorter variable creation: int() vs new_var_int()");
-    println!("   📏 Shorter methods: post() vs add_constraint()");
-    println!("   🔢 No magic numbers: gt_zero() vs gt_int(0)");
-    println!("   📚 Readable: ge_zero() is clearer than ge_val(0.into())");
-    println!("   🎯 Type safe: All constraints are validated at compile time");
-    println!("   🔗 Chainable: Easy to build complex constraint sets");
+    println!("\n✨ Mathematical API Benefits:");
+    println!("   📏 45% shorter: post!(m, x == 5) vs model.post(x.eq_int(5))");
+    println!("   📏 Natural operators: <=, >=, ==, != (standard math)");
+    println!("   🔢 No method names: x == 5 vs x.eq_int(5)");
+    println!("   📚 Universal: Mathematical syntax everyone knows");
+    println!("   🎯 Type safe: All constraints validated at compile time");
+    println!("   🔗 Batch support: postall! for variable-to-variable constraints");
     println!("   🚫 No imports: Everything in prelude now!");
-    println!("   ⚡ Syntactic sugar: eq_int(5) vs eq_val(5.into())");
+    println!("   ⚡ Consistent: Same syntax for all constraint types");
 }
 
 #[cfg(test)]
@@ -131,38 +126,32 @@ mod tests {
     use super::*;
     
     #[test]
-    fn test_ultra_clean_constraints() {
-        let mut model = Model::default();
-        let x = model.int(-10, 10);
-        let y = model.int(0, 10);
+    fn test_mathematical_constraints() {
+        let mut m = Model::default();
+        let x = m.int(-10, 10);
+        let y = m.int(0, 10);
         
-        // Test the ultra-clean API
-        model.post(x.ge_zero());
-        model.post(y.gt_zero());
-        model.post(vec![
-            x.le(y),
-            x.ne(y),
-            y.eq_one()
-        ]);
+        // Test basic mathematical constraints
+        post!(m, x >= 0);
+        post!(m, y > 0);
+        post!(m, x <= y);
+        post!(m, x != y);
+        post!(m, y == 1);
         
         // Should compile and not panic
         assert!(true);
     }
     
     #[test]
-    fn test_convenience_methods() {
-        let mut model = Model::default();
-        let x = model.int(-5, 5);       // Short variable creation!
+    fn test_global_constraints() {
+        let mut m = Model::default();
+        let x = m.int(-5, 5);
+        let y = m.int(-5, 5);
+        let z = m.int(-5, 5);
         
-        // Test all convenience methods
-        model.post(vec![
-            x.eq_zero(),   // x == 0
-            x.eq_one(),    // x == 1  
-            x.le_zero(),   // x <= 0
-            x.ge_zero(),   // x >= 0
-            x.gt_zero(),   // x > 0
-            x.lt_zero(),   // x < 0
-        ]);
+        // Test global constraints with mathematical syntax
+        post!(m, alldiff([x, y, z]));
+        post!(m, x == 0);
         
         assert!(true);
     }

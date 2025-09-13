@@ -8,7 +8,7 @@
 //! - Real-world constraint satisfaction problem
 
 use cspsolver::prelude::*;
-use cspsolver::constraint_builder::*;
+use cspsolver::{post, postall};
 
 fn main() {
     // Create a model for our PC building problem
@@ -29,25 +29,27 @@ fn main() {
     let gpus: Vec<_> = m.new_vars_binary(gpu_prices.len()).collect();
     
     // Calculate total GPU price and score based on selection
-    let gpu_price = m.sum_iter(
-        gpus.iter()
-            .zip(gpu_prices)
-            .map(|(gpu, price)| gpu.times(price))
-    );
-    let gpu_score = m.sum_iter(
-        gpus.iter()
-            .zip(gpu_scores)
-            .map(|(gpu, score)| gpu.times(score))
-    );
+    let mut gpu_price_terms = Vec::new();
+    let mut gpu_score_terms = Vec::new();
+    for (gpu, (price, score)) in gpus.iter().zip(gpu_prices.iter().zip(gpu_scores.iter())) {
+        gpu_price_terms.push(m.mul(*gpu, *price));
+        gpu_score_terms.push(m.mul(*gpu, *score));
+    }
+    let gpu_price = m.sum_iter(gpu_price_terms);
+    let gpu_score = m.sum_iter(gpu_score_terms);
     
     // Total build price and score
-    let total_price = m.add(gpu_price, n_monitors.times(monitor_price));
-    let total_score = m.add(gpu_score, n_monitors.times(monitor_score));
+    let monitor_price_total = m.mul(n_monitors, monitor_price);
+    let monitor_score_total = m.mul(n_monitors, monitor_score);
+    let total_price = m.add(gpu_price, monitor_price_total);
+    let total_score = m.add(gpu_score, monitor_score_total);
     
     // Constraints
     let n_gpus = m.sum(&gpus);
-    m.post(n_gpus.eq_int(1)); // Exactly one GPU
-    m.post(total_price.le_int(600)); // Budget constraint
+    postall!(m,
+        n_gpus == int(1),       // Exactly one GPU
+        total_price <= int(600) // Budget constraint
+    );
     
     // Find optimal solution
     let solution = m.maximize(total_score).unwrap();

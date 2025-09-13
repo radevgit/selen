@@ -72,27 +72,27 @@ pub trait BooleanOp {
 // Implement ComparisonOp for VarId
 impl ComparisonOp for VarId {
     fn eq_op(&self, model: &mut Model, other: VarId) {
-        model.eq(*self, other);
+        model.props.equals(*self, other);
     }
     
     fn ne_op(&self, model: &mut Model, other: VarId) {
-        model.ne(*self, other);
+        model.props.not_equals(*self, other);
     }
     
     fn lt_op(&self, model: &mut Model, other: VarId) {
-        model.lt(*self, other);
+        model.props.less_than(*self, other);
     }
     
     fn le_op(&self, model: &mut Model, other: VarId) {
-        model.le(*self, other);
+        model.props.less_than_or_equals(*self, other);
     }
     
     fn gt_op(&self, model: &mut Model, other: VarId) {
-        model.gt(*self, other);
+        model.props.greater_than(*self, other);
     }
     
     fn ge_op(&self, model: &mut Model, other: VarId) {
-        model.ge(*self, other);
+        model.props.greater_than_or_equals(*self, other);
     }
 }
 
@@ -115,32 +115,32 @@ impl BooleanOp for VarId {
 impl Model {
     /// Create equality constraint using operator syntax
     pub fn eq_op(&mut self, left: VarId, right: VarId) {
-        self.eq(left, right);
+        self.props.equals(left, right);
     }
     
     /// Create inequality constraint using operator syntax
     pub fn ne_op(&mut self, left: VarId, right: VarId) {
-        self.ne(left, right);
+        self.props.not_equals(left, right);
     }
     
     /// Create less-than constraint using operator syntax
     pub fn lt_op(&mut self, left: VarId, right: VarId) {
-        self.lt(left, right);
+        self.props.less_than(left, right);
     }
     
     /// Create less-than-or-equal constraint using operator syntax
     pub fn le_op(&mut self, left: VarId, right: VarId) {
-        self.le(left, right);
+        self.props.less_than_or_equals(left, right);
     }
     
     /// Create greater-than constraint using operator syntax
     pub fn gt_op(&mut self, left: VarId, right: VarId) {
-        self.gt(left, right);
+        self.props.greater_than(left, right);
     }
     
     /// Create greater-than-or-equal constraint using operator syntax
     pub fn ge_op(&mut self, left: VarId, right: VarId) {
-        self.ge(left, right);
+        self.props.greater_than_or_equals(left, right);
     }
     
     /// Create boolean AND constraint using operator syntax

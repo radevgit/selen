@@ -5,13 +5,13 @@ fn main() {
     println!("=================================");
     
     // Test: x * y = z where x=3, y=4, solve for z
-    let mut model = Model::default();
+    let mut m = Model::default();
     
-    let x = model.int(3, 3); // x = 3
-    let y = model.int(4, 4); // y = 4
-    let z = model.mul(x, y);         // z = x * y = 3 * 4 = 12
+    let x = m.int(3, 3); // x = 3
+    let y = m.int(4, 4); // y = 4
+    let z = m.mul(x, y);         // z = x * y = 3 * 4 = 12
     
-    if let Some(solution) = model.solve() {
+    if let Some(solution) = m.solve() {
         let z_val = match solution[z] {
             Val::ValI(v) => v,
             Val::ValF(v) => v as i32,
@@ -23,17 +23,17 @@ fn main() {
     }
     
     // Test: x * y = z where z=15, y=3, solve for x
-    let mut model2 = Model::default();
+    let mut m2 = Model::default();
     
-    let x2 = model2.int(1, 10);  // x unknown
-    let y2 = model2.int(3, 3);   // y = 3
-    let z2 = model2.int(15, 15); // z = 15
+    let x2 = m2.int(1, 10);  // x unknown
+    let y2 = m2.int(3, 3);   // y = 3
+    let z2 = m2.int(15, 15); // z = 15
     
     // Create the constraint: x * y = z, so x = z / y = 15 / 3 = 5
-    let product = model2.mul(x2, y2);
-    model2.equals(product, z2);
+    let product = m2.mul(x2, y2);
+    post!(m2, product == z2);
     
-    if let Some(solution) = model2.solve() {
+    if let Some(solution) = m2.solve() {
         let x_val = match solution[x2] {
             Val::ValI(v) => v,
             Val::ValF(v) => v as i32,

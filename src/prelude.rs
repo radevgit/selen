@@ -30,7 +30,10 @@ pub use crate::props::*;
 pub use crate::search::*;
 
 // Clean constraint API - include constraint builder traits
-pub use crate::constraint_builder::{ModelConstraints, VarConstraints};
+pub use crate::constraint_builder::ModelConstraints;
+
+// Mathematical constraint macros
+pub use crate::{post, postall};
 
 // Convenient constructor functions for common values
 /// Create an integer value - shorthand for Val::ValI()

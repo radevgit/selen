@@ -67,94 +67,156 @@ impl ConstraintRef {
 macro_rules! post {
     // Handle simple variable comparisons: x < y, x <= y, etc.
     ($model:expr, $left:ident < $right:ident) => {{
-        $model.lt($left, $right);
+        $model.props.less_than($left, $right);
         $crate::constraint_macros::ConstraintRef::new(0) // TODO: proper ID tracking
     }};
     
     ($model:expr, $left:ident <= $right:ident) => {{
-        $model.le($left, $right);
+        $model.props.less_than_or_equals($left, $right);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident > $right:ident) => {{
-        $model.gt($left, $right);
+        $model.props.greater_than($left, $right);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident >= $right:ident) => {{
-        $model.ge($left, $right);
+        $model.props.greater_than_or_equals($left, $right);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident == $right:ident) => {{
-        $model.eq($left, $right);
+        $model.props.equals($left, $right);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident != $right:ident) => {{
-        $model.ne($left, $right);
+        $model.props.not_equals($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Handle variable vs bare literal: x < 5, y >= 3.14
+    ($model:expr, $left:ident < $right:literal) => {{
+        $model.props.less_than($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident <= $right:literal) => {{
+        $model.props.less_than_or_equals($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident > $right:literal) => {{
+        $model.props.greater_than($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident >= $right:literal) => {{
+        $model.props.greater_than_or_equals($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident == $right:literal) => {{
+        $model.props.equals($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident != $right:literal) => {{
+        $model.props.not_equals($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Handle variable vs expression in parentheses: x < (y + 1)
+    ($model:expr, $left:ident < ($right:expr)) => {{
+        $model.props.less_than($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident <= ($right:expr)) => {{
+        $model.props.less_than_or_equals($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident > ($right:expr)) => {{
+        $model.props.greater_than($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident >= ($right:expr)) => {{
+        $model.props.greater_than_or_equals($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident == ($right:expr)) => {{
+        $model.props.equals($left, $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident != ($right:expr)) => {{
+        $model.props.not_equals($left, $crate::vars::Val::from($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Handle variable vs constant: x < int(5), y >= float(3.14)
     ($model:expr, $left:ident < int($right:expr)) => {{
-        $model.lt($left, $crate::prelude::int($right));
+        $model.props.less_than($left, $crate::prelude::int($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident <= int($right:expr)) => {{
-        $model.le($left, $crate::prelude::int($right));
+        $model.props.less_than_or_equals($left, $crate::prelude::int($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident > int($right:expr)) => {{
-        $model.gt($left, $crate::prelude::int($right));
+        $model.props.greater_than($left, $crate::prelude::int($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident >= int($right:expr)) => {{
-        $model.ge($left, $crate::prelude::int($right));
+        $model.props.greater_than_or_equals($left, $crate::prelude::int($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident == int($right:expr)) => {{
-        $model.eq($left, $crate::prelude::int($right));
+        $model.props.equals($left, $crate::prelude::int($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident != int($right:expr)) => {{
-        $model.ne($left, $crate::prelude::int($right));
+        $model.props.not_equals($left, $crate::prelude::int($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Handle float constants
     ($model:expr, $left:ident < float($right:expr)) => {{
-        $model.lt($left, $crate::prelude::float($right));
+        $model.props.less_than($left, $crate::prelude::float($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident <= float($right:expr)) => {{
-        $model.le($left, $crate::prelude::float($right));
+        $model.props.less_than_or_equals($left, $crate::prelude::float($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident > float($right:expr)) => {{
-        $model.gt($left, $crate::prelude::float($right));
+        $model.props.greater_than($left, $crate::prelude::float($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident >= float($right:expr)) => {{
-        $model.ge($left, $crate::prelude::float($right));
+        $model.props.greater_than_or_equals($left, $crate::prelude::float($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident == float($right:expr)) => {{
-        $model.eq($left, $crate::prelude::float($right));
+        $model.props.equals($left, $crate::prelude::float($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident != float($right:expr)) => {{
-        $model.ne($left, $crate::prelude::float($right));
+        $model.props.not_equals($left, $crate::prelude::float($right));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
@@ -162,222 +224,370 @@ macro_rules! post {
     // Absolute value: abs(x) <op> <expr>
     ($model:expr, abs($var:ident) < $target:ident) => {{
         let _abs_var = $model.abs($var);
-        $model.lt(_abs_var, $target);
+        $model.props.less_than(_abs_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) <= $target:ident) => {{
         let _abs_var = $model.abs($var);
-        $model.le(_abs_var, $target);
+        $model.props.less_than_or_equals(_abs_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) > $target:ident) => {{
         let _abs_var = $model.abs($var);
-        $model.gt(_abs_var, $target);
+        $model.props.greater_than(_abs_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) >= $target:ident) => {{
         let _abs_var = $model.abs($var);
-        $model.ge(_abs_var, $target);
+        $model.props.greater_than_or_equals(_abs_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) == $target:ident) => {{
         let _abs_var = $model.abs($var);
-        $model.eq(_abs_var, $target);
+        $model.props.equals(_abs_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) != $target:ident) => {{
         let _abs_var = $model.abs($var);
-        $model.ne(_abs_var, $target);
+        $model.props.not_equals(_abs_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Absolute value with constants: abs(x) >= int(1)
     ($model:expr, abs($var:ident) < int($target:expr)) => {{
         let _abs_var = $model.abs($var);
-        $model.lt(_abs_var, $crate::prelude::int($target));
+        $model.props.less_than(_abs_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) <= int($target:expr)) => {{
         let _abs_var = $model.abs($var);
-        $model.le(_abs_var, $crate::prelude::int($target));
+        $model.props.less_than_or_equals(_abs_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) > int($target:expr)) => {{
         let _abs_var = $model.abs($var);
-        $model.gt(_abs_var, $crate::prelude::int($target));
+        $model.props.greater_than(_abs_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) >= int($target:expr)) => {{
         let _abs_var = $model.abs($var);
-        $model.ge(_abs_var, $crate::prelude::int($target));
+        $model.props.greater_than_or_equals(_abs_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) == int($target:expr)) => {{
         let _abs_var = $model.abs($var);
-        $model.eq(_abs_var, $crate::prelude::int($target));
+        $model.props.equals(_abs_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, abs($var:ident) != int($target:expr)) => {{
         let _abs_var = $model.abs($var);
-        $model.ne(_abs_var, $crate::prelude::int($target));
+        $model.props.not_equals(_abs_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Min function: min([x, y]) <op> <expr>
     ($model:expr, min([$($vars:ident),+ $(,)?]) < $target:ident) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.lt(_min_var, $target);
+        $model.props.less_than(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) <= $target:ident) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.le(_min_var, $target);
+        $model.props.less_than_or_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) > $target:ident) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.gt(_min_var, $target);
+        $model.props.greater_than(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) >= $target:ident) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.ge(_min_var, $target);
+        $model.props.greater_than_or_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) == $target:ident) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.eq(_min_var, $target);
+        $model.props.equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) != $target:ident) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.ne(_min_var, $target);
+        $model.props.not_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Min function with constants: min([x, y]) <= int(5)
     ($model:expr, min([$($vars:ident),+ $(,)?]) < int($target:expr)) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.lt(_min_var, $crate::prelude::int($target));
+        $model.props.less_than(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) <= int($target:expr)) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.le(_min_var, $crate::prelude::int($target));
+        $model.props.less_than_or_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) > int($target:expr)) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.gt(_min_var, $crate::prelude::int($target));
+        $model.props.greater_than(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) >= int($target:expr)) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.ge(_min_var, $crate::prelude::int($target));
+        $model.props.greater_than_or_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) == int($target:expr)) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.eq(_min_var, $crate::prelude::int($target));
+        $model.props.equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) != int($target:expr)) => {{
         let _min_var = $model.min(&[$($vars),+]);
-        $model.ne(_min_var, $crate::prelude::int($target));
+        $model.props.not_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Max function: max([x, y]) <op> <expr>
     ($model:expr, max([$($vars:ident),+ $(,)?]) < $target:ident) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.lt(_max_var, $target);
+        $model.props.less_than(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) <= $target:ident) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.le(_max_var, $target);
+        $model.props.less_than_or_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) > $target:ident) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.gt(_max_var, $target);
+        $model.props.greater_than(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) >= $target:ident) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.ge(_max_var, $target);
+        $model.props.greater_than_or_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) == $target:ident) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.eq(_max_var, $target);
+        $model.props.equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) != $target:ident) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.ne(_max_var, $target);
+        $model.props.not_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Max function with constants: max([x, y]) >= int(10)
     ($model:expr, max([$($vars:ident),+ $(,)?]) < int($target:expr)) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.lt(_max_var, $crate::prelude::int($target));
+        $model.props.less_than(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) <= int($target:expr)) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.le(_max_var, $crate::prelude::int($target));
+        $model.props.less_than_or_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) > int($target:expr)) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.gt(_max_var, $crate::prelude::int($target));
+        $model.props.greater_than(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) >= int($target:expr)) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.ge(_max_var, $crate::prelude::int($target));
+        $model.props.greater_than_or_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) == int($target:expr)) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.eq(_max_var, $crate::prelude::int($target));
+        $model.props.equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) != int($target:expr)) => {{
         let _max_var = $model.max(&[$($vars),+]);
-        $model.ne(_max_var, $crate::prelude::int($target));
+        $model.props.not_equals(_max_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Min function with array expressions: min(array) <op> <expr>
+    ($model:expr, min($array:expr) < $target:ident) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.less_than(_min_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) <= $target:ident) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.less_than_or_equals(_min_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) > $target:ident) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.greater_than(_min_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) >= $target:ident) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.greater_than_or_equals(_min_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) == $target:ident) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.equals(_min_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) != $target:ident) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.not_equals(_min_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Min function with array expressions and constants: min(array) <= int(5)
+    ($model:expr, min($array:expr) < int($target:expr)) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.less_than(_min_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) <= int($target:expr)) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.less_than_or_equals(_min_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) > int($target:expr)) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.greater_than(_min_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) >= int($target:expr)) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.greater_than_or_equals(_min_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) == int($target:expr)) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.equals(_min_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, min($array:expr) != int($target:expr)) => {{
+        let _min_var = $model.min(&$array);
+        $model.props.not_equals(_min_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Max function with array expressions: max(array) <op> <expr>
+    ($model:expr, max($array:expr) < $target:ident) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.less_than(_max_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) <= $target:ident) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.less_than_or_equals(_max_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) > $target:ident) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.greater_than(_max_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) >= $target:ident) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.greater_than_or_equals(_max_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) == $target:ident) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.equals(_max_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) != $target:ident) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.not_equals(_max_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Max function with array expressions and constants: max(array) >= int(10)
+    ($model:expr, max($array:expr) < int($target:expr)) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.less_than(_max_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) <= int($target:expr)) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.less_than_or_equals(_max_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) > int($target:expr)) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.greater_than(_max_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) >= int($target:expr)) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.greater_than_or_equals(_max_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) == int($target:expr)) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.equals(_max_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, max($array:expr) != int($target:expr)) => {{
+        let _max_var = $model.max(&$array);
+        $model.props.not_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
@@ -425,7 +635,13 @@ macro_rules! post {
     
     // Global constraints: alldiff([x, y, z])
     ($model:expr, alldiff([$($vars:ident),+ $(,)?])) => {{
-        $model.alldifferent(vec![$($vars),+]);
+        $model.props.all_different(vec![$($vars),+]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Global constraints: alldiff with array expressions
+    ($model:expr, alldiff($array:expr)) => {{
+        $model.props.all_different($array.to_vec());
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
@@ -435,316 +651,316 @@ macro_rules! post {
     // Addition: x + y <op> <expr>
     ($model:expr, $left:ident + $right:ident < $target:ident) => {{
         let _sum_var = $model.add($left, $right);
-        $model.lt(_sum_var, $target);
+        $model.props.less_than(_sum_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident <= $target:ident) => {{
         let _sum_var = $model.add($left, $right);
-        $model.le(_sum_var, $target);
+        $model.props.less_than_or_equals(_sum_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident > $target:ident) => {{
         let _sum_var = $model.add($left, $right);
-        $model.gt(_sum_var, $target);
+        $model.props.greater_than(_sum_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident >= $target:ident) => {{
         let _sum_var = $model.add($left, $right);
-        $model.ge(_sum_var, $target);
+        $model.props.greater_than_or_equals(_sum_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident == $target:ident) => {{
         let _sum_var = $model.add($left, $right);
-        $model.eq(_sum_var, $target);
+        $model.props.equals(_sum_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident != $target:ident) => {{
         let _sum_var = $model.add($left, $right);
-        $model.ne(_sum_var, $target);
+        $model.props.not_equals(_sum_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Addition with constants: x + y < int(10)
     ($model:expr, $left:ident + $right:ident < int($target:expr)) => {{
         let _sum_var = $model.add($left, $right);
-        $model.lt(_sum_var, $crate::prelude::int($target));
+        $model.props.less_than(_sum_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident <= int($target:expr)) => {{
         let _sum_var = $model.add($left, $right);
-        $model.le(_sum_var, $crate::prelude::int($target));
+        $model.props.less_than_or_equals(_sum_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident > int($target:expr)) => {{
         let _sum_var = $model.add($left, $right);
-        $model.gt(_sum_var, $crate::prelude::int($target));
+        $model.props.greater_than(_sum_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident >= int($target:expr)) => {{
         let _sum_var = $model.add($left, $right);
-        $model.ge(_sum_var, $crate::prelude::int($target));
+        $model.props.greater_than_or_equals(_sum_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident == int($target:expr)) => {{
         let _sum_var = $model.add($left, $right);
-        $model.eq(_sum_var, $crate::prelude::int($target));
+        $model.props.equals(_sum_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident + $right:ident != int($target:expr)) => {{
         let _sum_var = $model.add($left, $right);
-        $model.ne(_sum_var, $crate::prelude::int($target));
+        $model.props.not_equals(_sum_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Subtraction: x - y <op> <expr>
     ($model:expr, $left:ident - $right:ident < $target:ident) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.lt(_diff_var, $target);
+        $model.props.less_than(_diff_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident <= $target:ident) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.le(_diff_var, $target);
+        $model.props.less_than_or_equals(_diff_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident > $target:ident) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.gt(_diff_var, $target);
+        $model.props.greater_than(_diff_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident >= $target:ident) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.ge(_diff_var, $target);
+        $model.props.greater_than_or_equals(_diff_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident == $target:ident) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.eq(_diff_var, $target);
+        $model.props.equals(_diff_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident != $target:ident) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.ne(_diff_var, $target);
+        $model.props.not_equals(_diff_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Subtraction with constants: x - y >= int(0)
     ($model:expr, $left:ident - $right:ident < int($target:expr)) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.lt(_diff_var, $crate::prelude::int($target));
+        $model.props.less_than(_diff_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident <= int($target:expr)) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.le(_diff_var, $crate::prelude::int($target));
+        $model.props.less_than_or_equals(_diff_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident > int($target:expr)) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.gt(_diff_var, $crate::prelude::int($target));
+        $model.props.greater_than(_diff_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident >= int($target:expr)) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.ge(_diff_var, $crate::prelude::int($target));
+        $model.props.greater_than_or_equals(_diff_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident == int($target:expr)) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.eq(_diff_var, $crate::prelude::int($target));
+        $model.props.equals(_diff_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident - $right:ident != int($target:expr)) => {{
         let _diff_var = $model.sub($left, $right);
-        $model.ne(_diff_var, $crate::prelude::int($target));
+        $model.props.not_equals(_diff_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Multiplication: x * y <op> <expr>
     ($model:expr, $left:ident * $right:ident < $target:ident) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.lt(_prod_var, $target);
+        $model.props.less_than(_prod_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident <= $target:ident) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.le(_prod_var, $target);
+        $model.props.less_than_or_equals(_prod_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident > $target:ident) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.gt(_prod_var, $target);
+        $model.props.greater_than(_prod_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident >= $target:ident) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.ge(_prod_var, $target);
+        $model.props.greater_than_or_equals(_prod_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident == $target:ident) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.eq(_prod_var, $target);
+        $model.props.equals(_prod_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident != $target:ident) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.ne(_prod_var, $target);
+        $model.props.not_equals(_prod_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Multiplication with constants: x * y <= int(10)
     ($model:expr, $left:ident * $right:ident < int($target:expr)) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.lt(_prod_var, $crate::prelude::int($target));
+        $model.props.less_than(_prod_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident <= int($target:expr)) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.le(_prod_var, $crate::prelude::int($target));
+        $model.props.less_than_or_equals(_prod_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident > int($target:expr)) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.gt(_prod_var, $crate::prelude::int($target));
+        $model.props.greater_than(_prod_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident >= int($target:expr)) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.ge(_prod_var, $crate::prelude::int($target));
+        $model.props.greater_than_or_equals(_prod_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident == int($target:expr)) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.eq(_prod_var, $crate::prelude::int($target));
+        $model.props.equals(_prod_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident * $right:ident != int($target:expr)) => {{
         let _prod_var = $model.mul($left, $right);
-        $model.ne(_prod_var, $crate::prelude::int($target));
+        $model.props.not_equals(_prod_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Division: x / y <op> <expr>
     ($model:expr, $left:ident / $right:ident < $target:ident) => {{
         let _quot_var = $model.div($left, $right);
-        $model.lt(_quot_var, $target);
+        $model.props.less_than(_quot_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident <= $target:ident) => {{
         let _quot_var = $model.div($left, $right);
-        $model.le(_quot_var, $target);
+        $model.props.less_than_or_equals(_quot_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident > $target:ident) => {{
         let _quot_var = $model.div($left, $right);
-        $model.gt(_quot_var, $target);
+        $model.props.greater_than(_quot_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident >= $target:ident) => {{
         let _quot_var = $model.div($left, $right);
-        $model.ge(_quot_var, $target);
+        $model.props.greater_than_or_equals(_quot_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident == $target:ident) => {{
         let _quot_var = $model.div($left, $right);
-        $model.eq(_quot_var, $target);
+        $model.props.equals(_quot_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident != $target:ident) => {{
         let _quot_var = $model.div($left, $right);
-        $model.ne(_quot_var, $target);
+        $model.props.not_equals(_quot_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Division with constants: x / y <= int(5)
     ($model:expr, $left:ident / $right:ident < int($target:expr)) => {{
         let _quot_var = $model.div($left, $right);
-        $model.lt(_quot_var, $crate::prelude::int($target));
+        $model.props.less_than(_quot_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident <= int($target:expr)) => {{
         let _quot_var = $model.div($left, $right);
-        $model.le(_quot_var, $crate::prelude::int($target));
+        $model.props.less_than_or_equals(_quot_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident > int($target:expr)) => {{
         let _quot_var = $model.div($left, $right);
-        $model.gt(_quot_var, $crate::prelude::int($target));
+        $model.props.greater_than(_quot_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident >= int($target:expr)) => {{
         let _quot_var = $model.div($left, $right);
-        $model.ge(_quot_var, $crate::prelude::int($target));
+        $model.props.greater_than_or_equals(_quot_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident == int($target:expr)) => {{
         let _quot_var = $model.div($left, $right);
-        $model.eq(_quot_var, $crate::prelude::int($target));
+        $model.props.equals(_quot_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident / $right:ident != int($target:expr)) => {{
         let _quot_var = $model.div($left, $right);
-        $model.ne(_quot_var, $crate::prelude::int($target));
+        $model.props.not_equals(_quot_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Handle modulo operations: x % 3 == 1
     ($model:expr, $left:ident % $divisor:literal == $remainder:literal) => {{
         let _mod_var = $model.modulo($left, $crate::prelude::int($divisor));
-        $model.eq(_mod_var, $crate::prelude::int($remainder));
+        $model.props.equals(_mod_var, $crate::prelude::int($remainder));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Enhanced modulo operations: x % y == int(0), x % y != int(0)
     ($model:expr, $left:ident % $right:ident == int($remainder:expr)) => {{
         let _mod_var = $model.modulo($left, $right);
-        $model.eq(_mod_var, $crate::prelude::int($remainder));
+        $model.props.equals(_mod_var, $crate::prelude::int($remainder));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, $left:ident % $right:ident != int($remainder:expr)) => {{
         let _mod_var = $model.modulo($left, $right);
-        $model.ne(_mod_var, $crate::prelude::int($remainder));
+        $model.props.not_equals(_mod_var, $crate::prelude::int($remainder));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
 }
@@ -866,6 +1082,11 @@ macro_rules! postall_helper {
         $crate::post!($model, alldiff([$($vars),+]));
     };
     
+    // Global constraints with array expressions
+    ($model:expr, alldiff($array:expr)) => {
+        $crate::post!($model, alldiff($array));
+    };
+    
     // Logical operators
     ($model:expr, and($c1:expr, $c2:expr)) => {
         $crate::post!($model, and($c1, $c2));
@@ -979,6 +1200,12 @@ macro_rules! postall_helper {
         $crate::postall_helper!($model, $($rest)*);
     };
     
+    // Global constraints with array expressions (multiple)
+    ($model:expr, alldiff($array:expr), $($rest:tt)*) => {
+        $crate::post!($model, alldiff($array));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
     // Logical operators (multiple)
     ($model:expr, and($c1:expr, $c2:expr), $($rest:tt)*) => {
         $crate::post!($model, and($c1, $c2));
@@ -1013,6 +1240,28 @@ mod tests {
         let _c4 = post!(m, x >= y);
         let _c5 = post!(m, x == y);
         let _c6 = post!(m, x != y);
+        
+        // Should compile without errors
+        assert!(true);
+    }
+    
+    #[test]
+    fn test_post_macro_array_syntax() {
+        let mut m = Model::default();
+        let x = m.int(1, 10);
+        let y = m.int(1, 10);
+        let z = m.int(1, 10);
+        
+        // Test alldiff with arrays
+        let vars = [x, y, z];
+        let _c1 = post!(m, alldiff(vars));
+        
+        let vars_vec = vec![x, y, z];
+        let _c2 = post!(m, alldiff(vars_vec));
+        
+        // Test min/max with arrays
+        let _c3 = post!(m, min(vars) <= int(5));
+        let _c4 = post!(m, max(vars_vec) >= int(8));
         
         // Should compile without errors
         assert!(true);

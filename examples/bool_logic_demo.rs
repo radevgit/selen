@@ -9,16 +9,16 @@ fn main() {
         println!("📋 Demo 1: Boolean AND - Security Access Control");
         println!("Problem: Access granted only if user has BOTH badge AND PIN correct");
         
-        let mut model = Model::default();
-        let has_badge = model.int(0, 1);  // 0 = no badge, 1 = has badge
-        let correct_pin = model.int(0, 1); // 0 = wrong PIN, 1 = correct PIN
-        let access_granted = model.bool_and(&[has_badge, correct_pin]);
+        let mut m = Model::default();
+        let has_badge = m.int(0, 1);  // 0 = no badge, 1 = has badge
+        let correct_pin = m.int(0, 1); // 0 = wrong PIN, 1 = correct PIN
+        let access_granted = m.bool_and(&[has_badge, correct_pin]);
         
         // Scenario: User has badge but wrong PIN
-        model.eq(has_badge, Val::int(1));
-        model.eq(correct_pin, Val::int(0));
+        post!(m, has_badge == 1);
+        post!(m, correct_pin == 0);
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             let badge = if let Val::ValI(v) = solution[has_badge] { v } else { 0 };
             let pin = if let Val::ValI(v) = solution[correct_pin] { v } else { 0 };
             let access = if let Val::ValI(v) = solution[access_granted] { v } else { 0 };
@@ -33,16 +33,16 @@ fn main() {
         println!("📋 Demo 2: Boolean OR - Emergency Exit");
         println!("Problem: Emergency exit opens if EITHER fire alarm OR manual override");
         
-        let mut model = Model::default();
-        let fire_alarm = model.int(0, 1);      // 0 = no fire, 1 = fire detected
-        let manual_override = model.int(0, 1); // 0 = not pressed, 1 = pressed
-        let exit_open = model.bool_or(&[fire_alarm, manual_override]);
+        let mut m = Model::default();
+        let fire_alarm = m.int(0, 1);      // 0 = no fire, 1 = fire detected
+        let manual_override = m.int(0, 1); // 0 = not pressed, 1 = pressed
+        let exit_open = m.bool_or(&[fire_alarm, manual_override]);
         
         // Scenario: No fire but manual override pressed
-        model.eq(fire_alarm, Val::int(0));
-        model.eq(manual_override, Val::int(1));
+        post!(m, fire_alarm == 0);
+        post!(m, manual_override == 1);
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             let fire = if let Val::ValI(v) = solution[fire_alarm] { v } else { 0 };
             let manual = if let Val::ValI(v) = solution[manual_override] { v } else { 0 };
             let exit = if let Val::ValI(v) = solution[exit_open] { v } else { 0 };
@@ -57,14 +57,14 @@ fn main() {
         println!("📋 Demo 3: Boolean NOT - Inverter Circuit");
         println!("Problem: Output signal is opposite of input signal");
         
-        let mut model = Model::default();
-        let input_signal = model.int(0, 1);   // 0 = low, 1 = high
-        let output_signal = model.bool_not(input_signal);
+        let mut m = Model::default();
+        let input_signal = m.int(0, 1);   // 0 = low, 1 = high
+        let output_signal = m.bool_not(input_signal);
         
         // Scenario: High input
-        model.eq(input_signal, Val::int(1));
+        post!(m, input_signal == 1);
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             let input = if let Val::ValI(v) = solution[input_signal] { v } else { 0 };
             let output = if let Val::ValI(v) = solution[output_signal] { v } else { 0 };
             
@@ -78,21 +78,21 @@ fn main() {
         println!("📋 Demo 4: Complex Logic - Smart Home Security");
         println!("Problem: Alarm triggers if (motion AND night_mode) OR manual_panic");
         
-        let mut model = Model::default();
-        let motion_detected = model.int(0, 1);
-        let night_mode = model.int(0, 1);
-        let manual_panic = model.int(0, 1);
+        let mut m = Model::default();
+        let motion_detected = m.int(0, 1);
+        let night_mode = m.int(0, 1);
+        let manual_panic = m.int(0, 1);
         
         // Build expression: (motion AND night_mode) OR manual_panic
-        let motion_and_night = model.bool_and(&[motion_detected, night_mode]);
-        let alarm_triggered = model.bool_or(&[motion_and_night, manual_panic]);
+        let motion_and_night = m.bool_and(&[motion_detected, night_mode]);
+        let alarm_triggered = m.bool_or(&[motion_and_night, manual_panic]);
         
         // Scenario: Motion detected during day, no panic button
-        model.eq(motion_detected, Val::int(1));
-        model.eq(night_mode, Val::int(0));
-        model.eq(manual_panic, Val::int(0));
+        post!(m, motion_detected == 1);
+        post!(m, night_mode == 0);
+        post!(m, manual_panic == 0);
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             let motion = if let Val::ValI(v) = solution[motion_detected] { v } else { 0 };
             let night = if let Val::ValI(v) = solution[night_mode] { v } else { 0 };
             let panic = if let Val::ValI(v) = solution[manual_panic] { v } else { 0 };
@@ -111,21 +111,21 @@ fn main() {
         println!("📋 Demo 5: Multi-condition AND - Server Safety Checks");
         println!("Problem: Server starts only if ALL conditions are met");
         
-        let mut model = Model::default();
-        let power_stable = model.int(0, 1);
-        let network_ready = model.int(0, 1);
-        let disk_healthy = model.int(0, 1);
-        let memory_test_passed = model.int(0, 1);
+        let mut m = Model::default();
+        let power_stable = m.int(0, 1);
+        let network_ready = m.int(0, 1);
+        let disk_healthy = m.int(0, 1);
+        let memory_test_passed = m.int(0, 1);
         
-        let server_start = model.bool_and(&[power_stable, network_ready, disk_healthy, memory_test_passed]);
+        let server_start = m.bool_and(&[power_stable, network_ready, disk_healthy, memory_test_passed]);
         
         // Scenario: All systems good
-        model.eq(power_stable, Val::int(1));
-        model.eq(network_ready, Val::int(1));
-        model.eq(disk_healthy, Val::int(1));
-        model.eq(memory_test_passed, Val::int(1));
+        post!(m, power_stable == 1);
+        post!(m, network_ready == 1);
+        post!(m, disk_healthy == 1);
+        post!(m, memory_test_passed == 1);
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             let power = if let Val::ValI(v) = solution[power_stable] { v } else { 0 };
             let network = if let Val::ValI(v) = solution[network_ready] { v } else { 0 };
             let disk = if let Val::ValI(v) = solution[disk_healthy] { v } else { 0 };
@@ -143,22 +143,22 @@ fn main() {
         println!("📋 Demo 6: Constraint Propagation - Logic Puzzle");
         println!("Problem: If result must be true, what constraints apply to inputs?");
         
-        let mut model = Model::default();
-        let a = model.int(0, 1);
-        let b = model.int(0, 1);
-        let c = model.int(0, 1);
+        let mut m = Model::default();
+        let a = m.int(0, 1);
+        let b = m.int(0, 1);
+        let c = m.int(0, 1);
         
         // Create expression: a AND (b OR c) must be true
-        let b_or_c = model.bool_or(&[b, c]);
-        let final_result = model.bool_and(&[a, b_or_c]);
+        let b_or_c = m.bool_or(&[b, c]);
+        let final_result = m.bool_and(&[a, b_or_c]);
         
         // Constraint: result must be true
-        model.eq(final_result, Val::int(1));
+        post!(m, final_result == 1);
         
         // Additional constraint: b is false
-        model.eq(b, Val::int(0));
+        post!(m, b == 0);
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             let a_val = if let Val::ValI(v) = solution[a] { v } else { 0 };
             let b_val = if let Val::ValI(v) = solution[b] { v } else { 0 };
             let c_val = if let Val::ValI(v) = solution[c] { v } else { 0 };

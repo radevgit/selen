@@ -11,20 +11,20 @@ fn main() {
     // Example 1: Basic Min/Max Usage
     println!("Example 1: Basic Min/Max with Multiple Variables");
     {
-        let mut model = Model::default();
+        let mut m = Model::default();
         
-        let a = model.int(1, 10);
-        let b = model.int(5, 15);
-        let c = model.int(3, 8);
+        let a = m.int(1, 10);
+        let b = m.int(5, 15);
+        let c = m.int(3, 8);
         
-        let minimum = model.min(&[a, b, c]);
-        let maximum = model.max(&[a, b, c]);
+        let minimum = m.min(&[a, b, c]);
+        let maximum = m.max(&[a, b, c]);
         
         // Add some constraints
-        model.eq(minimum, int(4));  // min must be 4
-        model.le(maximum, int(12)); // max must be <= 12
+        post!(m, minimum == 4);  // min must be 4
+        post!(m, maximum <= 12); // max must be <= 12
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             println!("  Variables: a={:?}, b={:?}, c={:?}", 
                      solution[a], solution[b], solution[c]);
             println!("  Minimum: {:?}, Maximum: {:?}", 
@@ -37,30 +37,30 @@ fn main() {
     // Example 2: Resource Allocation Problem
     println!("Example 2: Resource Allocation (Finding Bottleneck)");
     {
-        let mut model = Model::default();
+        let mut m = Model::default();
         
         // Represent resource capacities for different departments
-        let engineering = model.int(50, 100);  // 50-100 engineers
-        let marketing = model.int(20, 80);     // 20-80 marketing people  
-        let sales = model.int(30, 90);         // 30-90 sales people
-        let support = model.int(10, 40);       // 10-40 support staff
+        let engineering = m.int(50, 100);  // 50-100 engineers
+        let marketing = m.int(20, 80);     // 20-80 marketing people  
+        let sales = m.int(30, 90);         // 30-90 sales people
+        let support = m.int(10, 40);       // 10-40 support staff
         
         // Find the department with minimum resources (bottleneck)
-        let bottleneck = model.min(&[engineering, marketing, sales, support]);
+        let bottleneck = m.min(&[engineering, marketing, sales, support]);
         
         // Find the department with maximum resources
-        let largest_dept = model.max(&[engineering, marketing, sales, support]);
+        let largest_dept = m.max(&[engineering, marketing, sales, support]);
         
         // Constraint: bottleneck should be at least 25
-        model.ge(bottleneck, int(25));
+        post!(m, bottleneck >= 25);
         
         // Constraint: largest department should be at most 85
-        model.le(largest_dept, int(85));
+        post!(m, largest_dept <= 85);
         
         // Constraint: engineering must have at least 60 people
-        model.ge(engineering, int(60));
+        post!(m, engineering >= 60);
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             println!("  Engineering: {:?} people", solution[engineering]);
             println!("  Marketing:   {:?} people", solution[marketing]);
             println!("  Sales:       {:?} people", solution[sales]);
@@ -75,30 +75,30 @@ fn main() {
     // Example 3: Performance Metrics
     println!("Example 3: Performance Metrics Optimization");
     {
-        let mut model = Model::default();
+        let mut m = Model::default();
         
         // Performance scores for different systems (0-100 scale)
-        let latency_score = model.int(60, 95);     // Lower latency = higher score
-        let throughput_score = model.int(70, 90);  // Higher throughput = higher score
-        let reliability_score = model.int(80, 98); // Higher reliability = higher score
-        let cost_score = model.int(40, 85);        // Lower cost = higher score
+        let latency_score = m.int(60, 95);     // Lower latency = higher score
+        let throughput_score = m.int(70, 90);  // Higher throughput = higher score
+        let reliability_score = m.int(80, 98); // Higher reliability = higher score
+        let cost_score = m.int(40, 85);        // Lower cost = higher score
         
         let scores = [latency_score, throughput_score, reliability_score, cost_score];
         
         // Overall system performance is limited by the weakest metric
-        let overall_performance = model.min(&scores);
+        let overall_performance = m.min(&scores);
         
         // We want to maximize the minimum performance (improve the bottleneck)
-        model.ge(overall_performance, int(75));
+        post!(m, overall_performance >= 75);
         
         // Best case scenario - what's the highest we can achieve?
-        let best_metric = model.max(&scores);
+        let best_metric = m.max(&scores);
         
         // Constraint: total "effort" is limited (trade-offs between metrics)
-        let total_effort = model.sum(&scores);
-        model.le(total_effort, int(320)); // Limited total effort
+        let total_effort = m.sum(&scores);
+        post!(m, total_effort <= 320); // Limited total effort
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             println!("  Latency Score:     {:?}/100", solution[latency_score]);
             println!("  Throughput Score:  {:?}/100", solution[throughput_score]);
             println!("  Reliability Score: {:?}/100", solution[reliability_score]);
@@ -114,27 +114,27 @@ fn main() {
     // Example 4: Mixed Integer/Float Constraints
     println!("Example 4: Mixed Integer/Float Temperature Control");
     {
-        let mut model = Model::default();
+        let mut m = Model::default();
         
         // Temperature readings from different sensors (in Celsius)
-        let sensor1 = model.float(18.5, 25.5);  // Room temperature
-        let sensor2 = model.int(20, 28);        // Thermostat (integer)
-        let sensor3 = model.float(19.0, 26.0);  // Outside sensor
+        let sensor1 = m.float(18.5, 25.5);  // Room temperature
+        let sensor2 = m.int(20, 28);        // Thermostat (integer)
+        let sensor3 = m.float(19.0, 26.0);  // Outside sensor
         
         let sensors = [sensor1, sensor2, sensor3];
         
         // Find minimum and maximum temperatures
-        let min_temp = model.min(&sensors);
-        let max_temp = model.max(&sensors);
+        let min_temp = m.min(&sensors);
+        let max_temp = m.max(&sensors);
         
         // Constraint: temperature range should not exceed 5 degrees
-        let temp_range = model.sub(max_temp, min_temp);
-        model.le(temp_range, float(5.0));
+        let temp_range = m.sub(max_temp, min_temp);
+        post!(m, temp_range <= 5.0);
         
         // Constraint: minimum temperature should be at least 20°C
-        model.ge(min_temp, float(20.0));
+        post!(m, min_temp >= 20.0);
         
-        if let Some(solution) = model.solve() {
+        if let Some(solution) = m.solve() {
             println!("  Sensor 1: {:?}°C", solution[sensor1]);
             println!("  Sensor 2: {:?}°C", solution[sensor2]);
             println!("  Sensor 3: {:?}°C", solution[sensor3]);

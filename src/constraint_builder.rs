@@ -41,20 +41,20 @@ impl Constraint {
     /// Apply this constraint to a model.
     pub fn apply_to(self, model: &mut Model) {
         match self {
-            Constraint::Eq(x, y) => model.eq(x, y),
-            Constraint::Ne(x, y) => model.ne(x, y),
-            Constraint::Lt(x, y) => model.lt(x, y),
-            Constraint::Le(x, y) => model.le(x, y),
-            Constraint::Gt(x, y) => model.gt(x, y),
-            Constraint::Ge(x, y) => model.ge(x, y),
-            Constraint::EqVal(x, val) => model.eq(x, val),
-            Constraint::LeVal(x, val) => model.le(x, val),
-            Constraint::GeVal(x, val) => model.ge(x, val),
-            Constraint::GtVal(x, val) => model.gt(x, val),
-            Constraint::LtVal(x, val) => model.lt(x, val),
+            Constraint::Eq(x, y) => { let _p = model.props.equals(x, y); },
+            Constraint::Ne(x, y) => { let _p = model.props.not_equals(x, y); },
+            Constraint::Lt(x, y) => { let _p = model.props.less_than(x, y); },
+            Constraint::Le(x, y) => { let _p = model.props.less_than_or_equals(x, y); },
+            Constraint::Gt(x, y) => { let _p = model.props.greater_than(x, y); },
+            Constraint::Ge(x, y) => { let _p = model.props.greater_than_or_equals(x, y); },
+            Constraint::EqVal(x, val) => { let _p = model.props.equals(x, val); },
+            Constraint::LeVal(x, val) => { let _p = model.props.less_than_or_equals(x, val); },
+            Constraint::GeVal(x, val) => { let _p = model.props.greater_than_or_equals(x, val); },
+            Constraint::GtVal(x, val) => { let _p = model.props.greater_than(x, val); },
+            Constraint::LtVal(x, val) => { let _p = model.props.less_than(x, val); },
             Constraint::BoolTrue(expr) => {
                 let result_var = model.bool_expr(expr);
-                model.eq(result_var, Val::ValI(1));
+                let _p = model.props.equals(result_var, Val::ValI(1));
             }
         }
     }
@@ -78,48 +78,6 @@ impl From<Constraint> for ConstraintInput {
 impl From<BoolExpr> for ConstraintInput {
     fn from(expr: BoolExpr) -> Self {
         ConstraintInput::Boolean(expr)
-    }
-}
-
-/// Extension trait for VarId to provide clean constraint creation API
-pub trait VarConstraints {
-    /// Create x == value constraint
-    fn eq_int(self, value: i32) -> Constraint;
-    /// Create x == value constraint
-    fn eq_float(self, value: f64) -> Constraint;
-    /// Create x == y constraint
-    fn eq_var(self, other: VarId) -> Constraint;
-    /// Create x != y constraint
-    fn ne_var(self, other: VarId) -> Constraint;
-    /// Create x <= value constraint
-    fn le_int(self, value: i32) -> Constraint;
-    /// Create x >= value constraint
-    fn ge_int(self, value: i32) -> Constraint;
-}
-
-impl VarConstraints for VarId {
-    fn eq_int(self, value: i32) -> Constraint {
-        Constraint::EqVal(self, Val::ValI(value))
-    }
-    
-    fn eq_float(self, value: f64) -> Constraint {
-        Constraint::EqVal(self, Val::ValF(value))
-    }
-    
-    fn eq_var(self, other: VarId) -> Constraint {
-        Constraint::Eq(self, other)
-    }
-    
-    fn ne_var(self, other: VarId) -> Constraint {
-        Constraint::Ne(self, other)
-    }
-    
-    fn le_int(self, value: i32) -> Constraint {
-        Constraint::LeVal(self, Val::ValI(value))
-    }
-    
-    fn ge_int(self, value: i32) -> Constraint {
-        Constraint::GeVal(self, Val::ValI(value))
     }
 }
 
