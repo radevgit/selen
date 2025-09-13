@@ -1,41 +1,10 @@
-//! Mathematical constraint posting macros
-//!
-//! This module provides the `post!` and `postall!` macros for creating constraints
-//! using natural mathematical notation.
-//!
-//! # Basic Usage
-//!
-//! The primary way to use these macros is for mathematical constraints:
-//!
-//! ```rust
-//! use cspsolver::prelude::*;
-//! 
-//! let mut m = Model::default();
-//! let x = m.int(1, 10);
-//! let y = m.int(1, 10);
-//! let five = m.int(5, 5);
-//! 
-//! // Mathematical constraint syntax:
-//! post!(m, x < y);
-//! post!(m, y > five);
-//! post!(m, x + y <= five);
-//! 
-//! // Multiple constraints at once:
-//! postall!(m, x < y, y != five);
-//! ```
-//!
-//! For boolean logic operations, use the model's boolean methods instead:
-//! - `model.bool_and(&[a, b])` for AND
-//! - `model.bool_or(&[a, b])` for OR  
-//! - `model.bool_not(a)` for NOT
-//!
-//! The function-style syntax is preferred because it's cleaner and doesn't require
-//! parentheses due to Rust macro parsing limitations.
+#[doc(hidden)]
 
 use crate::vars::{VarId, Val};
 use crate::model::Model;
 use crate::math_syntax::{MathExpr, TypedConstant};
 
+#[doc(hidden)]
 /// Represents a constraint reference that can be used later
 #[derive(Debug, Clone, Copy)]
 pub struct ConstraintRef {
@@ -55,7 +24,24 @@ impl ConstraintRef {
     }
 }
 
-
+#[doc(hidden)]
+/// Post a mathematical constraint to the model
+/// 
+/// Supported constraint patterns:
+/// 
+/// **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
+/// 
+/// **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
+/// 
+/// **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
+/// 
+/// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
+/// 
+/// **Global**: `alldiff([vars...])`
+/// 
+/// **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
+/// 
+/// Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`
 #[macro_export]
 macro_rules! post {
     // Handle simple variable comparisons: x < y, x <= y, etc.
@@ -1399,7 +1385,7 @@ macro_rules! post {
     }};
 }
 
-
+#[doc(hidden)]
 #[macro_export]
 macro_rules! postall {
     // Use simple comma-separated arguments
@@ -1408,6 +1394,7 @@ macro_rules! postall {
     }};
 }
 
+#[doc(hidden)]
 /// Helper macro to handle constraint expressions recursively
 #[macro_export]
 macro_rules! postall_helper {

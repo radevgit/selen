@@ -148,6 +148,7 @@ pub mod domain;
 pub mod optimization;
 pub mod prelude;
 
+#[doc(hidden)]
 // Clean constraint API modules
 // pub mod constraint_builder;  // Disabled - uses deprecated boolean_operators module
 pub mod view_constraints;
@@ -155,6 +156,8 @@ pub mod view_constraints;
 // pub mod boolean_operators;
 #[doc(hidden)]
 pub mod math_syntax;
+
+#[doc(hidden)]
 pub mod constraint_macros;
 
 

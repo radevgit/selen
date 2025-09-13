@@ -51,6 +51,7 @@ impl Model {
         self.props.get_constraint_registry()
     }
 
+    #[doc(hidden)]
     /// Create a new decision variable, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
@@ -71,6 +72,7 @@ impl Model {
         }
     }
 
+    #[doc(hidden)]
     /// Create new decision variables, with the provided domain bounds.
     ///
     /// All created variables will have the same starting domain bounds.
@@ -88,6 +90,7 @@ impl Model {
         core::iter::repeat_with(move || self.new_var_unchecked(actual_min, actual_max)).take(n)
     }
 
+    #[doc(hidden)]
     /// Create new integer decision variables, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
@@ -128,6 +131,7 @@ impl Model {
         self.vars.new_var_with_values(values)
     }
 
+    #[doc(hidden)]
     /// Create new float decision variables, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
@@ -174,6 +178,7 @@ impl Model {
         self.int(0, 1)
     }
 
+    #[doc(hidden)]
     /// Create a new binary decision variable.
     /// 
     ///
@@ -186,6 +191,7 @@ impl Model {
         VarIdBin(self.new_var_unchecked(Val::ValI(0), Val::ValI(1)))
     }
 
+    #[doc(hidden)]
     /// Create new binary decision variables.
     /// 
     ///
@@ -238,6 +244,7 @@ impl Model {
         self.new_var_binary()
     }
 
+    #[doc(hidden)]
     /// Create a new integer decision variable, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
@@ -634,6 +641,7 @@ impl Model {
         self.sum_iter(xs.iter().copied())
     }
 
+    #[doc(hidden)]
     /// Create an expression of the sum of an iterator of views.
     /// 
     ///
@@ -657,6 +665,7 @@ impl Model {
 
     // === BOOLEAN OPERATORS ===
 
+    #[doc(hidden)]
     /// Create a variable representing the boolean AND of multiple operands.
     /// Returns a variable that is 1 if ALL operands are non-zero, 0 otherwise.
     /// 
@@ -675,6 +684,7 @@ impl Model {
         result
     }
 
+    #[doc(hidden)]
     /// Create a variable representing the boolean OR of multiple operands.
     /// Returns a variable that is 1 if ANY operand is non-zero, 0 otherwise.
     /// 
@@ -692,6 +702,7 @@ impl Model {
         result
     }
 
+    #[doc(hidden)]
     /// Create a variable representing the boolean NOT of an operand.
     /// Returns a variable that is 1 if the operand is 0, and 0 if the operand is non-zero.
     /// 
@@ -944,12 +955,14 @@ impl Model {
         self.minimize_and_iterate_with_callback(objective.opposite(), callback)
     }
 
+    #[doc(hidden)]
     /// Get reference to variables for analysis (used by optimization module)
     #[doc(hidden)]
     pub fn get_vars(&self) -> &Vars {
         &self.vars
     }
 
+    #[doc(hidden)]
     /// Get reference to propagators for analysis (used by optimization module)
     #[doc(hidden)]
     pub fn get_props(&self) -> &Propagators {
@@ -971,9 +984,9 @@ impl Model {
             match var {
                 Var::VarI(sparse_set) => {
                     let domain_size = sparse_set.universe_size();
-                    if domain_size > 65535 {
+                    if domain_size > 1_000_000 {
                         return Err(format!(
-                            "Variable {} has domain size {} which exceeds the maximum of 65535 for u16 optimization. \
+                            "Variable {} has domain size {} which exceeds the maximum of 1_000_000 for u32 optimization. \
                             Consider using smaller domains or splitting large domains into multiple variables.",
                             i, domain_size
                         ));
@@ -984,10 +997,10 @@ impl Model {
                     let max_val = sparse_set.max_universe_value();
                     let actual_range = max_val - min_val + 1;
 
-                    if actual_range < 0 || actual_range > 65535 {
+                    if actual_range < 0 || actual_range > 1_000_000 {
                         return Err(format!(
                             "Variable {} has invalid domain range [{}, {}] which results in {} values. \
-                            Domain range must be positive and ≤ 65535.",
+                            Domain range must be positive and ≤ 1_000_000.",
                             i, min_val, max_val, actual_range
                         ));
                     }
@@ -1000,7 +1013,6 @@ impl Model {
         Ok(())
     }
 
-    #[doc(hidden)]
     /// Optimize constraint processing order based on constraint characteristics.
     ///
     /// This method analyzes constraints (particularly AllDifferent) and reorders them
