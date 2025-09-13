@@ -88,20 +88,12 @@ impl Model {
         core::iter::repeat_with(move || self.new_var_unchecked(actual_min, actual_max)).take(n)
     }
 
-    /// Create a new integer decision variable with the provided domain bounds.
-    ///
-    /// Both lower and upper bounds are included in the domain.
-    /// In case `max < min` the bounds will be swapped.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
     /// Create new integer decision variables, with the provided domain bounds.
+    ///
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
     /// 
-    ///
+    /// # Examples
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
@@ -136,21 +128,12 @@ impl Model {
         self.vars.new_var_with_values(values)
     }
 
-    /// Create a new float decision variable with the provided domain bounds.
-    ///
-    /// Both lower and upper bounds are included in the domain.
-    /// In case `max < min` the bounds will be swapped.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut model = Model::default();
     /// Create new float decision variables, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
     /// 
-    ///
+    /// # Examples
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
@@ -168,7 +151,7 @@ impl Model {
     /// Create a new boolean decision variable (0 or 1).
     ///
     /// This is a convenience method equivalent to `new_var_int(0, 1)`.
-    /// Boolean variables can be used with the ultra-clean boolean operators.
+    /// Boolean variables can be used with boolean logic constraints.
     /// 
     /// # Examples
     /// ```
@@ -178,14 +161,14 @@ impl Model {
     /// let b = model.bool();
     /// let c = model.bool();
     /// 
-    /// // Ultra-clean boolean operations:
-    /// model.post(a & b);           // AND
-    /// model.post(a | c);           // OR  
-    /// model.post(!a);              // NOT
-    /// model.post((a & b) | c);     // Complex expressions
+    /// // Boolean operations using model methods:
+    /// let and_result = model.bool_and(&[a, b]);  // AND
+    /// let or_result = model.bool_or(&[a, c]);    // OR  
+    /// let not_result = model.bool_not(a);        // NOT
     /// 
-    /// // Batch operations:
-    /// model.post_all(vec![a & b, !c, a | (b & c)]);
+    /// // Basic constraints:
+    /// post!(model, a != b);
+    /// post!(model, and_result != c);
     /// ```
     pub fn bool(&mut self) -> VarId {
         self.int(0, 1)
@@ -732,7 +715,7 @@ impl Model {
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let x = model.int(1, 10);
-    /// model.gt(x, Val::int(3));
+    /// post!(model, x > 3);
     /// let solution = model.minimize(x);
     /// ```
     #[must_use]
@@ -875,7 +858,7 @@ impl Model {
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let x = model.int(1, 10);
-    /// model.lt(x, Val::int(8));
+    /// post!(model, x < 8);
     /// let solution = model.maximize(x);
     /// ```
     #[must_use]
@@ -1031,7 +1014,7 @@ impl Model {
     /// use cspsolver::prelude::*;
     /// let mut model = Model::default();
     /// let vars: Vec<_> = model.int_vars(4, 1, 4).collect();
-    /// model.all_different(vars);
+    /// post!(model, alldiff(vars));
     /// model.optimize_constraint_order();
     /// ```
     pub fn optimize_constraint_order(&mut self) -> &mut Self {
@@ -1051,7 +1034,7 @@ impl Model {
     /// let mut model = Model::default();
     /// let x = model.int(1, 10);
     /// let y = model.int(1, 10);
-    /// model.ne(x, y);
+    /// post!(model, x != y);
     /// let solution = model.solve();
     /// ```
     #[must_use]
@@ -1238,7 +1221,7 @@ impl Model {
     /// let mut model = Model::default();
     /// let x = model.int(1, 3);
     /// let y = model.int(1, 3);
-    /// model.ne(x, y);
+    /// post!(model, x != y);
     /// let solutions: Vec<_> = model.enumerate().collect();
     /// ```
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {

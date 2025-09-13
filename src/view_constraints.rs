@@ -4,13 +4,13 @@
 //! like absolute value, modulo, and arithmetic operations in constraint expressions.
 
 use crate::vars::{VarId, Val};
-use crate::constraint_builder::Constraint;
+// use crate::constraint_builder::Constraint;  // Disabled - constraint_builder uses deprecated modules
 
 /// Extended constraint types that include view transformations.
 #[derive(Debug, Clone)]
 pub enum ViewConstraint {
-    /// Basic variable constraint (delegates to Constraint)
-    Basic(Constraint),
+    /// Basic variable constraint (disabled - depends on deprecated Constraint type)
+    // Basic(Constraint),
     /// Absolute value constraint: |x| == y or |x| == value
     AbsEq(VarId, AbsTarget),
     /// Modulo constraint: x % divisor == remainder
@@ -143,7 +143,7 @@ impl ViewConstraint {
     /// need to create appropriate view objects and propagators.
     pub fn apply_to(self, model: &mut crate::model::Model) {
         match self {
-            ViewConstraint::Basic(constraint) => constraint.apply_to(model),
+            // ViewConstraint::Basic(constraint) => constraint.apply_to(model),  // Disabled - depends on deprecated Constraint type
             ViewConstraint::AbsEq(var, target) => {
                 // TODO: Implement absolute value constraint creation
                 // This would need to create appropriate view and propagator

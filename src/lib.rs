@@ -24,8 +24,8 @@
 //! // Create a variable x in [1, 10]
 //! let v = model.int(1, 10);
 //!
-//! // Add constraint: x > 2.5
-//! model.gt(v, float(2.5));
+//! // Add constraint: x > 2 (using post! macro)
+//! post!(model, v > 2);
 //!
 //! // Solve the problem minimizing x
 //! let solution = model.minimize(v).unwrap();
@@ -46,8 +46,8 @@
 //! let even_var = model.new_var_with_values(vec![2, 4, 6, 8]);
 //! let odd_var = model.new_var_with_values(vec![1, 3, 5, 7]);
 //!
-//! // Add constraint: variables must be different
-//! model.ne(even_var, odd_var);
+//! // Add constraint: variables must be different (using post! macro)
+//! post!(model, even_var != odd_var);
 //!
 //! // Solve the problem
 //! let solution = model.solve().unwrap();
@@ -92,9 +92,10 @@ pub mod optimization;
 pub mod prelude;
 
 // Clean constraint API modules
-pub mod constraint_builder;
+// pub mod constraint_builder;  // Disabled - uses deprecated boolean_operators module
 pub mod view_constraints;
-pub mod boolean_operators;
+// Temporarily disabled due to deprecated API usage
+// pub mod boolean_operators;
 pub mod math_syntax;
 pub mod constraint_macros;
 

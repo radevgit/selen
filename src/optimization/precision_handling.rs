@@ -303,7 +303,7 @@ impl PrecisionAwareOptimizer {
     /// To enable reliable precision optimization, implement these architectural components:
     /// 
     /// ### Phase 1: Constraint Metadata Infrastructure
-    /// ```rust
+    /// ```rust,ignore
     /// struct ConstraintMetadata {
     ///     constraint_type: ConstraintType,  // LessThan, GreaterThan, Equal, etc.
     ///     operands: Vec<ConstraintOperand>, // Variables and constants involved
@@ -312,7 +312,7 @@ impl PrecisionAwareOptimizer {
     /// ```
     /// 
     /// ### Phase 2: Propagator Query Interface  
-    /// ```rust
+    /// ```rust,ignore
     /// impl Propagators {
     ///     fn get_constraints_for_variable(&self, var_id: VarId) -> Vec<&ConstraintMetadata>;
     ///     fn extract_constraint_bounds(&self, var_id: VarId) -> Option<(f64, f64)>;
