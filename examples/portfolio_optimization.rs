@@ -7,6 +7,7 @@
 //! - Simple constraint satisfaction with floating-point calculations
 
 use cspsolver::prelude::*;
+use cspsolver::{post, postall};
 
 fn main() {
     println!("💰 Portfolio Balance Calculator");
@@ -35,15 +36,19 @@ fn main() {
     
     // Portfolio allocation: simple two-asset model
     // Stocks: 30% to 70% (balanced range)
-    let stock_weight = m.new_var_float(30.0, 70.0);
+    let stock_weight = m.float(30.0, 70.0);
     
-    // Bonds: remainder to make 100% (use opposite to get negative)
-    let bond_weight = m.add(float(100.0), stock_weight.opposite());
+    // Bonds: 30% to 70% (balanced range)
+    let bond_weight = m.float(30.0, 70.0);
+    
+    // Constraint: Total allocation must be 100%
+    let total_weight = m.add(stock_weight, bond_weight);
+    post!(m, total_weight == float(100.0));
     
     println!("\nConstraints:");
     println!("  • Stock allocation: 30% to 70%");
-    println!("  • Bond allocation: Remainder (30% to 70%)");
-    println!("  • Total allocation: Always 100%");
+    println!("  • Bond allocation: 30% to 70%");
+    println!("  • Total allocation: Must equal 100%");
     
     // Find a feasible solution
     println!("\n🎯 Finding portfolio allocation...");

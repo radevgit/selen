@@ -5,19 +5,19 @@ fn main() {
 
     // Create a simple constraint satisfaction problem
     // We have three variables with predefined domains and they must all be different
-    let mut model = Model::default();
+    let mut m = Model::default();
 
     // Variable 1: Can only be even numbers
-    let var1 = model.new_var_with_values(vec![2, 4, 6, 8]);
+    let var1 = m.new_var_with_values(vec![2, 4, 6, 8]);
     
     // Variable 2: Can only be prime numbers  
-    let var2 = model.new_var_with_values(vec![2, 3, 5, 7]);
+    let var2 = m.new_var_with_values(vec![2, 3, 5, 7]);
     
     // Variable 3: Can only be odd numbers
-    let var3 = model.new_var_with_values(vec![1, 3, 5, 7, 9]);
+    let var3 = m.new_var_with_values(vec![1, 3, 5, 7, 9]);
 
     // All variables must be different
-    model.all_different(vec![var1, var2, var3]);
+    post!(m, alldiff([var1, var2, var3]));
 
     println!("Problem setup:");
     println!("  var1 ∈ {{2, 4, 6, 8}} (even numbers)");
@@ -26,7 +26,7 @@ fn main() {
     println!("  Constraint: all_different(var1, var2, var3)");
 
     // Solve the problem
-    if let Some(solution) = model.solve() {
+    if let Some(solution) = m.solve() {
         println!("\nSolution found:");
         println!("  var1 = {:?}", solution[var1]);
         println!("  var2 = {:?}", solution[var2]);

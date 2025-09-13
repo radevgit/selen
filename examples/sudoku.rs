@@ -6,6 +6,7 @@
 //! 2. Each row, column, and 3x3 box contains all digits 1-9 exactly once
 
 use cspsolver::prelude::*;
+use cspsolver::{post, postall};
 use std::time::Instant;
 
 fn main() {
@@ -156,19 +157,19 @@ fn solve_and_display(difficulty: &str, puzzle: &[[i32; 9]; 9]) -> (usize, usize)
 }
 
 fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)> {
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // OPTIMIZATION 1: Create variables more efficiently
     // For clues, create singleton variables directly; for empty cells, create full domain
-    let mut grid = [[model.new_var_int(1, 9); 9]; 9];
+    let mut grid = [[m.int(1, 9); 9]; 9];
     for row in 0..9 {
         for col in 0..9 {
             if puzzle[row][col] != 0 {
                 // Create singleton variable for clues (much more efficient than equals constraint)
                 let clue_val = puzzle[row][col];
-                grid[row][col] = model.new_var_int(clue_val, clue_val);
+                grid[row][col] = m.int(clue_val, clue_val);
             } else {
-                grid[row][col] = model.new_var_int(1, 9);
+                grid[row][col] = m.int(1, 9);
             }
         }
     }
@@ -176,13 +177,13 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     // OPTIMIZATION 2: Pre-allocate vectors and use more efficient constraint posting
     // Row constraints: each row has all digits 1-9
     for row in 0..9 {
-        model.all_different(grid[row].to_vec());
+        post!(m, alldiff(grid[row]));
     }
     
     // Column constraints: each column has all digits 1-9  
     for col in 0..9 {
         let column: Vec<VarId> = (0..9).map(|row| grid[row][col]).collect();
-        model.all_different(column);
+        post!(m, alldiff(column));
     }
     
     // Box constraints: each 3x3 box has all digits 1-9
@@ -194,18 +195,18 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
                     box_vars.push(grid[box_row * 3 + r][box_col * 3 + c]);
                 }
             }
-            model.all_different(box_vars);
+            post!(m, alldiff(box_vars));
         }
     }
     
     // OPTIMIZATION 3: Optimize constraint order for better propagation
-    model.optimize_constraint_order();
+    m.optimize_constraint_order();
     
     // Solve the model with statistics tracking
     let mut propagation_count = 0;
     let mut node_count = 0;
     
-    let solution = model.solve_with_callback(|stats| {
+    let solution = m.solve_with_callback(|stats| {
         // Track statistics
         propagation_count = stats.propagation_count;
         node_count = stats.node_count;

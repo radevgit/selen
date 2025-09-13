@@ -566,12 +566,36 @@ impl<V: View> ViewRaw for Next<V> {
 
     fn min_raw(self, vars: &Vars) -> Val {
         let base_min = self.x.min_raw(vars);
-        base_min.next()
+        // If this is a variable with a FloatInterval, use its next() method
+        if let Some(var_id) = self.x.get_underlying_var_raw() {
+            if let Var::VarF(interval) = &vars[var_id] {
+                if let Val::ValF(f) = base_min {
+                    return Val::ValF(interval.next(f));
+                }
+            }
+        }
+        // For non-float or non-variable cases, only work with integers
+        match base_min {
+            Val::ValI(i) => Val::ValI(i + 1),
+            Val::ValF(_) => base_min, // Return unchanged for floats without interval info
+        }
     }
 
     fn max_raw(self, vars: &Vars) -> Val {
         let base_max = self.x.max_raw(vars);
-        base_max.next()
+        // If this is a variable with a FloatInterval, use its next() method
+        if let Some(var_id) = self.x.get_underlying_var_raw() {
+            if let Var::VarF(interval) = &vars[var_id] {
+                if let Val::ValF(f) = base_max {
+                    return Val::ValF(interval.next(f));
+                }
+            }
+        }
+        // For non-float or non-variable cases, only work with integers
+        match base_max {
+            Val::ValI(i) => Val::ValI(i + 1),
+            Val::ValF(_) => base_max, // Return unchanged for floats without interval info
+        }
     }
 }
 
@@ -583,16 +607,40 @@ impl<V: View> View for Next<V> {
 
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         // To set min of next view, we need to reverse the operation
-        // Handle mixed types: if min is integer but underlying view is float,
-        // we need to convert to float first before taking prev()
         let target_min = match (min, self.x.result_type(ctx)) {
             (Val::ValI(min_int), ViewType::Float) => {
-                // Convert integer to float, then take prev
-                Val::ValF(min_int as f64).prev()
+                // Convert integer to float, then compute prev using step size
+                let min_f = min_int as f64;
+                if let Some(var_id) = self.x.get_underlying_var_raw() {
+                    if let Var::VarF(interval) = &ctx.vars()[var_id] {
+                        Val::ValF(interval.prev(min_f))
+                    } else {
+                        // Fallback: return original float value
+                        Val::ValF(min_f)
+                    }
+                } else {
+                    // Fallback: return original float value  
+                    Val::ValF(min_f)
+                }
             }
             _ => {
-                // Same type or float to integer conversion - use direct prev
-                min.prev()
+                // For float values, try to use step size if available
+                match min {
+                    Val::ValF(f) => {
+                        if let Some(var_id) = self.x.get_underlying_var_raw() {
+                            if let Var::VarF(interval) = &ctx.vars()[var_id] {
+                                Val::ValF(interval.prev(f))
+                            } else {
+                                // Fallback: return original value
+                                min
+                            }
+                        } else {
+                            // Fallback: return original value
+                            min
+                        }
+                    }
+                    Val::ValI(i) => Val::ValI(i - 1), // integer case works fine
+                }
             }
         };
         self.x.try_set_min(target_min, ctx)
@@ -600,16 +648,40 @@ impl<V: View> View for Next<V> {
 
     fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val> {
         // To set max of next view, we need to reverse the operation
-        // Handle mixed types: if max is integer but underlying view is float,
-        // we need to convert to float first before taking prev()
         let target_max = match (max, self.x.result_type(ctx)) {
             (Val::ValI(max_int), ViewType::Float) => {
-                // Convert integer to float, then take prev
-                Val::ValF(max_int as f64).prev()
+                // Convert integer to float, then compute prev using step size
+                let max_f = max_int as f64;
+                if let Some(var_id) = self.x.get_underlying_var_raw() {
+                    if let Var::VarF(interval) = &ctx.vars()[var_id] {
+                        Val::ValF(interval.prev(max_f))
+                    } else {
+                        // Fallback: return original float value
+                        Val::ValF(max_f)
+                    }
+                } else {
+                    // Fallback: return original float value
+                    Val::ValF(max_f)
+                }
             }
             _ => {
-                // Same type or float to integer conversion - use direct prev
-                max.prev()
+                // For float values, try to use step size if available
+                match max {
+                    Val::ValF(f) => {
+                        if let Some(var_id) = self.x.get_underlying_var_raw() {
+                            if let Var::VarF(interval) = &ctx.vars()[var_id] {
+                                Val::ValF(interval.prev(f))
+                            } else {
+                                // Fallback: return original value
+                                max
+                            }
+                        } else {
+                            // Fallback: return original value
+                            max
+                        }
+                    }
+                    Val::ValI(i) => Val::ValI(i - 1), // integer case works fine
+                }
             }
         };
         self.x.try_set_max(target_max, ctx)
@@ -623,12 +695,36 @@ impl<V: View> ViewRaw for Prev<V> {
 
     fn min_raw(self, vars: &Vars) -> Val {
         let base_min = self.x.min_raw(vars);
-        base_min.prev()
+        // If this is a variable with a FloatInterval, use its prev() method
+        if let Some(var_id) = self.x.get_underlying_var_raw() {
+            if let Var::VarF(interval) = &vars[var_id] {
+                if let Val::ValF(f) = base_min {
+                    return Val::ValF(interval.prev(f));
+                }
+            }
+        }
+        // For non-float or non-variable cases, only work with integers
+        match base_min {
+            Val::ValI(i) => Val::ValI(i - 1),
+            Val::ValF(_) => base_min, // Return unchanged for floats without interval info
+        }
     }
 
     fn max_raw(self, vars: &Vars) -> Val {
         let base_max = self.x.max_raw(vars);
-        base_max.prev()
+        // If this is a variable with a FloatInterval, use its prev() method
+        if let Some(var_id) = self.x.get_underlying_var_raw() {
+            if let Var::VarF(interval) = &vars[var_id] {
+                if let Val::ValF(f) = base_max {
+                    return Val::ValF(interval.prev(f));
+                }
+            }
+        }
+        // For non-float or non-variable cases, only work with integers
+        match base_max {
+            Val::ValI(i) => Val::ValI(i - 1),
+            Val::ValF(_) => base_max, // Return unchanged for floats without interval info
+        }
     }
 }
 
@@ -640,13 +736,43 @@ impl<V: View> View for Prev<V> {
 
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         // To set min of prev view, we need to reverse the operation
-        let target_min = min.next();
+        let target_min = match min {
+            Val::ValF(f) => {
+                if let Some(var_id) = self.x.get_underlying_var_raw() {
+                    if let Var::VarF(interval) = &ctx.vars()[var_id] {
+                        Val::ValF(interval.next(f))
+                    } else {
+                        // Fallback: return original value
+                        min
+                    }
+                } else {
+                    // Fallback: return original value
+                    min
+                }
+            }
+            Val::ValI(i) => Val::ValI(i + 1), // integer case works fine
+        };
         self.x.try_set_min(target_min, ctx)
     }
 
     fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val> {
         // To set max of prev view, we need to reverse the operation
-        let target_max = max.next();
+        let target_max = match max {
+            Val::ValF(f) => {
+                if let Some(var_id) = self.x.get_underlying_var_raw() {
+                    if let Var::VarF(interval) = &ctx.vars()[var_id] {
+                        Val::ValF(interval.next(f))
+                    } else {
+                        // Fallback: return original value
+                        max
+                    }
+                } else {
+                    // Fallback: return original value
+                    max
+                }
+            }
+            Val::ValI(i) => Val::ValI(i + 1), // integer case works fine
+        };
         self.x.try_set_max(target_max, ctx)
     }
 }

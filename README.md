@@ -10,12 +10,13 @@ A Constraint Satisfaction Problem (CSP) solver library written in Rust.
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
 
-Type of variables: `float`, `int`, `mixed` (int and float)
+**Variable Types**: `int`, `float`, mixed constraints
 
-Constraints supported include:
-- Arithmetic: `add`, `sum`
-- Comparisons: `less_than`, `less_than_or_equals`, `greater_than`, `greater_than_or_equals`, `equals`, `not_equals`
-- Global: `all_different`
+**Constraint Categories**:
+- **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
+- **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
+- **Boolean Logic**: `and()`, `or()`, `not()` with clean function syntax
+- **Global**: `alldiff()`
 
 ## Installation
 
@@ -40,38 +41,24 @@ cargo run --example portfolio_optimization
 🧩 Solving PLATINUM puzzle:
 📊 Puzzle stats: 17 clues given, 64 empty cells
 
-Puzzle:
-┌───────┬───────┬───────┐
-│ · · · │ · · · │ · · · │
-│ · · · │ · · 3 │ · 8 5 │
-│ · · 1 │ · 2 · │ · · · │
-├───────┼───────┼───────┤
-│ · · · │ 5 · 7 │ · · · │
-│ · · 4 │ · · · │ 1 · · │
-│ · 9 · │ · · · │ · · · │
-├───────┼───────┼───────┤
-│ 5 · · │ · · · │ · 7 3 │
-│ · · 2 │ · 1 · │ · · · │
-│ · · · │ · 4 · │ · · 9 │
-└───────┴───────┴───────┘
+Puzzle:                                 Solution:
+┌───────┬───────┬───────┐               ┌───────┬───────┬───────┐
+│ · · · │ · · · │ · · · │               │ 9 8 7 │ 6 5 4 │ 3 2 1 │
+│ · · · │ · · 3 │ · 8 5 │               │ 2 4 6 │ 1 7 3 │ 9 8 5 │
+│ · · 1 │ · 2 · │ · · · │               │ 3 5 1 │ 9 2 8 │ 7 4 6 │
+├───────┼───────┼───────┤               ├───────┼───────┼───────┤
+│ · · · │ 5 · 7 │ · · · │               │ 1 2 8 │ 5 3 7 │ 6 9 4 │
+│ · · 4 │ · · · │ 1 · · │               │ 6 3 4 │ 8 9 2 │ 1 5 7 │
+│ · 9 · │ · · · │ · · · │               │ 7 9 5 │ 4 6 1 │ 8 3 2 │
+├───────┼───────┼───────┤               ├───────┼───────┼───────┤
+│ 5 · · │ · · · │ · 7 3 │               │ 5 1 9 │ 2 8 6 │ 4 7 3 │
+│ · · 2 │ · 1 · │ · · · │               │ 4 7 2 │ 3 1 9 │ 5 6 8 │
+│ · · · │ · 4 · │ · · 9 │               │ 8 6 3 │ 7 4 5 │ 2 1 9 │
+└───────┴───────┴───────┘               └───────┴───────┴───────┘
+
 ✅ Solution found in 144330.511ms!
 📊 Statistics: 638 propagations, 54 nodes explored
 🔍 Efficiency: 11.8 propagations/node
-
-Solution:
-┌───────┬───────┬───────┐
-│ 9 8 7 │ 6 5 4 │ 3 2 1 │
-│ 2 4 6 │ 1 7 3 │ 9 8 5 │
-│ 3 5 1 │ 9 2 8 │ 7 4 6 │
-├───────┼───────┼───────┤
-│ 1 2 8 │ 5 3 7 │ 6 9 4 │
-│ 6 3 4 │ 8 9 2 │ 1 5 7 │
-│ 7 9 5 │ 4 6 1 │ 8 3 2 │
-├───────┼───────┼───────┤
-│ 5 1 9 │ 2 8 6 │ 4 7 3 │
-│ 4 7 2 │ 3 1 9 │ 5 6 8 │
-│ 8 6 3 │ 7 4 5 │ 2 1 9 │
-└───────┴───────┴───────┘
 
 ```
 
@@ -83,30 +70,64 @@ Solution:
 use cspsolver::prelude::*;
 
 fn main() {
-    // constraint: v0(int) * 1.5 < 5.0
-    // solving for maximum v0
-    let mut m = Model::default();
+    let mut model = Model::default();
 
-    let v0 = m.new_var_int(1, 3);
-    println!("v0 domain: [1, 3]");
+    // Create variables with clean syntax
+    let x = model.int(1, 10);       // Integer variable
+    let y = model.int(5, 15);       // Integer variable  
+    let z = model.float(0.0, 20.0); // Float variable
 
-    m.less_than(v0.times_pos(float(1.5)), float(5.0));
+    // Mathematical constraints using post! macro
+    post!(model, x < y);            // Comparison
+    post!(model, x + y >= int(10)); // Arithmetic
+    post!(model, abs(z) <= float(15.5)); // Math functions
+    
+    // Enhanced constraint features
+    post!(model, sum([x, y]) == int(12));     // Sum function
+    post!(model, and(x > int(3), y < int(12))); // Boolean logic
+    post!(model, x % int(3) != int(0));       // Modulo operations
+    
+    // Global constraints
+    post!(model, alldiff([x, y]));  // All different
 
-    let solution = m.maximize(v0).unwrap();
-    let x = match solution[v0] {
-        Val::ValI(int_val) => int_val,
-        _ => panic!("Expected integer value"),
-    };
-
-    assert!(x == 3);
-    println!("Found optimal value: {}", x);
+    if let Some(solution) = model.solve() {
+        println!("x = {:?}", solution[x]);
+        println!("y = {:?}", solution[y]);
+        println!("z = {:?}", solution[z]);
+    }
 }
 ```
 
+### Advanced Constraint Examples
+
+```rust
+use cspsolver::prelude::*;
+
+fn main() {
+    let mut model = Model::default();
+    let vars = vec![model.int(1, 5), model.int(1, 5), model.int(1, 5)];
+    
+    // Complex mathematical expressions
+    post!(model, sum(vars.clone()) <= int(12));
+    post!(model, max([vars[0]]) >= min([vars[1]]));
+    
+    // Boolean logic with traditional syntax  
+    let a = model.int(0, 1);
+    let b = model.int(0, 1);
+    post!(model, and(a, b));        // Boolean AND
+    post!(model, or(a, not(b)));    // Boolean OR with NOT
+    
+    // Mixed type constraints
+    let float_var = model.float(1.0, 10.0);
+    post!(model, abs(float_var) + vars[0] <= float(15.0));
+    
+    if let Some(solution) = model.solve() {
+        println!("Solution found!");
+    }
+}
+```
 
 ## Status
-
-The new implementation follows the design and implementation of [Copper](https://docs.rs/copper/0.1.0/copper/) v0.1.0.
 
 The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
 

@@ -8,6 +8,7 @@
 //! - Handling worker efficiency variations
 
 use cspsolver::prelude::*;
+use cspsolver::{post, postall};
 
 fn main() {
     println!("📋 Resource Allocation Optimizer");
@@ -44,7 +45,7 @@ fn main() {
     // Each task must be assigned to exactly one worker
     for task_assignments in &worker_assignments {
         let task_assignment_sum = m.sum(task_assignments);
-        m.equals(task_assignment_sum, int(1));
+        post!(m, task_assignment_sum == int(1));
     }
     println!("Constraint: Each task must be assigned to exactly one worker");
     
@@ -63,7 +64,7 @@ fn main() {
                 _ => 0
             };
             let adjusted_time = int(base_time_val * multiplier_val);
-            assignment.times(adjusted_time)
+            m.mul(*assignment, adjusted_time)
         }).collect();
         
         let total_time = m.sum_iter(time_terms);

@@ -49,11 +49,11 @@ fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration
     // Build the model with timing
     let model_start = Instant::now();
     let mut model = Model::default();
-    let mut grid = [[model.new_var_int(1, 9); 9]; 9];
+    let mut grid = [[model.int(1, 9); 9]; 9];
     
     for row in 0..9 {
         for col in 0..9 {
-            grid[row][col] = model.new_var_int(1, 9);
+            grid[row][col] = model.int(1, 9);
         }
     }
     

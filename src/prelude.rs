@@ -29,6 +29,12 @@ pub use crate::solution::*;
 pub use crate::props::*;
 pub use crate::search::*;
 
+// Clean constraint API - include constraint builder traits
+// pub use crate::constraint_builder::ModelConstraints;  // Disabled - constraint_builder uses deprecated modules
+
+// Mathematical constraint macros
+pub use crate::{post, postall};
+
 // Convenient constructor functions for common values
 /// Create an integer value - shorthand for Val::ValI()
 pub const fn int(value: i32) -> crate::vars::Val {

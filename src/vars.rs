@@ -72,6 +72,14 @@ impl Val {
         Some(self / other)
     }
 
+    /// Safe modulo that returns None if divisor is too close to zero
+    pub fn safe_mod(self, other: Val) -> Option<Val> {
+        if !other.is_safe_divisor() {
+            return None;
+        }
+        Some(self % other)
+    }
+
     /// Check if the range [min, max] contains zero or values close to zero
     pub fn range_contains_unsafe_divisor(min: Val, max: Val) -> bool {
         match (min, max) {
@@ -278,6 +286,47 @@ impl std::ops::Div for Val {
     }
 }
 
+impl std::ops::Rem for Val {
+    type Output = Val;
+
+    fn rem(self, other: Val) -> Val {
+        match (self, other) {
+            (Val::ValI(a), Val::ValI(b)) => {
+                if b == 0 {
+                    // Return NaN for modulo by zero (undefined behavior)
+                    Val::ValF(f64::NAN)
+                } else {
+                    Val::ValI(a % b)
+                }
+            },
+            (Val::ValF(a), Val::ValF(b)) => {
+                if b.abs() < f64::EPSILON {
+                    // Return NaN for modulo by value too close to zero
+                    Val::ValF(f64::NAN)
+                } else {
+                    Val::ValF(a % b)
+                }
+            },
+            (Val::ValI(a), Val::ValF(b)) => {
+                if b.abs() < f64::EPSILON {
+                    // Return NaN for modulo by value too close to zero
+                    Val::ValF(f64::NAN)
+                } else {
+                    Val::ValF(a as f64 % b)
+                }
+            },
+            (Val::ValF(a), Val::ValI(b)) => {
+                if b == 0 {
+                    // Return NaN for modulo by zero
+                    Val::ValF(f64::NAN)
+                } else {
+                    Val::ValF(a % b as f64)
+                }
+            },
+        }
+    }
+}
+
 impl Var {
     #[doc(hidden)]
     /// Assigned variables have a domain reduced to a singleton.
@@ -292,7 +341,7 @@ impl Var {
     /// Midpoint of domain for easier binary splits.
     pub fn mid(&self) -> Val {
         match self {
-            Var::VarF(interval) => Val::ValF(interval.min + (interval.max - interval.min) / 2.0),
+            Var::VarF(interval) => Val::ValF(interval.mid()),
             Var::VarI(sparse_set) => {
                 if sparse_set.is_empty() {
                     // Should not happen in a valid CSP, but provide a fallback
@@ -521,6 +570,12 @@ impl Vars {
             }
         }
     }
+
+    /// Iterator over variables for analysis
+    #[doc(hidden)]
+    pub fn iter(&self) -> std::slice::Iter<'_, Var> {
+        self.0.iter()
+    }
 }
 
 #[cfg(test)]
@@ -626,6 +681,18 @@ mod tests {
 /// Decision variable handle that is not bound to a specific memory location.
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct VarId(usize);
+
+impl VarId {
+    /// Create a VarId from a usize index (for internal use)
+    pub(crate) fn from_index(index: usize) -> Self {
+        VarId(index)
+    }
+    
+    /// Get the internal index as usize (for internal use)
+    pub(crate) fn to_index(self) -> usize {
+        self.0
+    }
+}
 
 impl std::fmt::Debug for VarId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
