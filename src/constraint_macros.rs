@@ -21,7 +21,7 @@
 //! post!(m, x + y <= five);
 //! 
 //! // Multiple constraints at once:
-//! postall!(model, x < y, y != five);
+//! postall!(m, x < y, y != five);
 //! ```
 //!
 //! For boolean logic operations, use the model's boolean methods instead:
@@ -1245,6 +1245,79 @@ macro_rules! post {
         $model.props.not_equals(_prod_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
+
+    // Multiplication with constant values: x * int(5) == y, x * float(3.14) <= z
+    ($model:expr, $target:ident == $left:ident * int($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::int($value));
+        $model.props.equals($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident == $left:ident * float($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::float($value));
+        $model.props.equals($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident <= $left:ident * int($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::int($value));
+        $model.props.less_than_or_equals($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident <= $left:ident * float($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::float($value));
+        $model.props.less_than_or_equals($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident >= $left:ident * int($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::int($value));
+        $model.props.greater_than_or_equals($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident >= $left:ident * float($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::float($value));
+        $model.props.greater_than_or_equals($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident < $left:ident * int($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::int($value));
+        $model.props.less_than($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident < $left:ident * float($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::float($value));
+        $model.props.less_than($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident > $left:ident * int($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::int($value));
+        $model.props.greater_than($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident > $left:ident * float($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::float($value));
+        $model.props.greater_than($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident != $left:ident * int($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::int($value));
+        $model.props.not_equals($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $target:ident != $left:ident * float($value:expr)) => {{
+        let _prod_var = $model.mul($left, $crate::prelude::float($value));
+        $model.props.not_equals($target, _prod_var);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
     
     // Division: x / y <op> <expr>
     ($model:expr, $left:ident / $right:ident < $target:ident) => {{
@@ -1358,7 +1431,7 @@ macro_rules! post {
 /// let five = m.int(5, 5);
 /// 
 /// // Post multiple constraints directly
-/// postall!(model, x < y, y > five, x + y <= z);
+/// postall!(m, x < y, y > five, x + y <= z);
 /// ```
 #[macro_export]
 macro_rules! postall {

@@ -47,7 +47,7 @@
 //!
 //! // Maximize number of items within budget
 //! if let Some(solution) = m.maximize(items) {
-//!     println!("Optimal: {} items, cost: {:?}", 
+//!     println!("Optimal: {:?} items, cost: {:?}", 
 //!              solution[items], solution[cost]);
 //! }
 //! ```

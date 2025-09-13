@@ -194,3 +194,106 @@ fn test_mixed_constraints_with_operators() {
         assert_ne!(x_val, z_val);
     }
 }
+
+#[test]
+fn test_multiplication_with_int_constants() {
+    // Test the new constraint patterns: var * int(constant)
+    let mut m = Model::default();
+    let x = m.int(1, 10);
+    let result = m.int(0, 100);
+    
+    // Test equality: result == x * int(5)
+    post!(m, result == x * int(5));
+    post!(m, x == 3);  // Force x = 3, so result should be 15
+    
+    let solution = m.solve().unwrap();
+    if let (Val::ValI(x_val), Val::ValI(result_val)) = (solution[x], solution[result]) {
+        assert_eq!(x_val, 3);
+        assert_eq!(result_val, 15);  // 3 * 5 = 15
+    }
+}
+
+#[test]
+fn test_multiplication_with_float_constants() {
+    // Test the new constraint patterns: var * float(constant)
+    let mut m = Model::default();
+    let items = m.int(1, 100);
+    let cost = m.float(0.0, 1000.0);
+    
+    // Test equality: cost == items * float(12.5)
+    post!(m, cost == items * float(12.5));
+    post!(m, items == 4);  // Force items = 4, so cost should be 50.0
+    
+    let solution = m.solve().unwrap();
+    if let (Val::ValI(items_val), Val::ValF(cost_val)) = (solution[items], solution[cost]) {
+        assert_eq!(items_val, 4);
+        assert!((cost_val - 50.0).abs() < 0.001);  // 4 * 12.5 = 50.0
+    }
+}
+
+#[test]
+fn test_multiplication_with_constants_inequalities() {
+    // Test inequality constraints with multiplication
+    let mut m = Model::default();
+    let x = m.int(1, 20);
+    let budget = m.int(0, 100);
+    
+    // Test: budget >= x * int(3) (budget must be at least 3x)
+    post!(m, budget >= x * int(3));
+    post!(m, budget == 15);  // Force budget = 15
+    
+    let solution = m.solve().unwrap();
+    if let (Val::ValI(x_val), Val::ValI(budget_val)) = (solution[x], solution[budget]) {
+        assert_eq!(budget_val, 15);
+        assert!(x_val <= 5);  // Since budget = 15, x * 3 <= 15, so x <= 5
+    }
+}
+
+#[test]
+fn test_multiplication_with_float_constants_optimization() {
+    // Test optimization with float multiplication
+    let mut m = Model::default();
+    let items = m.int(1, 100);
+    let cost = m.float(0.0, 1000.0);
+    
+    // Constraint: cost == items * float(12.5)
+    post!(m, cost == items * float(12.5));
+    // Budget constraint: cost <= float(500.0)
+    post!(m, cost <= float(500.0));
+    
+    // Maximize items within budget
+    let solution = m.maximize(items).unwrap();
+    if let (Val::ValI(items_val), Val::ValF(cost_val)) = (solution[items], solution[cost]) {
+        // items * 12.5 <= 500, so items <= 40
+        assert!(items_val <= 40);
+        assert!(cost_val <= 500.0);
+        assert!((cost_val - (items_val as f64 * 12.5)).abs() < 0.001);
+    }
+}
+
+#[test]
+fn test_mixed_multiplication_constraints() {
+    // Test multiple multiplication constraints together
+    let mut m = Model::default();
+    let a = m.int(1, 10);
+    let b = m.int(1, 10);
+    let result1 = m.int(0, 100);
+    let result2 = m.float(0.0, 100.0);
+    
+    // Multiple multiplication constraints
+    post!(m, result1 == a * int(5));      // result1 = a * 5
+    post!(m, result2 == b * float(2.5));  // result2 = b * 2.5
+    post!(m, result1 > result2);          // result1 > result2
+    post!(m, a == 4);                     // Force a = 4
+    post!(m, b == 3);                     // Force b = 3
+    
+    let solution = m.solve().unwrap();
+    if let (Val::ValI(a_val), Val::ValI(b_val), Val::ValI(result1_val), Val::ValF(result2_val)) = 
+        (solution[a], solution[b], solution[result1], solution[result2]) {
+        assert_eq!(a_val, 4);
+        assert_eq!(b_val, 3);
+        assert_eq!(result1_val, 20);  // 4 * 5 = 20
+        assert!((result2_val - 7.5).abs() < 0.001);  // 3 * 2.5 = 7.5
+        assert!(result1_val as f64 > result2_val);  // 20 > 7.5
+    }
+}

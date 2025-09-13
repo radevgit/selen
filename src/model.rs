@@ -24,7 +24,7 @@ impl Model {
     ///
     /// ```
     /// use cspsolver::prelude::*;
-    /// let mut model = Model::with_float_precision(4); // 4 decimal places
+    /// let mut m = Model::with_float_precision(4); // 4 decimal places
     /// let var = m.float(0.0, 1.0);
     /// ```
     pub fn with_float_precision(precision_digits: i32) -> Self {
