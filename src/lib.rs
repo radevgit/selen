@@ -83,6 +83,7 @@
 pub mod model;
 pub mod vars;
 pub mod solution;
+#[doc(hidden)]
 pub mod operators;
 
 #[doc(hidden)]
@@ -111,6 +112,7 @@ pub mod prelude;
 pub mod view_constraints;
 // Temporarily disabled due to deprecated API usage
 // pub mod boolean_operators;
+#[doc(hidden)]
 pub mod math_syntax;
 pub mod constraint_macros;
 
@@ -121,6 +123,7 @@ mod tests;
 mod debug;
 
 // Benchmarks module for performance validation
+#[doc(hidden)]
 pub mod benchmarks;
 
 

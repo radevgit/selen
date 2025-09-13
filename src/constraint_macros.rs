@@ -57,20 +57,21 @@ impl ConstraintRef {
 
 /// Post a mathematical constraint to the model
 /// 
-/// # Examples
+/// Supported constraint patterns:
 /// 
-/// ```rust
-/// use cspsolver::prelude::*;
+/// **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 /// 
-/// let mut m = Model::default();
-/// let x = m.int(1, 10);
-/// let y = m.int(1, 10);
-/// let one = m.int(1, 1);
+/// **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 /// 
-/// // Mathematical constraint syntax
-/// post!(m, x < y);
-/// post!(m, abs(x) >= one);
-/// ```
+/// **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
+/// 
+/// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
+/// 
+/// **Global**: `alldiff([vars...])`
+/// 
+/// **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
+/// 
+/// Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`
 #[macro_export]
 macro_rules! post {
     // Handle simple variable comparisons: x < y, x <= y, etc.
@@ -1414,25 +1415,23 @@ macro_rules! post {
     }};
 }
 
-/// Batch multiple constraint references into a vector
+/// Post multiple constraints to the model in a single call
 /// 
-/// This macro provides a convenient way to group existing constraint 
-/// references into a vector for organization or tracking purposes.
+/// Accepts comma-separated constraint expressions, each following the same patterns as `post!`:
 /// 
-/// # Examples
+/// **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 /// 
-/// ```rust
-/// use cspsolver::prelude::*;
+/// **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 /// 
-/// let mut m = Model::default();
-/// let x = m.int(1, 10);
-/// let y = m.int(1, 10);
-/// let z = m.int(1, 20);
-/// let five = m.int(5, 5);
+/// **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
 /// 
-/// // Post multiple constraints directly
-/// postall!(m, x < y, y > five, x + y <= z);
-/// ```
+/// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
+/// 
+/// **Global**: `alldiff([vars...])`
+/// 
+/// **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
+/// 
+/// Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`
 #[macro_export]
 macro_rules! postall {
     // Use simple comma-separated arguments
