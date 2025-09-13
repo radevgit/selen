@@ -24,7 +24,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cspsolver = "0.3.15"
+cspsolver = "0.5.0"
 ```
 
 
@@ -56,7 +56,6 @@ Puzzle:                                 Solution:
 │ · · · │ · 4 · │ · · 9 │               │ 8 6 3 │ 7 4 5 │ 2 1 9 │
 └───────┴───────┴───────┘               └───────┴───────┴───────┘
 
-✅ Solution found in 144330.511ms!
 📊 Statistics: 638 propagations, 54 nodes explored
 🔍 Efficiency: 11.8 propagations/node
 
@@ -70,27 +69,27 @@ Puzzle:                                 Solution:
 use cspsolver::prelude::*;
 
 fn main() {
-    let mut model = Model::default();
+    let mut m = Model::default();
 
     // Create variables with clean syntax
-    let x = model.int(1, 10);       // Integer variable
-    let y = model.int(5, 15);       // Integer variable  
-    let z = model.float(0.0, 20.0); // Float variable
+    let x = m.int(1, 10);       // Integer variable
+    let y = m.int(5, 15);       // Integer variable  
+    let z = m.float(0.0, 20.0); // Float variable
 
     // Mathematical constraints using post! macro
-    post!(model, x < y);            // Comparison
-    post!(model, x + y >= int(10)); // Arithmetic
-    post!(model, abs(z) <= float(15.5)); // Math functions
+    post!(m, x < y);            // Comparison
+    post!(m, x + y >= int(10)); // Arithmetic
+    post!(m, abs(z) <= float(15.5)); // Math functions
     
     // Enhanced constraint features
-    post!(model, sum([x, y]) == int(12));     // Sum function
-    post!(model, and(x > int(3), y < int(12))); // Boolean logic
-    post!(model, x % int(3) != int(0));       // Modulo operations
+    post!(m, sum([x, y]) == int(12));     // Sum function
+    post!(m, and(x > int(3), y < int(12))); // Boolean logic
+    post!(m, x % int(3) != int(0));       // Modulo operations
     
     // Global constraints
-    post!(model, alldiff([x, y]));  // All different
+    post!(m, alldiff([x, y]));  // All different
 
-    if let Some(solution) = model.solve() {
+    if let Some(solution) = m.solve() {
         println!("x = {:?}", solution[x]);
         println!("y = {:?}", solution[y]);
         println!("z = {:?}", solution[z]);
@@ -104,24 +103,24 @@ fn main() {
 use cspsolver::prelude::*;
 
 fn main() {
-    let mut model = Model::default();
-    let vars = vec![model.int(1, 5), model.int(1, 5), model.int(1, 5)];
+    let mut m = Model::default();
+    let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
     
     // Complex mathematical expressions
-    post!(model, sum(vars.clone()) <= int(12));
-    post!(model, max([vars[0]]) >= min([vars[1]]));
+    post!(m, sum(vars.clone()) <= int(12));
+    post!(m, max([vars[0]]) >= min([vars[1]]));
     
     // Boolean logic with traditional syntax  
-    let a = model.int(0, 1);
-    let b = model.int(0, 1);
-    post!(model, and(a, b));        // Boolean AND
-    post!(model, or(a, not(b)));    // Boolean OR with NOT
+    let a = m.int(0, 1);
+    let b = m.int(0, 1);
+    post!(m, and(a, b));        // Boolean AND
+    post!(m, or(a, not(b)));    // Boolean OR with NOT
     
     // Mixed type constraints
-    let float_var = model.float(1.0, 10.0);
-    post!(model, abs(float_var) + vars[0] <= float(15.0));
+    let f_var = m.float(1.0, 10.0);
+    post!(m, abs(f_var) + vars[0] <= float(15.0));
     
-    if let Some(solution) = model.solve() {
+    if let Some(solution) = m.solve() {
         println!("Solution found!");
     }
 }
