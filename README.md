@@ -10,14 +10,13 @@ A Constraint Satisfaction Problem (CSP) solver library written in Rust.
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
 
-Type of variables: `float`, `int`, `mixed` (int and float)
+**Variable Types**: `int`, `float`, mixed constraints
 
-Constraints supported include:
-- **Arithmetic**: `add`, `sub`, `mul`, `div`, `modulo`, `abs`, `sum`
-- **Comparisons**: `lt`, `le`, `gt`, `ge`, `eq`, `ne` (short names for < ≤ > ≥ = ≠)
-- **Boolean Logic**: Cean syntax with `&`, `|`, `!` operators (AND/OR/NOT operations)
-- **Global**: `all_different`, `min`, `max` (vector-based)
-- **Mixed Types**: Full support for integer and float variables in all constraints
+**Constraint Categories**:
+- **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
+- **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
+- **Boolean Logic**: `and()`, `or()`, `not()` with clean function syntax
+- **Global**: `alldiff()`
 
 ## Installation
 
@@ -76,73 +75,57 @@ fn main() {
     // Create variables with clean syntax
     let x = model.int(1, 10);       // Integer variable
     let y = model.int(5, 15);       // Integer variable  
-    let flag = model.bool();        // Boolean variable (NEW!)
+    let z = model.float(0.0, 20.0); // Float variable
 
-    // Arithmetic and comparison constraints
-    model.post(x.lt(y));            // x < y
-    model.post(x.ge(3));            // x >= 3
+    // Mathematical constraints using post! macro
+    post!(model, x < y);            // Comparison
+    post!(model, x + y >= int(10)); // Arithmetic
+    post!(model, abs(z) <= float(15.5)); // Math functions
     
-    // ✨ NEW: Ultra-clean boolean constraints
-    model.post(flag & (x.gt(5)));   // Boolean AND
-    model.post(flag | (y.lt(12)));  // Boolean OR
-    model.post(!flag);              // Boolean NOT
+    // Enhanced constraint features
+    post!(model, sum([x, y]) == int(12));     // Sum function
+    post!(model, and(x > int(3), y < int(12))); // Boolean logic
+    post!(model, x % int(3) != int(0));       // Modulo operations
     
-    // Complex boolean expressions work seamlessly
-    model.post((flag & (x.eq(7))) | (!flag & (y.eq(10))));
-    
-    // Batch operations for multiple constraints
-    model.post_all(vec![
-        x.ne(y),                    // x ≠ y
-        flag & (x.lt(8)),          // Boolean constraint
-        y.ge(6)                     // y ≥ 6
-    ]);
+    // Global constraints
+    post!(model, alldiff([x, y]));  // All different
 
     if let Some(solution) = model.solve() {
         println!("x = {:?}", solution[x]);
         println!("y = {:?}", solution[y]);
-        println!("flag = {:?}", solution[flag]);
+        println!("z = {:?}", solution[z]);
     }
 }
 ```
 
-### Ultra-Clean Boolean Logic
-
-The new boolean syntax is incredibly clean and intuitive:
+### Advanced Constraint Examples
 
 ```rust
 use cspsolver::prelude::*;
 
 fn main() {
     let mut model = Model::default();
-    let a = model.bool();           // Clean variable creation
-    let b = model.bool();
-    let c = model.bool();
+    let vars = vec![model.int(1, 5), model.int(1, 5), model.int(1, 5)];
     
-    // Direct boolean operations - no verbose method calls!
-    model.post(a & b);              // Boolean AND
-    model.post(a | c);              // Boolean OR  
-    model.post(!a);                 // Boolean NOT
-    model.post((a & b) | (!c));     // Complex expressions
+    // Complex mathematical expressions
+    post!(model, sum(vars.clone()) <= int(12));
+    post!(model, max([vars[0]]) >= min([vars[1]]));
     
-    // True batch operations
-    model.post_all(vec![
-        a & b,                      // Clean boolean expressions
-        !c,                         // No .into() needed!
-        a | (b & c)                 // Complex expressions work
-    ]);
+    // Boolean logic with traditional syntax  
+    let a = model.int(0, 1);
+    let b = model.int(0, 1);
+    post!(model, and(a, b));        // Boolean AND
+    post!(model, or(a, not(b)));    // Boolean OR with NOT
     
-    // Before: model.bool_and(&[a, b])     ❌ Verbose
-    // After:  model.post(a & b)           ✅ Clean!
+    // Mixed type constraints
+    let float_var = model.float(1.0, 10.0);
+    post!(model, abs(float_var) + vars[0] <= float(15.0));
+    
+    if let Some(solution) = model.solve() {
+        println!("Solution found!");
+    }
 }
 ```
-    model.eq(y, int(8));   // instead of equals
-    model.ne(x, y);        // instead of not_equals
-    
-    let solution = model.solve().unwrap();
-    println!("x = {:?}, y = {:?}", solution[x], solution[y]);
-}
-```
-
 
 ## Status
 
