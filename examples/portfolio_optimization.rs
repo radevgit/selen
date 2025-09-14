@@ -7,7 +7,7 @@
 //! - Simple constraint satisfaction with floating-point calculations
 
 use cspsolver::prelude::*;
-use cspsolver::{post, postall};
+use cspsolver::{post};
 
 fn main() {
     println!("💰 Portfolio Balance Calculator");
@@ -54,9 +54,9 @@ fn main() {
     println!("\n🎯 Finding portfolio allocation...");
     
     let solution = match m.solve() {
-        Some(sol) => sol,
-        None => {
-            println!("❌ No feasible solution found!");
+        Ok(sol) => sol,
+        Err(err) => {
+            println!("❌ No feasible solution found: {}", err);
             return;
         }
     };

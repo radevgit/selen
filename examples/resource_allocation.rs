@@ -8,7 +8,7 @@
 //! - Handling worker efficiency variations
 
 use cspsolver::prelude::*;
-use cspsolver::{post, postall};
+use cspsolver::{post};
 
 fn main() {
     println!("📋 Resource Allocation Optimizer");

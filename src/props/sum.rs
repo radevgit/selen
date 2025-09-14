@@ -14,7 +14,7 @@ impl<V> Sum<V> {
 }
 
 impl<V: View> Prune for Sum<V> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         // Derive minimum and maximum values the sum of terms can reach
         let min_of_terms: Val = self.xs.iter().map(|x| x.min(ctx)).sum();
         let max_of_terms: Val = self.xs.iter().map(|x| x.max(ctx)).sum();

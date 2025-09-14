@@ -43,7 +43,7 @@ fn main() {
     // 5. Solving
     println!("\n5. Solving:");
     match m.solve() {
-        Some(solution) => {
+        Ok(solution) => {
             println!("   Solution found!");
             println!("   x = {:?}", solution[x]);
             println!("   y = {:?}", solution[y]);
@@ -57,7 +57,7 @@ fn main() {
                 println!("     All different: x={}, y={}, z={}", x_val, y_val, z_val);
             }
         }
-        None => {
+        Err(_) => {
             println!("   No solution exists with these constraints.");
         }
     }

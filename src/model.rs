@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::domain::float_interval::{DEFAULT_FLOAT_PRECISION_DIGITS, precision_to_step_size};
 use crate::optimization::model_integration::{OptimizationRouter, OptimizationAttempt};
+use crate::error::{SolverError, SolverResult};
 use std::ops::Index;
 
 #[derive(Debug)]
@@ -11,6 +12,8 @@ pub struct Model {
     pub float_precision_digits: i32,
     /// Optimization router for efficient algorithm selection
     optimization_router: OptimizationRouter,
+    /// Configuration for solver behavior
+    config: crate::config::SolverConfig,
 }
 
 impl Default for Model {
@@ -28,11 +31,32 @@ impl Model {
     /// let var = m.float(0.0, 1.0);
     /// ```
     pub fn with_float_precision(precision_digits: i32) -> Self {
+        let config = crate::config::SolverConfig::default()
+            .with_float_precision(precision_digits);
         Self {
             vars: Vars::default(),
             props: Propagators::default(),
             float_precision_digits: precision_digits,
             optimization_router: OptimizationRouter::new(),
+            config,
+        }
+    }
+
+    /// Create a new model with a configuration
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let config = SolverConfig::default().with_float_precision(4);
+    /// let mut m = Model::with_config(config);
+    /// let var = m.float(0.0, 1.0);
+    /// ```
+    pub fn with_config(config: crate::config::SolverConfig) -> Self {
+        Self {
+            vars: Vars::default(),
+            props: Propagators::default(),
+            float_precision_digits: config.float_precision_digits,
+            optimization_router: OptimizationRouter::new(),
+            config,
         }
     }
 
@@ -44,6 +68,21 @@ impl Model {
     /// Get the step size for the current float precision
     pub fn float_step_size(&self) -> f64 {
         precision_to_step_size(self.float_precision_digits)
+    }
+
+    /// Get the solver configuration
+    pub fn config(&self) -> &crate::config::SolverConfig {
+        &self.config
+    }
+
+    /// Get timeout as Duration for search operations
+    fn timeout_duration(&self) -> Option<std::time::Duration> {
+        self.config.timeout_seconds.map(std::time::Duration::from_secs)
+    }
+
+    /// Get memory limit in MB for search operations
+    fn memory_limit_mb(&self) -> Option<u64> {
+        self.config.max_memory_mb
     }
 
     /// Get access to constraint registry for debugging/analysis
@@ -730,8 +769,11 @@ impl Model {
     /// let solution = m.minimize(x);
     /// ```
     #[must_use]
-    pub fn minimize(self, objective: impl View) -> Option<Solution> {
-        self.minimize_and_iterate(objective).last()
+    pub fn minimize(self, objective: impl View) -> SolverResult<Solution> {
+        match self.minimize_and_iterate(objective).last() {
+            Some(solution) => Ok(solution),
+            None => Err(SolverError::no_solution()),
+        }
     }
 
     /// Find assignment that minimizes objective expression with callback to capture solving statistics.
@@ -746,7 +788,7 @@ impl Model {
     /// });
     /// ```
     #[must_use]
-    pub fn minimize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
+    pub fn minimize_with_callback<F>(self, objective: impl View, callback: F) -> SolverResult<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
@@ -759,13 +801,15 @@ impl Model {
                     node_count: 0,
                 };
                 callback(&stats);
-                Some(solution)
+                Ok(solution)
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
+                let timeout = self.timeout_duration();
+                let memory_limit = self.memory_limit_mb();
                 let (vars, props) = self.prepare_for_search();
 
-                let mut search_iter = search(vars, props, mode::Minimize::new(objective));
+                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
                 let mut last_solution = None;
                 let mut current_count = 0;
 
@@ -782,7 +826,24 @@ impl Model {
                 };
 
                 callback(&stats);
-                last_solution
+                
+                // Check if search terminated due to timeout
+                if search_iter.is_timed_out() {
+                    let elapsed = search_iter.elapsed_time().as_secs_f64();
+                    return Err(SolverError::timeout_with_context(elapsed, "optimization search"));
+                }
+                
+                // Check if search terminated due to memory limit
+                if search_iter.is_memory_limit_exceeded() {
+                    let usage_mb = search_iter.get_memory_usage_mb();
+                    let limit_mb = memory_limit.unwrap_or(0) as usize;
+                    return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
+                }
+                
+                match last_solution {
+                    Some(solution) => Ok(solution),
+                    None => Err(SolverError::no_solution()),
+                }
             }
         }
     }
@@ -807,8 +868,9 @@ impl Model {
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
+                let timeout = self.timeout_duration();
                 let (vars, props) = self.prepare_for_search();
-                Box::new(search(vars, props, mode::Minimize::new(objective))) as Box<dyn Iterator<Item = Solution>>
+                Box::new(search_with_timeout(vars, props, mode::Minimize::new(objective), timeout)) as Box<dyn Iterator<Item = Solution>>
             }
         }
     }
@@ -838,9 +900,11 @@ impl Model {
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
+                let timeout = self.timeout_duration();
+                let memory_limit = self.memory_limit_mb();
                 let (vars, props) = self.prepare_for_search();
 
-                let mut search_iter = search(vars, props, mode::Minimize::new(objective));
+                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
                 let mut solutions = Vec::new();
                 let mut current_count = 0;
 
@@ -857,6 +921,10 @@ impl Model {
                 };
 
                 callback(&stats);
+                
+                // Note: If timeout occurred, we return partial solutions found before timeout
+                // The timeout condition can be checked via search_iter.is_timed_out() if needed
+                
                 solutions
             }
         }
@@ -873,10 +941,10 @@ impl Model {
     /// let solution = m.maximize(x);
     /// ```
     #[must_use]
-    pub fn maximize(self, objective: impl View) -> Option<Solution> {
+    pub fn maximize(self, objective: impl View) -> SolverResult<Solution> {
         // First try specialized optimization before falling back to opposite+minimize pattern
         match self.try_optimization_maximize(&objective) {
-            Some(solution) => Some(solution),
+            Some(solution) => Ok(solution),
             None => self.minimize(objective.opposite()),
         }
     }
@@ -893,7 +961,7 @@ impl Model {
     /// });
     /// ```
     #[must_use]
-    pub fn maximize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
+    pub fn maximize_with_callback<F>(self, objective: impl View, callback: F) -> SolverResult<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
@@ -906,7 +974,7 @@ impl Model {
                     node_count: 0,
                 };
                 callback(&stats);
-                Some(solution)
+                Ok(solution)
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
@@ -1036,6 +1104,25 @@ impl Model {
         self
     }
 
+    /// Create a search engine for this model that allows direct control over search.
+    ///
+    /// This provides access to lower-level search functionality including resource
+    /// cleanup callbacks, custom iteration, and manual search control.
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// post!(m, x != y);
+    /// let mut engine = m.engine();
+    /// engine.register_cleanup(Box::new(|| println!("Cleanup executed!")));
+    /// let solution = engine.solve_any();
+    /// ```
+    pub fn engine(self) -> EngineWrapper {
+        EngineWrapper::new(self)
+    }
+
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
     /// 
     /// This method automatically tries optimization algorithms for suitable problems
@@ -1050,13 +1137,36 @@ impl Model {
     /// let solution = m.solve();
     /// ```
     #[must_use]
-    pub fn solve(self) -> Option<Solution> {
+    pub fn solve(self) -> SolverResult<Solution> {
         // Step 6.5: Try hybrid optimization for mixed problems first
         match self.try_hybrid_solve() {
-            Some(solution) => Some(solution),
+            Some(solution) => Ok(solution),
             None => {
-                // Fall back to traditional constraint propagation search
-                self.enumerate().next()
+                // Fall back to traditional constraint propagation search with timeout checking
+                let timeout = self.timeout_duration();
+                let memory_limit = self.memory_limit_mb();
+                let (vars, props) = self.prepare_for_search();
+                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
+                
+                let result = search_iter.next();
+                
+                // Check if search terminated due to timeout
+                if search_iter.is_timed_out() {
+                    let elapsed = search_iter.elapsed_time().as_secs_f64();
+                    return Err(SolverError::timeout_with_context(elapsed, "constraint satisfaction"));
+                }
+                
+                // Check if search terminated due to memory limit
+                if search_iter.is_memory_limit_exceeded() {
+                    let usage_mb = search_iter.get_memory_usage_mb();
+                    let limit_mb = memory_limit.unwrap_or(0) as usize;
+                    return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
+                }
+                
+                match result {
+                    Some(solution) => Ok(solution),
+                    None => Err(SolverError::no_solution()),
+                }
             }
         }
     }
@@ -1097,15 +1207,17 @@ impl Model {
     /// });
     /// ```
     #[must_use]
-    pub fn solve_with_callback<F>(self, callback: F) -> Option<Solution>
+    pub fn solve_with_callback<F>(self, callback: F) -> SolverResult<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
         // Run the solving process
+        let timeout = self.timeout_duration();
+        let memory_limit = self.memory_limit_mb();
         let (vars, props) = self.prepare_for_search();
 
         // Create a search and run it to completion to capture final stats
-        let mut search_iter = search(vars, props, mode::Enumerate);
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
         let result = search_iter.next();
 
         // Get the final stats from the search
@@ -1118,7 +1230,24 @@ impl Model {
         };
 
         callback(&stats);
-        result
+        
+        // Check if search terminated due to timeout
+        if search_iter.is_timed_out() {
+            let elapsed = search_iter.elapsed_time().as_secs_f64();
+            return Err(SolverError::timeout_with_context(elapsed, "constraint satisfaction"));
+        }
+        
+        // Check if search terminated due to memory limit
+        if search_iter.is_memory_limit_exceeded() {
+            let usage_mb = search_iter.get_memory_usage_mb();
+            let limit_mb = memory_limit.unwrap_or(0) as usize;
+            return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
+        }
+        
+        match result {
+            Some(solution) => Ok(solution),
+            None => Err(SolverError::no_solution()),
+        }
     }
 
     #[doc(hidden)]
@@ -1164,65 +1293,6 @@ impl Model {
         }
     }
 
-    /// Extract a single float variable from the objective (Step 2.3.1 heuristic)
-    fn extract_single_float_variable(&self, _objective: &impl View) -> Option<VarId> {
-        // Simple heuristic for Step 2.3.1: if exactly one float variable exists, use it
-        // TODO: In Step 2.3.2, implement proper View analysis to extract variable from objective
-        
-        let mut float_vars = Vec::new();
-        for (index, var) in self.vars.iter_with_indices() {
-            if matches!(var, crate::vars::Var::VarF(_)) {
-                // Convert index to VarId using the helper from model_integration
-                let var_id = crate::optimization::model_integration::index_to_var_id(index);
-                float_vars.push(var_id);
-            }
-        }
-        
-        // Simple heuristic: if exactly one float variable, optimize it
-        if float_vars.len() == 1 {
-            Some(float_vars[0])
-        } else {
-            None // Fallback to search for complex cases
-        }
-    }
-
-    /// Create a Solution from an OptimizationResult
-    fn create_solution_from_optimization(&self, result: crate::optimization::float_direct::OptimizationResult) -> Result<Solution, String> {
-        // Create a solution vector with all variable values
-        let mut solution_values = Vec::new();
-        
-        for (index, var) in self.vars.iter_with_indices() {
-            match var {
-                crate::vars::Var::VarF(interval) => {
-                    // For the optimized variable, use the optimal value
-                    // For others, use their current bound (this is a simplification)
-                    if result.success {
-                        let var_id = crate::optimization::model_integration::index_to_var_id(index);
-                        match &result.outcome {
-                            crate::optimization::float_direct::OptimizationOutcome::Success { variable_id, .. } => {
-                                // Compare VarIds by converting both to usize for comparison
-                                let result_var_index = crate::optimization::model_integration::var_id_to_index(*variable_id);
-                                if index == result_var_index {
-                                    solution_values.push(crate::vars::Val::float(result.optimal_value));
-                                } else {
-                                    solution_values.push(crate::vars::Val::float(interval.min));
-                                }
-                            },
-                            _ => solution_values.push(crate::vars::Val::float(interval.min)),
-                        }
-                    } else {
-                        solution_values.push(crate::vars::Val::float(interval.min));
-                    }
-                },
-                crate::vars::Var::VarI(domain) => {
-                    solution_values.push(crate::vars::Val::int(domain.min()));
-                }
-            }
-        }
-        
-        Ok(Solution::from(solution_values))
-    }
-
     /// Enumerate all assignments that satisfy all constraints.
     ///
     /// The order in which assignments are yielded is not stable.
@@ -1237,8 +1307,10 @@ impl Model {
     /// let solutions: Vec<_> = m.enumerate().collect();
     /// ```
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
+        let timeout = self.timeout_duration();
+        let memory_limit = self.memory_limit_mb();
         let (vars, props) = self.prepare_for_search();
-        search(vars, props, mode::Enumerate)
+        search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit)
     }
 
     /// Enumerate all assignments that satisfy all constraints with callback to capture solving statistics.
@@ -1249,9 +1321,11 @@ impl Model {
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
+        let timeout = self.timeout_duration();
+        let memory_limit = self.memory_limit_mb();
         let (vars, props) = self.prepare_for_search();
 
-        let mut search_iter = search(vars, props, mode::Enumerate);
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
         let mut solutions = Vec::new();
 
         // CRITICAL: Get the stats BEFORE calling any next() methods,
@@ -1270,6 +1344,10 @@ impl Model {
         };
 
         callback(&stats);
+        
+        // Note: If timeout occurred, we return partial solutions found before timeout
+        // The timeout condition can be checked via search_iter.is_timed_out() if needed
+        
         solutions
     }
 }
@@ -1279,5 +1357,63 @@ impl Index<VarId> for Model {
 
     fn index(&self, index: VarId) -> &Self::Output {
         &self.vars[index]
+    }
+}
+
+/// Wrapper around search engine that provides clean API for resource management
+pub struct EngineWrapper {
+    model: Option<Model>,
+    callbacks: Vec<Box<dyn FnOnce() + Send>>,
+}
+
+impl EngineWrapper {
+    fn new(model: Model) -> Self {
+        Self { 
+            model: Some(model),
+            callbacks: Vec::new(),
+        }
+    }
+
+    /// Configure the engine with custom settings
+    pub fn with_config(mut self, config: crate::config::SolverConfig) -> Self {
+        if let Some(ref mut model) = self.model {
+            model.config = config;
+        }
+        self
+    }
+
+    /// Register a cleanup callback that will be called when search is interrupted
+    /// or when the engine is dropped
+    pub fn register_cleanup(&mut self, callback: Box<dyn FnOnce() + Send>) {
+        self.callbacks.push(callback);
+    }
+
+    /// Solve for any valid solution
+    pub fn solve_any(&mut self) -> Option<crate::solution::Solution> {
+        if let Some(model) = self.model.take() {
+            match model.solve() {
+                Ok(solution) => Some(solution),
+                Err(_) => {
+                    // Execute cleanup callbacks on error
+                    self.trigger_cleanup();
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Trigger all registered cleanup callbacks
+    fn trigger_cleanup(&mut self) {
+        for callback in self.callbacks.drain(..) {
+            callback();
+        }
+    }
+}
+
+impl Drop for EngineWrapper {
+    fn drop(&mut self) {
+        self.trigger_cleanup();
     }
 }

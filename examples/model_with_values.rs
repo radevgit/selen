@@ -26,7 +26,7 @@ fn main() {
     println!("  Constraint: all_different(var1, var2, var3)");
 
     // Solve the problem
-    if let Some(solution) = m.solve() {
+    if let Ok(solution) = m.solve() {
         println!("\nSolution found:");
         println!("  var1 = {:?}", solution[var1]);
         println!("  var2 = {:?}", solution[var2]);
@@ -43,7 +43,7 @@ fn main() {
         println!("  var3 ({}) is odd: {}", val3, val3 % 2 == 1);
         println!("  All different: {}", val1 != val2 && val2 != val3 && val1 != val3);
     } else {
-        println!("\nNo solution found!");
+        println!("\nNo solution found or error occurred!");
     }
 }
 

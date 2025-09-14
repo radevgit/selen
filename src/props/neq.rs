@@ -44,7 +44,7 @@ impl<U, V> NotEquals<U, V> {
 }
 
 impl<U: View, V: View> Prune for NotEquals<U, V> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         let x_min = self.x.min(ctx);
         let x_max = self.x.max(ctx);
         let y_min = self.y.min(ctx);

@@ -37,7 +37,7 @@ pub fn validate_tolerance_precision() -> PrecisionResult {
     post!(m, dimension > float(9.98));
     post!(m, dimension < float(10.02));
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     PrecisionResult::new("Manufacturing Tolerance".to_string(), duration, success)
@@ -56,7 +56,7 @@ pub fn validate_placement_precision() -> PrecisionResult {
     post!(m, y_coord > float(50.25));
     post!(m, y_coord < float(449.75));
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     PrecisionResult::new("Part Placement".to_string(), duration, success)
@@ -72,7 +72,7 @@ pub fn validate_quantity_optimization() -> PrecisionResult {
     post!(m, efficiency > float(0.85));  // Minimum 85% efficiency
     post!(m, efficiency < float(0.98));     // Maximum realistic efficiency
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     PrecisionResult::new("Quantity Efficiency".to_string(), duration, success)

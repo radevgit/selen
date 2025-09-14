@@ -8,25 +8,25 @@ fn test_comparison_trait_usage() {
     let x1 = model1.int(1, 10);
     let y1 = model1.int(5, 15);
     x1.eq_op(&mut model1, y1);
-    assert!(model1.solve().is_some());
+    assert!(model1.solve().is_ok());
     
     let mut model2 = Model::default();
     let x2 = model2.int(1, 10);
     let y2 = model2.int(5, 15);
     x2.ne_op(&mut model2, y2);
-    assert!(model2.solve().is_some());
+    assert!(model2.solve().is_ok());
     
     let mut model3 = Model::default();
     let x3 = model3.int(1, 10);
     let y3 = model3.int(5, 15);
     x3.lt_op(&mut model3, y3);
-    assert!(model3.solve().is_some());
+    assert!(model3.solve().is_ok());
     
     let mut model4 = Model::default();
     let x4 = model4.int(1, 10);
     let y4 = model4.int(5, 15);
     x4.le_op(&mut model4, y4);
-    assert!(model4.solve().is_some());
+    assert!(model4.solve().is_ok());
     
     let mut model5 = Model::default();
     let x5 = model5.int(1, 10);
@@ -53,7 +53,7 @@ fn test_boolean_trait_usage() {
     a.not_op(&mut m);
     
     // Should not panic and model should be valid
-    assert!(m.solve().is_some());
+    assert!(m.solve().is_ok());
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn test_equality_constraint_with_operators() {
     x.eq_op(&mut m, y);
     
     // Solve and verify both variables have same value
-    let solution = m.solve().unwrap();
+    let solution = m.solve().expect("Expected test to find a solution");
     if let (Val::ValI(x_val), Val::ValI(y_val)) = (solution[x], solution[y]) {
         assert_eq!(x_val, y_val);
     }
@@ -113,7 +113,7 @@ fn test_inequality_constraint_with_operators() {
     x.ne_op(&mut m, y);
     
     // Solve and verify variables have different values
-    let solution = m.solve().unwrap();
+    let solution = m.solve().expect("Expected test to find a solution");
     if let (Val::ValI(x_val), Val::ValI(y_val)) = (solution[x], solution[y]) {
         assert_ne!(x_val, y_val);
     }
@@ -129,7 +129,7 @@ fn test_less_than_constraint_with_operators() {
     x.lt_op(&mut m, y);
     
     // Solve and verify x < y
-    let solution = m.solve().unwrap();
+    let solution = m.solve().expect("Expected test to find a solution");
     if let (Val::ValI(x_val), Val::ValI(y_val)) = (solution[x], solution[y]) {
         assert!(x_val < y_val);
     }
@@ -145,7 +145,7 @@ fn test_boolean_and_constraint_with_operators() {
     a.and_op(&mut m, b);
     
     // Should be solvable
-    assert!(m.solve().is_some());
+    assert!(m.solve().is_ok());
 }
 
 #[test]
@@ -158,7 +158,7 @@ fn test_boolean_or_constraint_with_operators() {
     a.or_op(&mut m, b);
     
     // Should be solvable
-    assert!(m.solve().is_some());
+    assert!(m.solve().is_ok());
 }
 
 #[test]
@@ -170,7 +170,7 @@ fn test_boolean_not_constraint_with_operators() {
     a.not_op(&mut m);
     
     // Should be solvable
-    assert!(m.solve().is_some());
+    assert!(m.solve().is_ok());
 }
 
 #[test]
@@ -186,7 +186,7 @@ fn test_mixed_constraints_with_operators() {
     x.ne_op(&mut m, z);    // x != z
     
     // Should be solvable
-    let solution = m.solve().unwrap();
+    let solution = m.solve().expect("Expected test to find a solution");
     if let (Val::ValI(x_val), Val::ValI(y_val), Val::ValI(z_val)) = 
         (solution[x], solution[y], solution[z]) {
         assert!(x_val < y_val);
@@ -206,7 +206,7 @@ fn test_multiplication_with_int_constants() {
     post!(m, result == x * int(5));
     post!(m, x == 3);  // Force x = 3, so result should be 15
     
-    let solution = m.solve().unwrap();
+    let solution = m.solve().expect("Expected test to find a solution");
     if let (Val::ValI(x_val), Val::ValI(result_val)) = (solution[x], solution[result]) {
         assert_eq!(x_val, 3);
         assert_eq!(result_val, 15);  // 3 * 5 = 15
@@ -224,7 +224,7 @@ fn test_multiplication_with_float_constants() {
     post!(m, cost == items * float(12.5));
     post!(m, items == 4);  // Force items = 4, so cost should be 50.0
     
-    let solution = m.solve().unwrap();
+    let solution = m.solve().expect("Expected test to find a solution");
     if let (Val::ValI(items_val), Val::ValF(cost_val)) = (solution[items], solution[cost]) {
         assert_eq!(items_val, 4);
         assert!((cost_val - 50.0).abs() < 0.001);  // 4 * 12.5 = 50.0
@@ -242,7 +242,7 @@ fn test_multiplication_with_constants_inequalities() {
     post!(m, budget >= x * int(3));
     post!(m, budget == 15);  // Force budget = 15
     
-    let solution = m.solve().unwrap();
+    let solution = m.solve().expect("Expected test to find a solution");
     if let (Val::ValI(x_val), Val::ValI(budget_val)) = (solution[x], solution[budget]) {
         assert_eq!(budget_val, 15);
         assert!(x_val <= 5);  // Since budget = 15, x * 3 <= 15, so x <= 5
@@ -287,7 +287,7 @@ fn test_mixed_multiplication_constraints() {
     post!(m, a == 4);                     // Force a = 4
     post!(m, b == 3);                     // Force b = 3
     
-    let solution = m.solve().unwrap();
+    let solution = m.solve().expect("Expected test to find a solution");
     if let (Val::ValI(a_val), Val::ValI(b_val), Val::ValI(result1_val), Val::ValF(result2_val)) = 
         (solution[a], solution[b], solution[result1], solution[result2]) {
         assert_eq!(a_val, 4);

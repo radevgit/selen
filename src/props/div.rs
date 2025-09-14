@@ -16,7 +16,7 @@ impl<U, V> Div<U, V> {
 }
 
 impl<U: View, V: View> Prune for Div<U, V> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         // For s = x / y, we need to handle bounds propagation carefully
         // due to the possibility of division by zero and sign changes
         

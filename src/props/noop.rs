@@ -1,5 +1,6 @@
 use crate::views::Context;
 use crate::vars::VarId;
+use crate::props::{Prune};
 
 /// A no-operation propagator that does nothing when invoked.
 /// Used for branching operations that have already applied domain filtering directly.
@@ -13,8 +14,8 @@ impl NoOp {
     }
 }
 
-impl crate::props::Prune for NoOp {
-    fn prune(&mut self, _ctx: &mut Context) -> Option<()> {
+impl Prune for NoOp {
+    fn prune(&self, _ctx: &mut Context) -> Option<()> {
         // Do nothing - domain filtering was already applied during branching
         Some(())
     }

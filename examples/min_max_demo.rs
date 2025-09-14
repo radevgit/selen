@@ -24,7 +24,7 @@ fn main() {
         post!(m, minimum == 4);  // min must be 4
         post!(m, maximum <= 12); // max must be <= 12
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             println!("  Variables: a={:?}, b={:?}, c={:?}", 
                      solution[a], solution[b], solution[c]);
             println!("  Minimum: {:?}, Maximum: {:?}", 
@@ -60,7 +60,7 @@ fn main() {
         // Constraint: engineering must have at least 60 people
         post!(m, engineering >= 60);
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             println!("  Engineering: {:?} people", solution[engineering]);
             println!("  Marketing:   {:?} people", solution[marketing]);
             println!("  Sales:       {:?} people", solution[sales]);
@@ -98,7 +98,7 @@ fn main() {
         let total_effort = m.sum(&scores);
         post!(m, total_effort <= 320); // Limited total effort
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             println!("  Latency Score:     {:?}/100", solution[latency_score]);
             println!("  Throughput Score:  {:?}/100", solution[throughput_score]);
             println!("  Reliability Score: {:?}/100", solution[reliability_score]);
@@ -134,7 +134,7 @@ fn main() {
         // Constraint: minimum temperature should be at least 20°C
         post!(m, min_temp >= 20.0);
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             println!("  Sensor 1: {:?}°C", solution[sensor1]);
             println!("  Sensor 2: {:?}°C", solution[sensor2]);
             println!("  Sensor 3: {:?}°C", solution[sensor3]);

@@ -315,13 +315,19 @@ impl OptimizationRouter {
     /// This handles the case where the objective is a direct variable reference.
     /// For complex expressions (x + y, x * 2, etc.), this returns None and
     /// we fall back to traditional search.
-    fn extract_simple_variable(&self, vars: &Vars, _objective: &impl View) -> Option<VarId> {
-        // For Step 2.3.2: Use a safer approach that doesn't trigger expensive propagation
-        // The original approach was calling objective.min_raw(vars) and objective.max_raw(vars)
-        // which can trigger the same expensive propagation that causes hanging.
+    fn extract_simple_variable(&self, vars: &Vars, objective: &impl View) -> Option<VarId> {
+        // Step 1: Check if the objective is a direct variable reference
+        // This uses the ViewRaw trait's get_underlying_var_raw method
+        if let Some(var_id) = objective.get_underlying_var_raw() {
+            // Verify this is a float variable that exists in our model
+            let var = &vars[var_id];
+            if matches!(var, crate::vars::Var::VarF(_)) {
+                return Some(var_id);
+            }
+        }
         
-        // Simple heuristic: if there's only one float variable in the problem,
-        // and the objective seems to reference it, assume it's a direct variable optimization
+        // Step 2: For non-direct objectives, fall back to conservative heuristics
+        // Only when we have a single float variable (original logic for safety)
         let mut float_vars = Vec::new();
         for (var_idx, var) in vars.iter_with_indices() {
             if matches!(var, crate::vars::Var::VarF(_)) {
@@ -330,15 +336,14 @@ impl OptimizationRouter {
             }
         }
         
-        // If exactly one float variable, assume the objective is optimizing it
-        // This is a conservative heuristic that works for simple cases
+        // If exactly one float variable and we couldn't detect the objective directly,
+        // assume it's optimizing that variable (for backward compatibility)
         if float_vars.len() == 1 {
             return Some(float_vars[0]);
         }
         
-        // For multiple float variables, be more conservative
+        // For multiple float variables with complex objectives, fall back to search
         // TODO: In the future, implement proper AST analysis of the View
-        // For now, fall back to search for complex cases
         None
     }
     

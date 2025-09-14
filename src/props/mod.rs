@@ -14,14 +14,18 @@ mod noop;
 mod sum;
 
 use std::ops::{Index, IndexMut};
-use dyn_clone::{clone_trait_object, DynClone};
+use std::rc::Rc;
 
 use crate::{vars::VarId, views::{Context, View, ViewExt}};
 
+// Type aliases for cleaner Rc-based sharing
+type PropagatorBox = Box<dyn Prune>;
+type SharedPropagator = Rc<PropagatorBox>;
+
 /// Enforce a specific constraint by pruning domain of decision variables.
-pub trait Prune: core::fmt::Debug + DynClone {
+pub trait Prune: core::fmt::Debug {
     /// Perform pruning based on variable domains and internal state.
-    fn prune(&mut self, ctx: &mut Context) -> Option<()>;
+    fn prune(&self, ctx: &mut Context) -> Option<()>;
 }
 
 /// Isolate methods that prevent propagator from being used as a trait-object.
@@ -30,13 +34,10 @@ pub trait Propagate: Prune + 'static {
     fn list_trigger_vars(&self) -> impl Iterator<Item = VarId>;
 }
 
-// ? State of propagators is cloned during search, but trait objects cannot be `Clone` by default
-clone_trait_object!(Prune);
-
 /// Store internal state for each propagators, along with dependencies for when to schedule each.
 #[derive(Clone, Debug, Default)]
 pub struct Propagators {
-    state: Vec<Box<dyn Prune>>,
+    state: Vec<SharedPropagator>,
     dependencies: Vec<Vec<PropId>>,
     /// Counter for the number of propagation steps performed
     propagation_count: usize,
@@ -57,14 +58,9 @@ impl Propagators {
         (0..self.state.len()).map(PropId)
     }
 
-    /// Acquire mutable reference to propagator state.
-    pub fn get_state_mut(&mut self, p: PropId) -> &mut Box<dyn Prune> {
-        &mut self.state[p]
-    }
-
     /// Acquire immutable reference to propagator state (for constraint analysis).
-    pub fn get_state(&self, p: PropId) -> &Box<dyn Prune> {
-        &self.state[p]
+    pub fn get_state(&self, p: PropId) -> &SharedPropagator {
+        &self.state[p.0]
     }
 
     /// Get list of propagators that should be scheduled when a bound of variable `v` changes.
@@ -90,6 +86,11 @@ impl Propagators {
     /// Increment the search node counter.
     pub fn increment_node_count(&mut self) {
         self.node_count += 1;
+    }
+    
+    /// Get the number of propagators in this collection.
+    pub fn count(&self) -> usize {
+        self.state.len()
     }
 
     /// Get access to the constraint metadata registry
@@ -392,7 +393,7 @@ impl Propagators {
         };
         
         self.push_new_prop_with_metadata(
-            self::eq::Equals::new(x, y),
+            self::eq::Eq::new(x, y),
             ConstraintType::Equals,
             variables,
             metadata,
@@ -524,8 +525,8 @@ impl Propagators {
             self.dependencies[v].push(p);
         }
 
-        // Store propagator state as trait object
-        self.state.push(Box::new(state));
+        // Store propagator state as shared trait object
+        self.state.push(Rc::new(Box::new(state)));
 
         p
     }

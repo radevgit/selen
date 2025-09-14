@@ -31,11 +31,14 @@ cspsolver = "0.5.3"
 ## Examples
 
 ```bash
-cargo run --example sudoku
-cargo run --example pc_builder
-cargo run --example resource_allocation
-cargo run --example portfolio_optimization
+
+cargo run --release --example sudoku
+cargo run --release --example pc_builder
+cargo run --release --example resource_allocation
+cargo run --release --example portfolio_optimization
 ```
+
+
 
 ```
 🧩 Solving PLATINUM puzzle:

@@ -15,7 +15,7 @@ impl Min {
 }
 
 impl Prune for Min {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         if self.vars.is_empty() {
             // Empty set - undefined behavior, but we'll just return
             return Some(());

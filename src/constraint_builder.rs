@@ -6,7 +6,7 @@
 
 use crate::vars::{VarId, Val};
 use crate::model::Model;
-use crate::boolean_operators::{BoolExpr, BooleanModel};
+use crate::boolean_operators::{BoolExpr};
 
 /// Represents a constraint that can be added to a m.
 #[derive(Debug, Clone)]
@@ -38,23 +38,23 @@ pub enum Constraint {
 }
 
 impl Constraint {
-    /// Apply this constraint to a m.
+    /// Apply this constraint to a model.
     pub fn apply_to(self, model: &mut Model) {
         match self {
-            Constraint::Eq(x, y) => { let _p = m.props.equals(x, y); },
-            Constraint::Ne(x, y) => { let _p = m.props.not_equals(x, y); },
-            Constraint::Lt(x, y) => { let _p = m.props.less_than(x, y); },
-            Constraint::Le(x, y) => { let _p = m.props.less_than_or_equals(x, y); },
-            Constraint::Gt(x, y) => { let _p = m.props.greater_than(x, y); },
-            Constraint::Ge(x, y) => { let _p = m.props.greater_than_or_equals(x, y); },
-            Constraint::EqVal(x, val) => { let _p = m.props.equals(x, val); },
-            Constraint::LeVal(x, val) => { let _p = m.props.less_than_or_equals(x, val); },
-            Constraint::GeVal(x, val) => { let _p = m.props.greater_than_or_equals(x, val); },
-            Constraint::GtVal(x, val) => { let _p = m.props.greater_than(x, val); },
-            Constraint::LtVal(x, val) => { let _p = m.props.less_than(x, val); },
+            Constraint::Eq(x, y) => { let _p = model.props.equals(x, y); },
+            Constraint::Ne(x, y) => { let _p = model.props.not_equals(x, y); },
+            Constraint::Lt(x, y) => { let _p = model.props.less_than(x, y); },
+            Constraint::Le(x, y) => { let _p = model.props.less_than_or_equals(x, y); },
+            Constraint::Gt(x, y) => { let _p = model.props.greater_than(x, y); },
+            Constraint::Ge(x, y) => { let _p = model.props.greater_than_or_equals(x, y); },
+            Constraint::EqVal(x, val) => { let _p = model.props.equals(x, val); },
+            Constraint::LeVal(x, val) => { let _p = model.props.less_than_or_equals(x, val); },
+            Constraint::GeVal(x, val) => { let _p = model.props.greater_than_or_equals(x, val); },
+            Constraint::GtVal(x, val) => { let _p = model.props.greater_than(x, val); },
+            Constraint::LtVal(x, val) => { let _p = model.props.less_than(x, val); },
             Constraint::BoolTrue(expr) => {
-                let result_var = m.bool_expr(expr);
-                let _p = m.props.equals(result_var, Val::ValI(1));
+                let result_var = expr.apply_to(model);
+                let _p = model.props.equals(result_var, Val::ValI(1));
             }
         }
     }

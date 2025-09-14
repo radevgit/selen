@@ -233,7 +233,7 @@ impl AllDifferent {
 }
 
 impl Prune for AllDifferent {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         let n = self.vars.len();
         
         // Empty constraint is trivially satisfied

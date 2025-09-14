@@ -3,22 +3,6 @@
 //! This module re-exports the most commonly used types and traits from the CSP solver library.
 //! Users can import everything they need with a single `use csp::prelude::*;` statement.
 
-// Re-export modules
-// pub use crate::constraints;
-// pub use crate::domain;
-// pub use crate::propagation;
-// pub use crate::search;
-// pub use crate::solver;
-// pub use crate::variable;
-
-
-// Re-export commonly used types
-// pub use crate::constraints::*;
-// pub use crate::domain::*;
-// pub use crate::propagation::*;
-// pub use crate::search::*;
-// pub use crate::solver::*;
-// pub use crate::variable::*;
 
 #[doc(hidden)]
 pub use crate::utils::*;
@@ -26,11 +10,10 @@ pub use crate::vars::*;
 pub use crate::views::*;
 pub use crate::model::*;
 pub use crate::solution::*;
+pub use crate::config::*;
+pub use crate::error::*;
 pub use crate::props::*;
 pub use crate::search::*;
-
-// Clean constraint API - include constraint builder traits
-// pub use crate::constraint_builder::ModelConstraints;  // Disabled - constraint_builder uses deprecated modules
 
 // Mathematical constraint macros
 pub use crate::{post, postall};

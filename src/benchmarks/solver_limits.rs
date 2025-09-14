@@ -44,7 +44,7 @@ pub fn test_small_scale_precision() -> LimitResult {
         post!(m, part < (target + 0.0001));
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     LimitResult::new("Small Scale (mm)".to_string(), "0.001-0.1m".to_string(), duration, success, 10)
@@ -67,7 +67,7 @@ pub fn test_medium_scale_precision() -> LimitResult {
         post!(m, dim < (target + 0.001));
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     LimitResult::new("Medium Scale (cm-m)".to_string(), "0.01-5m".to_string(), duration, success, 25)
@@ -90,7 +90,7 @@ pub fn test_large_scale_precision() -> LimitResult {
         post!(m, plate < (target + 0.01));
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     LimitResult::new("Large Scale (m)".to_string(), "0.1-10m".to_string(), duration, success, 50)
@@ -114,7 +114,7 @@ pub fn test_high_quantity_constraints() -> LimitResult {
         post!(m, part < (base_pos + 0.15)); // 10cm slot
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     LimitResult::new("High Quantity".to_string(), "100 parts".to_string(), duration, success, quantity)
@@ -137,7 +137,7 @@ pub fn test_precision_boundary_limits() -> LimitResult {
         post!(m, part < (target + 0.0000005));
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     LimitResult::new("Precision Boundary".to_string(), "μm tolerance".to_string(), duration, success, 20)
@@ -164,7 +164,7 @@ pub fn test_mixed_scale_complexity() -> LimitResult {
         post!(m, large > 2.0); // 2m minimum
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     LimitResult::new("Mixed Scale".to_string(), "mm-m range".to_string(), duration, success, 30)

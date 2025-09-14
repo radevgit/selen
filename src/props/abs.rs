@@ -15,7 +15,7 @@ impl<U> Abs<U> {
 }
 
 impl<U: View> Prune for Abs<U> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         // For s = |x|, we know:
         // 1. s >= 0 (absolute value is always non-negative)
         // 2. If s is known, then x ∈ [-s, s] and x ∈ [-s, -s] ∪ [s, s]
@@ -25,7 +25,7 @@ impl<U: View> Prune for Abs<U> {
         let x_min = self.x.min(ctx);
         let x_max = self.x.max(ctx);
         let s_min = self.s.min(ctx);
-        let s_max = self.s.max(ctx);
+        let _s_max = self.s.max(ctx);
         
         // Step 1: Ensure s >= 0
         let zero = match s_min {

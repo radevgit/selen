@@ -501,6 +501,12 @@ impl Vars {
     pub fn is_assigned_all(&self) -> bool {
         self.get_unassigned_var().is_none()
     }
+    
+    /// Get the number of variables in this collection.
+    #[doc(hidden)]
+    pub fn count(&self) -> usize {
+        self.0.len()
+    }
 
     /// Get an iterator over all variables with their indices for validation.
     #[doc(hidden)]

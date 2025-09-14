@@ -69,7 +69,7 @@
 //! post!(m, x + y == int(12));
 //! post!(m, x > y);
 //!
-//! if let Some(solution) = m.solve() {
+//! if let Ok(solution) = m.solve() {
 //!     println!("x = {:?}, y = {:?}", solution[x], solution[y]);
 //! }
 //! ```
@@ -87,7 +87,7 @@
 //! post!(m, cost <= float(500.0));         // Budget constraint
 //!
 //! // Maximize number of items within budget
-//! if let Some(solution) = m.maximize(items) {
+//! if let Ok(solution) = m.maximize(items) {
 //!     println!("Optimal: {:?} items, cost: {:?}", 
 //!              solution[items], solution[cost]);
 //! }
@@ -108,22 +108,18 @@
 //! // All must be different
 //! post!(m, alldiff([red, blue, green]));
 //!
-//! if let Some(solution) = m.solve() {
+//! if let Ok(solution) = m.solve() {
 //!     println!("Red: {:?}, Blue: {:?}, Green: {:?}",
 //!              solution[red], solution[blue], solution[green]);
 //! }
 //! ```
 
-// pub mod constraints;
-// pub mod domain;
-// pub mod propagation;
-// pub mod search;
-// pub mod solver;
-// pub mod variable;
 
 pub mod model;
 pub mod vars;
 pub mod solution;
+pub mod config;
+pub mod error;
 #[doc(hidden)]
 pub mod operators;
 
@@ -150,10 +146,8 @@ pub mod prelude;
 
 #[doc(hidden)]
 // Clean constraint API modules
-// pub mod constraint_builder;  // Disabled - uses deprecated boolean_operators module
-pub mod view_constraints;
-// Temporarily disabled due to deprecated API usage
-// pub mod boolean_operators;
+pub mod constraint_builder;
+pub mod boolean_operators;
 #[doc(hidden)]
 pub mod math_syntax;
 

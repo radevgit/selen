@@ -1,19 +1,11 @@
 use crate::{prelude::Solution, props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, vars::Vars, views::Context};
-use crate::domain::sparse_set::SparseSetState;
 
 pub mod mode;
 
 pub mod agenda;
 pub mod branch;
 
-/// Lightweight state snapshot for efficient backtracking
-#[derive(Debug)]
-pub struct SpaceState {
-    sparse_states: Vec<Option<SparseSetState>>,
-    // Note: Propagators state could be added here if needed for more advanced backtracking
-}
-
-/// Data required to perform search, copied on branch and discarded on failure.
+/// Data required to perform search, now uses Clone for efficient backtracking.
 #[derive(Clone, Debug)]
 pub struct Space {
     pub vars: Vars,
@@ -31,21 +23,45 @@ impl Space {
         self.props.get_node_count()
     }
 
-    /// Save state for efficient backtracking instead of expensive cloning
-    pub fn save_state(&self) -> SpaceState {
-        SpaceState {
-            sparse_states: self.vars.save_sparse_states(),
-        }
-    }
-
-    /// Restore state from a previous save point
-    pub fn restore_state(&mut self, state: &SpaceState) {
-        self.vars.restore_sparse_states(&state.sparse_states);
+    /// Estimate memory usage for this space in KB (simple approximation)
+    pub fn estimate_memory_kb(&self) -> usize {
+        // Simple estimation based on variable count and domain complexity
+        // Average variable with domain uses ~50-100 bytes
+        let var_memory_kb = (self.vars.count() * 100) / 1024; // ~100 bytes per variable
+        
+        // Propagators are more complex, estimate ~200-500 bytes each
+        let prop_memory_kb = (self.props.count() * 300) / 1024; // ~300 bytes per propagator
+        
+        // Base overhead for the space structure itself
+        let base_memory_kb = 1; // 1KB base
+        
+        base_memory_kb + var_memory_kb + prop_memory_kb
     }
 }
 
 /// Perform search, iterating over assignments that satisfy all constraints.
 pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
+    search_with_timeout(vars, props, mode, None)
+}
+
+/// Perform search with timeout support.
+pub fn search_with_timeout<M: Mode>(
+    vars: Vars, 
+    props: Propagators, 
+    mode: M, 
+    timeout: Option<std::time::Duration>
+) -> Search<M> {
+    search_with_timeout_and_memory(vars, props, mode, timeout, None)
+}
+
+/// Perform search with timeout and memory limit support.
+pub fn search_with_timeout_and_memory<M: Mode>(
+    vars: Vars, 
+    props: Propagators, 
+    mode: M, 
+    timeout: Option<std::time::Duration>,
+    memory_limit_mb: Option<u64>
+) -> Search<M> {
     // Schedule all propagators during initial propagation step
     let agenda = Agenda::with_props(props.get_prop_ids_iter());
 
@@ -56,7 +72,7 @@ pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
 
     // Explore space by alternating branching and propagation
     if is_stalled {
-        Search::Stalled(Engine::new(space, mode))
+        Search::Stalled(DefaultEngine::with_timeout_and_memory(space, mode, timeout, memory_limit_mb))
     } else {
         Search::Done(Some(space))
     }
@@ -86,6 +102,38 @@ impl<M> Search<M> {
             Self::Done(None) => 0, // Failed search, no space available
         }
     }
+
+    /// Check if the search has timed out
+    pub fn is_timed_out(&self) -> bool {
+        match self {
+            Self::Stalled(engine) => engine.is_timed_out(),
+            Self::Done(_) => false, // Completed searches cannot timeout
+        }
+    }
+
+    /// Get the elapsed time since search started
+    pub fn elapsed_time(&self) -> std::time::Duration {
+        match self {
+            Self::Stalled(engine) => engine.elapsed_time(),
+            Self::Done(_) => std::time::Duration::from_secs(0), // Completed searches don't track time
+        }
+    }
+
+    /// Check if memory limit has been exceeded
+    pub fn is_memory_limit_exceeded(&self) -> bool {
+        match self {
+            Self::Stalled(engine) => engine.is_memory_limit_exceeded(),
+            Self::Done(_) => false, // Completed searches cannot exceed memory
+        }
+    }
+
+    /// Get current memory usage estimate in MB
+    pub fn get_memory_usage_mb(&self) -> usize {
+        match self {
+            Self::Stalled(engine) => engine.get_memory_usage_mb(),
+            Self::Done(_) => 0, // Completed searches don't track memory
+        }
+    }
 }
 
 impl<M: Mode> Iterator for Search<M> {
@@ -106,6 +154,17 @@ pub struct Engine<M, B> {
     mode: M,
     branching_factory: fn(Space) -> B,
     current_stats: Option<(usize, usize)>, // (propagation_count, node_count)
+    // Timeout support
+    start_time: std::time::Instant,
+    timeout_duration: Option<std::time::Duration>,
+    // Memory limit support
+    memory_limit_mb: Option<u64>,
+    // Optimization: only check timeout/memory periodically
+    iteration_count: usize,
+    timeout_check_interval: usize,
+    // Resource cleanup support
+    cleanup_callbacks: Vec<Box<dyn FnOnce() + Send>>,
+    is_interrupted: bool,
 }
 
 /// Default Engine with SplitOnUnassigned for backwards compatibility
@@ -120,6 +179,64 @@ impl<M> DefaultEngine<M> {
             mode,
             branching_factory: split_on_unassigned,
             current_stats: None,
+            start_time: std::time::Instant::now(),
+            timeout_duration: None,
+            memory_limit_mb: None,
+            iteration_count: 0,
+            timeout_check_interval: 10000, // Check every 10K iterations for minimal overhead
+            cleanup_callbacks: Vec::new(),
+            is_interrupted: false,
+        }
+    }
+
+    pub fn with_timeout(space: Space, mode: M, timeout: Option<std::time::Duration>) -> Self {
+        // Preserve a trail of copies to allow backtracking on failed spaces
+        Self {
+            branch_iter: split_on_unassigned(space),
+            stack: Vec::new(),
+            mode,
+            branching_factory: split_on_unassigned,
+            current_stats: None,
+            start_time: std::time::Instant::now(),
+            timeout_duration: timeout,
+            memory_limit_mb: None,
+            iteration_count: 0,
+            timeout_check_interval: 10000, // Check every 10K iterations for minimal overhead
+            cleanup_callbacks: Vec::new(),
+            is_interrupted: false,
+        }
+    }
+
+    pub fn with_timeout_and_memory(
+        space: Space, 
+        mode: M, 
+        timeout: Option<std::time::Duration>,
+        memory_limit_mb: Option<u64>
+    ) -> Self {
+        // Preserve a trail of copies to allow backtracking on failed spaces
+        Self {
+            branch_iter: split_on_unassigned(space),
+            stack: Vec::new(),
+            mode,
+            branching_factory: split_on_unassigned,
+            current_stats: None,
+            start_time: std::time::Instant::now(),
+            timeout_duration: timeout,
+            memory_limit_mb,
+            iteration_count: 0,
+            timeout_check_interval: 10000, // Check every 10K iterations for minimal overhead
+            cleanup_callbacks: Vec::new(),
+            is_interrupted: false,
+        }
+    }
+}
+
+// Automatic cleanup when Engine is dropped
+impl<M, B> Drop for Engine<M, B> {
+    fn drop(&mut self) {
+        // Only trigger cleanup if we haven't already been interrupted
+        if !self.is_interrupted {
+            self.trigger_cleanup();
         }
     }
 }
@@ -136,6 +253,74 @@ impl<M, B> Engine<M, B> {
         // Return the tracked statistics if available  
         self.current_stats.map(|(_, node_count)| node_count).unwrap_or(0)
     }
+
+    /// Check if the search has timed out
+    pub fn is_timed_out(&self) -> bool {
+        if let Some(timeout_duration) = self.timeout_duration {
+            self.start_time.elapsed() >= timeout_duration
+        } else {
+            false
+        }
+    }
+
+    /// Get the elapsed time since search started
+    pub fn elapsed_time(&self) -> std::time::Duration {
+        self.start_time.elapsed()
+    }
+
+    /// Check if memory limit has been exceeded
+    pub fn is_memory_limit_exceeded(&self) -> bool {
+        if let Some(limit_mb) = self.memory_limit_mb {
+            self.get_memory_usage_mb() > limit_mb as usize
+        } else {
+            false
+        }
+    }
+
+    /// Get current memory usage estimate in MB (simple approximation)
+    pub fn get_memory_usage_mb(&self) -> usize {
+        // Base memory for the engine itself and initial structures
+        let base_memory_kb = 512; // ~0.5MB base overhead
+        
+        // Stack memory (each stack frame contains Space which has vars + props)
+        // Use actual Space memory estimation when possible
+        let stack_memory_kb = self.stack.len() * 3; // Conservative 3KB per frame
+        
+        // Current branching iterator state (approximate)
+        let current_memory_kb = 2; // ~2KB for current iterator state
+        
+        // Iteration overhead (accumulated search state and temporary allocations)
+        // Very conservative estimate: ~5KB per 10K iterations
+        let iteration_memory_kb = (self.iteration_count / 10000) * 5;
+        
+        // Convert to MB with minimum of 1MB
+        ((base_memory_kb + stack_memory_kb + current_memory_kb + iteration_memory_kb) / 1024).max(1)
+    }
+    
+    /// Register a cleanup callback to be called when solving is interrupted
+    pub fn register_cleanup<F>(&mut self, cleanup: F) 
+    where 
+        F: FnOnce() + Send + 'static
+    {
+        self.cleanup_callbacks.push(Box::new(cleanup));
+    }
+    
+    /// Mark the engine as interrupted and trigger cleanup
+    fn trigger_cleanup(&mut self) {
+        if !self.is_interrupted {
+            self.is_interrupted = true;
+            
+            // Execute all cleanup callbacks
+            for cleanup in self.cleanup_callbacks.drain(..) {
+                cleanup();
+            }
+        }
+    }
+    
+    /// Check if the engine has been interrupted
+    pub fn is_interrupted(&self) -> bool {
+        self.is_interrupted
+    }
 }
 
 impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for Engine<M, B> {
@@ -143,6 +328,28 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
+            // Periodically check timeout and memory limits to reduce overhead
+            self.iteration_count += 1;
+            if self.iteration_count % self.timeout_check_interval == 0 {
+                // Check timeout
+                if let Some(timeout_duration) = self.timeout_duration {
+                    if self.start_time.elapsed() >= timeout_duration {
+                        // Timeout exceeded - trigger cleanup before returning
+                        self.trigger_cleanup();
+                        return None;
+                    }
+                }
+                
+                // Check memory limit
+                if let Some(limit_mb) = self.memory_limit_mb {
+                    if self.get_memory_usage_mb() > limit_mb as usize {
+                        // Memory limit exceeded - trigger cleanup before returning
+                        self.trigger_cleanup();
+                        return None;
+                    }
+                }
+            }
+
             while let Some((mut space, p)) = self.branch_iter.next() {
                 // Increment node count when exploring a new branch
                 space.props.increment_node_count();
@@ -192,13 +399,13 @@ pub fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> 
         space.props.increment_propagation_count();
 
         // Acquire trait object for propagator, which points to both code and inner state
-        let prop = space.props.get_state_mut(p);
+        let prop = space.props.get_state(p);
 
         // Wrap engine objects before passing them to user-controlled propagation logic
         let mut ctx = Context::new(&mut space.vars, &mut events);
 
         // Prune decision variable domains to enforce constraints
-        prop.prune(&mut ctx)?;
+        prop.as_ref().prune(&mut ctx)?;
 
         // Schedule propagators that depend on changed variables
         #[allow(clippy::iter_with_drain)]
