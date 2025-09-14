@@ -114,16 +114,11 @@
 //! }
 //! ```
 
-// pub mod constraints;
-// pub mod domain;
-// pub mod propagation;
-// pub mod search;
-// pub mod solver;
-// pub mod variable;
 
 pub mod model;
 pub mod vars;
 pub mod solution;
+pub mod config;
 #[doc(hidden)]
 pub mod operators;
 

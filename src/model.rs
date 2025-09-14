@@ -36,6 +36,23 @@ impl Model {
         }
     }
 
+    /// Create a new model with a configuration
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let config = SolverConfig::default().with_float_precision(4);
+    /// let mut m = Model::with_config(config);
+    /// let var = m.float(0.0, 1.0);
+    /// ```
+    pub fn with_config(config: crate::config::SolverConfig) -> Self {
+        Self {
+            vars: Vars::default(),
+            props: Propagators::default(),
+            float_precision_digits: config.float_precision_digits,
+            optimization_router: OptimizationRouter::new(),
+        }
+    }
+
     /// Get the current float precision setting
     pub fn float_precision_digits(&self) -> i32 {
         self.float_precision_digits
