@@ -87,6 +87,11 @@ impl Propagators {
     pub fn increment_node_count(&mut self) {
         self.node_count += 1;
     }
+    
+    /// Get the number of propagators in this collection.
+    pub fn count(&self) -> usize {
+        self.state.len()
+    }
 
     /// Get access to the constraint metadata registry
     pub fn get_constraint_registry(&self) -> &crate::optimization::constraint_metadata::ConstraintRegistry {

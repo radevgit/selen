@@ -1104,6 +1104,25 @@ impl Model {
         self
     }
 
+    /// Create a search engine for this model that allows direct control over search.
+    ///
+    /// This provides access to lower-level search functionality including resource
+    /// cleanup callbacks, custom iteration, and manual search control.
+    ///
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// post!(m, x != y);
+    /// let mut engine = m.engine();
+    /// engine.register_cleanup(Box::new(|| println!("Cleanup executed!")));
+    /// let solution = engine.solve_any();
+    /// ```
+    pub fn engine(self) -> EngineWrapper {
+        EngineWrapper::new(self)
+    }
+
     /// Search for assignment that satisfies all constraints within bounds of decision variables.
     /// 
     /// This method automatically tries optimization algorithms for suitable problems
@@ -1338,5 +1357,63 @@ impl Index<VarId> for Model {
 
     fn index(&self, index: VarId) -> &Self::Output {
         &self.vars[index]
+    }
+}
+
+/// Wrapper around search engine that provides clean API for resource management
+pub struct EngineWrapper {
+    model: Option<Model>,
+    callbacks: Vec<Box<dyn FnOnce() + Send>>,
+}
+
+impl EngineWrapper {
+    fn new(model: Model) -> Self {
+        Self { 
+            model: Some(model),
+            callbacks: Vec::new(),
+        }
+    }
+
+    /// Configure the engine with custom settings
+    pub fn with_config(mut self, config: crate::config::SolverConfig) -> Self {
+        if let Some(ref mut model) = self.model {
+            model.config = config;
+        }
+        self
+    }
+
+    /// Register a cleanup callback that will be called when search is interrupted
+    /// or when the engine is dropped
+    pub fn register_cleanup(&mut self, callback: Box<dyn FnOnce() + Send>) {
+        self.callbacks.push(callback);
+    }
+
+    /// Solve for any valid solution
+    pub fn solve_any(&mut self) -> Option<crate::solution::Solution> {
+        if let Some(model) = self.model.take() {
+            match model.solve() {
+                Ok(solution) => Some(solution),
+                Err(_) => {
+                    // Execute cleanup callbacks on error
+                    self.trigger_cleanup();
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Trigger all registered cleanup callbacks
+    fn trigger_cleanup(&mut self) {
+        for callback in self.callbacks.drain(..) {
+            callback();
+        }
+    }
+}
+
+impl Drop for EngineWrapper {
+    fn drop(&mut self) {
+        self.trigger_cleanup();
     }
 }

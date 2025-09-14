@@ -22,6 +22,21 @@ impl Space {
     pub fn get_node_count(&self) -> usize {
         self.props.get_node_count()
     }
+
+    /// Estimate memory usage for this space in KB (simple approximation)
+    pub fn estimate_memory_kb(&self) -> usize {
+        // Simple estimation based on variable count and domain complexity
+        // Average variable with domain uses ~50-100 bytes
+        let var_memory_kb = (self.vars.count() * 100) / 1024; // ~100 bytes per variable
+        
+        // Propagators are more complex, estimate ~200-500 bytes each
+        let prop_memory_kb = (self.props.count() * 300) / 1024; // ~300 bytes per propagator
+        
+        // Base overhead for the space structure itself
+        let base_memory_kb = 1; // 1KB base
+        
+        base_memory_kb + var_memory_kb + prop_memory_kb
+    }
 }
 
 /// Perform search, iterating over assignments that satisfy all constraints.
@@ -147,6 +162,9 @@ pub struct Engine<M, B> {
     // Optimization: only check timeout/memory periodically
     iteration_count: usize,
     timeout_check_interval: usize,
+    // Resource cleanup support
+    cleanup_callbacks: Vec<Box<dyn FnOnce() + Send>>,
+    is_interrupted: bool,
 }
 
 /// Default Engine with SplitOnUnassigned for backwards compatibility
@@ -165,7 +183,9 @@ impl<M> DefaultEngine<M> {
             timeout_duration: None,
             memory_limit_mb: None,
             iteration_count: 0,
-            timeout_check_interval: 1000, // Check timeout every 1000 iterations
+            timeout_check_interval: 10000, // Check every 10K iterations for minimal overhead
+            cleanup_callbacks: Vec::new(),
+            is_interrupted: false,
         }
     }
 
@@ -181,7 +201,9 @@ impl<M> DefaultEngine<M> {
             timeout_duration: timeout,
             memory_limit_mb: None,
             iteration_count: 0,
-            timeout_check_interval: 1000, // Check timeout every 1000 iterations
+            timeout_check_interval: 10000, // Check every 10K iterations for minimal overhead
+            cleanup_callbacks: Vec::new(),
+            is_interrupted: false,
         }
     }
 
@@ -202,7 +224,19 @@ impl<M> DefaultEngine<M> {
             timeout_duration: timeout,
             memory_limit_mb,
             iteration_count: 0,
-            timeout_check_interval: 1000, // Check timeout every 1000 iterations
+            timeout_check_interval: 10000, // Check every 10K iterations for minimal overhead
+            cleanup_callbacks: Vec::new(),
+            is_interrupted: false,
+        }
+    }
+}
+
+// Automatic cleanup when Engine is dropped
+impl<M, B> Drop for Engine<M, B> {
+    fn drop(&mut self) {
+        // Only trigger cleanup if we haven't already been interrupted
+        if !self.is_interrupted {
+            self.trigger_cleanup();
         }
     }
 }
@@ -243,16 +277,49 @@ impl<M, B> Engine<M, B> {
         }
     }
 
-    /// Get current memory usage estimate in MB
+    /// Get current memory usage estimate in MB (simple approximation)
     pub fn get_memory_usage_mb(&self) -> usize {
-        // Simple estimate based on stack depth and iteration count
-        // This is a rough approximation - for production use, consider using
-        // system memory tracking or profiling tools
-        let stack_size_estimate = self.stack.len() * 1024; // Estimate 1KB per stack frame
-        let iteration_overhead = (self.iteration_count / 1000) * 10; // ~10KB per 1000 iterations
-        let base_overhead = 1; // 1MB base overhead
+        // Base memory for the engine itself and initial structures
+        let base_memory_kb = 512; // ~0.5MB base overhead
         
-        base_overhead + (stack_size_estimate / (1024 * 1024)) + (iteration_overhead / 1024)
+        // Stack memory (each stack frame contains Space which has vars + props)
+        // Use actual Space memory estimation when possible
+        let stack_memory_kb = self.stack.len() * 3; // Conservative 3KB per frame
+        
+        // Current branching iterator state (approximate)
+        let current_memory_kb = 2; // ~2KB for current iterator state
+        
+        // Iteration overhead (accumulated search state and temporary allocations)
+        // Very conservative estimate: ~5KB per 10K iterations
+        let iteration_memory_kb = (self.iteration_count / 10000) * 5;
+        
+        // Convert to MB with minimum of 1MB
+        ((base_memory_kb + stack_memory_kb + current_memory_kb + iteration_memory_kb) / 1024).max(1)
+    }
+    
+    /// Register a cleanup callback to be called when solving is interrupted
+    pub fn register_cleanup<F>(&mut self, cleanup: F) 
+    where 
+        F: FnOnce() + Send + 'static
+    {
+        self.cleanup_callbacks.push(Box::new(cleanup));
+    }
+    
+    /// Mark the engine as interrupted and trigger cleanup
+    fn trigger_cleanup(&mut self) {
+        if !self.is_interrupted {
+            self.is_interrupted = true;
+            
+            // Execute all cleanup callbacks
+            for cleanup in self.cleanup_callbacks.drain(..) {
+                cleanup();
+            }
+        }
+    }
+    
+    /// Check if the engine has been interrupted
+    pub fn is_interrupted(&self) -> bool {
+        self.is_interrupted
     }
 }
 
@@ -267,15 +334,17 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
                 // Check timeout
                 if let Some(timeout_duration) = self.timeout_duration {
                     if self.start_time.elapsed() >= timeout_duration {
-                        // Timeout exceeded - behavior depends on search mode
-                        return None; // For now, return None (can be enhanced for optimization)
+                        // Timeout exceeded - trigger cleanup before returning
+                        self.trigger_cleanup();
+                        return None;
                     }
                 }
                 
                 // Check memory limit
                 if let Some(limit_mb) = self.memory_limit_mb {
                     if self.get_memory_usage_mb() > limit_mb as usize {
-                        // Memory limit exceeded - return None
+                        // Memory limit exceeded - trigger cleanup before returning
+                        self.trigger_cleanup();
                         return None;
                     }
                 }
