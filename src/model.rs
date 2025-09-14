@@ -767,7 +767,7 @@ impl Model {
     pub fn minimize(self, objective: impl View) -> SolverResult<Solution> {
         match self.minimize_and_iterate(objective).last() {
             Some(solution) => Ok(solution),
-            None => Err(SolverError::NoSolution),
+            None => Err(SolverError::no_solution()),
         }
     }
 
@@ -822,7 +822,7 @@ impl Model {
                 callback(&stats);
                 match last_solution {
                     Some(solution) => Ok(solution),
-                    None => Err(SolverError::NoSolution),
+                    None => Err(SolverError::no_solution()),
                 }
             }
         }
@@ -1101,7 +1101,7 @@ impl Model {
                 // Fall back to traditional constraint propagation search
                 match self.enumerate().next() {
                     Some(solution) => Ok(solution),
-                    None => Err(SolverError::NoSolution),
+                    None => Err(SolverError::no_solution()),
                 }
             }
         }
@@ -1167,7 +1167,7 @@ impl Model {
         callback(&stats);
         match result {
             Some(solution) => Ok(solution),
-            None => Err(SolverError::NoSolution),
+            None => Err(SolverError::no_solution()),
         }
     }
 
