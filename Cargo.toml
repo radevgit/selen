@@ -12,7 +12,7 @@ documentation = "https://docs.rs/cspsolver"
 readme = "README.md"
 
 [dependencies]
-# Minimal external dependencies for constraint solving
+
 
 [lib]
 crate-type = ["lib"]

@@ -69,7 +69,7 @@
 //! post!(m, x + y == int(12));
 //! post!(m, x > y);
 //!
-//! if let Some(solution) = m.solve() {
+//! if let Ok(solution) = m.solve() {
 //!     println!("x = {:?}, y = {:?}", solution[x], solution[y]);
 //! }
 //! ```
@@ -87,7 +87,7 @@
 //! post!(m, cost <= float(500.0));         // Budget constraint
 //!
 //! // Maximize number of items within budget
-//! if let Some(solution) = m.maximize(items) {
+//! if let Ok(solution) = m.maximize(items) {
 //!     println!("Optimal: {:?} items, cost: {:?}", 
 //!              solution[items], solution[cost]);
 //! }
@@ -108,7 +108,7 @@
 //! // All must be different
 //! post!(m, alldiff([red, blue, green]));
 //!
-//! if let Some(solution) = m.solve() {
+//! if let Ok(solution) = m.solve() {
 //!     println!("Red: {:?}, Blue: {:?}, Green: {:?}",
 //!              solution[red], solution[blue], solution[green]);
 //! }

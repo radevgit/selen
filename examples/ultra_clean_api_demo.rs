@@ -80,15 +80,15 @@ fn main() {
     // 7. Solving
     println!("\n7. Solving:");
     match m.solve() {
-        Some(solution) => {
+        Ok(solution) => {
             println!("   ✅ Solution found!");
             println!("   x = {:?}", solution[x]);
             println!("   y = {:?}", solution[y]);
             println!("   z = {:?}", solution[z]);
             println!("   w = {:?}", solution[w]);
         }
-        None => {
-            println!("   ❌ No solution exists.");
+        Err(err) => {
+            println!("   ❌ No solution exists: {}", err);
         }
     }
     

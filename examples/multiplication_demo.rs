@@ -19,7 +19,7 @@ fn main() {
         println!("✅ Test 1: 3 * 4 = {}", z_val);
         assert_eq!(z_val, 12);
     } else {
-        println!("❌ Test 1 failed: No solution found");
+        println!("❌ Test 1 failed: Unable to solve");
         return;
     }
     
@@ -41,7 +41,7 @@ fn main() {
         println!("✅ Test 2: {} * 3 = 15", x_val);
         assert_eq!(x_val, 5);
     } else {
-        println!("❌ Test 2 failed: No solution found");
+        println!("❌ Test 2 failed: Unable to solve");
         return;
     }
     
@@ -60,7 +60,7 @@ fn main() {
         println!("✅ Test 3: -2 * 6 = {}", z_val);
         assert_eq!(z_val, -12);
     } else {
-        println!("❌ Test 3 failed: No solution found");
+        println!("❌ Test 3 failed: Unable to solve");
         return;
     }
     

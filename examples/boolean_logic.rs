@@ -18,7 +18,7 @@ fn main() {
         post!(m, has_badge == 1);
         post!(m, correct_pin == 0);
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             let badge = if let Val::ValI(v) = solution[has_badge] { v } else { 0 };
             let pin = if let Val::ValI(v) = solution[correct_pin] { v } else { 0 };
             let access = if let Val::ValI(v) = solution[access_granted] { v } else { 0 };
@@ -42,7 +42,7 @@ fn main() {
         post!(m, fire_alarm == 0);
         post!(m, manual_override == 1);
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             let fire = if let Val::ValI(v) = solution[fire_alarm] { v } else { 0 };
             let manual = if let Val::ValI(v) = solution[manual_override] { v } else { 0 };
             let exit = if let Val::ValI(v) = solution[exit_open] { v } else { 0 };
@@ -64,7 +64,7 @@ fn main() {
         // Scenario: High input
         post!(m, input_signal == 1);
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             let input = if let Val::ValI(v) = solution[input_signal] { v } else { 0 };
             let output = if let Val::ValI(v) = solution[output_signal] { v } else { 0 };
             
@@ -92,7 +92,7 @@ fn main() {
         post!(m, night_mode == 0);
         post!(m, manual_panic == 0);
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             let motion = if let Val::ValI(v) = solution[motion_detected] { v } else { 0 };
             let night = if let Val::ValI(v) = solution[night_mode] { v } else { 0 };
             let panic = if let Val::ValI(v) = solution[manual_panic] { v } else { 0 };
@@ -125,7 +125,7 @@ fn main() {
         post!(m, disk_healthy == 1);
         post!(m, memory_test_passed == 1);
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             let power = if let Val::ValI(v) = solution[power_stable] { v } else { 0 };
             let network = if let Val::ValI(v) = solution[network_ready] { v } else { 0 };
             let disk = if let Val::ValI(v) = solution[disk_healthy] { v } else { 0 };
@@ -158,7 +158,7 @@ fn main() {
         // Additional constraint: b is false
         post!(m, b == 0);
         
-        if let Some(solution) = m.solve() {
+        if let Ok(solution) = m.solve() {
             let a_val = if let Val::ValI(v) = solution[a] { v } else { 0 };
             let b_val = if let Val::ValI(v) = solution[b] { v } else { 0 };
             let c_val = if let Val::ValI(v) = solution[c] { v } else { 0 };

@@ -35,13 +35,13 @@ impl BenchmarkResult {
 pub fn benchmark_simple_precision_constraint() -> BenchmarkResult {
     let start = Instant::now();
     
-    let mut model = Model::new();
-    let x = m.new_float_var(0.0, 10.0);
+    let mut m = Model::default();
+    let x = m.float(0.0, 10.0);
     
     // Simple precision constraint that should trigger ULP optimization
-    m.less_than_f64(x, 5.5);
+    post!(m, x < 5.5);
     
-    let success = m.solve();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     BenchmarkResult::new(duration, success)
@@ -50,16 +50,16 @@ pub fn benchmark_simple_precision_constraint() -> BenchmarkResult {
 pub fn benchmark_multi_precision_constraints() -> BenchmarkResult {
     let start = Instant::now();
     
-    let mut model = Model::new();
-    let x = m.new_float_var(0.0, 100.0);
-    let y = m.new_float_var(0.0, 100.0);
+    let mut m = Model::default();
+    let x = m.float(0.0, 100.0);
+    let y = m.float(0.0, 100.0);
     
     // Multiple precision constraints
-    m.less_than_f64(x, 50.5);
-    m.greater_than_f64(y, 25.25);
-    m.less_than_f64(y, 75.75);
+    post!(m, x < 50.5);
+    post!(m, y > 25.25);
+    post!(m, y < 75.75);
     
-    let success = m.solve();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     BenchmarkResult::new(duration, success)
@@ -68,16 +68,16 @@ pub fn benchmark_multi_precision_constraints() -> BenchmarkResult {
 pub fn benchmark_traditional_csp_fallback() -> BenchmarkResult {
     let start = Instant::now();
     
-    let mut model = Model::new();
-    let x = m.new_int_var(0, 100);
-    let y = m.new_int_var(0, 100);
-    let z = m.new_int_var(0, 100);
+    let mut m = Model::default();
+    let x = m.int(0, 100);
+    let y = m.int(0, 100);
+    let z = m.int(0, 100);
     
     // Complex constraints that should fall back to traditional CSP
-    m.all_different(&[x, y, z]);
-    m.equals(x + y, z);
+    post!(m, all_different([x, y, z]));
+    post!(m, x + y == z);
     
-    let success = m.solve();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     BenchmarkResult::new(duration, success)

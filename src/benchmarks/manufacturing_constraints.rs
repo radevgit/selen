@@ -59,7 +59,7 @@ pub fn benchmark_tool_clearance_constraints() -> ManufacturingResult {
         m.lt(y, float(plate_height - tool_diameter / 2.0 - min_clearance));
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     let score = if success { 9.0 } else { 0.0 };
@@ -104,7 +104,7 @@ pub fn benchmark_grain_direction_constraints() -> ManufacturingResult {
         m.lt(*orientation, float(grain_direction + 0.05));
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     let score = if success { 9.5 } else { 0.0 };
@@ -168,7 +168,7 @@ pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
         m.lt(*y, float(furnace_height - 0.1));
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     let score = if success { 8.8 } else { 0.0 };
@@ -229,7 +229,7 @@ pub fn benchmark_quality_control_sampling() -> ManufacturingResult {
     let distribution_quality = m.float(0.0, 1.0);
     m.gt(distribution_quality, float(0.92)); // 92% distribution quality
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     let score = if success { 9.2 } else { 0.0 };

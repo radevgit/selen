@@ -181,6 +181,36 @@ This plan focuses on transforming our hybrid CSP solver from a research prototyp
 **Estimated Time**: 4 weeks
 **Priority**: LOW
 
+### **Step 10.3: Objective Expression Analysis & AST**
+**Goal**: Enable optimization of complex mathematical expressions in objectives
+
+**10.3.1: Expression AST Implementation**
+- [ ] Design View expression tree structure for mathematical expressions
+- [ ] Implement AST parsing for objective expressions (`x * 2.0`, `x + 10.0`, etc.)
+- [ ] Add expression type classification (linear, quadratic, polynomial)
+- [ ] Create expression simplification and normalization algorithms
+
+**10.3.2: Advanced Objective Analysis**  
+- [ ] Detect linear transformations (`minimize x * coeff + const`)
+- [ ] Identify separable expressions (`minimize x + y * coeff`)
+- [ ] Handle negation and scaling automatically (`minimize -x` → `maximize x`)
+- [ ] Support common mathematical patterns and transformations
+
+**10.3.3: Optimization Integration**
+- [ ] Extend `extract_simple_variable` with AST analysis capabilities
+- [ ] Add transformation-aware optimization (scale results by coefficients)
+- [ ] Implement coefficient and offset handling in precision optimizers
+- [ ] Add expression complexity scoring for optimization routing decisions
+
+**10.3.4: Performance & Compatibility**
+- [ ] Ensure AST parsing overhead is <10% of optimization time
+- [ ] Maintain backwards compatibility with direct variable objectives
+- [ ] Add comprehensive test suite for expression patterns
+- [ ] Document supported expression types and limitations
+
+**Estimated Time**: 3-4 weeks
+**Priority**: MEDIUM-HIGH (high impact on user experience - expands optimization coverage)
+
 ---
 
 ## 🔌 **PHASE 4: External Solver Integration**
@@ -282,12 +312,13 @@ This plan focuses on transforming our hybrid CSP solver from a research prototyp
 
 ### **MEDIUM TERM (Weeks 13-20)**
 6. **Step 10.1**: Non-linear Constraints
-7. **Step 11.1**: External Solver Integration (basic)
+7. **Step 10.3**: Objective Expression Analysis & AST
+8. **Step 11.1**: External Solver Integration (basic)
 
 ### **LONG TERM (Weeks 21+)**
-8. **Step 10.2**: Global Constraint Optimization
-9. **Step 11.2**: Solver Coordination
-10. **Step 12.1-12.2**: Domain-Specific Extensions
+9. **Step 10.2**: Global Constraint Optimization
+10. **Step 11.2**: Solver Coordination
+11. **Step 12.1-12.2**: Domain-Specific Extensions
 
 ---
 

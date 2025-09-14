@@ -16,7 +16,7 @@ fn main() {
 
     let start = Instant::now();
     match model.solve() {
-        Some(solution) => {
+        Ok(solution) => {
             let duration = start.elapsed();
             println!("   ✓ Solution found in {:?}", duration);
             if let Val::ValI(x_val) = solution.get_values(&[x])[0] {
@@ -26,9 +26,9 @@ fn main() {
                 println!("   y = {}", y_val);
             }
         },
-        None => {
+        Err(err) => {
             let duration = start.elapsed();
-            println!("   ✗ No solution found in {:?}", duration);
+            println!("   ✗ No solution found in {:?}: {}", duration, err);
         }
     }
 
@@ -44,16 +44,16 @@ fn main() {
 
     let start = Instant::now();
     match model.solve() {
-        Some(solution) => {
+        Ok(solution) => {
             let duration = start.elapsed();
             println!("   ✓ Solution found in {:?} (timeout not reached)", duration);
             if let Val::ValI(a_val) = solution.get_values(&[a])[0] {
                 println!("   a = {}", a_val);
             }
         },
-        None => {
+        Err(err) => {
             let duration = start.elapsed();
-            println!("   ✗ Timeout reached in {:?}", duration);
+            println!("   ✗ Timeout reached in {:?}: {}", duration, err);
         }
     }
 
@@ -69,7 +69,7 @@ fn main() {
 
     let start = Instant::now();
     match model.solve() {
-        Some(solution) => {
+        Ok(solution) => {
             let duration = start.elapsed();
             println!("   ✓ Solution found in {:?}", duration);
             if let Val::ValI(p_val) = solution.get_values(&[p])[0] {
@@ -79,9 +79,9 @@ fn main() {
                 println!("   q = {}", q_val);
             }
         },
-        None => {
+        Err(err) => {
             let duration = start.elapsed();
-            println!("   ✗ No solution found in {:?}", duration);
+            println!("   ✗ No solution found in {:?}: {}", duration, err);
         }
     }
 

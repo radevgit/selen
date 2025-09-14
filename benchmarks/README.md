@@ -11,12 +11,25 @@ This directory contains performance benchmarks for validating the precision opti
 
 ## Running Benchmarks
 
+**⚠️ IMPORTANT**: Always use `--release` flag for accurate performance measurements!
+
 Benchmarks are separate from tests to avoid running them during normal `cargo test`:
 
 ```bash
-# Run all benchmarks
+# Run all benchmarks (RELEASE MODE REQUIRED)
 cargo run --release --bin benchmark_suite
+
+# Individual benchmark examples
+cargo run --release --example step_2_4_performance_benchmarks
+cargo run --release --example sudoku  # For Platinum puzzle timing
+
+# Debug mode comparison (for development only - NOT for benchmarks)
+cargo run --example sudoku  # ~7-10x slower than release mode
 ```
+
+**Performance Impact of Build Modes:**
+- **Release mode**: Full optimizations, accurate benchmark results
+- **Debug mode**: No optimizations, 5-10x slower, bounds checking enabled
 
 ## Performance Goals
 
