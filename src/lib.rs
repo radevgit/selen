@@ -119,6 +119,7 @@ pub mod model;
 pub mod vars;
 pub mod solution;
 pub mod config;
+pub mod error;
 #[doc(hidden)]
 pub mod operators;
 

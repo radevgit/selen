@@ -11,6 +11,7 @@ pub use crate::views::*;
 pub use crate::model::*;
 pub use crate::solution::*;
 pub use crate::config::*;
+pub use crate::error::*;
 pub use crate::props::*;
 pub use crate::search::*;
 
