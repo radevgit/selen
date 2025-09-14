@@ -27,6 +27,13 @@ pub const fn precision_to_step_size(precision_digits: i32) -> f64 {
 /// Based on DEFAULT_FLOAT_PRECISION_DIGITS (6 decimal places)
 pub const FLOAT_STEP_SIZE: f64 = precision_to_step_size(DEFAULT_FLOAT_PRECISION_DIGITS);
 
+/// Saved state for FloatInterval backtracking
+#[derive(Debug, Clone, PartialEq)]
+pub struct FloatIntervalState {
+    pub min: f64,
+    pub max: f64,
+}
+
 /// Float interval with fixed step size for predictable precision
 #[derive(Debug, Clone, PartialEq)]
 pub struct FloatInterval {
@@ -214,6 +221,23 @@ impl std::fmt::Display for FloatInterval {
         } else {
             write!(f, "[{}, {}] (step: {})", self.min, self.max, self.step)
         }
+    }
+}
+
+impl FloatInterval {
+    /// Save the current state for backtracking
+    pub fn save_state(&self) -> FloatIntervalState {
+        FloatIntervalState {
+            min: self.min,
+            max: self.max,
+        }
+    }
+    
+    /// Restore state from a previous save point
+    pub fn restore_state(&mut self, state: &FloatIntervalState) {
+        self.min = state.min;
+        self.max = state.max;
+        // Note: step is never restored since it's a constant property
     }
 }
 
@@ -647,5 +671,44 @@ mod tests {
         let tiny_interval = FloatInterval::with_step(0.0, 0.1, 0.1);
         assert!(tiny_interval.is_fixed());
         assert_eq!(tiny_interval.mid(), 0.0); // Should return min for fixed intervals
+    }
+
+    #[test]
+    fn test_save_restore_state() {
+        let mut interval = FloatInterval::with_step(0.0, 10.0, 0.1);
+        
+        // Save initial state
+        let initial_state = interval.save_state();
+        assert_eq!(initial_state.min, 0.0);
+        assert_eq!(initial_state.max, 10.0);
+        
+        // Modify the interval
+        interval.remove_below(3.5);
+        interval.remove_above(7.2);
+        assert_ne!(interval.min, 0.0);
+        assert_ne!(interval.max, 10.0);
+        
+        // Restore to initial state
+        interval.restore_state(&initial_state);
+        assert_eq!(interval.min, 0.0);
+        assert_eq!(interval.max, 10.0);
+        assert_eq!(interval.step, 0.1); // Step should remain unchanged
+        
+        // Test multiple save/restore levels
+        let level1_state = interval.save_state();
+        interval.remove_below(2.0);
+        
+        let level2_state = interval.save_state();
+        interval.remove_above(8.0);
+        
+        // Restore to level 2
+        interval.restore_state(&level2_state);
+        assert_eq!(interval.min, 2.0);
+        assert_eq!(interval.max, 10.0);
+        
+        // Restore to level 1
+        interval.restore_state(&level1_state);
+        assert_eq!(interval.min, 0.0);
+        assert_eq!(interval.max, 10.0);
     }
 }

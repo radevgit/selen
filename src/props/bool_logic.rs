@@ -16,7 +16,7 @@ impl BoolAnd {
 }
 
 impl Prune for BoolAnd {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         if self.operands.is_empty() {
             // Empty AND is typically true
             let _r = self.result.try_set_min(Val::ValI(1), ctx)?;
@@ -119,7 +119,7 @@ impl BoolOr {
 }
 
 impl Prune for BoolOr {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         if self.operands.is_empty() {
             // Empty OR is typically false
             let _r = self.result.try_set_min(Val::ValI(0), ctx)?;
@@ -222,7 +222,7 @@ impl BoolNot {
 }
 
 impl Prune for BoolNot {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         // For boolean NOT:
         // If operand = 0, then result = 1
         // If operand != 0, then result = 0

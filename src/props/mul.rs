@@ -15,7 +15,7 @@ impl<U, V> Mul<U, V> {
 }
 
 impl<U: View, V: View> Prune for Mul<U, V> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         // For s = x * y, we need to handle bounds propagation carefully
         // due to the possibility of negative values affecting the bounds
         

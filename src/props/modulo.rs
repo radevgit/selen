@@ -16,7 +16,7 @@ impl<U, V> Modulo<U, V> {
 }
 
 impl<U: View, V: View> Prune for Modulo<U, V> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         // For s = x % y, we need to handle bounds propagation carefully
         let x_min = self.x.min(ctx);
         let x_max = self.x.max(ctx);

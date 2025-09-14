@@ -35,16 +35,22 @@ impl BoolExpr {
             BoolOperation::And(left, right) => {
                 let left_var = left.apply_to(model);
                 let right_var = right.apply_to(model);
-                m.bool_and(&[left_var, right_var])
+                let result = model.bool();
+                model.props.bool_and(vec![left_var, right_var], result);
+                result
             }
             BoolOperation::Or(left, right) => {
                 let left_var = left.apply_to(model);
                 let right_var = right.apply_to(model);
-                m.bool_or(&[left_var, right_var])
+                let result = model.bool();
+                model.props.bool_or(vec![left_var, right_var], result);
+                result
             }
             BoolOperation::Not(operand) => {
                 let operand_var = operand.apply_to(model);
-                m.bool_not(operand_var)
+                let result = model.bool();
+                model.props.bool_not(operand_var, result);
+                result
             }
         }
     }
@@ -251,9 +257,9 @@ mod tests {
         let complex = m.bool_expr((a | b) & !c);
         
         // Set up constraints using new API
-        m.eq(a, crate::vars::Val::ValI(1));
-        m.eq(b, crate::vars::Val::ValI(0)); 
-        m.eq(c, crate::vars::Val::ValI(0));
+        m.props.equals(a, crate::vars::Val::ValI(1));
+        m.props.equals(b, crate::vars::Val::ValI(0)); 
+        m.props.equals(c, crate::vars::Val::ValI(0));
         
         let solution = m.solve().unwrap();
         let a_val = if let crate::vars::Val::ValI(v) = solution[a] { v } else { 0 };

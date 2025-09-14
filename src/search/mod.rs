@@ -1,19 +1,11 @@
 use crate::{prelude::Solution, props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, vars::Vars, views::Context};
-use crate::domain::sparse_set::SparseSetState;
 
 pub mod mode;
 
 pub mod agenda;
 pub mod branch;
 
-/// Lightweight state snapshot for efficient backtracking
-#[derive(Debug)]
-pub struct SpaceState {
-    sparse_states: Vec<Option<SparseSetState>>,
-    // Note: Propagators state could be added here if needed for more advanced backtracking
-}
-
-/// Data required to perform search, copied on branch and discarded on failure.
+/// Data required to perform search, now uses Clone for efficient backtracking.
 #[derive(Clone, Debug)]
 pub struct Space {
     pub vars: Vars,
@@ -29,18 +21,6 @@ impl Space {
     /// Get the current node count from this space.
     pub fn get_node_count(&self) -> usize {
         self.props.get_node_count()
-    }
-
-    /// Save state for efficient backtracking instead of expensive cloning
-    pub fn save_state(&self) -> SpaceState {
-        SpaceState {
-            sparse_states: self.vars.save_sparse_states(),
-        }
-    }
-
-    /// Restore state from a previous save point
-    pub fn restore_state(&mut self, state: &SpaceState) {
-        self.vars.restore_sparse_states(&state.sparse_states);
     }
 }
 
@@ -238,13 +218,13 @@ pub fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> 
         space.props.increment_propagation_count();
 
         // Acquire trait object for propagator, which points to both code and inner state
-        let prop = space.props.get_state_mut(p);
+        let prop = space.props.get_state(p);
 
         // Wrap engine objects before passing them to user-controlled propagation logic
         let mut ctx = Context::new(&mut space.vars, &mut events);
 
         // Prune decision variable domains to enforce constraints
-        prop.prune(&mut ctx)?;
+        prop.as_ref().prune(&mut ctx)?;
 
         // Schedule propagators that depend on changed variables
         #[allow(clippy::iter_with_drain)]

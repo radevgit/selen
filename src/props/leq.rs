@@ -14,7 +14,7 @@ impl<U, V> LessThanOrEquals<U, V> {
 }
 
 impl<U: View, V: View> Prune for LessThanOrEquals<U, V> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         let _max = self.x.try_set_max(self.y.max(ctx), ctx)?;
         let _min = self.y.try_set_min(self.x.min(ctx), ctx)?;
 

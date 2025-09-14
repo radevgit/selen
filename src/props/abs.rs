@@ -15,7 +15,7 @@ impl<U> Abs<U> {
 }
 
 impl<U: View> Prune for Abs<U> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         // For s = |x|, we know:
         // 1. s >= 0 (absolute value is always non-negative)
         // 2. If s is known, then x ∈ [-s, s] and x ∈ [-s, -s] ∪ [s, s]

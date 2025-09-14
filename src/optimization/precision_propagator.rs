@@ -18,8 +18,6 @@ pub struct PrecisionBoundaryPropagator {
     variables: Vec<VarId>,
     /// Step size for precision calculations
     step_size: f64,
-    /// Whether this propagator has been initialized
-    initialized: bool,
 }
 
 impl PrecisionBoundaryPropagator {
@@ -28,7 +26,6 @@ impl PrecisionBoundaryPropagator {
         Self {
             variables,
             step_size,
-            initialized: false,
         }
     }
 
@@ -38,8 +35,8 @@ impl PrecisionBoundaryPropagator {
     }
 
     /// Apply precision optimization to all variables using constraint metadata
-    fn apply_precision_optimization(
-        &mut self,
+    pub fn apply_precision_optimization(
+        &self,
         ctx: &mut Context,
         registry: &ConstraintRegistry,
     ) -> Option<()> {
@@ -110,7 +107,7 @@ impl PrecisionBoundaryPropagator {
 }
 
 impl Prune for PrecisionBoundaryPropagator {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         // Simplified precision-aware boundary check
         // This is a basic implementation that focuses on the most common precision issues
         
@@ -147,7 +144,6 @@ impl Prune for PrecisionBoundaryPropagator {
             }
         }
         
-        self.initialized = true;
         Some(())
     }
 }
@@ -210,10 +206,9 @@ mod tests {
     fn test_precision_boundary_propagator() {
         // Test that propagator initializes correctly
         let var_id = VarId::from_index(0); // Use proper constructor
-        let propagator = PrecisionBoundaryPropagator::for_variable(var_id, 1e-10);
+        let _propagator = PrecisionBoundaryPropagator::for_variable(var_id, 1e-10);
         
         // Test that propagator initializes correctly
-        assert!(!propagator.initialized);
         // Note: Full context testing would require more complex setup
     }
 

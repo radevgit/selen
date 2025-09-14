@@ -146,10 +146,9 @@ pub mod prelude;
 
 #[doc(hidden)]
 // Clean constraint API modules
-// pub mod constraint_builder;  // Disabled - uses deprecated boolean_operators module
+pub mod constraint_builder;
 pub mod view_constraints;
-// Temporarily disabled due to deprecated API usage
-// pub mod boolean_operators;
+pub mod boolean_operators;
 #[doc(hidden)]
 pub mod math_syntax;
 

@@ -2,19 +2,19 @@ use crate::{props::{Propagate, Prune}, vars::VarId, views::{Context, View}};
 
 /// Enforce equality between two views: `x == y`.
 #[derive(Clone, Copy, Debug)]
-pub struct Equals<U, V> {
+pub struct Eq<U, V> {
     x: U,
     y: V,
 }
 
-impl<U, V> Equals<U, V> {
+impl<U, V> Eq<U, V> {
     pub const fn new(x: U, y: V) -> Self {
         Self { x, y }
     }
 }
 
-impl<U: View, V: View> Prune for Equals<U, V> {
-    fn prune(&mut self, ctx: &mut Context) -> Option<()> {
+impl<U: View, V: View> Prune for Eq<U, V> {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
         let _min = self.x.try_set_min(self.y.min(ctx), ctx)?;
         let _max = self.x.try_set_max(self.y.max(ctx), ctx)?;
 
@@ -25,7 +25,7 @@ impl<U: View, V: View> Prune for Equals<U, V> {
     }
 }
 
-impl<U: View, V: View> Propagate for Equals<U, V> {
+impl<U: View, V: View> Propagate for Eq<U, V> {
     fn list_trigger_vars(&self) -> impl Iterator<Item = VarId> {
         self.x
             .get_underlying_var()
