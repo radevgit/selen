@@ -25,7 +25,7 @@ impl<U: View> Prune for Abs<U> {
         let x_min = self.x.min(ctx);
         let x_max = self.x.max(ctx);
         let s_min = self.s.min(ctx);
-        let s_max = self.s.max(ctx);
+        let _s_max = self.s.max(ctx);
         
         // Step 1: Ensure s >= 0
         let zero = match s_min {

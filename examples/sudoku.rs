@@ -6,7 +6,7 @@
 //! 2. Each row, column, and 3x3 box contains all digits 1-9 exactly once
 
 use cspsolver::prelude::*;
-use cspsolver::{post, postall};
+use cspsolver::{post};
 use std::time::Instant;
 
 fn main() {

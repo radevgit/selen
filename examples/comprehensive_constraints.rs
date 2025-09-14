@@ -306,7 +306,6 @@ fn enhanced_features_demo() {
     println!("\n🔗 Boolean Logic Functions:");
     let a = m.int(0, 1);
     let b = m.int(0, 1);
-    let c = m.int(0, 1);
     post!(m, and(a, b));
     post!(m, or(a, b));
     post!(m, not(a));

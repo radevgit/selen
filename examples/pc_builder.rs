@@ -8,7 +8,7 @@
 //! - Real-world constraint satisfaction problem
 
 use cspsolver::prelude::*;
-use cspsolver::{post, postall};
+use cspsolver::{postall};
 
 fn main() {
     // Create a model for our PC building problem

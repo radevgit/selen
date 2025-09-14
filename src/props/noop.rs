@@ -1,6 +1,6 @@
 use crate::views::Context;
 use crate::vars::VarId;
-use crate::props::{Prune, Propagate};
+use crate::props::{Prune};
 
 /// A no-operation propagator that does nothing when invoked.
 /// Used for branching operations that have already applied domain filtering directly.

@@ -7,7 +7,7 @@
 //! - Simple constraint satisfaction with floating-point calculations
 
 use cspsolver::prelude::*;
-use cspsolver::{post, postall};
+use cspsolver::{post};
 
 fn main() {
     println!("💰 Portfolio Balance Calculator");

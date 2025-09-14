@@ -1,8 +1,5 @@
 #[doc(hidden)]
 
-use crate::vars::{VarId, Val};
-use crate::model::Model;
-use crate::math_syntax::{MathExpr, TypedConstant};
 
 #[doc(hidden)]
 /// Represents a constraint reference that can be used later
@@ -2050,8 +2047,6 @@ mod tests {
         let z = m.int(1, 10);
         let a = m.bool();
         let b = m.bool();
-        let f1 = m.float(0.0, 10.0);
-        let f2 = m.float(0.0, 10.0);
         let vars = vec![x, y, z];
         
         // Test a combination of all new features in one go

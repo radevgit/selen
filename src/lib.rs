@@ -147,7 +147,6 @@ pub mod prelude;
 #[doc(hidden)]
 // Clean constraint API modules
 pub mod constraint_builder;
-pub mod view_constraints;
 pub mod boolean_operators;
 #[doc(hidden)]
 pub mod math_syntax;
