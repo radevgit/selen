@@ -7,8 +7,8 @@ fn main() {
     // Test: x * y = z where x=3, y=4, solve for z
     let mut m = Model::default();
     
-    let x = m.int(3, 3); // x = 3
-    let y = m.int(4, 4); // y = 4
+    let x = m.int(3, 3); // x = 3 (constant for mul operation)
+    let y = m.int(4, 4); // y = 4 (constant for mul operation)
     let z = m.mul(x, y);         // z = x * y = 3 * 4 = 12
     
     if let Some(solution) = m.solve() {
@@ -26,12 +26,11 @@ fn main() {
     let mut m2 = Model::default();
     
     let x2 = m2.int(1, 10);  // x unknown
-    let y2 = m2.int(3, 3);   // y = 3
-    let z2 = m2.int(15, 15); // z = 15
+    let y2 = m2.int(3, 3);   // y = 3 (constant for mul operation)
     
-    // Create the constraint: x * y = z, so x = z / y = 15 / 3 = 5
+    // Create the constraint: x * y = 15, so x = 15 / 3 = 5
     let product = m2.mul(x2, y2);
-    post!(m2, product == z2);
+    post!(m2, product == int(15));
     
     if let Some(solution) = m2.solve() {
         let x_val = match solution[x2] {
@@ -47,8 +46,8 @@ fn main() {
     // Test: negative multiplication
     let mut model3 = Model::default();
     
-    let x3 = model3.int(-2, -2); // x = -2
-    let y3 = model3.int(6, 6);   // y = 6
+    let x3 = model3.int(-2, -2); // x = -2 (constant for mul operation)
+    let y3 = model3.int(6, 6);   // y = 6 (constant for mul operation)
     let z3 = model3.mul(x3, y3);         // z = -2 * 6 = -12
     
     if let Some(solution) = model3.solve() {

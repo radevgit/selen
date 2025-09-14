@@ -11,6 +11,8 @@ pub struct Model {
     pub float_precision_digits: i32,
     /// Optimization router for efficient algorithm selection
     optimization_router: OptimizationRouter,
+    /// Configuration for solver behavior
+    config: crate::config::SolverConfig,
 }
 
 impl Default for Model {
@@ -28,11 +30,14 @@ impl Model {
     /// let var = m.float(0.0, 1.0);
     /// ```
     pub fn with_float_precision(precision_digits: i32) -> Self {
+        let config = crate::config::SolverConfig::default()
+            .with_float_precision(precision_digits);
         Self {
             vars: Vars::default(),
             props: Propagators::default(),
             float_precision_digits: precision_digits,
             optimization_router: OptimizationRouter::new(),
+            config,
         }
     }
 
@@ -50,6 +55,7 @@ impl Model {
             props: Propagators::default(),
             float_precision_digits: config.float_precision_digits,
             optimization_router: OptimizationRouter::new(),
+            config,
         }
     }
 
@@ -61,6 +67,16 @@ impl Model {
     /// Get the step size for the current float precision
     pub fn float_step_size(&self) -> f64 {
         precision_to_step_size(self.float_precision_digits)
+    }
+
+    /// Get the solver configuration
+    pub fn config(&self) -> &crate::config::SolverConfig {
+        &self.config
+    }
+
+    /// Get timeout as Duration for search operations
+    fn timeout_duration(&self) -> Option<std::time::Duration> {
+        self.config.timeout_seconds.map(std::time::Duration::from_secs)
     }
 
     /// Get access to constraint registry for debugging/analysis
@@ -780,9 +796,10 @@ impl Model {
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
+                let timeout = self.timeout_duration();
                 let (vars, props) = self.prepare_for_search();
 
-                let mut search_iter = search(vars, props, mode::Minimize::new(objective));
+                let mut search_iter = search_with_timeout(vars, props, mode::Minimize::new(objective), timeout);
                 let mut last_solution = None;
                 let mut current_count = 0;
 
@@ -824,8 +841,9 @@ impl Model {
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
+                let timeout = self.timeout_duration();
                 let (vars, props) = self.prepare_for_search();
-                Box::new(search(vars, props, mode::Minimize::new(objective))) as Box<dyn Iterator<Item = Solution>>
+                Box::new(search_with_timeout(vars, props, mode::Minimize::new(objective), timeout)) as Box<dyn Iterator<Item = Solution>>
             }
         }
     }
@@ -855,9 +873,10 @@ impl Model {
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
+                let timeout = self.timeout_duration();
                 let (vars, props) = self.prepare_for_search();
 
-                let mut search_iter = search(vars, props, mode::Minimize::new(objective));
+                let mut search_iter = search_with_timeout(vars, props, mode::Minimize::new(objective), timeout);
                 let mut solutions = Vec::new();
                 let mut current_count = 0;
 
@@ -1119,10 +1138,11 @@ impl Model {
         F: FnOnce(&crate::solution::SolveStats),
     {
         // Run the solving process
+        let timeout = self.timeout_duration();
         let (vars, props) = self.prepare_for_search();
 
         // Create a search and run it to completion to capture final stats
-        let mut search_iter = search(vars, props, mode::Enumerate);
+        let mut search_iter = search_with_timeout(vars, props, mode::Enumerate, timeout);
         let result = search_iter.next();
 
         // Get the final stats from the search
@@ -1181,65 +1201,6 @@ impl Model {
         }
     }
 
-    /// Extract a single float variable from the objective (Step 2.3.1 heuristic)
-    fn extract_single_float_variable(&self, _objective: &impl View) -> Option<VarId> {
-        // Simple heuristic for Step 2.3.1: if exactly one float variable exists, use it
-        // TODO: In Step 2.3.2, implement proper View analysis to extract variable from objective
-        
-        let mut float_vars = Vec::new();
-        for (index, var) in self.vars.iter_with_indices() {
-            if matches!(var, crate::vars::Var::VarF(_)) {
-                // Convert index to VarId using the helper from model_integration
-                let var_id = crate::optimization::model_integration::index_to_var_id(index);
-                float_vars.push(var_id);
-            }
-        }
-        
-        // Simple heuristic: if exactly one float variable, optimize it
-        if float_vars.len() == 1 {
-            Some(float_vars[0])
-        } else {
-            None // Fallback to search for complex cases
-        }
-    }
-
-    /// Create a Solution from an OptimizationResult
-    fn create_solution_from_optimization(&self, result: crate::optimization::float_direct::OptimizationResult) -> Result<Solution, String> {
-        // Create a solution vector with all variable values
-        let mut solution_values = Vec::new();
-        
-        for (index, var) in self.vars.iter_with_indices() {
-            match var {
-                crate::vars::Var::VarF(interval) => {
-                    // For the optimized variable, use the optimal value
-                    // For others, use their current bound (this is a simplification)
-                    if result.success {
-                        let var_id = crate::optimization::model_integration::index_to_var_id(index);
-                        match &result.outcome {
-                            crate::optimization::float_direct::OptimizationOutcome::Success { variable_id, .. } => {
-                                // Compare VarIds by converting both to usize for comparison
-                                let result_var_index = crate::optimization::model_integration::var_id_to_index(*variable_id);
-                                if index == result_var_index {
-                                    solution_values.push(crate::vars::Val::float(result.optimal_value));
-                                } else {
-                                    solution_values.push(crate::vars::Val::float(interval.min));
-                                }
-                            },
-                            _ => solution_values.push(crate::vars::Val::float(interval.min)),
-                        }
-                    } else {
-                        solution_values.push(crate::vars::Val::float(interval.min));
-                    }
-                },
-                crate::vars::Var::VarI(domain) => {
-                    solution_values.push(crate::vars::Val::int(domain.min()));
-                }
-            }
-        }
-        
-        Ok(Solution::from(solution_values))
-    }
-
     /// Enumerate all assignments that satisfy all constraints.
     ///
     /// The order in which assignments are yielded is not stable.
@@ -1254,8 +1215,9 @@ impl Model {
     /// let solutions: Vec<_> = m.enumerate().collect();
     /// ```
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
+        let timeout = self.timeout_duration();
         let (vars, props) = self.prepare_for_search();
-        search(vars, props, mode::Enumerate)
+        search_with_timeout(vars, props, mode::Enumerate, timeout)
     }
 
     /// Enumerate all assignments that satisfy all constraints with callback to capture solving statistics.
@@ -1266,9 +1228,10 @@ impl Model {
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
+        let timeout = self.timeout_duration();
         let (vars, props) = self.prepare_for_search();
 
-        let mut search_iter = search(vars, props, mode::Enumerate);
+        let mut search_iter = search_with_timeout(vars, props, mode::Enumerate, timeout);
         let mut solutions = Vec::new();
 
         // CRITICAL: Get the stats BEFORE calling any next() methods,

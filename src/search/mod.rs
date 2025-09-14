@@ -46,6 +46,16 @@ impl Space {
 
 /// Perform search, iterating over assignments that satisfy all constraints.
 pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
+    search_with_timeout(vars, props, mode, None)
+}
+
+/// Perform search with timeout support.
+pub fn search_with_timeout<M: Mode>(
+    vars: Vars, 
+    props: Propagators, 
+    mode: M, 
+    timeout: Option<std::time::Duration>
+) -> Search<M> {
     // Schedule all propagators during initial propagation step
     let agenda = Agenda::with_props(props.get_prop_ids_iter());
 
@@ -56,7 +66,7 @@ pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
 
     // Explore space by alternating branching and propagation
     if is_stalled {
-        Search::Stalled(Engine::new(space, mode))
+        Search::Stalled(Engine::with_timeout(space, mode, timeout))
     } else {
         Search::Done(Some(space))
     }
@@ -106,6 +116,12 @@ pub struct Engine<M, B> {
     mode: M,
     branching_factory: fn(Space) -> B,
     current_stats: Option<(usize, usize)>, // (propagation_count, node_count)
+    // Timeout support
+    start_time: std::time::Instant,
+    timeout_duration: Option<std::time::Duration>,
+    // Optimization: only check timeout periodically
+    iteration_count: usize,
+    timeout_check_interval: usize,
 }
 
 /// Default Engine with SplitOnUnassigned for backwards compatibility
@@ -120,6 +136,25 @@ impl<M> DefaultEngine<M> {
             mode,
             branching_factory: split_on_unassigned,
             current_stats: None,
+            start_time: std::time::Instant::now(),
+            timeout_duration: None,
+            iteration_count: 0,
+            timeout_check_interval: 1000, // Check timeout every 1000 iterations
+        }
+    }
+
+    pub fn with_timeout(space: Space, mode: M, timeout: Option<std::time::Duration>) -> Self {
+        // Preserve a trail of copies to allow backtracking on failed spaces
+        Self {
+            branch_iter: split_on_unassigned(space),
+            stack: Vec::new(),
+            mode,
+            branching_factory: split_on_unassigned,
+            current_stats: None,
+            start_time: std::time::Instant::now(),
+            timeout_duration: timeout,
+            iteration_count: 0,
+            timeout_check_interval: 1000, // Check timeout every 1000 iterations
         }
     }
 }
@@ -143,6 +178,17 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
+            // Periodically check timeout to reduce overhead
+            if let Some(timeout_duration) = self.timeout_duration {
+                self.iteration_count += 1;
+                if self.iteration_count % self.timeout_check_interval == 0 {
+                    if self.start_time.elapsed() >= timeout_duration {
+                        // Timeout exceeded - behavior depends on search mode
+                        return None; // For now, return None (can be enhanced for optimization)
+                    }
+                }
+            }
+
             while let Some((mut space, p)) = self.branch_iter.next() {
                 // Increment node count when exploring a new branch
                 space.props.increment_node_count();

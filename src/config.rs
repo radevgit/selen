@@ -20,9 +20,11 @@ use crate::domain::float_interval::DEFAULT_FLOAT_PRECISION_DIGITS;
 /// let config = SolverConfig::default();
 /// let mut m = Model::with_config(config);
 /// 
-/// // Custom configuration
+/// // Custom configuration with precision and timeout settings
 /// let config = SolverConfig::default()
-///     .with_float_precision(6);
+///     .with_float_precision(8)
+///     .with_timeout_seconds(60)
+///     .with_max_memory_mb(1024);
 /// let mut m = Model::with_config(config);
 /// ```
 #[derive(Debug, Clone)]
