@@ -36,6 +36,17 @@ pub fn search_with_timeout<M: Mode>(
     mode: M, 
     timeout: Option<std::time::Duration>
 ) -> Search<M> {
+    search_with_timeout_and_memory(vars, props, mode, timeout, None)
+}
+
+/// Perform search with timeout and memory limit support.
+pub fn search_with_timeout_and_memory<M: Mode>(
+    vars: Vars, 
+    props: Propagators, 
+    mode: M, 
+    timeout: Option<std::time::Duration>,
+    memory_limit_mb: Option<u64>
+) -> Search<M> {
     // Schedule all propagators during initial propagation step
     let agenda = Agenda::with_props(props.get_prop_ids_iter());
 
@@ -46,7 +57,7 @@ pub fn search_with_timeout<M: Mode>(
 
     // Explore space by alternating branching and propagation
     if is_stalled {
-        Search::Stalled(Engine::with_timeout(space, mode, timeout))
+        Search::Stalled(DefaultEngine::with_timeout_and_memory(space, mode, timeout, memory_limit_mb))
     } else {
         Search::Done(Some(space))
     }
@@ -76,6 +87,38 @@ impl<M> Search<M> {
             Self::Done(None) => 0, // Failed search, no space available
         }
     }
+
+    /// Check if the search has timed out
+    pub fn is_timed_out(&self) -> bool {
+        match self {
+            Self::Stalled(engine) => engine.is_timed_out(),
+            Self::Done(_) => false, // Completed searches cannot timeout
+        }
+    }
+
+    /// Get the elapsed time since search started
+    pub fn elapsed_time(&self) -> std::time::Duration {
+        match self {
+            Self::Stalled(engine) => engine.elapsed_time(),
+            Self::Done(_) => std::time::Duration::from_secs(0), // Completed searches don't track time
+        }
+    }
+
+    /// Check if memory limit has been exceeded
+    pub fn is_memory_limit_exceeded(&self) -> bool {
+        match self {
+            Self::Stalled(engine) => engine.is_memory_limit_exceeded(),
+            Self::Done(_) => false, // Completed searches cannot exceed memory
+        }
+    }
+
+    /// Get current memory usage estimate in MB
+    pub fn get_memory_usage_mb(&self) -> usize {
+        match self {
+            Self::Stalled(engine) => engine.get_memory_usage_mb(),
+            Self::Done(_) => 0, // Completed searches don't track memory
+        }
+    }
 }
 
 impl<M: Mode> Iterator for Search<M> {
@@ -99,7 +142,9 @@ pub struct Engine<M, B> {
     // Timeout support
     start_time: std::time::Instant,
     timeout_duration: Option<std::time::Duration>,
-    // Optimization: only check timeout periodically
+    // Memory limit support
+    memory_limit_mb: Option<u64>,
+    // Optimization: only check timeout/memory periodically
     iteration_count: usize,
     timeout_check_interval: usize,
 }
@@ -118,6 +163,7 @@ impl<M> DefaultEngine<M> {
             current_stats: None,
             start_time: std::time::Instant::now(),
             timeout_duration: None,
+            memory_limit_mb: None,
             iteration_count: 0,
             timeout_check_interval: 1000, // Check timeout every 1000 iterations
         }
@@ -133,6 +179,28 @@ impl<M> DefaultEngine<M> {
             current_stats: None,
             start_time: std::time::Instant::now(),
             timeout_duration: timeout,
+            memory_limit_mb: None,
+            iteration_count: 0,
+            timeout_check_interval: 1000, // Check timeout every 1000 iterations
+        }
+    }
+
+    pub fn with_timeout_and_memory(
+        space: Space, 
+        mode: M, 
+        timeout: Option<std::time::Duration>,
+        memory_limit_mb: Option<u64>
+    ) -> Self {
+        // Preserve a trail of copies to allow backtracking on failed spaces
+        Self {
+            branch_iter: split_on_unassigned(space),
+            stack: Vec::new(),
+            mode,
+            branching_factory: split_on_unassigned,
+            current_stats: None,
+            start_time: std::time::Instant::now(),
+            timeout_duration: timeout,
+            memory_limit_mb,
             iteration_count: 0,
             timeout_check_interval: 1000, // Check timeout every 1000 iterations
         }
@@ -151,6 +219,41 @@ impl<M, B> Engine<M, B> {
         // Return the tracked statistics if available  
         self.current_stats.map(|(_, node_count)| node_count).unwrap_or(0)
     }
+
+    /// Check if the search has timed out
+    pub fn is_timed_out(&self) -> bool {
+        if let Some(timeout_duration) = self.timeout_duration {
+            self.start_time.elapsed() >= timeout_duration
+        } else {
+            false
+        }
+    }
+
+    /// Get the elapsed time since search started
+    pub fn elapsed_time(&self) -> std::time::Duration {
+        self.start_time.elapsed()
+    }
+
+    /// Check if memory limit has been exceeded
+    pub fn is_memory_limit_exceeded(&self) -> bool {
+        if let Some(limit_mb) = self.memory_limit_mb {
+            self.get_memory_usage_mb() > limit_mb as usize
+        } else {
+            false
+        }
+    }
+
+    /// Get current memory usage estimate in MB
+    pub fn get_memory_usage_mb(&self) -> usize {
+        // Simple estimate based on stack depth and iteration count
+        // This is a rough approximation - for production use, consider using
+        // system memory tracking or profiling tools
+        let stack_size_estimate = self.stack.len() * 1024; // Estimate 1KB per stack frame
+        let iteration_overhead = (self.iteration_count / 1000) * 10; // ~10KB per 1000 iterations
+        let base_overhead = 1; // 1MB base overhead
+        
+        base_overhead + (stack_size_estimate / (1024 * 1024)) + (iteration_overhead / 1024)
+    }
 }
 
 impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for Engine<M, B> {
@@ -158,13 +261,22 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            // Periodically check timeout to reduce overhead
-            if let Some(timeout_duration) = self.timeout_duration {
-                self.iteration_count += 1;
-                if self.iteration_count % self.timeout_check_interval == 0 {
+            // Periodically check timeout and memory limits to reduce overhead
+            self.iteration_count += 1;
+            if self.iteration_count % self.timeout_check_interval == 0 {
+                // Check timeout
+                if let Some(timeout_duration) = self.timeout_duration {
                     if self.start_time.elapsed() >= timeout_duration {
                         // Timeout exceeded - behavior depends on search mode
                         return None; // For now, return None (can be enhanced for optimization)
+                    }
+                }
+                
+                // Check memory limit
+                if let Some(limit_mb) = self.memory_limit_mb {
+                    if self.get_memory_usage_mb() > limit_mb as usize {
+                        // Memory limit exceeded - return None
+                        return None;
                     }
                 }
             }

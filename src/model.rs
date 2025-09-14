@@ -80,6 +80,11 @@ impl Model {
         self.config.timeout_seconds.map(std::time::Duration::from_secs)
     }
 
+    /// Get memory limit in MB for search operations
+    fn memory_limit_mb(&self) -> Option<u64> {
+        self.config.max_memory_mb
+    }
+
     /// Get access to constraint registry for debugging/analysis
     pub fn get_constraint_registry(&self) -> &crate::optimization::constraint_metadata::ConstraintRegistry {
         self.props.get_constraint_registry()
@@ -801,9 +806,10 @@ impl Model {
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
+                let memory_limit = self.memory_limit_mb();
                 let (vars, props) = self.prepare_for_search();
 
-                let mut search_iter = search_with_timeout(vars, props, mode::Minimize::new(objective), timeout);
+                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
                 let mut last_solution = None;
                 let mut current_count = 0;
 
@@ -820,6 +826,20 @@ impl Model {
                 };
 
                 callback(&stats);
+                
+                // Check if search terminated due to timeout
+                if search_iter.is_timed_out() {
+                    let elapsed = search_iter.elapsed_time().as_secs_f64();
+                    return Err(SolverError::timeout_with_context(elapsed, "optimization search"));
+                }
+                
+                // Check if search terminated due to memory limit
+                if search_iter.is_memory_limit_exceeded() {
+                    let usage_mb = search_iter.get_memory_usage_mb();
+                    let limit_mb = memory_limit.unwrap_or(0) as usize;
+                    return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
+                }
+                
                 match last_solution {
                     Some(solution) => Ok(solution),
                     None => Err(SolverError::no_solution()),
@@ -881,9 +901,10 @@ impl Model {
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
+                let memory_limit = self.memory_limit_mb();
                 let (vars, props) = self.prepare_for_search();
 
-                let mut search_iter = search_with_timeout(vars, props, mode::Minimize::new(objective), timeout);
+                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
                 let mut solutions = Vec::new();
                 let mut current_count = 0;
 
@@ -900,6 +921,10 @@ impl Model {
                 };
 
                 callback(&stats);
+                
+                // Note: If timeout occurred, we return partial solutions found before timeout
+                // The timeout condition can be checked via search_iter.is_timed_out() if needed
+                
                 solutions
             }
         }
@@ -1098,8 +1123,28 @@ impl Model {
         match self.try_hybrid_solve() {
             Some(solution) => Ok(solution),
             None => {
-                // Fall back to traditional constraint propagation search
-                match self.enumerate().next() {
+                // Fall back to traditional constraint propagation search with timeout checking
+                let timeout = self.timeout_duration();
+                let memory_limit = self.memory_limit_mb();
+                let (vars, props) = self.prepare_for_search();
+                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
+                
+                let result = search_iter.next();
+                
+                // Check if search terminated due to timeout
+                if search_iter.is_timed_out() {
+                    let elapsed = search_iter.elapsed_time().as_secs_f64();
+                    return Err(SolverError::timeout_with_context(elapsed, "constraint satisfaction"));
+                }
+                
+                // Check if search terminated due to memory limit
+                if search_iter.is_memory_limit_exceeded() {
+                    let usage_mb = search_iter.get_memory_usage_mb();
+                    let limit_mb = memory_limit.unwrap_or(0) as usize;
+                    return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
+                }
+                
+                match result {
                     Some(solution) => Ok(solution),
                     None => Err(SolverError::no_solution()),
                 }
@@ -1149,10 +1194,11 @@ impl Model {
     {
         // Run the solving process
         let timeout = self.timeout_duration();
+        let memory_limit = self.memory_limit_mb();
         let (vars, props) = self.prepare_for_search();
 
         // Create a search and run it to completion to capture final stats
-        let mut search_iter = search_with_timeout(vars, props, mode::Enumerate, timeout);
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
         let result = search_iter.next();
 
         // Get the final stats from the search
@@ -1165,6 +1211,20 @@ impl Model {
         };
 
         callback(&stats);
+        
+        // Check if search terminated due to timeout
+        if search_iter.is_timed_out() {
+            let elapsed = search_iter.elapsed_time().as_secs_f64();
+            return Err(SolverError::timeout_with_context(elapsed, "constraint satisfaction"));
+        }
+        
+        // Check if search terminated due to memory limit
+        if search_iter.is_memory_limit_exceeded() {
+            let usage_mb = search_iter.get_memory_usage_mb();
+            let limit_mb = memory_limit.unwrap_or(0) as usize;
+            return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
+        }
+        
         match result {
             Some(solution) => Ok(solution),
             None => Err(SolverError::no_solution()),
@@ -1229,8 +1289,9 @@ impl Model {
     /// ```
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
         let timeout = self.timeout_duration();
+        let memory_limit = self.memory_limit_mb();
         let (vars, props) = self.prepare_for_search();
-        search_with_timeout(vars, props, mode::Enumerate, timeout)
+        search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit)
     }
 
     /// Enumerate all assignments that satisfy all constraints with callback to capture solving statistics.
@@ -1242,9 +1303,10 @@ impl Model {
         F: FnOnce(&crate::solution::SolveStats),
     {
         let timeout = self.timeout_duration();
+        let memory_limit = self.memory_limit_mb();
         let (vars, props) = self.prepare_for_search();
 
-        let mut search_iter = search_with_timeout(vars, props, mode::Enumerate, timeout);
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
         let mut solutions = Vec::new();
 
         // CRITICAL: Get the stats BEFORE calling any next() methods,
@@ -1263,6 +1325,10 @@ impl Model {
         };
 
         callback(&stats);
+        
+        // Note: If timeout occurred, we return partial solutions found before timeout
+        // The timeout condition can be checked via search_iter.is_timed_out() if needed
+        
         solutions
     }
 }
