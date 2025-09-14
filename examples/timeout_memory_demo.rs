@@ -2,6 +2,15 @@
 //!
 //! This example demonstrates the graceful timeout and memory limit handling
 //! implemented as part of the Production Readiness Plan Step 8.1.1.
+//!
+//! ## Performance Note
+//!
+//! **For reliable timeout testing, run with `cargo run --release --example timeout_memory_demo`**
+//! - Debug mode: Solver is slower, timeouts may trigger more reliably
+//! - Release mode: Solver is faster, may need more complex problems for timeouts
+//!
+//! The timeout tests use computationally intensive problems designed to stress
+//! the solver safely without consuming excessive system resources.
 
 use cspsolver::prelude::*;
 
@@ -23,30 +32,33 @@ fn test_timeout_handling() {
     println!("🕒 Test 1: Timeout Handling");
     println!("---------------------------");
     
-    // Create a complex problem that should timeout
+    // Create a challenging problem that should timeout in 1 second
     let mut model = Model::with_config(
         SolverConfig::default()
             .with_timeout_seconds(1) // Very short timeout
     );
     
-    // Create many variables with large domains to make solving slow
-    let vars: Vec<_> = (0..20).map(|_| model.int(1, 100)).collect();
+    // Create a large all-different problem (computationally expensive)
+    let vars: Vec<_> = (0..40).map(|_| model.int(1, 40)).collect();
     
-    // Add all-different constraint to make the problem complex
-    let vars_clone = vars.clone();
-    model.props.all_different(vars_clone);
+    // Add all-different constraint (creates large search space)
+    model.props.all_different(vars.clone());
     
-    // This should timeout
+    // Add sum constraint to make it even harder
+    let sum_all = model.sum(&vars);
+    let target = model.int(820, 820); // Sum of 1..40 is 820
+    post!(model, sum_all == target);
+    
     let result = model.solve();
     
     match result {
-        Err(SolverError::Timeout { elapsed_seconds, operation }) => {
+        Err(SolverError::Timeout { elapsed_seconds, operation: _ }) => {
             println!("✅ Timeout handled gracefully!");
             println!("   ⏱️  Elapsed: {:.2}s", elapsed_seconds.unwrap_or(0.0));
-            println!("   🔧 Operation: {}", operation.as_deref().unwrap_or("unknown"));
         }
         Ok(_) => {
             println!("⚠️  Problem solved too quickly - timeout test may be unreliable");
+            println!("   💡 Try running with --release for more realistic performance");
         }
         Err(other) => {
             println!("❌ Unexpected error: {:?}", other);
@@ -54,7 +66,7 @@ fn test_timeout_handling() {
     }
 }
 
-/// Test memory limit handling
+/// Test memory limit handling  
 fn test_memory_limit_handling() {
     println!("💾 Test 2: Memory Limit Handling");
     println!("--------------------------------");
@@ -62,16 +74,15 @@ fn test_memory_limit_handling() {
     // Create a problem with very low memory limit
     let mut model = Model::with_config(
         SolverConfig::default()
-            .with_max_memory_mb(2) // Very low memory limit
-            .with_timeout_seconds(5) // Reasonable timeout as backup
+            .with_max_memory_mb(1) // Very low memory limit  
+            .with_timeout_seconds(3) // Backup timeout
     );
     
-    // Create a problem that might consume memory
-    let vars: Vec<_> = (0..15).map(|_| model.int(1, 50)).collect();
+    // Create a moderately complex but solvable problem
+    let vars: Vec<_> = (0..15).map(|_| model.int(1, 20)).collect();
     
-    // Add all-different constraint instead of manual != constraints
-    let vars_clone = vars.clone();
-    model.props.all_different(vars_clone);
+    // Add all-different constraint (solvable since 15 vars in domain [1,20])
+    model.props.all_different(vars.clone());
     
     let result = model.solve();
     
@@ -81,13 +92,14 @@ fn test_memory_limit_handling() {
             println!("   📊 Usage: {}MB", usage_mb.unwrap_or(0));
             println!("   🚧 Limit: {}MB", limit_mb.unwrap_or(0));
         }
-        Err(SolverError::Timeout { elapsed_seconds, operation }) => {
+        Err(SolverError::Timeout { elapsed_seconds, operation: _ }) => {
             println!("⏱️  Timed out before hitting memory limit");
             println!("   ⏱️  Elapsed: {:.2}s", elapsed_seconds.unwrap_or(0.0));
         }
-        Ok(solution) => {
-            println!("✅ Problem solved successfully: {:?}", solution);
-            println!("   (Memory limit test may be unreliable - problem too simple)");
+        Ok(_solution) => {
+            println!("✅ Problem solved successfully!");
+            println!("   💡 Memory limit test may need adjustment for this system");
+            println!("   📝 Memory monitoring is conservative and may underestimate usage");
         }
         Err(other) => {
             println!("❌ Unexpected error: {:?}", other);

@@ -28,6 +28,8 @@ impl ConstraintRef {
 /// 
 /// **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 /// 
+/// **Array indexing**: `vars[i] op vars[j]`, `vars[i] op var`, `var op vars[i]`, `vars[i] op literal`, `literal op vars[i]`
+/// 
 /// **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 /// 
 /// **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
@@ -71,7 +73,162 @@ macro_rules! post {
         $model.props.not_equals($left, $right);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
+
+    // Handle array indexing: vars[i] < vars[j], vars[0] == x, etc.
+    ($model:expr, $left_array:ident[$left_index:expr] < $right_array:ident[$right_index:expr]) => {{
+        $model.props.less_than($left_array[$left_index], $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
     
+    ($model:expr, $left_array:ident[$left_index:expr] <= $right_array:ident[$right_index:expr]) => {{
+        $model.props.less_than_or_equals($left_array[$left_index], $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] > $right_array:ident[$right_index:expr]) => {{
+        $model.props.greater_than($left_array[$left_index], $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] >= $right_array:ident[$right_index:expr]) => {{
+        $model.props.greater_than_or_equals($left_array[$left_index], $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] == $right_array:ident[$right_index:expr]) => {{
+        $model.props.equals($left_array[$left_index], $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] != $right_array:ident[$right_index:expr]) => {{
+        $model.props.not_equals($left_array[$left_index], $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Handle array vs variable: vars[i] < x, x == vars[0]
+    ($model:expr, $left_array:ident[$left_index:expr] < $right:ident) => {{
+        $model.props.less_than($left_array[$left_index], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] <= $right:ident) => {{
+        $model.props.less_than_or_equals($left_array[$left_index], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] > $right:ident) => {{
+        $model.props.greater_than($left_array[$left_index], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] >= $right:ident) => {{
+        $model.props.greater_than_or_equals($left_array[$left_index], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] == $right:ident) => {{
+        $model.props.equals($left_array[$left_index], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] != $right:ident) => {{
+        $model.props.not_equals($left_array[$left_index], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Handle variable vs array: x < vars[i], y == vars[0]
+    ($model:expr, $left:ident < $right_array:ident[$right_index:expr]) => {{
+        $model.props.less_than($left, $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident <= $right_array:ident[$right_index:expr]) => {{
+        $model.props.less_than_or_equals($left, $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident > $right_array:ident[$right_index:expr]) => {{
+        $model.props.greater_than($left, $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident >= $right_array:ident[$right_index:expr]) => {{
+        $model.props.greater_than_or_equals($left, $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident == $right_array:ident[$right_index:expr]) => {{
+        $model.props.equals($left, $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident != $right_array:ident[$right_index:expr]) => {{
+        $model.props.not_equals($left, $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Handle array vs literal: vars[i] < 5, vars[0] == 42
+    ($model:expr, $left_array:ident[$left_index:expr] < $right:literal) => {{
+        $model.props.less_than($left_array[$left_index], $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] <= $right:literal) => {{
+        $model.props.less_than_or_equals($left_array[$left_index], $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] > $right:literal) => {{
+        $model.props.greater_than($left_array[$left_index], $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] >= $right:literal) => {{
+        $model.props.greater_than_or_equals($left_array[$left_index], $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] == $right:literal) => {{
+        $model.props.equals($left_array[$left_index], $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] != $right:literal) => {{
+        $model.props.not_equals($left_array[$left_index], $crate::vars::Val::from($right));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Handle literal vs array: 5 < vars[i], 42 == vars[0]
+    ($model:expr, $left:literal < $right_array:ident[$right_index:expr]) => {{
+        $model.props.less_than($crate::vars::Val::from($left), $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:literal <= $right_array:ident[$right_index:expr]) => {{
+        $model.props.less_than_or_equals($crate::vars::Val::from($left), $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:literal > $right_array:ident[$right_index:expr]) => {{
+        $model.props.greater_than($crate::vars::Val::from($left), $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:literal >= $right_array:ident[$right_index:expr]) => {{
+        $model.props.greater_than_or_equals($crate::vars::Val::from($left), $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:literal == $right_array:ident[$right_index:expr]) => {{
+        $model.props.equals($crate::vars::Val::from($left), $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:literal != $right_array:ident[$right_index:expr]) => {{
+        $model.props.not_equals($crate::vars::Val::from($left), $right_array[$right_index]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
     // Handle variable vs bare literal: x < 5, y >= 3.14
     ($model:expr, $left:ident < $right:literal) => {{
         $model.props.less_than($left, $crate::vars::Val::from($right));
@@ -2069,6 +2226,56 @@ mod tests {
         post!(m, sum(vars) <= int(25));
         
         // Should compile and run without errors
+        assert!(true);
+    }
+
+    #[test]
+    fn test_array_indexing_support() {
+        let mut m = Model::default();
+        let vars: Vec<_> = (0..5).map(|_| m.int(1, 10)).collect();
+        let x = m.int(1, 10);
+        
+        // Test array vs array indexing
+        let _c1 = post!(m, vars[0] < vars[1]);
+        let _c2 = post!(m, vars[1] <= vars[2]);
+        let _c3 = post!(m, vars[2] > vars[3]);
+        let _c4 = post!(m, vars[3] >= vars[4]);
+        let _c5 = post!(m, vars[0] == vars[4]);
+        let _c6 = post!(m, vars[1] != vars[3]);
+        
+        // Test array vs variable
+        let _c7 = post!(m, vars[0] < x);
+        let _c8 = post!(m, vars[1] <= x);
+        let _c9 = post!(m, vars[2] > x);
+        let _c10 = post!(m, vars[3] >= x);
+        let _c11 = post!(m, vars[4] == x);
+        let _c12 = post!(m, vars[0] != x);
+        
+        // Test variable vs array
+        let _c13 = post!(m, x < vars[0]);
+        let _c14 = post!(m, x <= vars[1]);
+        let _c15 = post!(m, x > vars[2]);
+        let _c16 = post!(m, x >= vars[3]);
+        let _c17 = post!(m, x == vars[4]);
+        let _c18 = post!(m, x != vars[0]);
+        
+        // Test array vs literal
+        let _c19 = post!(m, vars[0] < 5);
+        let _c20 = post!(m, vars[1] <= 7);
+        let _c21 = post!(m, vars[2] > 3);
+        let _c22 = post!(m, vars[3] >= 2);
+        let _c23 = post!(m, vars[4] == 8);
+        let _c24 = post!(m, vars[0] != 9);
+        
+        // Test literal vs array
+        let _c25 = post!(m, 5 < vars[0]);
+        let _c26 = post!(m, 7 <= vars[1]);
+        let _c27 = post!(m, 3 > vars[2]);
+        let _c28 = post!(m, 2 >= vars[3]);
+        let _c29 = post!(m, 8 == vars[4]);
+        let _c30 = post!(m, 9 != vars[0]);
+        
+        // Should compile without errors
         assert!(true);
     }
 }
