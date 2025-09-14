@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::domain::float_interval::{DEFAULT_FLOAT_PRECISION_DIGITS, precision_to_step_size};
 use crate::optimization::model_integration::{OptimizationRouter, OptimizationAttempt};
+use crate::error::{SolverError, SolverResult};
 use std::ops::Index;
 
 #[derive(Debug)]
@@ -763,8 +764,11 @@ impl Model {
     /// let solution = m.minimize(x);
     /// ```
     #[must_use]
-    pub fn minimize(self, objective: impl View) -> Option<Solution> {
-        self.minimize_and_iterate(objective).last()
+    pub fn minimize(self, objective: impl View) -> SolverResult<Solution> {
+        match self.minimize_and_iterate(objective).last() {
+            Some(solution) => Ok(solution),
+            None => Err(SolverError::NoSolution),
+        }
     }
 
     /// Find assignment that minimizes objective expression with callback to capture solving statistics.
@@ -779,7 +783,7 @@ impl Model {
     /// });
     /// ```
     #[must_use]
-    pub fn minimize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
+    pub fn minimize_with_callback<F>(self, objective: impl View, callback: F) -> SolverResult<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
@@ -792,7 +796,7 @@ impl Model {
                     node_count: 0,
                 };
                 callback(&stats);
-                Some(solution)
+                Ok(solution)
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
@@ -816,7 +820,10 @@ impl Model {
                 };
 
                 callback(&stats);
-                last_solution
+                match last_solution {
+                    Some(solution) => Ok(solution),
+                    None => Err(SolverError::NoSolution),
+                }
             }
         }
     }
@@ -909,10 +916,10 @@ impl Model {
     /// let solution = m.maximize(x);
     /// ```
     #[must_use]
-    pub fn maximize(self, objective: impl View) -> Option<Solution> {
+    pub fn maximize(self, objective: impl View) -> SolverResult<Solution> {
         // First try specialized optimization before falling back to opposite+minimize pattern
         match self.try_optimization_maximize(&objective) {
-            Some(solution) => Some(solution),
+            Some(solution) => Ok(solution),
             None => self.minimize(objective.opposite()),
         }
     }
@@ -929,7 +936,7 @@ impl Model {
     /// });
     /// ```
     #[must_use]
-    pub fn maximize_with_callback<F>(self, objective: impl View, callback: F) -> Option<Solution>
+    pub fn maximize_with_callback<F>(self, objective: impl View, callback: F) -> SolverResult<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
@@ -942,7 +949,7 @@ impl Model {
                     node_count: 0,
                 };
                 callback(&stats);
-                Some(solution)
+                Ok(solution)
             }
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
@@ -1086,13 +1093,16 @@ impl Model {
     /// let solution = m.solve();
     /// ```
     #[must_use]
-    pub fn solve(self) -> Option<Solution> {
+    pub fn solve(self) -> SolverResult<Solution> {
         // Step 6.5: Try hybrid optimization for mixed problems first
         match self.try_hybrid_solve() {
-            Some(solution) => Some(solution),
+            Some(solution) => Ok(solution),
             None => {
                 // Fall back to traditional constraint propagation search
-                self.enumerate().next()
+                match self.enumerate().next() {
+                    Some(solution) => Ok(solution),
+                    None => Err(SolverError::NoSolution),
+                }
             }
         }
     }
@@ -1133,7 +1143,7 @@ impl Model {
     /// });
     /// ```
     #[must_use]
-    pub fn solve_with_callback<F>(self, callback: F) -> Option<Solution>
+    pub fn solve_with_callback<F>(self, callback: F) -> SolverResult<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
     {
@@ -1155,7 +1165,10 @@ impl Model {
         };
 
         callback(&stats);
-        result
+        match result {
+            Some(solution) => Ok(solution),
+            None => Err(SolverError::NoSolution),
+        }
     }
 
     #[doc(hidden)]

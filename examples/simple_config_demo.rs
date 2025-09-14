@@ -35,16 +35,19 @@ fn main() {
     println!("Variables: x ∈ [0, 10], y ∈ [0, 10]");
     println!("Constraint: x + y >= 5");
 
-    if let Some(solution) = model.solve() {
-        use cspsolver::vars::Val;
-        println!("Solution found:");
-        if let Val::ValI(x_val) = solution.get_values(&[x])[0] {
-            println!("x = {}", x_val);
+    match model.solve() {
+        Ok(solution) => {
+            use cspsolver::vars::Val;
+            println!("Solution found:");
+            if let Val::ValI(x_val) = solution.get_values(&[x])[0] {
+                println!("x = {}", x_val);
+            }
+            if let Val::ValI(y_val) = solution.get_values(&[y])[0] {
+                println!("y = {}", y_val);
+            }
         }
-        if let Val::ValI(y_val) = solution.get_values(&[y])[0] {
-            println!("y = {}", y_val);
+        Err(err) => {
+            println!("No solution found: {}", err);
         }
-    } else {
-        println!("No solution found");
     }
 }

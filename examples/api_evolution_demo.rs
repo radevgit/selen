@@ -53,9 +53,16 @@ fn show_mathematical_api() {
     post!(m, y > 1);
     post!(m, z != 0);
     
-    let solution = m.solve().unwrap();
-    println!("   ✅ Mathematical solution: x={:?}, y={:?}, z={:?}", 
-             solution[x], solution[y], solution[z]);
+    match m.solve() {
+        Ok(solution) => {
+            println!("   ✅ Mathematical solution: x={:?}, y={:?}, z={:?}", 
+                     solution[x], solution[y], solution[z]);
+        }
+        Err(err) => {
+            println!("   ❌ Failed to find solution: {}", err);
+            return;
+        }
+    }
 }
 
 fn api_comparison() {

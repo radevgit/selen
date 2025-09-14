@@ -18,7 +18,7 @@ fn test_model_with_config_basic() {
     
     // Should be able to solve with the custom configuration
     let solution = m.solve();
-    assert!(solution.is_some());
+    assert!(solution.is_ok());
 }
 
 #[test]

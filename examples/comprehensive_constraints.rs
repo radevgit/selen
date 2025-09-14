@@ -96,7 +96,7 @@ fn basic_constraints_demo() {
     println!("   post!(m, x != y);          // Not equal");
     post!(m, x != y);
     
-    if let Some(solution) = m.solve() {
+    if let Ok(solution) = m.solve() {
         println!("\n✅ Solution found:");
         println!("   x = {:?}, y = {:?}, z = {:?}", solution[x], solution[y], solution[z]);
     } else {
@@ -131,7 +131,7 @@ fn variable_types_demo() {
     println!("   post!(m, temperature > 20.0);");
     println!("   post!(m, percentage <= 50.0);");
     
-    if let Some(solution) = m.solve() {
+    if let Ok(solution) = m.solve() {
         println!("\n✅ Solution found:");
         println!("   small_int = {:?}", solution[small_int]);
         println!("   large_int = {:?}", solution[large_int]);
@@ -161,7 +161,7 @@ fn arithmetic_expressions_demo() {
     println!("   post!(m, result >= 20);    // Result constraint");
     post!(m, result >= 20);
     
-    if let Some(solution) = m.solve() {
+    if let Ok(solution) = m.solve() {
         println!("\n✅ Solution found:");
         let x_val = if let Val::ValI(v) = solution[x] { v } else { 0 };
         let y_val = if let Val::ValI(v) = solution[y] { v } else { 0 };
@@ -198,7 +198,7 @@ fn global_constraints_demo() {
     println!("   post!(m, total >= 10);        // Total must be at least 10");
     post!(m, total >= 10);
     
-    if let Some(solution) = m.solve() {
+    if let Ok(solution) = m.solve() {
         println!("\n✅ Solution found:");
         let a_val = if let Val::ValI(v) = solution[a] { v } else { 0 };
         let b_val = if let Val::ValI(v) = solution[b] { v } else { 0 };
@@ -228,7 +228,7 @@ fn batch_operations_demo() {
     println!("   post!(m, alldiff({:?}));", vars);
     post!(m, alldiff(vars.clone()));
     
-    if let Some(solution) = m.solve() {
+    if let Ok(solution) = m.solve() {
         println!("\n✅ Solution found:");
         for (i, &var) in vars.iter().enumerate() {
             let val = if let Val::ValI(v) = solution[var] { v } else { 0 };

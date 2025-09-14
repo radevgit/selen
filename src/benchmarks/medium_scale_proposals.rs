@@ -29,7 +29,7 @@ pub fn test_grouped_constraints_approach() -> (Duration, bool) {
         post!(m, part < 4.5);
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     (duration, success)
@@ -64,7 +64,7 @@ pub fn test_hierarchical_decomposition() -> (Duration, bool) {
         post!(m, detail < 4.9);
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     (duration, success)
@@ -89,7 +89,7 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
             post!(m, var < (target + 0.01));
         }
         
-        let success = m.solve().is_some();
+        let success = m.solve().is_ok();
         total_success &= success;
         batch_durations.push(batch_start.elapsed());
     }
@@ -106,7 +106,7 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
             post!(m, var < (target + 0.01));
         }
         
-        let success = m.solve().is_some();
+        let success = m.solve().is_ok();
         total_success &= success;
         batch_durations.push(batch_start.elapsed());
     }
@@ -123,7 +123,7 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
             post!(m, var < (target + 0.01));
         }
         
-        let success = m.solve().is_some();
+        let success = m.solve().is_ok();
         total_success &= success;
         batch_durations.push(batch_start.elapsed());
     }
@@ -161,7 +161,7 @@ pub fn test_constraint_simplification() -> (Duration, bool) {
         post!(m, var < 4.9);
     }
     
-    let success = m.solve().is_some();
+    let success = m.solve().is_ok();
     let duration = start.elapsed();
     
     (duration, success)
@@ -181,7 +181,7 @@ pub fn run_medium_scale_optimization_proposals() {
         post!(m, var > (target - 0.001));
         post!(m, var < (target + 0.001));
     }
-    let original_success = m.solve().is_some();
+    let original_success = m.solve().is_ok();
     let original_duration = start.elapsed();
     
     println!("Baseline (Original): {} μs ({})", 
