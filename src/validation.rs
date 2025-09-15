@@ -40,7 +40,7 @@
 use crate::error::SolverError;
 use crate::vars::{Vars, Var, VarId};
 use crate::props::Propagators;
-use crate::optimization::constraint_metadata::{ConstraintRegistry, ConstraintType};
+use crate::optimization::constraint_metadata::ConstraintType;
 use std::collections::{HashMap, HashSet};
 
 /// Comprehensive model validation system that checks for:
@@ -269,7 +269,7 @@ impl<'a> ModelValidator<'a> {
                 }
                 
                 // Calculate minimum required domain size for AllDifferent
-                let mut total_domain_size = 0;
+                let mut _total_domain_size = 0;
                 let mut min_individual_domain = usize::MAX;
                 
                 for &var_id in variables {
@@ -282,7 +282,7 @@ impl<'a> ModelValidator<'a> {
                         }
                     };
                     
-                    total_domain_size += domain_size;
+                    _total_domain_size += domain_size;
                     min_individual_domain = min_individual_domain.min(domain_size);
                 }
                 
@@ -324,11 +324,30 @@ impl<'a> ModelValidator<'a> {
                         }
                     },
                     ConstraintType::Addition | ConstraintType::Multiplication => {
-                        // These constraints typically need exactly 3 variables: x, y, result
-                        if metadata.variables.len() != 3 {
+                        // These constraints need exactly 3 operands: x, y, result
+                        // But the variable count can be 2 if one operand is a constant
+                        let operand_count = if let crate::optimization::constraint_metadata::ConstraintData::NAry { operands } = &metadata.data {
+                            operands.len()
+                        } else {
+                            metadata.variables.len()
+                        };
+                        
+                        if operand_count != 3 {
                             return Err(SolverError::InvalidConstraint {
                                 message: format!(
-                                    "{:?} constraint requires exactly 3 variables (x, y, result), got {}",
+                                    "{:?} constraint requires exactly 3 operands (x, y, result), got {}",
+                                    metadata.constraint_type, operand_count
+                                ),
+                                constraint_name: Some(format!("constraint_{}", constraint_id.0)),
+                                variables: Some(metadata.variables.iter().map(|id| format!("var_{:?}", id)).collect()),
+                            });
+                        }
+                        
+                        // Variable count should be 2 or 3 (depending on whether constants are involved)
+                        if metadata.variables.len() < 2 || metadata.variables.len() > 3 {
+                            return Err(SolverError::InvalidConstraint {
+                                message: format!(
+                                    "{:?} constraint requires 2-3 variables, got {}",
                                     metadata.constraint_type, metadata.variables.len()
                                 ),
                                 constraint_name: Some(format!("constraint_{}", constraint_id.0)),

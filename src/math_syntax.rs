@@ -71,6 +71,40 @@ impl TypedConstant {
     }
 }
 
+// Implement View traits for TypedConstant so it can be used directly with constraints
+impl crate::views::ViewRaw for TypedConstant {
+    fn get_underlying_var_raw(self) -> Option<crate::vars::VarId> {
+        None // Constants don't have underlying variables
+    }
+
+    fn min_raw(self, _vars: &crate::vars::Vars) -> crate::vars::Val {
+        self.to_val() // Constants have fixed values
+    }
+
+    fn max_raw(self, _vars: &crate::vars::Vars) -> crate::vars::Val {
+        self.to_val() // Constants have fixed values
+    }
+}
+
+impl crate::views::View for TypedConstant {
+    fn result_type(self, _ctx: &crate::views::Context) -> crate::views::ViewType {
+        match self {
+            TypedConstant::Integer(_) => crate::views::ViewType::Integer,
+            TypedConstant::Float(_) => crate::views::ViewType::Float,
+        }
+    }
+
+    fn try_set_min(self, min: crate::vars::Val, _ctx: &mut crate::views::Context) -> Option<crate::vars::Val> {
+        let self_val = self.to_val();
+        if min <= self_val { Some(self_val) } else { None }
+    }
+
+    fn try_set_max(self, max: crate::vars::Val, _ctx: &mut crate::views::Context) -> Option<crate::vars::Val> {
+        let self_val = self.to_val();
+        if max >= self_val { Some(self_val) } else { None }
+    }
+}
+
 /// Create an explicit integer constant
 /// 
 /// # Examples

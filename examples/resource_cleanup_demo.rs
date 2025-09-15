@@ -48,9 +48,9 @@ fn demo_timeout_cleanup() {
     let elapsed = start.elapsed();
     
     match result {
-        Some(_) => println!("  Unexpectedly found solution in {:?}", elapsed),
-        None => {
-            println!("  Search timed out after {:?}", elapsed);
+        Ok(_) => println!("  Unexpectedly found solution in {:?}", elapsed),
+        Err(e) => {
+            println!("  Search failed with error: {} after {:?}", e, elapsed);
             if cleanup_called.load(Ordering::SeqCst) {
                 println!("  ✓ Resource cleanup was properly triggered!");
             } else {
@@ -94,9 +94,9 @@ fn demo_memory_limit_cleanup() {
     let elapsed = start.elapsed();
     
     match result {
-        Some(_) => println!("  Found solution in {:?}", elapsed),
-        None => {
-            println!("  Search stopped after {:?}", elapsed);
+        Ok(_) => println!("  Found solution in {:?}", elapsed),
+        Err(e) => {
+            println!("  Search failed with error: {} after {:?}", e, elapsed);
             if cleanup_called.load(Ordering::SeqCst) {
                 println!("  ✓ Resource cleanup was properly triggered!");
             } else {

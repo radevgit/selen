@@ -588,10 +588,34 @@ impl Propagators {
 
     /// Declare a new propagator to enforce `x * y == s`.
     pub fn mul(&mut self, x: impl View, y: impl View, s: VarId) -> PropId {
-        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo, ConstraintValue};
         
-        let x_info = self.analyze_view(&x);
-        let y_info = self.analyze_view(&y);
+        // Special handling for TypedConstant detection
+        fn analyze_view_for_constants<T: View>(view: &T) -> ViewInfo {
+            if let Some(var_id) = view.get_underlying_var() {
+                ViewInfo::Variable { var_id }
+            } else {
+                // This view has no underlying variable - it might be a constant
+                // For TypedConstant, we can detect this by checking min == max
+                // Since both are the constant value
+                let min_val = view.min_raw(&crate::vars::Vars::default());
+                let max_val = view.max_raw(&crate::vars::Vars::default());
+                
+                if min_val == max_val {
+                    // This is likely a constant value
+                    let const_val = match min_val {
+                        crate::vars::Val::ValI(i) => ConstraintValue::Integer(i),
+                        crate::vars::Val::ValF(f) => ConstraintValue::Float(f),
+                    };
+                    ViewInfo::Constant { value: const_val }
+                } else {
+                    ViewInfo::Complex
+                }
+            }
+        }
+        
+        let x_info = analyze_view_for_constants(&x);
+        let y_info = analyze_view_for_constants(&y);
         let s_info = ViewInfo::Variable { var_id: s };
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
