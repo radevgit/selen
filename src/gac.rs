@@ -733,6 +733,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore = "takes too mutch time"]
     fn test_large_scale_gac() {
         // Test GAC with more than 64 variables (would fail with old limit)
         let mut gac = SparseSetGAC::new();

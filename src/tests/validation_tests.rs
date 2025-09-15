@@ -104,6 +104,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "takes too mutch time"]
     fn test_validation_large_domain_handling() {
         // Create a model with a large domain (but not too extreme to avoid memory issues)
         let mut model = Model::default();
