@@ -210,6 +210,11 @@ impl ConstraintRegistry {
             .collect()
     }
 
+    /// Get all constraint IDs registered in the system
+    pub fn get_all_constraint_ids(&self) -> Vec<ConstraintId> {
+        self.constraints.keys().cloned().collect()
+    }
+
     /// Analyze constraints for a variable to extract simple patterns
     pub fn analyze_variable_constraints(&self, var_id: VarId) -> VariableConstraintAnalysis {
         let constraint_ids = self.get_constraints_for_variable(var_id);

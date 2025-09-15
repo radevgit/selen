@@ -33,6 +33,7 @@ cspsolver = "0.5.8"
 ```bash
 
 cargo run --release --example sudoku
+cargo run --release --example n_queens
 cargo run --release --example pc_builder
 cargo run --release --example resource_allocation
 cargo run --release --example portfolio_optimization

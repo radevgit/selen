@@ -807,7 +807,7 @@ impl Model {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
                 let memory_limit = self.memory_limit_mb();
-                let (vars, props) = self.prepare_for_search();
+                let (vars, props) = self.prepare_for_search()?;
 
                 let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
                 let mut last_solution = None;
@@ -869,8 +869,15 @@ impl Model {
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
-                let (vars, props) = self.prepare_for_search();
-                Box::new(search_with_timeout(vars, props, mode::Minimize::new(objective), timeout)) as Box<dyn Iterator<Item = Solution>>
+                match self.prepare_for_search() {
+                    Ok((vars, props)) => {
+                        Box::new(search_with_timeout(vars, props, mode::Minimize::new(objective), timeout)) as Box<dyn Iterator<Item = Solution>>
+                    }
+                    Err(_) => {
+                        // Validation failed - return empty iterator
+                        Box::new(std::iter::empty()) as Box<dyn Iterator<Item = Solution>>
+                    }
+                }
             }
         }
     }
@@ -902,7 +909,18 @@ impl Model {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
                 let memory_limit = self.memory_limit_mb();
-                let (vars, props) = self.prepare_for_search();
+                let (vars, props) = match self.prepare_for_search() {
+                    Ok(result) => result,
+                    Err(_) => {
+                        // Validation failed - report error stats and return empty vector
+                        let stats = crate::solution::SolveStats {
+                            propagation_count: 0,
+                            node_count: 0,
+                        };
+                        callback(&stats);
+                        return Vec::new();
+                    }
+                };
 
                 let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
                 let mut solutions = Vec::new();
@@ -1144,7 +1162,7 @@ impl Model {
                 // Fall back to traditional constraint propagation search with timeout checking
                 let timeout = self.timeout_duration();
                 let memory_limit = self.memory_limit_mb();
-                let (vars, props) = self.prepare_for_search();
+                let (vars, props) = self.prepare_for_search()?;
                 let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
                 
                 let result = search_iter.next();
@@ -1213,7 +1231,7 @@ impl Model {
         // Run the solving process
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
-        let (vars, props) = self.prepare_for_search();
+        let (vars, props) = self.prepare_for_search()?;
 
         // Create a search and run it to completion to capture final stats
         let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
@@ -1250,12 +1268,16 @@ impl Model {
     }
 
     #[doc(hidden)]
-    /// Internal helper that automatically optimizes constraints before search.
-    /// This ensures all solving methods benefit from constraint optimization.
-    fn prepare_for_search(mut self) -> (crate::vars::Vars, crate::props::Propagators) {
-        // Automatically optimize constraint order for better performance
+    /// Internal helper that validates the model and optimizes constraints before search.
+    /// This ensures all solving methods benefit from validation and constraint optimization.
+    fn prepare_for_search(mut self) -> Result<(crate::vars::Vars, crate::props::Propagators), crate::error::SolverError> {
+        // First, validate the model for common errors
+        let validator = crate::validation::ModelValidator::new(&self.vars, &self.props);
+        validator.validate()?;
+        
+        // Then optimize constraint order for better performance
         self.optimize_constraint_order();
-        (self.vars, self.props)
+        Ok((self.vars, self.props))
     }
 
     /// Try to solve minimization using specialized optimization algorithms
@@ -1308,8 +1330,15 @@ impl Model {
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
-        let (vars, props) = self.prepare_for_search();
-        search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit)
+        match self.prepare_for_search() {
+            Ok((vars, props)) => {
+                Box::new(search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit)) as Box<dyn Iterator<Item = Solution>>
+            }
+            Err(_) => {
+                // Validation failed - return empty iterator
+                Box::new(std::iter::empty()) as Box<dyn Iterator<Item = Solution>>
+            }
+        }
     }
 
     /// Enumerate all assignments that satisfy all constraints with callback to capture solving statistics.
@@ -1322,7 +1351,18 @@ impl Model {
     {
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
-        let (vars, props) = self.prepare_for_search();
+        let (vars, props) = match self.prepare_for_search() {
+            Ok(result) => result,
+            Err(_) => {
+                // Validation failed - report error stats and return empty vector
+                let stats = crate::solution::SolveStats {
+                    propagation_count: 0,
+                    node_count: 0,
+                };
+                callback(&stats);
+                return Vec::new();
+            }
+        };
 
         let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
         let mut solutions = Vec::new();

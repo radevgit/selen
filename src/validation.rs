@@ -1,0 +1,392 @@
+use crate::error::SolverError;
+use crate::vars::{Vars, Var, VarId};
+use crate::props::Propagators;
+use crate::optimization::constraint_metadata::{ConstraintRegistry, ConstraintType};
+use std::collections::{HashMap, HashSet};
+
+/// Comprehensive model validation system that checks for:
+/// - Conflicting constraints that make the model unsolvable
+/// - Invalid variable domains (empty, inconsistent bounds)
+/// - Constraint compatibility issues (duplicate variables in AllDifferent, etc.)
+/// - Variable reference validation (all constraint variables exist)
+/// 
+/// This validation runs automatically before solving to catch modeling errors early.
+pub struct ModelValidator<'a> {
+    vars: &'a Vars,
+    props: &'a Propagators,
+}
+
+/// Validation result with specific error types for better error reporting
+#[derive(Debug, Clone)]
+pub enum ValidationError {
+    /// Empty or invalid variable domain
+    InvalidDomain {
+        variable_id: VarId,
+        issue: DomainIssue,
+    },
+    /// Constraint references non-existent variable
+    InvalidVariableReference {
+        constraint_id: usize,
+        variable_id: VarId,
+        constraint_type: String,
+    },
+    /// Conflicting constraints detected
+    ConflictingConstraints {
+        conflict_type: ConflictType,
+        variables: Vec<VarId>,
+        constraint_details: String,
+    },
+    /// Constraint has invalid parameters
+    InvalidConstraintParameters {
+        constraint_id: usize,
+        constraint_type: String,
+        issue: String,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub enum DomainIssue {
+    EmptyDomain,
+    InvalidBounds { min: i32, max: i32 },
+    FloatPrecisionIssue { interval: String },
+}
+
+#[derive(Debug, Clone)]
+pub enum ConflictType {
+    /// Multiple equality constraints on same variable with different values
+    DirectValueConflict,
+    /// AllDifferent constraint with insufficient domain size
+    AllDifferentDomainTooSmall,
+    /// Constraint combination that creates empty intersection
+    EmptyIntersection,
+}
+
+impl<'a> ModelValidator<'a> {
+    /// Create a new validator for the given model components
+    pub fn new(vars: &'a Vars, props: &'a Propagators) -> Self {
+        Self { vars, props }
+    }
+    
+    /// Perform comprehensive model validation
+    /// 
+    /// This method runs all validation checks and returns the first error found,
+    /// or Ok(()) if the model is valid and ready for solving.
+    pub fn validate(&self) -> Result<(), SolverError> {
+        // 1. Validate variable domains
+        self.validate_variable_domains()?;
+        
+        // 2. Validate constraint variable references
+        self.validate_constraint_references()?;
+        
+        // 3. Check for constraint conflicts
+        self.validate_constraint_conflicts()?;
+        
+        // 4. Validate constraint parameters
+        self.validate_constraint_parameters()?;
+        
+        Ok(())
+    }
+    
+    /// Check that all variable domains are valid and non-empty
+    fn validate_variable_domains(&self) -> Result<(), SolverError> {
+        for (var_id, var) in self.vars.iter_with_indices() {
+            match var {
+                Var::VarI(sparse_set) => {
+                    if sparse_set.is_empty() {
+                        return Err(SolverError::InvalidDomain {
+                            message: "Variable domain is empty".to_string(),
+                            variable_name: Some(format!("var_{:?}", var_id)),
+                            domain_info: Some("integer domain with no valid values".to_string()),
+                        });
+                    }
+                    
+                    let min_val = sparse_set.min_universe_value();
+                    let max_val = sparse_set.max_universe_value();
+                    
+                    if min_val > max_val {
+                        return Err(SolverError::InvalidDomain {
+                            message: "Variable domain bounds are invalid".to_string(),
+                            variable_name: Some(format!("var_{:?}", var_id)),
+                            domain_info: Some(format!("min ({}) > max ({})", min_val, max_val)),
+                        });
+                    }
+                    
+                    // Check for extremely large domains that might cause performance issues
+                    let domain_size = sparse_set.universe_size();
+                    if domain_size > 10_000_000 {
+                        return Err(SolverError::InvalidDomain {
+                            message: "Variable domain is too large and may cause performance issues".to_string(),
+                            variable_name: Some(format!("var_{:?}", var_id)),
+                            domain_info: Some(format!("domain size: {} (max recommended: 10,000,000)", domain_size)),
+                        });
+                    }
+                },
+                Var::VarF(interval) => {
+                    if interval.min > interval.max {
+                        return Err(SolverError::InvalidDomain {
+                            message: "Float variable bounds are invalid".to_string(),
+                            variable_name: Some(format!("var_{:?}", var_id)),
+                            domain_info: Some(format!("min ({}) > max ({})", interval.min, interval.max)),
+                        });
+                    }
+                    
+                    if interval.min.is_infinite() || interval.max.is_infinite() {
+                        return Err(SolverError::InvalidDomain {
+                            message: "Float variable has infinite bounds".to_string(),
+                            variable_name: Some(format!("var_{:?}", var_id)),
+                            domain_info: Some(format!("bounds: [{}, {}]", interval.min, interval.max)),
+                        });
+                    }
+                    
+                    if interval.min.is_nan() || interval.max.is_nan() {
+                        return Err(SolverError::InvalidDomain {
+                            message: "Float variable has NaN bounds".to_string(),
+                            variable_name: Some(format!("var_{:?}", var_id)),
+                            domain_info: Some("NaN values are not allowed in variable bounds".to_string()),
+                        });
+                    }
+                },
+            }
+        }
+        Ok(())
+    }
+    
+    /// Validate that all constraint variable references are valid
+    fn validate_constraint_references(&self) -> Result<(), SolverError> {
+        let constraint_registry = self.props.get_constraint_registry();
+        
+        for constraint_id in constraint_registry.get_all_constraint_ids() {
+            if let Some(metadata) = constraint_registry.get_constraint(constraint_id) {
+                // Check that all variables referenced by this constraint exist
+                for &var_id in &metadata.variables {
+                    if var_id.to_index() >= self.vars.count() {
+                        return Err(SolverError::InvalidVariable {
+                            message: "Constraint references non-existent variable".to_string(),
+                            variable_id: Some(format!("var_{:?}", var_id)),
+                            expected: Some(format!("0 to {}", self.vars.count() - 1)),
+                        });
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+    
+    /// Check for conflicting constraints that make the model unsolvable
+    fn validate_constraint_conflicts(&self) -> Result<(), SolverError> {
+        let constraint_registry = self.props.get_constraint_registry();
+        
+        // Group constraints by the variables they affect
+        let mut variable_constraints: HashMap<VarId, Vec<(usize, &ConstraintType)>> = HashMap::new();
+        
+        for constraint_id in constraint_registry.get_all_constraint_ids() {
+            if let Some(metadata) = constraint_registry.get_constraint(constraint_id) {
+                for &var_id in &metadata.variables {
+                    variable_constraints
+                        .entry(var_id)
+                        .or_insert_with(Vec::new)
+                        .push((constraint_id.0, &metadata.constraint_type));
+                }
+            }
+        }
+        
+        // Check for obvious conflicts
+        for (var_id, constraints) in variable_constraints.iter() {
+            // Look for multiple equality constraints on the same variable
+            let mut equality_constraints = Vec::new();
+            for &(constraint_id, constraint_type) in constraints {
+                if matches!(constraint_type, ConstraintType::Equals) {
+                    equality_constraints.push(constraint_id);
+                }
+            }
+            
+            if equality_constraints.len() > 1 {
+                return Err(SolverError::ConflictingConstraints {
+                    constraint_names: Some(equality_constraints.iter().map(|id| format!("constraint_{}", id)).collect()),
+                    variables: Some(vec![format!("var_{:?}", var_id)]),
+                    context: Some("Multiple equality constraints on same variable may conflict".to_string()),
+                });
+            }
+        }
+        
+        // Check AllDifferent constraints for sufficient domain size
+        self.validate_alldiff_constraints()?;
+        
+        Ok(())
+    }
+    
+    /// Validate AllDifferent constraints have sufficient domain sizes
+    fn validate_alldiff_constraints(&self) -> Result<(), SolverError> {
+        let constraint_registry = self.props.get_constraint_registry();
+        let alldiff_constraints = constraint_registry.get_constraints_by_type(&ConstraintType::AllDifferent);
+        
+        for constraint_id in alldiff_constraints {
+            if let Some(metadata) = constraint_registry.get_constraint(constraint_id) {
+                let variables = &metadata.variables;
+                let num_variables = variables.len();
+                
+                if num_variables <= 1 {
+                    continue; // Trivially satisfiable
+                }
+                
+                // Calculate minimum required domain size for AllDifferent
+                let mut total_domain_size = 0;
+                let mut min_individual_domain = usize::MAX;
+                
+                for &var_id in variables {
+                    let var = &self.vars[var_id];
+                    let domain_size = match var {
+                        Var::VarI(sparse_set) => sparse_set.size(),
+                        Var::VarF(_) => {
+                            // Float variables have essentially infinite domains for AllDifferent purposes
+                            continue;
+                        }
+                    };
+                    
+                    total_domain_size += domain_size;
+                    min_individual_domain = min_individual_domain.min(domain_size);
+                }
+                
+                // Check if any individual variable domain is too small
+                if min_individual_domain < num_variables {
+                    return Err(SolverError::ConflictingConstraints {
+                        constraint_names: Some(vec![format!("alldiff_constraint_{}", constraint_id.0)]),
+                        variables: Some(variables.iter().map(|id| format!("var_{:?}", id)).collect()),
+                        context: Some(format!(
+                            "AllDifferent constraint requires {} distinct values, but smallest variable domain has only {} values",
+                            num_variables, min_individual_domain
+                        )),
+                    });
+                }
+            }
+        }
+        Ok(())
+    }
+    
+    /// Validate constraint parameters for common issues
+    fn validate_constraint_parameters(&self) -> Result<(), SolverError> {
+        let constraint_registry = self.props.get_constraint_registry();
+        
+        for constraint_id in constraint_registry.get_all_constraint_ids() {
+            if let Some(metadata) = constraint_registry.get_constraint(constraint_id) {
+                match &metadata.constraint_type {
+                    ConstraintType::AllDifferent => {
+                        // Check for duplicate variables in AllDifferent
+                        let variables = &metadata.variables;
+                        let mut seen_vars = HashSet::new();
+                        for &var_id in variables {
+                            if !seen_vars.insert(var_id) {
+                                return Err(SolverError::InvalidConstraint {
+                                    message: "AllDifferent constraint contains duplicate variables".to_string(),
+                                    constraint_name: Some(format!("alldiff_constraint_{}", constraint_id.0)),
+                                    variables: Some(vec![format!("var_{:?} (duplicate)", var_id)]),
+                                });
+                            }
+                        }
+                    },
+                    ConstraintType::Addition | ConstraintType::Multiplication => {
+                        // These constraints typically need exactly 3 variables: x, y, result
+                        if metadata.variables.len() != 3 {
+                            return Err(SolverError::InvalidConstraint {
+                                message: format!(
+                                    "{:?} constraint requires exactly 3 variables (x, y, result), got {}",
+                                    metadata.constraint_type, metadata.variables.len()
+                                ),
+                                constraint_name: Some(format!("constraint_{}", constraint_id.0)),
+                                variables: Some(metadata.variables.iter().map(|id| format!("var_{:?}", id)).collect()),
+                            });
+                        }
+                    },
+                    ConstraintType::Division | ConstraintType::Modulo => {
+                        // Division and modulo need special validation for zero divisors
+                        if metadata.variables.len() != 3 {
+                            return Err(SolverError::InvalidConstraint {
+                                message: format!(
+                                    "{:?} constraint requires exactly 3 variables (dividend, divisor, result), got {}",
+                                    metadata.constraint_type, metadata.variables.len()
+                                ),
+                                constraint_name: Some(format!("constraint_{}", constraint_id.0)),
+                                variables: Some(metadata.variables.iter().map(|id| format!("var_{:?}", id)).collect()),
+                            });
+                        }
+                        
+                        // Check if divisor variable domain includes zero
+                        if metadata.variables.len() >= 2 {
+                            let divisor_var_id = metadata.variables[1];
+                            let divisor_var = &self.vars[divisor_var_id];
+                            if let Var::VarI(sparse_set) = divisor_var {
+                                if sparse_set.contains(0) {
+                                    return Err(SolverError::InvalidConstraint {
+                                        message: "Division/Modulo constraint has divisor that can be zero".to_string(),
+                                        constraint_name: Some(format!("constraint_{}", constraint_id.0)),
+                                        variables: Some(vec![format!("var_{:?} (divisor)", divisor_var_id)]),
+                                    });
+                                }
+                            }
+                        }
+                    },
+                    _ => {
+                        // Additional constraint-specific validations can be added here
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl From<ValidationError> for SolverError {
+    fn from(validation_error: ValidationError) -> Self {
+        match validation_error {
+            ValidationError::InvalidDomain { variable_id, issue } => {
+                let (message, domain_info) = match issue {
+                    DomainIssue::EmptyDomain => (
+                        "Variable domain is empty".to_string(),
+                        Some("no valid values in domain".to_string())
+                    ),
+                    DomainIssue::InvalidBounds { min, max } => (
+                        "Variable domain bounds are invalid".to_string(),
+                        Some(format!("min ({}) > max ({})", min, max))
+                    ),
+                    DomainIssue::FloatPrecisionIssue { interval } => (
+                        "Float variable precision issue".to_string(),
+                        Some(interval)
+                    ),
+                };
+                
+                SolverError::InvalidDomain {
+                    message,
+                    variable_name: Some(format!("var_{:?}", variable_id)),
+                    domain_info,
+                }
+            },
+            ValidationError::InvalidVariableReference { constraint_id, variable_id, constraint_type } => {
+                SolverError::InvalidVariable {
+                    message: format!("{} constraint references invalid variable", constraint_type),
+                    variable_id: Some(format!("var_{:?}", variable_id)),
+                    expected: Some(format!("constraint_{}", constraint_id)),
+                }
+            },
+            ValidationError::ConflictingConstraints { conflict_type, variables, constraint_details } => {
+                let context = match conflict_type {
+                    ConflictType::DirectValueConflict => "Direct value conflict detected".to_string(),
+                    ConflictType::AllDifferentDomainTooSmall => "AllDifferent domain too small".to_string(),
+                    ConflictType::EmptyIntersection => "Constraints create empty solution space".to_string(),
+                };
+                
+                SolverError::ConflictingConstraints {
+                    constraint_names: None,
+                    variables: Some(variables.iter().map(|id| format!("var_{:?}", id)).collect()),
+                    context: Some(format!("{}: {}", context, constraint_details)),
+                }
+            },
+            ValidationError::InvalidConstraintParameters { constraint_id, constraint_type, issue } => {
+                SolverError::InvalidConstraint {
+                    message: issue,
+                    constraint_name: Some(format!("{}_constraint_{}", constraint_type, constraint_id)),
+                    variables: None,
+                }
+            },
+        }
+    }
+}
