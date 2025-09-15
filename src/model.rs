@@ -272,9 +272,8 @@ impl Model {
     /// // Use in constraints
     /// post!(m, flag != enabled);    // Flags must be different
     /// 
-    /// // Boolean logic (using constraint macros)
-    /// let result = m.bool();
-    /// post!(m, result == and([flag, enabled]));  // result = flag AND enabled
+    /// // Boolean logic (using model methods)
+    /// let result = m.bool_and(&[flag, enabled]);  // result = flag AND enabled
     /// ```
     pub fn bool(&mut self) -> VarId {
         self.int(0, 1)
