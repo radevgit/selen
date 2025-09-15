@@ -1,3 +1,40 @@
+//! Error handling for the CSP solver.
+//!
+//! This module provides comprehensive error types for all failure modes that can occur
+//! during constraint solving. All public solver methods return `Result<T, SolverError>`
+//! for consistent error handling.
+//!
+//! # Error Categories
+//!
+//! - **No Solution**: The constraints are unsatisfiable
+//! - **Timeout**: Solving took longer than the configured limit
+//! - **Memory Limit**: Solver exceeded memory usage limits
+//! - **Invalid Input**: Problems with constraints or variable definitions
+//! - **Internal Errors**: Unexpected solver failures
+//!
+//! # Example
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//!
+//! let mut m = Model::default();
+//! let x = m.int(1, 5);
+//! let y = m.int(1, 5);
+//! post!(m, x > y);
+//! post!(m, y > x);  // Contradictory constraint
+//!
+//! match m.solve() {
+//!     Ok(solution) => println!("Found solution: x={:?}, y={:?}", solution[x], solution[y]),
+//!     Err(SolverError::NoSolution { context, .. }) => {
+//!         println!("No solution exists: {:?}", context);
+//!     }
+//!     Err(SolverError::Timeout { elapsed_seconds, .. }) => {
+//!         println!("Timeout after {:?} seconds", elapsed_seconds);
+//!     }
+//!     Err(e) => println!("Other error: {}", e),
+//! }
+//! ```
+
 /// Simple error types for the CSP solver
 ///
 /// This enum covers the basic failure modes that can occur during solving.

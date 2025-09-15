@@ -120,6 +120,7 @@ pub mod vars;
 pub mod solution;
 pub mod config;
 pub mod error;
+pub mod validation;
 #[doc(hidden)]
 pub mod operators;
 

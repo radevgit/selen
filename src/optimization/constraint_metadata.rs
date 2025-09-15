@@ -210,6 +210,11 @@ impl ConstraintRegistry {
             .collect()
     }
 
+    /// Get all constraint IDs registered in the system
+    pub fn get_all_constraint_ids(&self) -> Vec<ConstraintId> {
+        self.constraints.keys().cloned().collect()
+    }
+
     /// Analyze constraints for a variable to extract simple patterns
     pub fn analyze_variable_constraints(&self, var_id: VarId) -> VariableConstraintAnalysis {
         let constraint_ids = self.get_constraints_for_variable(var_id);
@@ -460,9 +465,10 @@ pub fn analyze_view<T: View>(view: &T) -> ViewInfo {
         // to detect transformations like .next(), .prev(), etc.
         ViewInfo::Variable { var_id }
     } else {
-        // Try to extract constant value
-        // This is a simplified approach - a full implementation would need
-        // to evaluate the view to see if it's constant
+        // Check if this is a TypedConstant (by attempting downcasting via Any trait)
+        // Since we don't have access to Any trait here, we'll use a different approach:
+        // Try to evaluate the view with a dummy context to see if it's constant
+        // For now, mark as Complex - this could be improved with type checking
         ViewInfo::Complex
     }
 }

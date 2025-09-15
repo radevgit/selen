@@ -1,3 +1,39 @@
+//! Solution representation and solving statistics.
+//!
+//! This module provides types for representing solutions to CSP problems and
+//! collecting statistics about the solving process.
+//!
+//! # Solution Access
+//!
+//! Solutions are represented by the `Solution` struct, which allows indexed access
+//! to variable values using the original `VarId` handles.
+//!
+//! # Statistics
+//!
+//! The solver collects statistics about the solving process, including the number
+//! of propagations performed and search nodes explored.
+//!
+//! # Example
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//!
+//! let mut m = Model::default();
+//! let x = m.int(1, 10);
+//! let y = m.int(1, 10);
+//! post!(m, x + y == int(15));
+//!
+//! // Solve with statistics callback
+//! let solution = m.solve_with_callback(|stats| {
+//!     println!("Propagations: {}", stats.propagation_count);
+//!     println!("Search nodes: {}", stats.node_count);
+//! }).unwrap();
+//!
+//! // Access solution values
+//! println!("x = {:?}", solution[x]);
+//! println!("y = {:?}", solution[y]);
+//! ```
+
 use std::borrow::Borrow;
 use std::ops::Index;
 use std::time::Duration;
