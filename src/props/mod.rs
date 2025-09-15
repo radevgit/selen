@@ -103,71 +103,454 @@ impl Propagators {
         &mut self.constraint_registry
     }
 
-    /// Optimize the order of AllDifferent constraints based on the number of fixed variables.
+    /// Optimize the order of AllDifferent constraints using multiple universal heuristics.
     /// 
-    /// AllDifferent constraints with more singleton (fixed) variables are processed first
-    /// because they tend to propagate more effectively and reduce the search space earlier.
-    /// This can significantly improve solving performance.
-    pub fn optimize_alldiff_order(&mut self, _vars: &crate::vars::Vars) {
-        // Use a simpler heuristic based on constraint dependencies
-        // that proved effective in practice.
+    /// Uses a combination of three heuristics to determine priority:
+    /// 1. Domain tightness: Constraints with smaller average domain sizes (closer to failure)
+    /// 2. Variable connectivity: Constraints affecting variables with higher connectivity
+    /// 3. Constraint saturation: Constraints with higher ratio of fixed variables
+    /// 
+    /// This approach is universal and works for any constraint satisfaction problem.
+    pub fn optimize_alldiff_order(&mut self, vars: &crate::vars::Vars) {
+        use crate::optimization::constraint_metadata::ConstraintType;
         
-        // Create a vector of (constraint_index, dependency_count) pairs
-        let mut constraint_priorities: Vec<(usize, usize)> = Vec::new();
+        // Get all AllDifferent constraints from the registry
+        let alldiff_constraint_ids = self.constraint_registry.get_constraints_by_type(&ConstraintType::AllDifferent);
         
-        for (i, _constraint) in self.state.iter().enumerate() {
-            // Calculate priority score based on number of variables this constraint affects
-            let mut dependency_count = 0;
-            
-            // Count how many variables depend on this constraint
-            for var_deps in &self.dependencies {
-                for &prop_id in var_deps {
-                    if prop_id.0 == i {
-                        dependency_count += 1;
-                    }
-                }
-            }
-            
-            constraint_priorities.push((i, dependency_count));
+        if alldiff_constraint_ids.len() <= 1 {
+            return; // Nothing to optimize with 0 or 1 AllDifferent constraints
         }
         
-        // Sort by dependency count (descending - more dependencies = higher priority)
-        constraint_priorities.sort_by(|a, b| b.1.cmp(&a.1));
+        // Pre-calculate variable connectivity map
+        let variable_connectivity = self.calculate_variable_connectivity_map();
         
-        // Only reorder if we have multiple constraints and the ordering would change
-        if constraint_priorities.len() > 1 {
-            let first_original_index = constraint_priorities[0].0;
-            if first_original_index != 0 {
-                // Create new ordered vectors
-                let original_state = self.state.clone();
-                let original_dependencies = self.dependencies.clone();
+        // Create a vector of (prop_id, priority_scores) for AllDifferent constraints only
+        let mut alldiff_priorities: Vec<(usize, (f64, f64, f64))> = Vec::new();
+        
+        for constraint_id in alldiff_constraint_ids {
+            if let Some(metadata) = self.constraint_registry.get_constraint(constraint_id) {
+                // Extract variables from this AllDifferent constraint
+                let constraint_vars = match &metadata.data {
+                    crate::optimization::constraint_metadata::ConstraintData::NAry { operands } => {
+                        operands.iter().filter_map(|op| match op {
+                            crate::optimization::constraint_metadata::ViewInfo::Variable { var_id } => Some(*var_id),
+                            _ => None,
+                        }).collect::<Vec<_>>()
+                    },
+                    _ => continue, // Skip non-NAry constraints
+                };
                 
-                // Clear current state
-                self.state.clear();
-                self.dependencies = vec![Vec::new(); original_dependencies.len()];
+                // Calculate domain tightness score (smaller average domain = higher priority)
+                let tightness_score = self.calculate_domain_tightness(&constraint_vars, vars);
                 
-                // Create index mapping from old to new positions
-                let mut index_mapping = vec![0; original_state.len()];
+                // Calculate variable connectivity score (higher connectivity = higher priority)
+                let connectivity_score = self.calculate_variable_connectivity(&constraint_vars, &variable_connectivity);
                 
-                // Rebuild in optimized order
-                for (new_idx, &(old_idx, _priority)) in constraint_priorities.iter().enumerate() {
-                    if old_idx < original_state.len() {
-                        self.state.push(original_state[old_idx].clone());
-                        index_mapping[old_idx] = new_idx;
-                    }
-                }
+                // Calculate constraint saturation score (higher fixed ratio = higher priority)
+                let saturation_score = self.calculate_constraint_saturation(&constraint_vars, vars);
                 
-                // Update dependency mapping
-                for (var_id, deps) in original_dependencies.into_iter().enumerate() {
-                    for old_prop_id in deps {
-                        if old_prop_id.0 < index_mapping.len() {
-                            let new_prop_id = PropId(index_mapping[old_prop_id.0]);
-                            self.dependencies[var_id].push(new_prop_id);
-                        }
-                    }
+                // Map constraint_id to propagator index
+                let prop_index = constraint_id.0;
+                if prop_index < self.state.len() {
+                    alldiff_priorities.push((prop_index, (tightness_score, connectivity_score, saturation_score)));
                 }
             }
         }
+        
+        if alldiff_priorities.is_empty() {
+            return; // No AllDifferent constraints found
+        }
+        
+        // Sort AllDifferent constraints by priority (lexicographic ordering):
+        // Primary: domain tightness (ascending - smaller domains = higher priority)
+        // Secondary: constraint saturation (descending - higher fixed ratio = higher priority)
+        // Tertiary: variable connectivity (descending - higher connectivity = higher priority)
+        alldiff_priorities.sort_by(|a, b| {
+            // First compare by domain tightness (ascending)
+            let tightness_cmp = a.1.0.partial_cmp(&b.1.0).unwrap_or(std::cmp::Ordering::Equal);
+            if tightness_cmp != std::cmp::Ordering::Equal {
+                return tightness_cmp;
+            }
+            // Then by constraint saturation (descending)
+            let saturation_cmp = b.1.2.partial_cmp(&a.1.2).unwrap_or(std::cmp::Ordering::Equal);
+            if saturation_cmp != std::cmp::Ordering::Equal {
+                return saturation_cmp;
+            }
+            // Finally by variable connectivity (descending)
+            b.1.1.partial_cmp(&a.1.1).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        
+        // Check if reordering would actually change anything
+        let mut needs_reordering = false;
+        for (i, &(prop_idx, _)) in alldiff_priorities.iter().enumerate() {
+            if i < alldiff_priorities.len() - 1 {
+                let next_prop_idx = alldiff_priorities[i + 1].0;
+                if prop_idx > next_prop_idx {
+                    needs_reordering = true;
+                    break;
+                }
+            }
+        }
+        
+        if !needs_reordering {
+            return; // Already in optimal order
+        }
+        
+        // Create new ordered vectors for reordering
+        let original_state = self.state.clone();
+        let original_dependencies = self.dependencies.clone();
+        
+        // Extract AllDifferent constraint indices for reordering
+        let alldiff_indices: std::collections::HashSet<usize> = alldiff_priorities.iter().map(|&(idx, _)| idx).collect();
+        
+        // Build the new state with AllDifferent constraints in optimized order
+        self.state.clear();
+        let mut index_mapping = vec![0; original_state.len()];
+        let mut new_idx = 0;
+        
+        // First, add AllDifferent constraints in priority order
+        for &(old_idx, _) in &alldiff_priorities {
+            if old_idx < original_state.len() {
+                self.state.push(original_state[old_idx].clone());
+                index_mapping[old_idx] = new_idx;
+                new_idx += 1;
+            }
+        }
+        
+        // Then, add all non-AllDifferent constraints in their original order
+        for (old_idx, constraint) in original_state.iter().enumerate() {
+            if !alldiff_indices.contains(&old_idx) {
+                self.state.push(constraint.clone());
+                index_mapping[old_idx] = new_idx;
+                new_idx += 1;
+            }
+        }
+        
+        // Update dependency mapping with new indices
+        self.dependencies = vec![Vec::new(); original_dependencies.len()];
+        for (var_id, deps) in original_dependencies.into_iter().enumerate() {
+            for old_prop_id in deps {
+                if old_prop_id.0 < index_mapping.len() {
+                    let new_prop_id = PropId(index_mapping[old_prop_id.0]);
+                    self.dependencies[var_id].push(new_prop_id);
+                }
+            }
+        }
+    }
+
+    /// Universal constraint optimization that works for all constraint types.
+    /// 
+    /// This function analyzes ALL constraint types (not just AllDifferent) and prioritizes
+    /// them based on constraint-specific optimization strategies:
+    /// - AllDifferent: Prioritizes domain tightness + connectivity + saturation
+    /// - Arithmetic (=, ≤, +, *): Prioritizes saturation (more fixed variables = easier propagation)
+    /// - Boolean (AND, OR, NOT): Prioritizes connectivity (affecting more variables = higher impact)
+    /// - Complex constraints: Use hybrid scoring based on constraint characteristics
+    pub fn optimize_universal_constraint_order(&mut self, vars: &crate::vars::Vars) {
+        use crate::optimization::constraint_metadata::ConstraintType;
+        
+        // Get all constraint types we want to optimize
+        let constraint_types_to_optimize = [
+            ConstraintType::AllDifferent,
+            ConstraintType::Addition,
+            ConstraintType::Multiplication,
+            ConstraintType::Modulo,
+            ConstraintType::Division,
+            ConstraintType::Sum,
+            ConstraintType::Equals,
+            ConstraintType::NotEquals,
+            ConstraintType::LessThanOrEquals,
+            ConstraintType::LessThan,
+            ConstraintType::GreaterThanOrEquals,
+            ConstraintType::GreaterThan,
+            ConstraintType::BooleanAnd,
+            ConstraintType::BooleanOr,
+            ConstraintType::BooleanNot,
+        ];
+        
+        // Pre-calculate variable connectivity map for all constraint types
+        let variable_connectivity = self.calculate_variable_connectivity_map();
+        
+        // Create a vector of (prop_id, priority_score, constraint_type) for all constraints
+        let mut constraint_priorities: Vec<(usize, f64, ConstraintType)> = Vec::new();
+        
+        for constraint_type in &constraint_types_to_optimize {
+            for constraint_id in self.constraint_registry.get_constraints_by_type(constraint_type) {
+                if let Some(metadata) = self.constraint_registry.get_constraint(constraint_id) {
+                    // Extract variables from this constraint
+                    let constraint_vars = &metadata.variables;
+                    
+                    if constraint_vars.is_empty() {
+                        continue; // Skip constraints with no variables
+                    }
+                    
+                    // Calculate constraint-specific priority score
+                    let priority_score = self.calculate_universal_constraint_priority(
+                        constraint_type, 
+                        constraint_vars, 
+                        vars, 
+                        &variable_connectivity
+                    );
+                    
+                    // Map constraint_id to propagator index
+                    let prop_index = constraint_id.0;
+                    if prop_index < self.state.len() {
+                        constraint_priorities.push((prop_index, priority_score, constraint_type.clone()));
+                    }
+                }
+            }
+        }
+        
+        if constraint_priorities.len() <= 1 {
+            return; // Nothing to optimize
+        }
+        
+        // Sort constraints by priority score (descending - higher scores = higher priority)
+        constraint_priorities.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        
+        // Check if reordering would actually change anything
+        let mut needs_reordering = false;
+        for (i, &(prop_idx, _, _)) in constraint_priorities.iter().enumerate() {
+            if i < constraint_priorities.len() - 1 {
+                let next_prop_idx = constraint_priorities[i + 1].0;
+                if prop_idx > next_prop_idx {
+                    needs_reordering = true;
+                    break;
+                }
+            }
+        }
+        
+        if !needs_reordering {
+            return; // Already in optimal order
+        }
+        
+        // Create new ordered vectors for reordering
+        let original_state = self.state.clone();
+        let original_dependencies = self.dependencies.clone();
+        
+        // Create index mapping: old_index -> new_index
+        let mut index_mapping = vec![0; original_state.len()];
+        for (new_index, &(old_index, _, _)) in constraint_priorities.iter().enumerate() {
+            index_mapping[old_index] = new_index;
+        }
+        
+        // Reorder propagators based on priority
+        self.state.clear();
+        for &(prop_idx, _, _) in &constraint_priorities {
+            self.state.push(original_state[prop_idx].clone());
+        }
+        
+        // Reorder dependencies to maintain consistency
+        self.dependencies = vec![Vec::new(); original_dependencies.len()];
+        for (var_id, deps) in original_dependencies.into_iter().enumerate() {
+            for old_prop_id in deps {
+                if old_prop_id.0 < index_mapping.len() {
+                    let new_prop_id = PropId(index_mapping[old_prop_id.0]);
+                    self.dependencies[var_id].push(new_prop_id);
+                }
+            }
+        }
+    }
+
+    /// Calculate universal constraint priority based on constraint type and characteristics.
+    /// Higher scores indicate higher priority for propagation.
+    fn calculate_universal_constraint_priority(
+        &self,
+        constraint_type: &crate::optimization::constraint_metadata::ConstraintType,
+        constraint_vars: &[VarId],
+        vars: &crate::vars::Vars,
+        variable_connectivity: &std::collections::HashMap<VarId, usize>
+    ) -> f64 {
+        use crate::optimization::constraint_metadata::ConstraintType;
+        
+        match constraint_type {
+            // AllDifferent constraints: Use comprehensive scoring (domain tightness + connectivity + saturation)
+            ConstraintType::AllDifferent => {
+                let tightness_score = 1.0 / self.calculate_domain_tightness(constraint_vars, vars).max(1.0);
+                let connectivity_score = self.calculate_variable_connectivity(constraint_vars, variable_connectivity);
+                let saturation_score = self.calculate_constraint_saturation(constraint_vars, vars);
+                
+                // Weight: tightness (40%) + saturation (35%) + connectivity (25%)
+                0.4 * tightness_score + 0.35 * saturation_score + 0.25 * connectivity_score
+            },
+            
+            // Arithmetic constraints: Prioritize saturation (fixed variables make propagation easier)
+            ConstraintType::Addition | ConstraintType::Multiplication | 
+            ConstraintType::Modulo | ConstraintType::Division | 
+            ConstraintType::Sum => {
+                let saturation_score = self.calculate_constraint_saturation(constraint_vars, vars);
+                let connectivity_score = self.calculate_variable_connectivity(constraint_vars, variable_connectivity);
+                
+                // Weight: saturation (70%) + connectivity (30%)
+                0.7 * saturation_score + 0.3 * connectivity_score
+            },
+            
+            // Comparison constraints: Balance saturation and connectivity
+            ConstraintType::Equals | ConstraintType::NotEquals |
+            ConstraintType::LessThanOrEquals | ConstraintType::LessThan |
+            ConstraintType::GreaterThanOrEquals | ConstraintType::GreaterThan => {
+                let saturation_score = self.calculate_constraint_saturation(constraint_vars, vars);
+                let connectivity_score = self.calculate_variable_connectivity(constraint_vars, variable_connectivity);
+                
+                // Weight: saturation (60%) + connectivity (40%)
+                0.6 * saturation_score + 0.4 * connectivity_score
+            },
+            
+            // Boolean constraints: Prioritize connectivity (affecting many variables = high impact)
+            ConstraintType::BooleanAnd | ConstraintType::BooleanOr | ConstraintType::BooleanNot => {
+                let connectivity_score = self.calculate_variable_connectivity(constraint_vars, variable_connectivity);
+                let saturation_score = self.calculate_constraint_saturation(constraint_vars, vars);
+                
+                // Weight: connectivity (60%) + saturation (40%)
+                0.6 * connectivity_score + 0.4 * saturation_score
+            },
+            
+            // Complex constraints: Use hybrid scoring
+            ConstraintType::Complex { .. } => {
+                let tightness_score = 1.0 / self.calculate_domain_tightness(constraint_vars, vars).max(1.0);
+                let connectivity_score = self.calculate_variable_connectivity(constraint_vars, variable_connectivity);
+                let saturation_score = self.calculate_constraint_saturation(constraint_vars, vars);
+                
+                // Balanced weight: all three factors equally
+                (tightness_score + connectivity_score + saturation_score) / 3.0
+            },
+            
+            // Default case: Use balanced scoring
+            _ => {
+                let connectivity_score = self.calculate_variable_connectivity(constraint_vars, variable_connectivity);
+                let saturation_score = self.calculate_constraint_saturation(constraint_vars, vars);
+                
+                // Weight: connectivity (50%) + saturation (50%)
+                0.5 * connectivity_score + 0.5 * saturation_score
+            }
+        }
+    }
+
+    /// Calculate domain tightness score for a constraint.
+    /// Lower scores indicate tighter constraints (smaller domains) which should be prioritized.
+    fn calculate_domain_tightness(&self, constraint_vars: &[VarId], vars: &crate::vars::Vars) -> f64 {
+        if constraint_vars.is_empty() {
+            return f64::INFINITY; // Invalid constraint, lowest priority
+        }
+        
+        let total_domain_size: f64 = constraint_vars.iter()
+            .map(|&var_id| self.calculate_variable_domain_size(var_id, vars))
+            .sum();
+        
+        // Return average domain size (smaller = tighter = higher priority)
+        total_domain_size / (constraint_vars.len() as f64)
+    }
+    
+    /// Calculate the effective domain size for a variable.
+    /// For integer variables, this is the actual domain size.
+    /// For float variables, this estimates discrete steps within the interval.
+    fn calculate_variable_domain_size(&self, var_id: VarId, vars: &crate::vars::Vars) -> f64 {
+        match &vars[var_id] {
+            crate::vars::Var::VarI(sparse_set) => {
+                sparse_set.size() as f64
+            },
+            crate::vars::Var::VarF(interval) => {
+                // For float variables, estimate the number of discrete steps
+                let range = interval.max - interval.min;
+                if range <= 0.0 {
+                    return 1.0; // Single value
+                }
+                
+                // Estimate discrete domain size based on step size
+                let estimated_steps = (range / interval.step).ceil();
+                estimated_steps.max(1.0) // At least 1 step
+            }
+        }
+    }
+
+    /// Calculate variable connectivity map - how many constraints each variable participates in.
+    /// This builds a connectivity graph to understand variable importance in the constraint network.
+    fn calculate_variable_connectivity_map(&self) -> std::collections::HashMap<VarId, usize> {
+        let mut connectivity_map = std::collections::HashMap::new();
+        
+        // Since we don't have direct access to all constraints, we'll iterate through
+        // all constraint types and collect their constraint IDs
+        use crate::optimization::constraint_metadata::ConstraintType;
+        
+        let constraint_types = [
+            ConstraintType::AllDifferent,
+            ConstraintType::Addition,
+            ConstraintType::Multiplication,
+            ConstraintType::Modulo,
+            ConstraintType::Division,
+            ConstraintType::AbsoluteValue,
+            ConstraintType::Minimum,
+            ConstraintType::Maximum,
+            ConstraintType::Sum,
+            ConstraintType::Equals,
+            ConstraintType::NotEquals,
+            ConstraintType::LessThanOrEquals,
+            ConstraintType::LessThan,
+            ConstraintType::GreaterThanOrEquals,
+            ConstraintType::GreaterThan,
+            ConstraintType::BooleanAnd,
+            ConstraintType::BooleanOr,
+            ConstraintType::BooleanNot,
+        ];
+        
+        // Iterate through all constraint types to count variable participation
+        for constraint_type in &constraint_types {
+            for constraint_id in self.constraint_registry.get_constraints_by_type(constraint_type) {
+                if let Some(metadata) = self.constraint_registry.get_constraint(constraint_id) {
+                    // Extract variables from this constraint and increment their connectivity
+                    for var_id in &metadata.variables {
+                        *connectivity_map.entry(*var_id).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+        
+        connectivity_map
+    }
+
+    /// Calculate average variable connectivity for a constraint.
+    /// Higher connectivity indicates variables that are more constrained and likely to propagate.
+    fn calculate_variable_connectivity(
+        &self, 
+        constraint_vars: &[VarId], 
+        connectivity_map: &std::collections::HashMap<VarId, usize>
+    ) -> f64 {
+        if constraint_vars.is_empty() {
+            return 0.0; // No variables, lowest connectivity
+        }
+        
+        let total_connectivity: usize = constraint_vars.iter()
+            .map(|var_id| connectivity_map.get(var_id).copied().unwrap_or(0))
+            .sum();
+        
+        // Return average connectivity (higher = more constrained = higher priority)
+        total_connectivity as f64 / constraint_vars.len() as f64
+    }
+
+    /// Calculate constraint saturation score - ratio of fixed variables to total variables.
+    /// Higher saturation indicates constraints closer to completion and likely to propagate effectively.
+    fn calculate_constraint_saturation(&self, constraint_vars: &[VarId], vars: &crate::vars::Vars) -> f64 {
+        if constraint_vars.is_empty() {
+            return 0.0; // No variables, lowest saturation
+        }
+        
+        let fixed_variables = constraint_vars.iter()
+            .filter(|&&var_id| {
+                match &vars[var_id] {
+                    crate::vars::Var::VarI(sparse_set) => sparse_set.size() == 1,
+                    crate::vars::Var::VarF(interval) => {
+                        // For float variables, consider fixed if the range is very small
+                        let range = interval.max - interval.min;
+                        range <= interval.step
+                    }
+                }
+            })
+            .count();
+        
+        // Return saturation ratio (higher = more fixed = higher priority)
+        fixed_variables as f64 / constraint_vars.len() as f64
     }
 
     /// Declare a new propagator to enforce `x + y == s`.

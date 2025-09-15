@@ -1098,9 +1098,8 @@ impl Model {
     /// m.optimize_constraint_order();
     /// ```
     pub fn optimize_constraint_order(&mut self) -> &mut Self {
-        // Since we can't downcast trait objects easily, we'll implement this optimization
-        // at the Propagators level by adding a method there
-        self.props.optimize_alldiff_order(&self.vars);
+        // Universal constraint optimization that works for all constraint types
+        self.props.optimize_universal_constraint_order(&self.vars);
         self
     }
 

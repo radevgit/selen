@@ -207,8 +207,8 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
         }
     }
     
-    // OPTIMIZATION 3: Optimize constraint order for better propagation
-    m.optimize_constraint_order();
+    // Constraint optimization is now handled automatically in prepare_for_search()
+    // No need to call m.optimize_constraint_order() manually
     
     // Solve the model with statistics tracking
     let mut propagation_count = 0;
