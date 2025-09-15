@@ -1,3 +1,23 @@
+//! Variable views and domain transformations.
+//!
+//! This module provides views that allow applying domain transformations on the fly
+//! to make propagators more generic. Views enable efficient constraint implementation
+//! by allowing the same propagator to work with transformed variable domains.
+//!
+//! # View Types
+//!
+//! Views can produce different types of values:
+//! - Integer views for operations that preserve integer domains
+//! - Float views for operations that may introduce floating-point values
+//!
+//! # Internal Implementation
+//!
+//! Views are primarily internal implementation details used by the constraint
+//! system to efficiently handle domain transformations without copying data.
+//! Most users interact with views indirectly through constraint posting.
+//!
+//! Note: This module contains primarily internal APIs marked with `#[doc(hidden)]`.
+
 use crate::vars::{Val, Var, VarId, VarIdBin, Vars};
 
 #[doc(hidden)]

@@ -1,3 +1,42 @@
+//! Model validation and constraint analysis.
+//!
+//! This module provides comprehensive validation of CSP models before solving
+//! to catch modeling errors early and provide helpful error messages.
+//!
+//! # Validation Types
+//!
+//! The validator checks for several categories of problems:
+//! - **Variable domain issues**: Empty domains, invalid bounds, type mismatches
+//! - **Constraint conflicts**: Contradictory constraints that make models unsolvable
+//! - **Reference validation**: All constraint variables exist and are properly referenced
+//! - **Constraint compatibility**: Duplicate variables in constraints that require uniqueness
+//!
+//! # Automatic Validation
+//!
+//! Validation runs automatically before solving, so users typically don't need
+//! to call validation methods directly. However, explicit validation can be useful
+//! for debugging model construction.
+//!
+//! # Example
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//!
+//! let mut m = Model::default();
+//! let x = m.int(1, 10);
+//! let y = m.int(5, 15);
+//!
+//! // This will be caught by validation before solving
+//! post!(m, x == int(20)); // x can't equal 20 (outside domain)
+//! post!(m, x == int(5));  // Conflicting with above
+//!
+//! // Validation error will be reported when solve() is called
+//! match m.solve() {
+//!     Ok(solution) => println!("Solution: {:?}", solution),
+//!     Err(e) => println!("Validation error: {}", e),
+//! }
+//! ```
+
 use crate::error::SolverError;
 use crate::vars::{Vars, Var, VarId};
 use crate::props::Propagators;

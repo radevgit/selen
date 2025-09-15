@@ -30,6 +30,7 @@ impl Model {
     /// let mut m = Model::with_float_precision(4); // 4 decimal places
     /// let var = m.float(0.0, 1.0);
     /// ```
+    #[must_use]
     pub fn with_float_precision(precision_digits: i32) -> Self {
         let config = crate::config::SolverConfig::default()
             .with_float_precision(precision_digits);
@@ -50,6 +51,7 @@ impl Model {
     /// let mut m = Model::with_config(config);
     /// let var = m.float(0.0, 1.0);
     /// ```
+    #[must_use]
     pub fn with_config(config: crate::config::SolverConfig) -> Self {
         Self {
             vars: Vars::default(),
@@ -60,17 +62,59 @@ impl Model {
         }
     }
 
-    /// Get the current float precision setting
+    /// Get the current float precision setting.
+    ///
+    /// Returns the number of decimal places used for floating-point precision
+    /// in this model. This affects the granularity of float variable domains
+    /// and optimization algorithms.
+    ///
+    /// # Returns
+    /// Number of decimal places for float precision (e.g., 3 = 0.001 granularity)
+    ///
+    /// # Example
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let m = Model::with_float_precision(4);
+    /// assert_eq!(m.float_precision_digits(), 4);
+    /// ```
     pub fn float_precision_digits(&self) -> i32 {
         self.float_precision_digits
     }
 
-    /// Get the step size for the current float precision
+    /// Get the step size corresponding to the current float precision.
+    ///
+    /// Returns the minimum representable difference between float values
+    /// based on the model's precision setting. For example, with 3 decimal
+    /// places, the step size is 0.001.
+    ///
+    /// # Returns
+    /// The step size as a floating-point value
+    ///
+    /// # Example
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let m = Model::with_float_precision(2);
+    /// assert_eq!(m.float_step_size(), 0.01);
+    /// ```
     pub fn float_step_size(&self) -> f64 {
         precision_to_step_size(self.float_precision_digits)
     }
 
-    /// Get the solver configuration
+    /// Get the solver configuration.
+    ///
+    /// Returns a reference to the current solver configuration, which contains
+    /// settings for timeouts, memory limits, precision, and other solver behavior.
+    ///
+    /// # Returns
+    /// Reference to the `SolverConfig` for this model
+    ///
+    /// # Example
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let m = Model::default();
+    /// let config = m.config();
+    /// println!("Float precision: {}", config.float_precision_digits);
+    /// ```
     pub fn config(&self) -> &crate::config::SolverConfig {
         &self.config
     }
@@ -85,11 +129,13 @@ impl Model {
         self.config.max_memory_mb
     }
 
+    #[doc(hidden)]
     /// Get access to constraint registry for debugging/analysis
     pub fn get_constraint_registry(&self) -> &crate::optimization::constraint_metadata::ConstraintRegistry {
         self.props.get_constraint_registry()
     }
 
+    #[doc(hidden)]
     #[doc(hidden)]
     /// Create a new decision variable, with the provided domain bounds.
     ///
@@ -97,6 +143,7 @@ impl Model {
     /// In case `max < min` the bounds will be swapped.
     /// We don't want to deal with "unwrap" every time
     /// 
+    /// **Note**: This is a low-level method. Use `int()`, `float()`, or `bool()` instead.
     ///
     /// ```
     /// use cspsolver::prelude::*;
@@ -112,12 +159,14 @@ impl Model {
     }
 
     #[doc(hidden)]
+    #[doc(hidden)]
     /// Create new decision variables, with the provided domain bounds.
     ///
     /// All created variables will have the same starting domain bounds.
     /// Both lower and upper bounds are included in the domain.
     /// In case `max < min` the bounds will be swapped.
     /// 
+    /// **Note**: This is a low-level method. Use specific variable creation methods instead.
     ///
     /// ```
     /// use cspsolver::prelude::*;
@@ -150,20 +199,33 @@ impl Model {
         self.new_vars(n, Val::ValI(min), Val::ValI(max))
     }
 
-    /// Create a new integer decision variable from a vector of specific values.
-    /// This is useful for creating variables with non-contiguous domains.
+    /// Create an integer variable with a custom domain from specific values.
+    /// 
+    /// Creates a variable that can only take values from the provided list.
+    /// This is useful for non-contiguous domains, categorical values, or
+    /// when you need precise control over allowed values.
     ///
     /// # Arguments
     /// * `values` - Vector of integer values that the variable can take
     ///
     /// # Returns
-    /// A new VarId for the created variable
+    /// A `VarId` that can only take values from the provided vector
     ///
-    ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
-    /// let var = m.ints(vec![2, 4, 6, 8]); // Even numbers only
+    /// 
+    /// // Variable that can only be prime numbers
+    /// let prime = m.ints(vec![2, 3, 5, 7, 11, 13]);
+    /// 
+    /// // Variable for days of week (1=Monday, 7=Sunday)  
+    /// let weekday = m.ints(vec![1, 2, 3, 4, 5, 6, 7]);
+    /// 
+    /// // Non-contiguous range
+    /// let sparse = m.ints(vec![1, 5, 10, 50, 100]);
+    /// 
+    /// post!(m, prime != weekday);
     /// ```
     pub fn ints(&mut self, values: Vec<i32>) -> VarId {
         self.props.on_new_var();
@@ -191,27 +253,28 @@ impl Model {
         self.new_vars(n, Val::ValF(min), Val::ValF(max))
     }
 
-    /// Create a new boolean decision variable (0 or 1).
+    /// Create a boolean variable (0 or 1).
     ///
-    /// This is a convenience method equivalent to `new_var_int(0, 1)`.
-    /// Boolean variables can be used with boolean logic constraints.
+    /// Creates a variable that can only take values 0 or 1, useful for representing
+    /// boolean logic, flags, or binary decisions. Equivalent to `m.int(0, 1)` but
+    /// more semantically clear for boolean use cases.
     /// 
-    /// # Examples
+    /// # Returns
+    /// A `VarId` that can take values 0 (false) or 1 (true)
+    ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
-    /// let a = m.bool();
-    /// let b = m.bool();
-    /// let c = m.bool();
+    /// let flag = m.bool();          // 0 or 1
+    /// let enabled = m.bool();       // 0 or 1
     /// 
-    /// // Boolean operations using model methods:
-    /// let and_result = m.bool_and(&[a, b]);  // AND
-    /// let or_result = m.bool_or(&[a, c]);    // OR  
-    /// let not_result = m.bool_not(a);        // NOT
+    /// // Use in constraints
+    /// post!(m, flag != enabled);    // Flags must be different
     /// 
-    /// // Basic constraints:
-    /// post!(m, a != b);
-    /// post!(m, and_result != c);
+    /// // Boolean logic (using constraint macros)
+    /// let result = m.bool();
+    /// post!(m, result == and([flag, enabled]));  // result = flag AND enabled
     /// ```
     pub fn bool(&mut self) -> VarId {
         self.int(0, 1)
@@ -245,39 +308,55 @@ impl Model {
 
     // === SHORT VARIABLE CREATION METHODS ===
     
-    /// Short method to create an integer variable.
-    /// Alias for `new_var_int()` - more concise and readable.
+    /// Create an integer variable with specified bounds.
+    /// 
+    /// Creates a variable that can take any integer value between `min` and `max` (inclusive).
     ///
+    /// # Arguments
+    /// * `min` - Minimum value for the variable (inclusive)
+    /// * `max` - Maximum value for the variable (inclusive)
+    ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
-    /// let x = m.int(0, 10);    // Instead of m.int(0, 10)
-    /// let y = m.int(-5, 5);    // Clean and concise
+    /// let x = m.int(1, 10);     // Variable from 1 to 10
+    /// let y = m.int(-5, 15);    // Variable from -5 to 15
     /// ```
     pub fn int(&mut self, min: i32, max: i32) -> VarId {
         self.new_var(Val::ValI(min), Val::ValI(max))
     }
 
-    /// Short method to create a float variable.
-    /// Alias for `new_var_float()` - more concise and readable.
+    /// Create a floating-point variable with specified bounds.
+    /// 
+    /// Creates a variable that can take any floating-point value between `min` and `max` (inclusive).
+    /// The precision is controlled by the model's `float_precision_digits` setting.
     ///
+    /// # Arguments
+    /// * `min` - Minimum value for the variable (inclusive)
+    /// * `max` - Maximum value for the variable (inclusive)
+    ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
-    /// let x = m.float(0.0, 10.0);    // Instead of m.float(0.0, 10.0)
-    /// let y = m.float(-1.5, 3.14);   // Clean and concise
+    /// let x = m.float(0.0, 10.0);    // Variable from 0.0 to 10.0
+    /// let y = m.float(-1.5, 3.14);   // Variable from -1.5 to 3.14
     /// ```
     pub fn float(&mut self, min: f64, max: f64) -> VarId {
         self.new_var(Val::ValF(min), Val::ValF(max))
     }
 
-    /// Short method to create a binary variable.
-    /// Alias for `new_var_binary()` - more concise and readable.
+    /// Create a binary variable (0 or 1).
+    /// 
+    /// Creates a boolean variable that can only take values 0 or 1.
+    /// Equivalent to `m.int(0, 1)` but optimized for binary constraints.
     ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
-    /// let x = m.binary();    // Instead of m.new_var_binary()
+    /// let flag = m.binary();    // Variable that is 0 or 1
     /// ```
     pub fn binary(&mut self) -> VarIdBin {
         self.new_var_binary()
@@ -1121,6 +1200,7 @@ impl Model {
         self
     }
 
+    #[doc(hidden)]
     /// Create a search engine for this model that allows direct control over search.
     ///
     /// This provides access to lower-level search functionality including resource
@@ -1140,18 +1220,28 @@ impl Model {
         EngineWrapper::new(self)
     }
 
-    /// Search for assignment that satisfies all constraints within bounds of decision variables.
+    /// Find a solution that satisfies all constraints.
     /// 
-    /// This method automatically tries optimization algorithms for suitable problems
-    /// before falling back to traditional constraint propagation search.
+    /// Searches for any assignment to variables that satisfies all posted constraints.
+    /// Uses hybrid optimization techniques when applicable before falling back to 
+    /// traditional constraint propagation search.
     ///
+    /// # Returns
+    /// * `Ok(Solution)` - A valid solution if one exists
+    /// * `Err(SolverError)` - No solution exists, timeout occurred, or other error
+    ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
     /// post!(m, x != y);
-    /// let solution = m.solve();
+    /// 
+    /// match m.solve() {
+    ///     Ok(solution) => println!("Found: x={:?}, y={:?}", solution[x], solution[y]),
+    ///     Err(e) => println!("No solution: {}", e),
+    /// }
     /// ```
     #[must_use]
     pub fn solve(self) -> SolverResult<Solution> {
@@ -1314,18 +1404,30 @@ impl Model {
         }
     }
 
-    /// Enumerate all assignments that satisfy all constraints.
+    /// Find all solutions that satisfy the constraints.
     ///
-    /// The order in which assignments are yielded is not stable.
+    /// Returns an iterator over all valid assignments to variables that satisfy
+    /// all posted constraints. The order of solutions is not guaranteed to be stable.
     /// 
+    /// # Returns
+    /// An iterator over `Solution` objects. Each solution represents one valid
+    /// assignment to all variables.
     ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 3);
     /// let y = m.int(1, 3);
-    /// post!(m, x != y);
+    /// post!(m, x != y);  // x and y must be different
+    /// 
+    /// // Collect all solutions
     /// let solutions: Vec<_> = m.enumerate().collect();
+    /// println!("Found {} solutions", solutions.len());
+    /// 
+    /// for solution in solutions {
+    ///     println!("x={:?}, y={:?}", solution[x], solution[y]);
+    /// }
     /// ```
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
         let timeout = self.timeout_duration();
@@ -1341,10 +1443,32 @@ impl Model {
         }
     }
 
-    /// Enumerate all assignments that satisfy all constraints with callback to capture solving statistics.
+    /// Find all solutions with callback for statistics.
     ///
-    /// The callback is called with final statistics after all solutions are found.
-    /// Returns a vector of all solutions found during the search.
+    /// Returns all valid assignments to variables that satisfy all posted constraints.
+    /// A callback function is called with solving statistics after search completes.
+    /// 
+    /// # Arguments
+    /// * `callback` - Function called with `SolveStats` after enumeration finishes
+    ///
+    /// # Returns
+    /// A vector containing all found solutions
+    ///
+    /// # Example
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 3);
+    /// let y = m.int(1, 3);
+    /// post!(m, x != y);
+    /// 
+    /// let solutions = m.enumerate_with_callback(|stats| {
+    ///     println!("Search explored {} nodes", stats.node_count);
+    ///     println!("Performed {} propagations", stats.propagation_count);
+    /// });
+    /// 
+    /// println!("Found {} total solutions", solutions.len());
+    /// ```
     pub fn enumerate_with_callback<F>(self, callback: F) -> Vec<Solution>
     where
         F: FnOnce(&crate::solution::SolveStats),
@@ -1399,6 +1523,7 @@ impl Index<VarId> for Model {
     }
 }
 
+#[doc(hidden)]
 /// Wrapper around search engine that provides clean API for resource management
 pub struct EngineWrapper {
     model: Option<Model>,
@@ -1414,6 +1539,7 @@ impl EngineWrapper {
     }
 
     /// Configure the engine with custom settings
+    #[must_use]
     pub fn with_config(mut self, config: crate::config::SolverConfig) -> Self {
         if let Some(ref mut model) = self.model {
             model.config = config;
@@ -1428,18 +1554,23 @@ impl EngineWrapper {
     }
 
     /// Solve for any valid solution
-    pub fn solve_any(&mut self) -> Option<crate::solution::Solution> {
+    #[must_use]
+    pub fn solve_any(&mut self) -> SolverResult<crate::solution::Solution> {
         if let Some(model) = self.model.take() {
             match model.solve() {
-                Ok(solution) => Some(solution),
-                Err(_) => {
+                Ok(solution) => Ok(solution),
+                Err(err) => {
                     // Execute cleanup callbacks on error
                     self.trigger_cleanup();
-                    None
+                    Err(err)
                 }
             }
         } else {
-            None
+            Err(SolverError::InternalError {
+                message: "Model has already been consumed".to_string(),
+                location: Some("solve_any()".to_string()),
+                debug_info: Some("The model can only be solved once".to_string()),
+            })
         }
     }
 

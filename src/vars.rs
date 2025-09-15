@@ -1,3 +1,38 @@
+//! Variable domains and value types.
+//!
+//! This module provides the core types for representing CSP variables and their
+//! domains, including both integer and floating-point values.
+//!
+//! # Variable Domains
+//!
+//! Variables can have different domain types:
+//! - Integer domains using sparse sets for efficient representation
+//! - Floating-point domains using intervals with configurable precision
+//!
+//! # Value Types
+//!
+//! The `Val` enum represents values that can be either integers or floating-point
+//! numbers, providing type-safe access to variable assignments.
+//!
+//! # Variable IDs
+//!
+//! The `VarId` type provides opaque handles to variables that can be used to
+//! access variable values in solutions and constraint posting.
+//!
+//! # Example
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//!
+//! let mut m = Model::default();
+//! let x = m.int(1, 10);      // Integer variable
+//! let y = m.float(0.0, 1.0); // Floating-point variable
+//!
+//! // Variable IDs are opaque handles
+//! let x_id: VarId = x;
+//! let y_id: VarId = y;
+//! ```
+
 use crate::prelude::*;
 use crate::domain::{SparseSet, FloatInterval};
 use crate::domain::sparse_set::SparseSetState;
