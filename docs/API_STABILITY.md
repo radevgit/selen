@@ -17,7 +17,7 @@ All current public APIs are considered stable and will remain compatible within 
 - Constraint posting: `post!()`, `postall!()` macros
 - Solving methods: `solve()`, `minimize()`, `maximize()`, `enumerate()`
 - Iterator methods: `minimize_and_iterate()`, `maximize_and_iterate()`
-- Callback methods: `solve_with_callback()`, `minimize_with_callback()`, etc.
+- Embedded statistics: All solutions include `stats` field with propagation/node counts
 - Solution access patterns and indexing
 
 #### **Configuration System**

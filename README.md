@@ -130,9 +130,7 @@ fn main() {
 }
 ```
 
-## Status
 
-The library is currently in active development. Features and APIs may change as we refine the implementation and add new functionality.
 
 ## License
 

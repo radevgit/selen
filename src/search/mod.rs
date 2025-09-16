@@ -142,7 +142,13 @@ impl<M: Mode> Iterator for Search<M> {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             Self::Stalled(engine) => engine.next(),
-            Self::Done(space_opt) => space_opt.take().map(|space| space.vars.into_solution()),
+            Self::Done(space_opt) => space_opt.take().map(|space| {
+                let stats = crate::solution::SolveStats {
+                    propagation_count: space.get_propagation_count(),
+                    node_count: space.get_node_count(),
+                };
+                space.vars.into_solution_with_stats(stats)
+            }),
         }
     }
 }
@@ -372,8 +378,12 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
                         // Mode object may update its internal state when new solutions are found
                         self.mode.on_solution(&space.vars);
 
-                        // Extract solution assignment for all decision variables
-                        return Some(space.vars.into_solution());
+                        // Extract solution assignment for all decision variables with current statistics
+                        let stats = crate::solution::SolveStats {
+                            propagation_count: space.get_propagation_count(),
+                            node_count: space.get_node_count(),
+                        };
+                        return Some(space.vars.into_solution_with_stats(stats));
                     }
                 }
             }

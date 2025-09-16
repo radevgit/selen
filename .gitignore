@@ -4,3 +4,25 @@
 **/*.rs.bk
 clippy.txt
 
+# Binary executables and object files
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.o
+*.bin
+*_bin
+*_benchmark
+test_platinum
+performance_investigation
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+
