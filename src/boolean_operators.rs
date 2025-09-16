@@ -1,13 +1,14 @@
 //! Operator overloads for VarId to provide clean syntax.
 //!
 //! This module implements operator overloading for VarId to enable:
-//! - Bitwise operators: a & b, a | b, !a for boolean operations that work directly with post()
+//! - Function-style boolean operations: and(a, b), or(a, b), not(a) that work directly with post()
 
 use crate::vars::VarId;
 use crate::model::Model;
 use crate::constraint_builder::Constraint;
 use std::ops::{BitAnd, BitOr, Not};
 
+#[doc(hidden)]
 /// Represents a boolean expression that can be applied to a model
 /// This automatically creates variables when applied
 #[derive(Debug, Clone)]
@@ -207,6 +208,7 @@ impl Not for BoolExpr {
     }
 }
 
+#[doc(hidden)]
 /// Extension trait for Model to work with boolean expressions
 pub trait BooleanModel {
     /// Post a boolean expression as a constraint that must be true

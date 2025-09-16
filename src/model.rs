@@ -4,6 +4,7 @@ use crate::optimization::model_integration::{OptimizationRouter, OptimizationAtt
 use crate::error::{SolverError, SolverResult};
 use std::ops::Index;
 
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct Model {
     vars: Vars,
@@ -136,7 +137,6 @@ impl Model {
     }
 
     #[doc(hidden)]
-    #[doc(hidden)]
     /// Create a new decision variable, with the provided domain bounds.
     ///
     /// Both lower and upper bounds are included in the domain.
@@ -158,7 +158,6 @@ impl Model {
         }
     }
 
-    #[doc(hidden)]
     #[doc(hidden)]
     /// Create new decision variables, with the provided domain bounds.
     ///

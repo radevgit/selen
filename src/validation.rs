@@ -43,6 +43,7 @@ use crate::props::Propagators;
 use crate::optimization::constraint_metadata::ConstraintType;
 use std::collections::{HashMap, HashSet};
 
+#[doc(hidden)]
 /// Comprehensive model validation system that checks for:
 /// - Conflicting constraints that make the model unsolvable
 /// - Invalid variable domains (empty, inconsistent bounds)
