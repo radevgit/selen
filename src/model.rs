@@ -848,37 +848,14 @@ impl Model {
     /// ```
     #[must_use]
     pub fn minimize(self, objective: impl View) -> SolverResult<Solution> {
-        match self.minimize_and_iterate(objective).last() {
-            Some(solution) => Ok(solution),
-            None => Err(SolverError::no_solution()),
-        }
-    }
-
-    /// Find assignment that minimizes objective expression with callback to capture solving statistics.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.int(1, 10);
-    /// let solution = m.minimize_with_callback(x, |stats| {
-    ///     println!("Propagations: {}", stats.propagation_count);
-    /// });
-    /// ```
-    #[must_use]
-    pub fn minimize_with_callback<F>(self, objective: impl View, callback: F) -> SolverResult<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
         // First try specialized optimization (Step 2.4 precision handling)
         match self.try_optimization_minimize(&objective) {
-            Some(solution) => {
-                // Optimization succeeded - report zero search statistics since no search was needed
-                let stats = crate::solution::SolveStats {
+            Some(mut solution) => {
+                // Optimization succeeded - update with minimal stats since no search was performed
+                solution.stats = crate::solution::SolveStats {
                     propagation_count: 0,
                     node_count: 0,
                 };
-                callback(&stats);
                 Ok(solution)
             }
             None => {
@@ -902,8 +879,6 @@ impl Model {
                     propagation_count: current_count,
                     node_count: search_iter.get_node_count(),
                 };
-
-                callback(&stats);
                 
                 // Check if search terminated due to timeout
                 if search_iter.is_timed_out() {
@@ -919,18 +894,24 @@ impl Model {
                 }
                 
                 match last_solution {
-                    Some(solution) => Ok(solution),
+                    Some(mut solution) => {
+                        solution.stats = stats;
+                        Ok(solution)
+                    }
                     None => Err(SolverError::no_solution()),
                 }
             }
         }
     }
 
+    /// Enumerate assignments that minimize objective expression.
+    /// 
     /// Enumerate assignments that satisfy all constraints, while minimizing objective expression.
+    /// Each yielded solution includes embedded statistics.
     ///
     /// The order in which assignments are yielded is not stable.
     /// 
-    ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
@@ -960,72 +941,6 @@ impl Model {
         }
     }
 
-    /// Enumerate assignments that satisfy all constraints, while minimizing objective expression, with callback.
-    ///
-    /// The callback is called with final statistics after all solutions are found.
-    /// Returns a vector of all solutions found during the search.
-    pub fn minimize_and_iterate_with_callback<F>(
-        self,
-        objective: impl View,
-        callback: F,
-    ) -> Vec<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        // First try specialized optimization (Step 2.4 precision handling)
-        match self.try_optimization_minimize(&objective) {
-            Some(solution) => {
-                // Optimization succeeded - report zero search statistics since no search was needed
-                let stats = crate::solution::SolveStats {
-                    propagation_count: 0,
-                    node_count: 0,
-                };
-                callback(&stats);
-                vec![solution]
-            }
-            None => {
-                // Optimization failed or not applicable - fall back to traditional search
-                let timeout = self.timeout_duration();
-                let memory_limit = self.memory_limit_mb();
-                let (vars, props) = match self.prepare_for_search() {
-                    Ok(result) => result,
-                    Err(_) => {
-                        // Validation failed - report error stats and return empty vector
-                        let stats = crate::solution::SolveStats {
-                            propagation_count: 0,
-                            node_count: 0,
-                        };
-                        callback(&stats);
-                        return Vec::new();
-                    }
-                };
-
-                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
-                let mut solutions = Vec::new();
-                let mut current_count = 0;
-
-                // Collect all solutions manually and capture count during iteration
-                while let Some(solution) = search_iter.next() {
-                    solutions.push(solution);
-                    // Capture the count each iteration, as it might get lost when iterator is consumed
-                    current_count = search_iter.get_propagation_count();
-                }
-
-                let stats = crate::solution::SolveStats {
-                    propagation_count: current_count,
-                    node_count: search_iter.get_node_count(),
-                };
-
-                callback(&stats);
-                
-                // Note: If timeout occurred, we return partial solutions found before timeout
-                // The timeout condition can be checked via search_iter.is_timed_out() if needed
-                
-                solutions
-            }
-        }
-    }
-
     /// Find assignment that maximizes objective expression while satisfying all constraints.
     /// 
     ///
@@ -1040,50 +955,44 @@ impl Model {
     pub fn maximize(self, objective: impl View) -> SolverResult<Solution> {
         // First try specialized optimization before falling back to opposite+minimize pattern
         match self.try_optimization_maximize(&objective) {
-            Some(solution) => Ok(solution),
+            Some(mut solution) => {
+                // Optimization succeeded - update with minimal stats since no search was performed
+                solution.stats = crate::solution::SolveStats {
+                    propagation_count: 0,
+                    node_count: 0,
+                };
+                Ok(solution)
+            }
             None => self.minimize(objective.opposite()),
         }
     }
 
-    /// Find assignment that maximizes objective expression with callback to capture solving statistics.
+    /// Find assignment that maximizes objective expression.
     /// 
+    /// Find assignment that maximizes objective expression and return both solution and statistics.
     ///
+    /// This method provides the same functionality as `minimize()` but for maximization,
+    /// and returns both the solution and solving statistics in a single call.
+    ///
+    /// # Returns
+    /// A `SolutionWithStats` containing both the optimal solution and solving statistics
+    ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
-    /// let solution = m.maximize_with_callback(x, |stats| {
-    ///     println!("Nodes explored: {}", stats.node_count);
-    /// });
+    /// let y = m.int(1, 10);
+    /// post!(m, x + y <= int(15));
+    /// let sum = m.add(x, y);
+    /// let result = m.maximize(sum);
     /// ```
-    #[must_use]
-    pub fn maximize_with_callback<F>(self, objective: impl View, callback: F) -> SolverResult<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        // First try specialized optimization (Step 2.4 precision handling)
-        match self.try_optimization_maximize(&objective) {
-            Some(solution) => {
-                // Optimization succeeded - report zero search statistics since no search was needed
-                let stats = crate::solution::SolveStats {
-                    propagation_count: 0,
-                    node_count: 0,
-                };
-                callback(&stats);
-                Ok(solution)
-            }
-            None => {
-                // Optimization failed or not applicable - fall back to traditional search
-                self.minimize_with_callback(objective.opposite(), callback)
-            }
-        }
-    }
-
+    /// 
     /// Enumerate assignments that satisfy all constraints, while maximizing objective expression.
     ///
     /// The order in which assignments are yielded is not stable.
     /// 
-    ///
+    /// # Example
     /// ```
     /// use cspsolver::prelude::*;
     /// let mut m = Model::default();
@@ -1102,21 +1011,6 @@ impl Model {
                 Box::new(self.minimize_and_iterate(objective.opposite())) as Box<dyn Iterator<Item = Solution>>
             }
         }
-    }
-
-    /// Enumerate assignments that satisfy all constraints, while maximizing objective expression, with callback.
-    ///
-    /// The callback is called with final statistics after all solutions are found.
-    /// Returns a vector of all solutions found during the search.
-    pub fn maximize_and_iterate_with_callback<F>(
-        self,
-        objective: impl View,
-        callback: F,
-    ) -> Vec<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        self.minimize_and_iterate_with_callback(objective.opposite(), callback)
     }
 
     #[doc(hidden)]
@@ -1244,36 +1138,39 @@ impl Model {
     /// ```
     #[must_use]
     pub fn solve(self) -> SolverResult<Solution> {
-        // Step 6.5: Try hybrid optimization for mixed problems first
-        match self.try_hybrid_solve() {
-            Some(solution) => Ok(solution),
-            None => {
-                // Fall back to traditional constraint propagation search with timeout checking
-                let timeout = self.timeout_duration();
-                let memory_limit = self.memory_limit_mb();
-                let (vars, props) = self.prepare_for_search()?;
-                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
-                
-                let result = search_iter.next();
-                
-                // Check if search terminated due to timeout
-                if search_iter.is_timed_out() {
-                    let elapsed = search_iter.elapsed_time().as_secs_f64();
-                    return Err(SolverError::timeout_with_context(elapsed, "constraint satisfaction"));
-                }
-                
-                // Check if search terminated due to memory limit
-                if search_iter.is_memory_limit_exceeded() {
-                    let usage_mb = search_iter.get_memory_usage_mb();
-                    let limit_mb = memory_limit.unwrap_or(0) as usize;
-                    return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
-                }
-                
-                match result {
-                    Some(solution) => Ok(solution),
-                    None => Err(SolverError::no_solution()),
-                }
-            }
+        // For pure constraint satisfaction (no optimization objective), go directly to search
+        let timeout = self.timeout_duration();
+        let memory_limit = self.memory_limit_mb();
+        let (vars, props) = self.prepare_for_search()?;
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
+        
+        let result = search_iter.next();
+        
+        // Capture statistics after search
+        let stats = crate::solution::SolveStats {
+            propagation_count: search_iter.get_propagation_count(),
+            node_count: search_iter.get_node_count(),
+        };
+        
+        // Check if search terminated due to timeout
+        if search_iter.is_timed_out() {
+            let elapsed = search_iter.elapsed_time().as_secs_f64();
+            return Err(SolverError::timeout_with_context(elapsed, "constraint satisfaction"));
+        }
+        
+        // Check if search terminated due to memory limit
+        if search_iter.is_memory_limit_exceeded() {
+            let usage_mb = search_iter.get_memory_usage_mb();
+            let limit_mb = memory_limit.unwrap_or(0) as usize;
+            return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
+        }
+        
+        match result {
+            Some(mut solution) => {
+                solution.stats = stats;
+                Ok(solution)
+            },
+            None => Err(SolverError::no_solution()),
         }
     }
     
@@ -1296,63 +1193,6 @@ impl Model {
             OptimizationAttempt::Success(solution) => Some(solution),
             OptimizationAttempt::Fallback(_) => None, // Fall back to search
             OptimizationAttempt::Infeasible(_) => None, // No solution exists
-        }
-    }
-
-    /// Search for assignment with a callback to capture solving statistics.
-    ///
-    /// The callback receives the solving statistics when the search completes.
-    /// 
-    ///
-    /// ```
-    /// use cspsolver::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.int(1, 10);
-    /// let solution = m.solve_with_callback(|stats| {
-    ///     println!("Search completed with {} propagations", stats.propagation_count);
-    /// });
-    /// ```
-    #[must_use]
-    pub fn solve_with_callback<F>(self, callback: F) -> SolverResult<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
-        // Run the solving process
-        let timeout = self.timeout_duration();
-        let memory_limit = self.memory_limit_mb();
-        let (vars, props) = self.prepare_for_search()?;
-
-        // Create a search and run it to completion to capture final stats
-        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
-        let result = search_iter.next();
-
-        // Get the final stats from the search
-        let final_propagation_count = search_iter.get_propagation_count();
-        let final_node_count = search_iter.get_node_count();
-
-        let stats = crate::solution::SolveStats {
-            propagation_count: final_propagation_count,
-            node_count: final_node_count,
-        };
-
-        callback(&stats);
-        
-        // Check if search terminated due to timeout
-        if search_iter.is_timed_out() {
-            let elapsed = search_iter.elapsed_time().as_secs_f64();
-            return Err(SolverError::timeout_with_context(elapsed, "constraint satisfaction"));
-        }
-        
-        // Check if search terminated due to memory limit
-        if search_iter.is_memory_limit_exceeded() {
-            let usage_mb = search_iter.get_memory_usage_mb();
-            let limit_mb = memory_limit.unwrap_or(0) as usize;
-            return Err(SolverError::memory_limit_with_context(usage_mb, limit_mb));
-        }
-        
-        match result {
-            Some(solution) => Ok(solution),
-            None => Err(SolverError::no_solution()),
         }
     }
 
@@ -1442,16 +1282,32 @@ impl Model {
         }
     }
 
-    /// Find all solutions with callback for statistics.
+    /// Find all solutions with embedded statistics.
     ///
     /// Returns all valid assignments to variables that satisfy all posted constraints.
-    /// A callback function is called with solving statistics after search completes.
+    /// Each solution includes embedded statistics about the solving process.
     /// 
-    /// # Arguments
-    /// * `callback` - Function called with `SolveStats` after enumeration finishes
+    /// # Returns
+    /// A vector containing all found solutions with their embedded statistics
+    ///
+    /// # Example
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 3);
+    /// let solutions = m.enumerate();
+    /// for solution in solutions {
+    ///     println!("Solution found! Propagations: {}", solution.stats.propagation_count);
+    /// }
+    /// ```
+    /// 
+    /// Find all solutions and return both solutions and statistics.
+    ///
+    /// This method provides comprehensive solution enumeration with embedded statistics,
+    /// eliminating the need for external callbacks or manual statistics collection.
     ///
     /// # Returns
-    /// A vector containing all found solutions
+    /// A tuple containing a vector of all solutions and the solving statistics
     ///
     /// # Example
     /// ```
@@ -1461,17 +1317,17 @@ impl Model {
     /// let y = m.int(1, 3);
     /// post!(m, x != y);
     /// 
-    /// let solutions = m.enumerate_with_callback(|stats| {
-    ///     println!("Search explored {} nodes", stats.node_count);
-    ///     println!("Performed {} propagations", stats.propagation_count);
-    /// });
+    /// let (solutions, stats) = m.enumerate_with_stats();
     /// 
-    /// println!("Found {} total solutions", solutions.len());
+    /// println!("Found {} solutions", solutions.len());
+    /// println!("Search explored {} nodes", stats.node_count);
+    /// println!("Performed {} propagations", stats.propagation_count);
+    /// 
+    /// for solution in solutions {
+    ///     println!("x={:?}, y={:?}", solution[x], solution[y]);
+    /// }
     /// ```
-    pub fn enumerate_with_callback<F>(self, callback: F) -> Vec<Solution>
-    where
-        F: FnOnce(&crate::solution::SolveStats),
-    {
+    pub fn enumerate_with_stats(self) -> (Vec<Solution>, crate::solution::SolveStats) {
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
         let (vars, props) = match self.prepare_for_search() {
@@ -1482,35 +1338,28 @@ impl Model {
                     propagation_count: 0,
                     node_count: 0,
                 };
-                callback(&stats);
-                return Vec::new();
+                return (Vec::new(), stats);
             }
         };
 
         let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
         let mut solutions = Vec::new();
 
-        // CRITICAL: Get the stats BEFORE calling any next() methods,
-        // because Search::Done(Some(space)) becomes Search::Done(None) after the first next()
-        let final_count = search_iter.get_propagation_count();
-        let final_node_count = search_iter.get_node_count();
-
-        // Collect all solutions
+        // Collect all solutions - the search iterator will track statistics as it goes
         while let Some(solution) = search_iter.next() {
             solutions.push(solution);
         }
 
+        // Get the final statistics after enumeration is complete
         let stats = crate::solution::SolveStats {
-            propagation_count: final_count,
-            node_count: final_node_count,
+            propagation_count: search_iter.get_propagation_count(),
+            node_count: search_iter.get_node_count(),
         };
-
-        callback(&stats);
         
         // Note: If timeout occurred, we return partial solutions found before timeout
         // The timeout condition can be checked via search_iter.is_timed_out() if needed
         
-        solutions
+        (solutions, stats)
     }
 }
 

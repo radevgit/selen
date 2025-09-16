@@ -92,18 +92,8 @@ fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration
     
     // Solve with detailed timing
     let solve_start = Instant::now();
-    let mut stats = cspsolver::solution::SolveStats::default();
     
-    let solution = m.solve_with_callback(|solve_stats| {
-        stats = solve_stats.clone();
-        // Print progress every few seconds to see if it's stuck
-        if solve_stats.node_count % 5 == 0 && solve_stats.node_count > 0 {
-            let elapsed = solve_start.elapsed();
-            println!("   Progress: {} nodes, {} props, {:.1}s elapsed", 
-                     solve_stats.node_count, solve_stats.propagation_count, 
-                     elapsed.as_secs_f64());
-        }
-    });
+    let solution = m.solve();
     
     let solve_time = solve_start.elapsed();
     let total_time = total_start.elapsed();
@@ -112,13 +102,28 @@ fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration
     println!("   Model setup: {:.3}ms", model_time.as_secs_f64() * 1000.0);
     println!("   Solve time: {:.3}ms", solve_time.as_secs_f64() * 1000.0);
     println!("   Total time: {:.3}ms", total_time.as_secs_f64() * 1000.0);
-    println!("   Propagations: {}, Nodes: {}", stats.propagation_count, stats.node_count);
     
-    if solution.is_some() {
+    match &solution {
+        Ok(sol) => {
+            println!("   Propagations: {}, Nodes: {}", sol.stats.propagation_count, sol.stats.node_count);
+            println!("   ✅ Solution found!");
+        }
+        Err(_) => {
+            println!("   ❌ No solution found!");
+        }
+    }
+    
+    if solution.is_ok() {
         println!("   ✅ Solution found!");
     } else {
         println!("   ❌ No solution found!");
     }
+    
+    let stats = if let Ok(sol) = &solution {
+        sol.stats.clone()
+    } else {
+        cspsolver::solution::SolveStats::default()
+    };
     
     (total_time, stats)
 }

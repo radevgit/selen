@@ -23,25 +23,14 @@ fn main() -> SolverResult<()> {
     
     println!("Constraints added, solving...");
     
-    let mut prop_count = 0;
-    let mut node_count = 0;
-    
-    let solution = m.solve_with_callback(|stats| {
-        prop_count = stats.propagation_count;
-        node_count = stats.node_count;
-        
-        // Print progress 
-        if node_count % 10 == 0 && node_count > 0 {
-            println!("Progress: {} propagations, {} nodes", prop_count, node_count);
-        }
-    });
+    let solution = m.solve();
     
     let duration = start.elapsed();
     
     match solution {
         Ok(sol) => {
             println!("✅ Success in {:?}!", duration);
-            println!("Stats: {} propagations, {} nodes", prop_count, node_count);
+            println!("Stats: {} propagations, {} nodes", sol.stats.propagation_count, sol.stats.node_count);
             
             // Print solution
             for row in 0..2 {

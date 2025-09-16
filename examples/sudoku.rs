@@ -167,19 +167,20 @@ fn solve_and_display(difficulty: &str, puzzle: &[[i32; 9]; 9]) -> (usize, usize)
 fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)> {
     let mut m = Model::default();
     
-    // OPTIMIZATION 1: Create variables more efficiently
-    // For clues, create singleton variables directly; for empty cells, create full domain
-    let mut grid = [[m.int(1, 9); 9]; 9];
+    // Create variables individually to avoid duplication
+    let mut grid = Vec::new();
     for row in 0..9 {
+        let mut grid_row = Vec::new();
         for col in 0..9 {
             if puzzle[row][col] != 0 {
                 // Create singleton variable for clues (much more efficient than equals constraint)
                 let clue_val = puzzle[row][col];
-                grid[row][col] = m.int(clue_val, clue_val);
+                grid_row.push(m.int(clue_val, clue_val));
             } else {
-                grid[row][col] = m.int(1, 9);
+                grid_row.push(m.int(1, 9));
             }
         }
+        grid.push(grid_row);
     }
     
     // OPTIMIZATION 2: Pre-allocate vectors and use more efficient constraint posting
@@ -211,17 +212,15 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     // No need to call m.optimize_constraint_order() manually
     
     // Solve the model with statistics tracking
-    let mut propagation_count = 0;
-    let mut node_count = 0;
-    
-    let solution = m.solve_with_callback(|stats| {
-        // Track statistics
-        propagation_count = stats.propagation_count;
-        node_count = stats.node_count;
-    });
+    // Solve the model with embedded statistics
+    let solution = m.solve();
     
     // Convert solution to grid
     solution.map(|sol| {
+        // Access statistics from the solution
+        let propagation_count = sol.stats.propagation_count;
+        let node_count = sol.stats.node_count;
+        
         let mut result = [[0; 9]; 9];
         for row in 0..9 {
             for col in 0..9 {

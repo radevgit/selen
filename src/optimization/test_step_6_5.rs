@@ -133,25 +133,26 @@ mod tests {
         }
     }
     
-    /// Test that the solve_with_callback method still works
+    /// Test that the embedded statistics API works
     #[test]
-    fn test_solve_with_callback_compatibility() {
+    fn test_embedded_statistics_api() {
         let mut m = Model::default();
         
         let x = m.int(1, 10);
         let y = m.int(1, 10);
         m.ne(x, y);
         
-        let mut callback_called = false;
-        let solution = m.solve_with_callback(|stats| {
-            callback_called = true;
-            // Just check that stats are provided
-            println!("Search stats - propagations: {}, nodes: {}", 
-                     stats.propagation_count, stats.node_count);
-        });
+        let solution = m.solve();
         
-        assert!(solution.is_some());
-        assert!(callback_called);
+        assert!(solution.is_ok());
+        let sol = solution.unwrap();
+        
+        // Check that stats are provided via embedded API
+        println!("Search stats - propagations: {}, nodes: {}", 
+                 sol.stats.propagation_count, sol.stats.node_count);
+        
+        // Stats should be non-zero for this problem
+        assert!(sol.stats.propagation_count > 0 || sol.stats.node_count > 0);
     }
     
     /// Performance test - hybrid solver should be efficient for mixed problems

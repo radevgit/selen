@@ -105,6 +105,129 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
 
+    // Handle 2D array indexing: grid[i][j] < grid[k][l], grid[0][1] == x, etc.
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] < $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.less_than($left_array[$left_i][$left_j], $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] <= $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.less_than_or_equals($left_array[$left_i][$left_j], $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] > $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.greater_than($left_array[$left_i][$left_j], $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] >= $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.greater_than_or_equals($left_array[$left_i][$left_j], $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] == $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.equals($left_array[$left_i][$left_j], $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] != $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.not_equals($left_array[$left_i][$left_j], $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Handle 2D array vs variable: grid[i][j] < x, x == grid[0][1]
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] < $right:ident) => {{
+        $model.props.less_than($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] <= $right:ident) => {{
+        $model.props.less_than_or_equals($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] > $right:ident) => {{
+        $model.props.greater_than($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] >= $right:ident) => {{
+        $model.props.greater_than_or_equals($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] == $right:ident) => {{
+        $model.props.equals($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] != $right:ident) => {{
+        $model.props.not_equals($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, $left:ident < $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.less_than($left, $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident <= $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.less_than_or_equals($left, $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident > $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.greater_than($left, $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident >= $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.greater_than_or_equals($left, $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident == $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.equals($left, $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident != $right_array:ident[$right_i:expr][$right_j:expr]) => {{
+        $model.props.not_equals($left, $right_array[$right_i][$right_j]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Handle 2D array vs expression: grid[i][j] == int(5), grid[0][1] != int(3)
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] < $right:expr) => {{
+        $model.props.less_than($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] <= $right:expr) => {{
+        $model.props.less_than_or_equals($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] > $right:expr) => {{
+        $model.props.greater_than($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] >= $right:expr) => {{
+        $model.props.greater_than_or_equals($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] == $right:expr) => {{
+        $model.props.equals($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_i:expr][$left_j:expr] != $right:expr) => {{
+        $model.props.not_equals($left_array[$left_i][$left_j], $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
     // Handle array vs variable: vars[i] < x, x == vars[0]
     ($model:expr, $left_array:ident[$left_index:expr] < $right:ident) => {{
         $model.props.less_than($left_array[$left_index], $right);

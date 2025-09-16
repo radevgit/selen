@@ -268,32 +268,52 @@ impl<'a> ModelValidator<'a> {
                     continue; // Trivially satisfiable
                 }
                 
-                // Calculate minimum required domain size for AllDifferent
-                let mut _total_domain_size = 0;
-                let mut min_individual_domain = usize::MAX;
+                // For AllDifferent constraints, check for obvious conflicts
+                // 1. If two variables are already fixed to the same value, that's a conflict
+                // 2. If we have more variables than available distinct values, that's a conflict
+                let mut fixed_values = std::collections::HashSet::new();
+                let mut all_possible_values = std::collections::HashSet::new();
                 
                 for &var_id in variables {
                     let var = &self.vars[var_id];
-                    let domain_size = match var {
-                        Var::VarI(sparse_set) => sparse_set.size(),
+                    match var {
+                        Var::VarI(sparse_set) => {
+                            // Add all possible values to the union
+                            for val in sparse_set.iter() {
+                                all_possible_values.insert(val);
+                            }
+                            
+                            // If variable is fixed (size 1), check for duplicates
+                            if sparse_set.size() == 1 {
+                                let fixed_val = sparse_set.iter().next().unwrap();
+                                if fixed_values.contains(&fixed_val) {
+                                    return Err(SolverError::ConflictingConstraints {
+                                        constraint_names: Some(vec![format!("alldiff_constraint_{}", constraint_id.0)]),
+                                        variables: Some(variables.iter().map(|id| format!("var_{:?}", id)).collect()),
+                                        context: Some(format!(
+                                            "AllDifferent constraint has two variables fixed to the same value: {}",
+                                            fixed_val
+                                        )),
+                                    });
+                                }
+                                fixed_values.insert(fixed_val);
+                            }
+                        }
                         Var::VarF(_) => {
                             // Float variables have essentially infinite domains for AllDifferent purposes
                             continue;
                         }
                     };
-                    
-                    _total_domain_size += domain_size;
-                    min_individual_domain = min_individual_domain.min(domain_size);
                 }
                 
-                // Check if any individual variable domain is too small
-                if min_individual_domain < num_variables {
+                // Check if we have enough distinct values available
+                if all_possible_values.len() < num_variables {
                     return Err(SolverError::ConflictingConstraints {
                         constraint_names: Some(vec![format!("alldiff_constraint_{}", constraint_id.0)]),
                         variables: Some(variables.iter().map(|id| format!("var_{:?}", id)).collect()),
                         context: Some(format!(
-                            "AllDifferent constraint requires {} distinct values, but smallest variable domain has only {} values",
-                            num_variables, min_individual_domain
+                            "AllDifferent constraint requires {} distinct values, but only {} distinct values are available in the domains",
+                            num_variables, all_possible_values.len()
                         )),
                     });
                 }

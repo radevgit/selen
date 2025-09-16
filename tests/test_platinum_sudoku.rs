@@ -52,24 +52,17 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     // OPTIMIZATION 3: Optimize constraint order for better propagation
     m.optimize_constraint_order();
     
-    // Solve the model with statistics tracking
-    let mut propagation_count = 0;
-    let mut node_count = 0;
+    // Solve the model with embedded statistics
+    let solution = m.solve();
     
-    let solution = m.solve_with_callback(|stats| {
-        // Track statistics
-        propagation_count = stats.propagation_count;
-        node_count = stats.node_count;
-        
-        // Print progress every 10,000 nodes to show we're making progress
-        if node_count % 10000 == 0 && node_count > 0 {
-            println!("  Progress: {} propagations, {} nodes explored", propagation_count, node_count);
-        }
-    });
-    
-    // Convert solution to grid
     match solution {
         Ok(sol) => {
+            // Access statistics from the solution
+            let propagation_count = sol.stats.propagation_count;
+            let node_count = sol.stats.node_count;
+            
+            println!("  Completed: {} propagations, {} nodes explored", propagation_count, node_count);
+            
             let mut result = [[0; 9]; 9];
             for row in 0..9 {
                 for col in 0..9 {

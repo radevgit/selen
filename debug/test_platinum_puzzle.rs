@@ -79,19 +79,8 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
         }
     }
     
-    // Track statistics
-    let mut propagation_count = 0;
-    let mut node_count = 0;
     
-    let solution = m.solve_with_callback(|stats| {
-        propagation_count = stats.propagation_count;
-        node_count = stats.node_count;
-        
-        // Print progress every 1000 nodes to detect potential infinite loops
-        if node_count % 1000 == 0 && node_count > 0 {
-            println!("Progress: {} nodes, {} propagations", node_count, propagation_count);
-        }
-    });
+    let solution = m.solve();
     
     solution.map(|sol| {
         let mut result = [[0; 9]; 9];
@@ -102,7 +91,7 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
                 }
             }
         }
-        (result, propagation_count, node_count)
+        (result, sol.stats.propagation_count, sol.stats.node_count)
     })
 }
 

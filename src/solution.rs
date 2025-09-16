@@ -6,12 +6,14 @@
 //! # Solution Access
 //!
 //! Solutions are represented by the `Solution` struct, which allows indexed access
-//! to variable values using the original `VarId` handles.
+//! to variable values using the original `VarId` handles. Every solution includes
+//! statistics about how it was found.
 //!
 //! # Statistics
 //!
 //! The solver collects statistics about the solving process, including the number
-//! of propagations performed and search nodes explored.
+//! of propagations performed and search nodes explored. These are automatically
+//! included with every solution.
 //!
 //! # Example
 //!
@@ -23,15 +25,16 @@
 //! let y = m.int(1, 10);
 //! post!(m, x + y == int(15));
 //!
-//! // Solve with statistics callback
-//! let solution = m.solve_with_callback(|stats| {
-//!     println!("Propagations: {}", stats.propagation_count);
-//!     println!("Search nodes: {}", stats.node_count);
-//! }).unwrap();
+//! // Solve and get solution with statistics
+//! let solution = m.solve().unwrap();
 //!
 //! // Access solution values
 //! println!("x = {:?}", solution[x]);
 //! println!("y = {:?}", solution[y]);
+//!
+//! // Access statistics
+//! println!("Propagations: {}", solution.stats.propagation_count);
+//! println!("Search nodes: {}", solution.stats.node_count);
 //! ```
 
 use std::borrow::Borrow;
@@ -41,7 +44,7 @@ use std::time::Duration;
 use crate::vars::{Val, VarId, VarIdBin};
 
 /// Statistics collected during the solving process.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct SolveStats {
     /// Number of propagation steps performed during solving
     pub propagation_count: usize,
@@ -140,17 +143,39 @@ impl EnhancedSolveStats {
 
 /// Assignment for decision variables that satisfies all constraints.
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Solution(Vec<Val>);
+pub struct Solution {
+    values: Vec<Val>,
+    /// Statistics collected during the solving process
+    pub stats: SolveStats,
+}
 
 impl Index<VarId> for Solution {
     type Output = Val;
 
     fn index(&self, index: VarId) -> &Self::Output {
-        &self.0[index]
+        &self.values[index]
     }
 }
 
 impl Solution {
+    /// Create a new solution with values and statistics
+    pub fn new(values: Vec<Val>, stats: SolveStats) -> Self {
+        Self { values, stats }
+    }
+
+    /// Create a solution from values with default (empty) statistics
+    pub fn from_values(values: Vec<Val>) -> Self {
+        Self {
+            values,
+            stats: SolveStats::default(),
+        }
+    }
+
+    /// Get a reference to the solving statistics
+    pub fn stats(&self) -> &SolveStats {
+        &self.stats
+    }
+
     /// Get assignments for the decision variables provided as a slice.
     #[must_use]
     pub fn get_values(&self, vs: &[VarId]) -> Vec<Val> {
@@ -175,7 +200,7 @@ impl Solution {
     /// Get binary assignment for the provided decision variable.
     #[must_use]
     pub fn get_value_binary(&self, v: impl Borrow<VarIdBin>) -> bool {
-        self.0[v.borrow().0] == Val::ValI(1)
+        self.values[v.borrow().0] == Val::ValI(1)
     }
 
     /// Get binary assignments for the decision variables provided as a slice.
@@ -202,7 +227,7 @@ impl Solution {
 
 
 impl From<Vec<Val>> for Solution {
-    fn from(value: Vec<Val>) -> Self {
-        Self(value)
+    fn from(values: Vec<Val>) -> Self {
+        Self::from_values(values)
     }
 }

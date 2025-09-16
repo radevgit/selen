@@ -581,6 +581,19 @@ impl Vars {
         Solution::from(values)
     }
 
+    /// Extract assignment for all decision variables with statistics.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if any decision variables are not assigned.
+    #[doc(hidden)]
+    pub fn into_solution_with_stats(self, stats: crate::solution::SolveStats) -> Solution {
+        // Extract values for each decision variable
+        let values: Vec<_> = self.0.into_iter().map(|v| v.get_assignment()).collect();
+
+        Solution::new(values, stats)
+    }
+
     /// Save state of all sparse set variables for efficient backtracking
     #[doc(hidden)]
     pub fn save_sparse_states(&self) -> Vec<Option<SparseSetState>> {
