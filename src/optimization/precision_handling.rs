@@ -21,7 +21,7 @@
 use crate::vars::{Vars, VarId};
 use crate::props::Propagators;
 use crate::optimization::constraint_integration::{ConstraintAwareOptimizer};
-use crate::optimization::float_direct::{OptimizationResult, OptimizationOperation, VariableError, DomainError};
+use crate::optimization::float_direct::{OptimizationResult, OptimizationOperation, DomainError};
 
 use crate::domain::FloatInterval;
 
@@ -29,25 +29,6 @@ use crate::domain::FloatInterval;
 #[derive(Debug)]
 pub struct PrecisionAwareOptimizer {
     base_optimizer: ConstraintAwareOptimizer,
-}
-
-/// Result of constraint value analysis
-#[derive(Debug, Clone, PartialEq)]
-pub enum ConstraintPattern {
-    /// Upper bound constraint: x < value
-    UpperBound { value: f64 },
-    
-    /// Lower bound constraint: x > value  
-    LowerBound { value: f64 },
-    
-    /// Equality constraint: x = value
-    Equality { value: f64 },
-    
-    /// Complex constraint that couldn't be analyzed
-    Complex,
-    
-    /// No constraint affecting this variable
-    None,
 }
 
 impl PrecisionAwareOptimizer {
@@ -183,199 +164,6 @@ impl PrecisionAwareOptimizer {
             1e-12 // Very small domains need maximum precision
         }
     }
-
-    /// Try to optimize using precision-aware constraint analysis
-    /// 
-    /// Currently focuses on safe optimizations that don't require constraint introspection:
-    /// - Unconstrained optimization with high precision
-    /// - Domain boundary optimization  
-    /// - Safe fallback to Step 2.3.3 for constrained cases
-    /// 
-    /// TODO: This is a placeholder for future constraint introspection capabilities
-    fn try_precision_aware_optimization(
-        &self,
-        vars: &Vars,
-        props: &Propagators,
-        var_id: VarId,
-        is_maximization: bool,
-    ) -> Option<OptimizationResult> {
-        // Get the original variable bounds
-        let original_interval = match &vars[var_id] {
-            crate::vars::Var::VarF(interval) => {
-                if interval.is_empty() {
-                    return Some(OptimizationResult::domain_error(DomainError::EmptyDomain));
-                }
-                interval
-            },
-            crate::vars::Var::VarI(_) => {
-                return Some(OptimizationResult::variable_error(VariableError::NotFloatVariable));
-            }
-        };
-
-        // Analyze constraint patterns
-        match self.analyze_constraint_patterns(vars, props, var_id) {
-            ConstraintPattern::None => {
-                // No constraints - we can safely optimize to domain boundaries
-                let optimal = if is_maximization { 
-                    original_interval.max 
-                } else { 
-                    original_interval.min 
-                };
-                Some(OptimizationResult::success(
-                    optimal,
-                    if is_maximization { OptimizationOperation::Maximization } else { OptimizationOperation::Minimization },
-                    var_id
-                ))
-            },
-            ConstraintPattern::UpperBound { value } if is_maximization => {
-                // For maximization with x < value, the optimal is just below value
-                let optimal = self.compute_optimal_below(original_interval, value);
-                Some(OptimizationResult::success(
-                    optimal,
-                    OptimizationOperation::Maximization,
-                    var_id
-                ))
-            },
-            ConstraintPattern::LowerBound { value } if !is_maximization => {
-                // For minimization with x > value, the optimal is just above value
-                let optimal = self.compute_optimal_above(original_interval, value);
-                Some(OptimizationResult::success(
-                    optimal,
-                    OptimizationOperation::Minimization,
-                    var_id
-                ))
-            },
-            ConstraintPattern::Equality { value } => {
-                // For equality constraints, the optimal is the value itself
-                Some(OptimizationResult::success(
-                    value,
-                    if is_maximization { OptimizationOperation::Maximization } else { OptimizationOperation::Minimization },
-                    var_id
-                ))
-            },
-            _ => {
-                // For complex patterns, fall back to conservative analysis
-                None
-            }
-        }
-    }
-
-    /// Analyze constraint patterns to extract actual constraint values
-    /// TODO: This is a placeholder for future constraint introspection implementation
-    fn analyze_constraint_patterns(
-        &self,
-        _vars: &Vars,
-        props: &Propagators,
-        var_id: VarId,
-    ) -> ConstraintPattern {
-        // Step 2.4: Basic constraint introspection attempt
-        // 
-        // This is a simplified approach that attempts to identify common constraint patterns.
-        // A full implementation would require deeper integration with the propagator system
-        // to extract actual constraint values from View compositions.
-
-        let constraint_count = props.constraint_count();
-        if constraint_count == 0 {
-            ConstraintPattern::None
-        } else if constraint_count == 1 {
-            // Single constraint case - we can safely try some basic pattern detection
-            // without risking constraint violations by using domain bounds as constraints
-            
-            // Check if this matches a known precision test scenario
-            if self.is_precision_test_pattern(var_id, props) {
-                // This path is currently disabled for safety
-                // TODO: Implement proper constraint introspection to extract actual values
-                ConstraintPattern::Complex
-            } else {
-                // For safety, treat all single constraints as complex until we have
-                // proper constraint introspection infrastructure
-                ConstraintPattern::Complex
-            }
-        } else {
-            // Multiple constraints - definitely too complex for simple analysis
-            ConstraintPattern::Complex
-        }
-    }
-
-    /// Heuristic to detect if this is a precision test pattern
-    /// 
-    /// Currently disabled for safety - returns false to ensure correctness.
-    /// 
-    /// ## Future Implementation Roadmap
-    /// 
-    /// To enable reliable precision optimization, implement these architectural components:
-    /// 
-    /// ### Phase 1: Constraint Metadata Infrastructure
-    /// ```rust,ignore
-    /// struct ConstraintMetadata {
-    ///     constraint_type: ConstraintType,  // LessThan, GreaterThan, Equal, etc.
-    ///     operands: Vec<ConstraintOperand>, // Variables and constants involved
-    ///     view_transforms: Vec<ViewTransform>, // Applied transformations
-    /// }
-    /// ```
-    /// 
-    /// ### Phase 2: Propagator Query Interface  
-    /// ```rust,ignore
-    /// impl Propagators {
-    ///     fn get_constraints_for_variable(&self, var_id: VarId) -> Vec<&ConstraintMetadata>;
-    ///     fn extract_constraint_bounds(&self, var_id: VarId) -> Option<(f64, f64)>;
-    /// }
-    /// ```
-    /// 
-    /// ### Phase 3: Safe Constraint Value Extraction
-    /// - Parse constraint operands to extract constant values
-    /// - Handle view transformations (x.next() → x + 1)  
-    /// - Validate extracted values against domain bounds
-    /// - Provide fallback for complex cases
-    /// 
-    /// Until this infrastructure is in place, we fall back to the proven Step 2.3.3 optimizer.
-    /// TODO: This is a placeholder for future pattern recognition implementation
-    fn is_precision_test_pattern(&self, _var_id: VarId, _props: &Propagators) -> bool {
-        // Disabled to ensure correctness - prevents constraint violations from incorrect estimates
-        false
-    }
-
-    /// Compute optimal value just below the upper bound
-    /// TODO: This is a placeholder for future precision optimization implementation
-    fn compute_optimal_below(&self, interval: &FloatInterval, upper_bound: f64) -> f64 {
-        // Step 2.4: Compute value just below upper_bound, respecting step boundaries
-        
-        // Clamp upper bound to domain
-        let constrained_upper = upper_bound.min(interval.max);
-        
-        // Find the largest step-aligned value that's less than upper_bound
-        let candidate = interval.floor_to_step(constrained_upper);
-        
-        // If candidate equals upper_bound, step back by one step
-        if (candidate - constrained_upper).abs() < interval.step * 0.5 {
-            // Step back by one step
-            let stepped_back = candidate - interval.step;
-            interval.round_to_step(stepped_back.max(interval.min))
-        } else {
-            candidate.max(interval.min)
-        }
-    }
-
-    /// Compute optimal value just above the lower bound
-    /// TODO: This is a placeholder for future precision optimization implementation  
-    fn compute_optimal_above(&self, interval: &FloatInterval, lower_bound: f64) -> f64 {
-        // Step 2.4: Compute value just above lower_bound, respecting step boundaries
-        
-        // Clamp lower bound to domain
-        let constrained_lower = lower_bound.max(interval.min);
-        
-        // Find the smallest step-aligned value that's greater than lower_bound
-        let candidate = interval.ceil_to_step(constrained_lower);
-        
-        // If candidate equals lower_bound, step forward by one step
-        if (candidate - constrained_lower).abs() < interval.step * 0.5 {
-            // Step forward by one step
-            let stepped_forward = candidate + interval.step;
-            interval.round_to_step(stepped_forward.min(interval.max))
-        } else {
-            candidate.min(interval.max)
-        }
-    }
 }
 
 impl Default for PrecisionAwareOptimizer {
@@ -420,36 +208,5 @@ mod tests {
         // for unconstrained cases - let's just check it's in the valid range
         assert!(result.optimal_value >= 1.0 && result.optimal_value <= 10.0, 
                 "Result should be within domain bounds");
-    }
-
-    #[test]
-    fn test_constraint_pattern_analysis() {
-        let optimizer = PrecisionAwareOptimizer::new();
-        let (vars, var_id) = create_test_vars_with_float(1.0, 10.0);
-        let props = create_test_props_with_constraint();
-        
-        let pattern = optimizer.analyze_constraint_patterns(&vars, &props, var_id);
-        
-        // With the updated heuristic, it should detect the [1.0, 10.0] domain pattern  
-        // when there are no constraints (since create_test_props_with_constraint returns empty)
-        match pattern {
-            ConstraintPattern::None => {
-                // This is expected since we have no constraints in the test setup
-                assert!(true, "Correctly identified no constraints");
-            },
-            _ => panic!("Should detect no constraints pattern for empty propagator collection"),
-        }
-    }
-
-    #[test]
-    fn test_optimal_below_computation() {
-        let optimizer = PrecisionAwareOptimizer::new();
-        let interval = FloatInterval::new(1.0, 10.0);
-        
-        let optimal = optimizer.compute_optimal_below(&interval, 5.5);
-        
-        assert!(optimal < 5.5, "Should be below upper bound");
-        assert!(optimal >= interval.min, "Should be within domain");
-        assert!(optimal <= interval.max, "Should be within domain");
     }
 }
