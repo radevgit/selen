@@ -8,11 +8,8 @@ use crate::vars::{Vars, VarId};
 use crate::props::Propagators;
 use crate::solution::Solution;
 use crate::views::View;
-use crate::optimization::{ProblemClassifier, ProblemType, ConstraintAwareOptimizer, OptimizationResult};
+use crate::optimization::{ProblemClassifier, ProblemType, ConstraintAwareOptimizer};
 use crate::optimization::precision_handling::PrecisionAwareOptimizer;
-use crate::optimization::variable_partitioning::{VariablePartitioner, PartitionResult};
-use crate::optimization::subproblem_solving::{solve_with_partitioning, SubproblemSolvingError};
-use crate::optimization::solution_integration::{SolutionIntegrator, IntegrationError};
 
 /// Helper function to extract the internal index from VarId
 /// Safe accessor using the new VarId methods
@@ -29,7 +26,6 @@ pub fn index_to_var_id(index: usize) -> VarId {
 /// Integration manager for connecting Model API to optimization algorithms
 #[derive(Debug)]
 pub struct OptimizationRouter {
-    classifier: ProblemClassifier,
     constraint_optimizer: ConstraintAwareOptimizer,
     precision_optimizer: PrecisionAwareOptimizer,
 }
@@ -206,7 +202,6 @@ impl OptimizationRouter {
     /// Create a new optimization router
     pub fn new() -> Self {
         Self {
-            classifier: ProblemClassifier,
             constraint_optimizer: ConstraintAwareOptimizer::new(),
             precision_optimizer: PrecisionAwareOptimizer::new(),
         }
@@ -470,6 +465,7 @@ impl OptimizationRouter {
     }
     
     /// Attempt unconstrained float minimization (Step 2.3.2 conservative implementation)
+    /// TODO: This method is not currently used but contains valuable optimization logic
     fn try_unconstrained_float_minimize(
         &self,
         vars: &Vars,
@@ -501,6 +497,7 @@ impl OptimizationRouter {
     }
     
     /// Attempt unconstrained float maximization (Step 2.3.2 conservative implementation)
+    /// TODO: This method is not currently used but contains valuable optimization logic
     fn try_unconstrained_float_maximize(
         &self,
         vars: &Vars,
@@ -569,6 +566,7 @@ impl OptimizationRouter {
     }
     
     /// Attempt float minimization using constraint-aware optimizer
+    /// TODO: This method is not currently used but contains valuable optimization logic
     fn try_float_minimize(
         &self,
         vars: &Vars,
@@ -599,6 +597,7 @@ impl OptimizationRouter {
     }
     
     /// Attempt float maximization using constraint-aware optimizer
+    /// TODO: This method is not currently used but contains valuable optimization logic
     fn try_float_maximize(
         &self,
         vars: &Vars,
@@ -646,7 +645,7 @@ impl OptimizationRouter {
     fn try_hybrid_constraint_satisfaction(
         &self,
         vars: &Vars,
-        props: &Propagators,
+        _props: &Propagators,
     ) -> OptimizationAttempt {
         // For Step 6.5, we implement a simplified version that focuses on constraint satisfaction
         // This demonstrates the hybrid pipeline integration
@@ -671,48 +670,6 @@ impl OptimizationRouter {
         // For Step 6.5, we return a fallback to indicate the hybrid solver was attempted
         // but needs full integration with the model creation
         OptimizationAttempt::Fallback(FallbackReason::MixedSeparableProblem)
-    }
-    
-    /// Create a Solution from an OptimizationResult
-    /// 
-    /// This converts the optimizer's result back to the format expected by
-    /// the Model API. For now, we create a solution with all variables at
-    /// their current domain values, and the optimized variable at its optimal value.
-    fn create_solution(
-        &self,
-        vars: &Vars,
-        optimized_var_idx: usize,
-        result: &OptimizationResult,
-    ) -> Result<Solution, SolutionCreationError> {
-        let mut values = Vec::new();
-        
-        // Add all variables to the solution at their current values
-        for (var_idx, var) in vars.iter_with_indices() {
-            if var_idx == optimized_var_idx {
-                // Set the optimized variable to its optimal value
-                values.push(crate::vars::Val::ValF(result.optimal_value));
-            } else {
-                // For other variables, use their current domain values
-                // This is a simplification - in a real solution, all variables would be assigned
-                match var {
-                    crate::vars::Var::VarF(interval) => {
-                        // Use the midpoint of the interval as a reasonable assignment
-                        let value = if interval.is_fixed() {
-                            interval.min
-                        } else {
-                            interval.mid()
-                        };
-                        values.push(crate::vars::Val::ValF(value));
-                    },
-                    crate::vars::Var::VarI(sparse_set) => {
-                        // Use the minimum value for integer variables
-                        values.push(crate::vars::Val::ValI(sparse_set.min()));
-                    },
-                }
-            }
-        }
-        
-        Ok(Solution::from(values))
     }
 }
 

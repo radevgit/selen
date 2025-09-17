@@ -33,7 +33,7 @@ pub fn test_small_scale_precision() -> LimitResult {
     let mut m = Model::default();
     
     // Small precision: millimeter-level constraints (0.001m to 0.1m)
-    let parts: Vec<_> = (0..10).map(|i| {
+    let parts: Vec<_> = (0..10).map(|_i| {
         m.float(0.001, 0.1) // 1mm to 10cm
     }).collect();
     
@@ -56,7 +56,7 @@ pub fn test_medium_scale_precision() -> LimitResult {
     let mut m = Model::default();
     
     // Medium scale: centimeter to meter level (0.01m to 5m)
-    let dimensions: Vec<_> = (0..25).map(|i| {
+    let dimensions: Vec<_> = (0..25).map(|_i| {
         m.float(0.01, 5.0) // 1cm to 5m
     }).collect();
     
@@ -79,7 +79,7 @@ pub fn test_large_scale_precision() -> LimitResult {
     let mut m = Model::default();
     
     // Large scale: meter level (0.1m to 10m)
-    let plates: Vec<_> = (0..50).map(|i| {
+    let plates: Vec<_> = (0..50).map(|_i| {
         m.float(0.1, 10.0) // 10cm to 10m
     }).collect();
     
@@ -126,7 +126,7 @@ pub fn test_precision_boundary_limits() -> LimitResult {
     let mut m = Model::default();
     
     // Test very tight precision boundaries
-    let precision_parts: Vec<_> = (0..20).map(|i| {
+    let precision_parts: Vec<_> = (0..20).map(|_i| {
         m.float(1.0, 2.0) // 1m to 2m range
     }).collect();
     

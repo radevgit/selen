@@ -8,7 +8,7 @@ fn main() -> SolverResult<()> {
     let mut m = Model::default();
     
     // Create a 2x2 mini-sudoku for testing
-    let mut grid = [[m.int(1, 2); 2]; 2];
+    let grid = [[m.int(1, 2); 2]; 2];
     
     // Row constraints: each row has all digits 1-2
     for row in 0..2 {

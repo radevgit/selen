@@ -1175,25 +1175,25 @@ impl Model {
     
     /// Step 6.5: Try hybrid optimization approach for constraint satisfaction
     /// Returns Some(solution) if hybrid solver succeeds, None if should fall back to search
-    fn try_hybrid_solve(&self) -> Option<Solution> {
-        // Create a dummy objective (we're not optimizing, just solving constraints)
-        // Use the first variable if available, otherwise return None
-        let first_var = match self.vars.iter().next() {
-            Some(_) => {
-                // Create VarId for the first variable
-                let first_var_id = crate::optimization::model_integration::index_to_var_id(0);
-                first_var_id
-            },
-            None => return None, // No variables to solve
-        };
+    // fn try_hybrid_solve(&self) -> Option<Solution> {
+    //     // Create a dummy objective (we're not optimizing, just solving constraints)
+    //     // Use the first variable if available, otherwise return None
+    //     let first_var = match self.vars.iter().next() {
+    //         Some(_) => {
+    //             // Create VarId for the first variable
+    //             let first_var_id = crate::optimization::model_integration::index_to_var_id(0);
+    //             first_var_id
+    //         },
+    //         None => return None, // No variables to solve
+    //     };
         
-        // Try optimization with the dummy objective
-        match self.optimization_router.try_minimize(&self.vars, &self.props, &first_var) {
-            OptimizationAttempt::Success(solution) => Some(solution),
-            OptimizationAttempt::Fallback(_) => None, // Fall back to search
-            OptimizationAttempt::Infeasible(_) => None, // No solution exists
-        }
-    }
+    //     // Try optimization with the dummy objective
+    //     match self.optimization_router.try_minimize(&self.vars, &self.props, &first_var) {
+    //         OptimizationAttempt::Success(solution) => Some(solution),
+    //         OptimizationAttempt::Fallback(_) => None, // Fall back to search
+    //         OptimizationAttempt::Infeasible(_) => None, // No solution exists
+    //     }
+    // }
 
     #[doc(hidden)]
     /// Internal helper that validates the model and optimizes constraints before search.

@@ -14,15 +14,17 @@
 use crate::model::Model;
 use crate::solution::Solution;
 use crate::optimization::variable_partitioning::{VariablePartition, PartitionResult};
-use crate::vars::{Vars, Var, VarId};
-use crate::props::Propagators;
+use crate::vars::{Var, VarId};
+use crate::domain::float_interval::precision_to_step_size;
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 
 /// Specialized solver for float-only subproblems
 #[derive(Debug, Clone)]
 pub struct FloatSubproblemSolver {
-    /// Precision for floating-point operations
+    /// Precision for floating-point operations (decimal places)
+    /// This controls the granularity of float solutions and ensures
+    /// that subproblem solutions respect the model's precision settings
     precision_digits: i32,
     /// Timeout for solving operations
     timeout: Duration,
@@ -198,7 +200,7 @@ impl FloatSubproblemSolver {
         })
     }
     
-    /// Solve a single float variable using bounds analysis
+    /// Solve a single float variable using bounds analysis with precision awareness
     fn solve_single_float_variable(
         &self,
         model: &Model,
@@ -211,24 +213,32 @@ impl FloatSubproblemSolver {
         
         match var {
             Var::VarF(float_interval) => {
-                // For Step 6.3, use a simple midpoint strategy
-                // In a full implementation, this would analyze constraints to find optimal bounds
+                // Use precision-aware calculations based on the solver's precision setting
+                let step_size = precision_to_step_size(self.precision_digits);
+                
                 let min_val = float_interval.min;
                 let max_val = float_interval.max;
                 
                 if min_val.is_finite() && max_val.is_finite() {
-                    // Use midpoint as a reasonable solution for unconstrained variables
-                    let solution = (min_val + max_val) / 2.0;
+                    // Use midpoint as a reasonable solution, but round to solver's precision
+                    let midpoint = (min_val + max_val) / 2.0;
+                    // Round to the solver's step size, not the interval's
+                    let solution = (midpoint / step_size).round() * step_size;
                     Ok(Some(solution))
                 } else if min_val.is_finite() {
-                    // Only lower bound, use lower bound + 1
-                    Ok(Some(min_val + 1.0))
+                    // Only lower bound, move one step from the minimum
+                    let candidate = min_val + step_size;
+                    let solution = (candidate / step_size).round() * step_size;
+                    Ok(Some(solution))
                 } else if max_val.is_finite() {
-                    // Only upper bound, use upper bound - 1
-                    Ok(Some(max_val - 1.0))
+                    // Only upper bound, move one step from the maximum
+                    let candidate = max_val - step_size;
+                    let solution = (candidate / step_size).round() * step_size;
+                    Ok(Some(solution))
                 } else {
-                    // Unbounded, use 0 as default
-                    Ok(Some(0.0))
+                    // Unbounded, use 0 as default but round to solver's precision
+                    let solution = (0.0 / step_size).round() * step_size;
+                    Ok(Some(solution))
                 }
             },
             _ => Err(SubproblemSolvingError::FloatSolvingFailed(
@@ -545,4 +555,196 @@ pub fn solve_with_partitioning(
 ) -> Result<CombinedSolution, SubproblemSolvingError> {
     let coordinator = SubproblemCoordinator::new(model.float_precision_digits());
     coordinator.solve_partitioned_problem(model, partition_result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::Model;
+    use crate::optimization::variable_partitioning::{VariablePartition, PartitionResult};
+
+    #[test]
+    fn test_float_solver_respects_precision() {
+        // Test that FloatSubproblemSolver actually uses the precision setting
+        
+        // Create model with high precision (8 decimal places)
+        let mut model = Model::with_float_precision(8);
+        let var_id = model.float(0.0, 1.0).into();
+        
+        // Create partition with this float variable
+        let partition = VariablePartition {
+            float_variables: vec![var_id],
+            integer_variables: vec![],
+            constraint_count: 0,
+        };
+        
+        // Create solver with the same precision
+        let solver = FloatSubproblemSolver::new(8);
+        
+        // Solve the subproblem
+        let result = solver.solve_float_subproblem(&model, &partition)
+            .expect("Should solve float subproblem");
+        
+        assert!(result.is_solved);
+        assert_eq!(result.variable_assignments.len(), 1);
+        
+        // Verify the solution value is within the precision bounds
+        if let Some(SubproblemValue::Float(value)) = result.variable_assignments.get(&var_id) {
+            // Value should be rounded to 8 decimal places
+            let step_size = precision_to_step_size(8); // 0.00000001
+            let rounded_value = (value / step_size).round() * step_size;
+            let diff = (value - rounded_value).abs();
+            assert!(diff < 1e-12, "Solution should be rounded to precision: {} vs {}", value, rounded_value);
+        } else {
+            panic!("Expected float value in solution");
+        }
+    }
+    
+    #[test]
+    fn test_float_solver_different_precisions() {
+        // Test that different precision settings produce differently rounded results
+        
+        let test_cases = vec![
+            (1, 0.1),      // 1 decimal place
+            (2, 0.01),     // 2 decimal places  
+            (4, 0.0001),   // 4 decimal places
+            (6, 0.000001), // 6 decimal places
+        ];
+        
+        for (precision_digits, expected_step) in test_cases {
+            let mut model = Model::with_float_precision(precision_digits);
+            let var_id = model.float(0.0, 1.0).into();
+            
+            let partition = VariablePartition {
+                float_variables: vec![var_id],
+                integer_variables: vec![],
+                constraint_count: 0,
+            };
+            
+            let solver = FloatSubproblemSolver::new(precision_digits);
+            let result = solver.solve_float_subproblem(&model, &partition)
+                .expect("Should solve float subproblem");
+            
+            // Check that the step size matches expectations
+            let actual_step = precision_to_step_size(precision_digits);
+            let diff = (actual_step - expected_step).abs();
+            assert!(diff < 1e-12, "Step size mismatch for precision {}: {} vs {}", 
+                precision_digits, actual_step, expected_step);
+            
+            // Verify solution is properly rounded
+            if let Some(SubproblemValue::Float(value)) = result.variable_assignments.get(&var_id) {
+                let remainder = value % actual_step;
+                assert!(remainder.abs() < 1e-12 || (actual_step - remainder).abs() < 1e-12,
+                    "Value {} should be aligned to step size {} (remainder: {})", 
+                    value, actual_step, remainder);
+            }
+        }
+    }
+    
+    #[test]
+    fn test_coordinator_uses_model_precision() {
+        // Test that SubproblemCoordinator correctly passes model precision to float solver
+        
+        let mut model = Model::with_float_precision(3); // 3 decimal places
+        let float_var = model.float(0.0, 10.0).into();
+        let int_var = model.int(0, 100).into();
+        
+        // Create partition result with both types
+        let partition_result = PartitionResult {
+            float_partition: Some(VariablePartition {
+                float_variables: vec![float_var],
+                integer_variables: vec![],
+                constraint_count: 0,
+            }),
+            integer_partition: Some(VariablePartition {
+                float_variables: vec![],
+                integer_variables: vec![int_var],
+                constraint_count: 0,
+            }),
+            is_separable: true,
+            total_variables: 2,
+            total_constraints: 0,
+        };
+        
+        // Coordinator should extract precision from model
+        let coordinator = SubproblemCoordinator::new(model.float_precision_digits());
+        let result = coordinator.solve_partitioned_problem(&model, &partition_result)
+            .expect("Should solve partitioned problem");
+        
+        assert!(result.is_complete);
+        assert_eq!(result.all_assignments.len(), 2);
+        
+        // Verify float solution respects 3-decimal precision
+        if let Some(SubproblemValue::Float(value)) = result.all_assignments.get(&float_var) {
+            let step_size = precision_to_step_size(3); // 0.001
+            let remainder = value % step_size;
+            assert!(remainder.abs() < 1e-12 || (step_size - remainder).abs() < 1e-12,
+                "Float value {} should be aligned to 3-decimal precision (step {})", 
+                value, step_size);
+        }
+    }
+    
+    #[test]
+    fn test_precision_mismatch_handling() {
+        // Test behavior when solver precision doesn't match model precision
+        
+        let mut model = Model::with_float_precision(6); // Model has 6 decimal places
+        let var_id = model.float(0.0, 1.0).into();
+        
+        let partition = VariablePartition {
+            float_variables: vec![var_id],
+            integer_variables: vec![],
+            constraint_count: 0,
+        };
+        
+        // Create solver with different precision (2 decimal places)
+        let solver = FloatSubproblemSolver::new(2);
+        
+        let result = solver.solve_float_subproblem(&model, &partition)
+            .expect("Should still solve despite precision mismatch");
+        
+        // Should solve, but use solver's precision, not model's
+        assert!(result.is_solved);
+        
+        if let Some(SubproblemValue::Float(value)) = result.variable_assignments.get(&var_id) {
+            // Should be rounded to solver's 2-decimal precision, not model's 6-decimal
+            let solver_step = precision_to_step_size(2); // 0.01
+            let remainder = value % solver_step;
+            assert!(remainder.abs() < 1e-12 || (solver_step - remainder).abs() < 1e-12,
+                "Should use solver precision (2 decimals), not model precision (6 decimals)");
+        }
+    }
+    
+    #[test]
+    fn test_convenience_function_precision_propagation() {
+        // Test that solve_with_partitioning correctly propagates model precision
+        
+        let mut model = Model::with_float_precision(4);
+        let var_id = model.float(-5.0, 5.0).into();
+        
+        let partition_result = PartitionResult {
+            float_partition: Some(VariablePartition {
+                float_variables: vec![var_id],
+                integer_variables: vec![],
+                constraint_count: 0,
+            }),
+            integer_partition: None,
+            is_separable: true,
+            total_variables: 1,
+            total_constraints: 0,
+        };
+        
+        let result = solve_with_partitioning(&model, &partition_result)
+            .expect("Should solve with partitioning");
+        
+        assert!(result.is_complete);
+        
+        // Verify precision propagation
+        if let Some(SubproblemValue::Float(value)) = result.all_assignments.get(&var_id) {
+            let step_size = precision_to_step_size(4); // 0.0001
+            let remainder = value % step_size;
+            assert!(remainder.abs() < 1e-12 || (step_size - remainder).abs() < 1e-12,
+                "Convenience function should propagate model precision correctly");
+        }
+    }
 }

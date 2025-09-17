@@ -101,18 +101,15 @@ impl ProblemClassifier {
         VariableAnalysis {
             integer_count,
             float_count,
-            total_count: integer_count + float_count,
         }
     }
     
     /// Analyze constraint patterns to detect coupling
     fn analyze_constraints(props: &Propagators, var_analysis: &VariableAnalysis) -> ConstraintAnalysis {
-        let has_constraints = props.constraint_count() > 0;
         
         if var_analysis.integer_count == 0 || var_analysis.float_count == 0 {
             // Pure problems can't have cross-type coupling
             return ConstraintAnalysis {
-                has_constraints,
                 appears_linear: true,
                 has_coupling: false,
                 coupling_strength: CouplingStrength::Linear,
@@ -124,7 +121,6 @@ impl ProblemClassifier {
         let coupling_analysis = Self::analyze_variable_coupling(constraint_registry, var_analysis);
         
         ConstraintAnalysis {
-            has_constraints,
             appears_linear: coupling_analysis.appears_linear,
             has_coupling: coupling_analysis.has_coupling,
             coupling_strength: coupling_analysis.coupling_strength,
@@ -208,38 +204,6 @@ impl ProblemClassifier {
         false
     }
 
-    /// Build a mapping from VarId to variable type (integer vs float)
-    /// For Step 6.1, we'll use a simplified approach based on variable indices
-    fn build_variable_type_map(
-        _constraint_registry: &crate::optimization::constraint_metadata::ConstraintRegistry,
-    ) -> std::collections::HashMap<VarId, VariableType> {
-        // For now, return empty map - we'll enhance this in future steps
-        // The main classification still works based on variable counting
-        std::collections::HashMap::new()
-    }
-
-    /// Infer variable type from constraint data
-    fn infer_variable_type_from_constraint(
-        _constraint_data: &crate::optimization::constraint_metadata::ConstraintData,
-    ) -> VariableType {
-        // For Step 6.1, return unknown - we'll enhance this later
-        VariableType::Unknown
-    }
-
-    /// Analyze the variable types involved in a single constraint
-    fn get_constraint_variable_types(
-        _variables: &[VarId],
-        _var_types: &std::collections::HashMap<VarId, VariableType>,
-    ) -> ConstraintVariableTypes {
-        // For Step 6.1, conservative approach - assume no cross-type constraints
-        ConstraintVariableTypes {
-            has_integer: false,
-            has_float: false,
-            has_unknown: true,
-            has_both_types: false,
-        }
-    }
-    
     /// Determine the final problem type based on analysis
     fn determine_problem_type(
         var_analysis: VariableAnalysis,
@@ -285,13 +249,11 @@ impl ProblemClassifier {
 struct VariableAnalysis {
     integer_count: usize,
     float_count: usize,
-    total_count: usize,
 }
 
 /// Analysis results for constraints in the problem
 #[derive(Debug, Clone)]
 struct ConstraintAnalysis {
-    has_constraints: bool,
     appears_linear: bool,
     has_coupling: bool,
     coupling_strength: CouplingStrength,
@@ -303,23 +265,6 @@ struct CouplingAnalysisResult {
     has_coupling: bool,
     coupling_strength: CouplingStrength,
     appears_linear: bool,
-}
-
-/// Variable type classification for coupling detection
-#[derive(Debug, Clone, PartialEq)]
-enum VariableType {
-    Integer,
-    Float,
-    Unknown,
-}
-
-/// Analysis of variable types in a constraint
-#[derive(Debug, Clone)]
-struct ConstraintVariableTypes {
-    has_integer: bool,
-    has_float: bool,
-    has_unknown: bool,
-    has_both_types: bool,
 }
 
 impl ProblemType {
@@ -376,10 +321,6 @@ mod tests {
     
     fn create_test_vars() -> Vars {
         Vars::new()
-    }
-    
-    fn create_test_props() -> Propagators {
-        Propagators::default()
     }
     
     #[test]
@@ -464,7 +405,6 @@ mod tests {
         let analysis = ProblemClassifier::analyze_variables(&vars);
         assert_eq!(analysis.integer_count, 0);
         assert_eq!(analysis.float_count, 0);
-        assert_eq!(analysis.total_count, 0);
         
         // Test with actual variables from a model
         let mut m = Model::default();
@@ -475,6 +415,5 @@ mod tests {
         let analysis = ProblemClassifier::analyze_variables(m.get_vars());
         assert_eq!(analysis.integer_count, 2);
         assert_eq!(analysis.float_count, 1);
-        assert_eq!(analysis.total_count, 3);
     }
 }
