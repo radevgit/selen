@@ -71,7 +71,7 @@ pub fn test_hierarchical_decomposition() -> (Duration, bool) {
 }
 
 pub fn test_batch_optimization_approach() -> (Duration, bool) {
-    let start = Instant::now();
+    //let start = Instant::now();
     
     // Instead of one large model, solve multiple smaller models
     let mut total_success = true;
@@ -129,7 +129,7 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
     }
     
     let total_duration = batch_durations.iter().sum();
-    let duration = start.elapsed();
+    //let duration = start.elapsed();
     
     (total_duration, total_success)
 }

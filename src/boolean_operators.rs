@@ -232,7 +232,6 @@ impl BooleanModel for Model {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::prelude::*;
     use crate::post;
     

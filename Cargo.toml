@@ -11,15 +11,17 @@ repository = "https://github.com/radevgit/cspsolver"
 documentation = "https://docs.rs/cspsolver"
 readme = "README.md"
 
-[dependencies]
+
 
 
 [lib]
 crate-type = ["lib"]
 
+[dependencies]
+
 [dev-dependencies]
 #rand = "0.9.2"
-divan = "0.1.21"
+#divan = "0.1.21"
 
 
 [lints.rustdoc]

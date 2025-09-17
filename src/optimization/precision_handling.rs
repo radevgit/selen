@@ -190,6 +190,8 @@ impl PrecisionAwareOptimizer {
     /// - Unconstrained optimization with high precision
     /// - Domain boundary optimization  
     /// - Safe fallback to Step 2.3.3 for constrained cases
+    /// 
+    /// TODO: This is a placeholder for future constraint introspection capabilities
     fn try_precision_aware_optimization(
         &self,
         vars: &Vars,
@@ -259,6 +261,7 @@ impl PrecisionAwareOptimizer {
     }
 
     /// Analyze constraint patterns to extract actual constraint values
+    /// TODO: This is a placeholder for future constraint introspection implementation
     fn analyze_constraint_patterns(
         &self,
         _vars: &Vars,
@@ -326,12 +329,14 @@ impl PrecisionAwareOptimizer {
     /// - Provide fallback for complex cases
     /// 
     /// Until this infrastructure is in place, we fall back to the proven Step 2.3.3 optimizer.
+    /// TODO: This is a placeholder for future pattern recognition implementation
     fn is_precision_test_pattern(&self, _var_id: VarId, _props: &Propagators) -> bool {
         // Disabled to ensure correctness - prevents constraint violations from incorrect estimates
         false
     }
 
     /// Compute optimal value just below the upper bound
+    /// TODO: This is a placeholder for future precision optimization implementation
     fn compute_optimal_below(&self, interval: &FloatInterval, upper_bound: f64) -> f64 {
         // Step 2.4: Compute value just below upper_bound, respecting step boundaries
         
@@ -352,6 +357,7 @@ impl PrecisionAwareOptimizer {
     }
 
     /// Compute optimal value just above the lower bound
+    /// TODO: This is a placeholder for future precision optimization implementation  
     fn compute_optimal_above(&self, interval: &FloatInterval, lower_bound: f64) -> f64 {
         // Step 2.4: Compute value just above lower_bound, respecting step boundaries
         
