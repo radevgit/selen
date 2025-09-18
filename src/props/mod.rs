@@ -4,6 +4,7 @@ mod alldiff;
 mod allequal;
 mod bool_logic;
 mod div;
+mod element;
 mod eq;
 mod leq;
 mod max;
@@ -934,6 +935,34 @@ impl Propagators {
             self::allequal::AllEqual::new(vars.clone()),
             ConstraintType::AllEqual,
             vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce that array[index] == value.
+    /// This is the element constraint for array indexing operations.
+    /// Supports both constant and variable indices with bidirectional propagation.
+    pub fn element(&mut self, array: Vec<VarId>, index: VarId, value: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let mut operands: Vec<ViewInfo> = array.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: index });
+        operands.push(ViewInfo::Variable { var_id: value });
+            
+        let metadata = ConstraintData::NAry { operands };
+        let trigger_vars = {
+            let mut vars = array.clone();
+            vars.push(index);
+            vars.push(value);
+            vars
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::element::Element::new(array, index, value),
+            ConstraintType::Element,
+            trigger_vars,
             metadata,
         )
     }

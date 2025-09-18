@@ -28,7 +28,7 @@ impl ConstraintRef {
 /// 
 /// **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 /// 
-/// **Array indexing**: `vars[i] op vars[j]`, `vars[i] op var`, `var op vars[i]`, `vars[i] op literal`, `literal op vars[i]`
+/// **Array indexing**: `vars[i] op vars[j]`, `vars[i] op var`, `var op vars[i]`, `vars[i] op literal`, `literal op vars[i]`, `array[var] == value` (Element)
 /// 
 /// **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 /// 
@@ -36,7 +36,7 @@ impl ConstraintRef {
 /// 
 /// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
 /// 
-/// **Global**: `alldiff([vars...])`, `allequal([vars...])`
+/// **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
 /// 
 /// **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
 /// 
@@ -71,6 +71,18 @@ macro_rules! post {
     
     ($model:expr, $left:ident != $right:ident) => {{
         $model.props.not_equals($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Element constraint syntax: array[variable] == value
+    // These patterns must come BEFORE general array indexing to match variable indices
+    ($model:expr, $array:ident[$index:ident] == $value:ident) => {{
+        $model.props.element($array.to_vec(), $index, $value);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $value:ident == $array:ident[$index:ident]) => {{
+        $model.props.element($array.to_vec(), $index, $value);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
 
@@ -1194,6 +1206,18 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
+    // Element constraint: element(array, index, value)
+    ($model:expr, element($array:expr, $index:ident, $value:ident)) => {{
+        $model.props.element($array.to_vec(), $index, $value);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Element constraint: element with array literal
+    ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident)) => {{
+        $model.props.element(vec![$($vars),+], $index, $value);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
     // Enhanced modulo operations: x % y == int(0), x % y != int(0)
     
     // Modulo with literal divisor and variable remainder: x % 5 == y
@@ -1740,6 +1764,15 @@ macro_rules! postall_helper {
         $crate::post!($model, $var != int($target));
     };
     
+    // Element constraint syntax (single)
+    ($model:expr, $array:ident[$index:ident] == $value:ident) => {
+        $crate::post!($model, $array[$index] == $value);
+    };
+    
+    ($model:expr, $value:ident == $array:ident[$index:ident]) => {
+        $crate::post!($model, $value == $array[$index]);
+    };
+    
     // Arithmetic operations
     ($model:expr, $left:ident + $right:ident <= $target:ident) => {
         $crate::post!($model, $left + $right <= $target);
@@ -1786,6 +1819,16 @@ macro_rules! postall_helper {
         $crate::post!($model, allequal($array));
     };
     
+    // Element constraint
+    ($model:expr, element($array:expr, $index:ident, $value:ident)) => {
+        $crate::post!($model, element($array, $index, $value));
+    };
+    
+    // Element constraint with array literal
+    ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident)) => {
+        $crate::post!($model, element([$($vars),+], $index, $value));
+    };
+    
     // Logical operators
     ($model:expr, and($c1:expr, $c2:expr)) => {
         $crate::post!($model, and($c1, $c2));
@@ -1827,6 +1870,17 @@ macro_rules! postall_helper {
     
     ($model:expr, $var:ident != $target:ident, $($rest:tt)*) => {
         $crate::post!($model, $var != $target);
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Element constraint syntax (multiple)
+    ($model:expr, $array:ident[$index:ident] == $value:ident, $($rest:tt)*) => {
+        $crate::post!($model, $array[$index] == $value);
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    ($model:expr, $value:ident == $array:ident[$index:ident], $($rest:tt)*) => {
+        $crate::post!($model, $value == $array[$index]);
         $crate::postall_helper!($model, $($rest)*);
     };
     
@@ -1914,6 +1968,18 @@ macro_rules! postall_helper {
     // Global constraints: allequal with array expressions (multiple)
     ($model:expr, allequal($array:expr), $($rest:tt)*) => {
         $crate::post!($model, allequal($array));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Element constraint (multiple)
+    ($model:expr, element($array:expr, $index:ident, $value:ident), $($rest:tt)*) => {
+        $crate::post!($model, element($array, $index, $value));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Element constraint with array literal (multiple)
+    ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident), $($rest:tt)*) => {
+        $crate::post!($model, element([$($vars),+], $index, $value));
         $crate::postall_helper!($model, $($rest)*);
     };
     
@@ -2119,6 +2185,32 @@ mod tests {
         // Should compile without errors
         assert!(true);
     }
+
+    #[test]
+    fn test_post_macro_element() {
+        let mut m = Model::default();
+        let a0 = m.int(10, 10);
+        let a1 = m.int(20, 20);
+        let a2 = m.int(30, 30);
+        let index = m.int(0, 2);
+        let value = m.int(10, 30);
+        
+        // Test element constraint with array literal
+        let _c1 = post!(m, element([a0, a1, a2], index, value));
+        
+        // Test element constraint with array expression
+        let array = vec![a0, a1, a2];
+        let _c2 = post!(m, element(array.clone(), index, value));
+        
+        // Test natural array[index] == value syntax
+        let _c3 = post!(m, array[index] == value);
+        
+        // Test reverse syntax: value == array[index]
+        let _c4 = post!(m, value == array[index]);
+        
+        // Should compile without errors
+        assert!(true);
+    }
     
     #[test]
     fn test_post_macro_enhanced_modulo() {
@@ -2187,12 +2279,15 @@ mod tests {
         let b = m.int(0, 1);
         
         // Test direct constraint posting with simple comma syntax
+        let array = vec![x, y, z];
         postall!(m, 
             x < y,
             y > int(5),
             x + y <= z,
             alldiff([x, y, z]),
             allequal([x, y]),
+            element([x, y, z], a, b),
+            array[a] == b,
             and(a, b),
             or(a, b),
             not(a)

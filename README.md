@@ -16,7 +16,7 @@ This library provides efficient algorithms and data structures for solving const
 - **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
 - **Boolean Logic**: `and()`, `or()`, `not()` with clean function syntax
-- **Global**: `alldiff()`, `allequal()`
+- **Global**: `alldiff()`, `allequal()`, element `x[y] = z`
 
 ## Installation
 
@@ -89,6 +89,12 @@ fn main() {
     // Global constraints
     post!(m, alldiff([x, y]));  // All different
     post!(m, allequal([x, y])); // All equal
+    
+    // Element constraint (array indexing)
+    let array = vec![x, y, z];
+    let index = m.int(0, 2);
+    let value = m.int(1, 20);
+    post!(m, element(array, index, value)); // array[index] = value
 
     if let Some(solution) = m.solve() {
         println!("x = {:?}", solution[x]);

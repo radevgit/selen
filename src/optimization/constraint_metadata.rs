@@ -42,6 +42,8 @@ pub enum ConstraintType {
     AllDifferent,
     /// AllEqual constraint
     AllEqual,
+    /// Element constraint (array[index] = value)
+    Element,
     /// Sum constraint
     Sum,
     /// Addition constraint (x + y = z)
@@ -372,6 +374,7 @@ impl ConstraintRegistry {
                 ConstraintType::BooleanNot |
                 ConstraintType::AllDifferent | 
                 ConstraintType::AllEqual |
+                ConstraintType::Element |
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;
                 }
