@@ -27,7 +27,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cspsolver = "0.5.11"
+cspsolver = "0.5.15"
 ```
 
 
