@@ -70,6 +70,16 @@ pub enum ConstraintType {
     Count,
     /// Table constraint (table(vars, tuples))
     Table,
+    /// Between constraint (lower <= middle <= upper)
+    Between,
+    /// At least N constraint (at_least(vars, value, count))
+    AtLeast,
+    /// At most N constraint (at_most(vars, value, count))
+    AtMost,
+    /// Exactly N constraint (exactly(vars, value, count))
+    Exactly,
+    /// If-then-else constraint (if condition then constraint1 else constraint2)
+    IfThenElse,
     /// Complex constraint that couldn't be categorized
     Complex {
         /// Number of variables involved
@@ -381,6 +391,11 @@ impl ConstraintRegistry {
                 ConstraintType::Element |
                 ConstraintType::Count |
                 ConstraintType::Table |
+                ConstraintType::Between |
+                ConstraintType::AtLeast |
+                ConstraintType::AtMost |
+                ConstraintType::Exactly |
+                ConstraintType::IfThenElse |
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;
                 }

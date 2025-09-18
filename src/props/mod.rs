@@ -2,7 +2,10 @@ mod abs;
 mod add;
 mod alldiff;
 mod allequal;
+pub mod between;
 mod bool_logic;
+pub mod cardinality;
+pub mod conditional;
 mod count;
 mod div;
 mod element;
@@ -995,6 +998,107 @@ impl Propagators {
             self::element::Element::new(array, index, value),
             ConstraintType::Element,
             trigger_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce a between constraint: lower <= middle <= upper
+    pub fn between_constraint(&mut self, lower: VarId, middle: VarId, upper: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let variables = vec![lower, middle, upper];
+        let operands = vec![
+            ViewInfo::Variable { var_id: lower },
+            ViewInfo::Variable { var_id: middle },
+            ViewInfo::Variable { var_id: upper },
+        ];
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::between::BetweenConstraint::new(lower, middle, upper),
+            ConstraintType::Between,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce "at least N" cardinality constraint
+    pub fn at_least_constraint(&mut self, vars: Vec<VarId>, target_value: i32, count: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::cardinality::CardinalityConstraint::at_least(vars.clone(), target_value, count),
+            ConstraintType::AtLeast,
+            vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce "at most N" cardinality constraint
+    pub fn at_most_constraint(&mut self, vars: Vec<VarId>, target_value: i32, count: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::cardinality::CardinalityConstraint::at_most(vars.clone(), target_value, count),
+            ConstraintType::AtMost,
+            vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce "exactly N" cardinality constraint
+    pub fn exactly_constraint(&mut self, vars: Vec<VarId>, target_value: i32, count: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::cardinality::CardinalityConstraint::exactly(vars.clone(), target_value, count),
+            ConstraintType::Exactly,
+            vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce if-then-else constraint
+    pub fn if_then_else_constraint(
+        &mut self, 
+        condition: self::conditional::Condition,
+        then_constraint: self::conditional::SimpleConstraint,
+        else_constraint: Option<self::conditional::SimpleConstraint>
+    ) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let constraint = self::conditional::IfThenElseConstraint::new(condition, then_constraint, else_constraint);
+        let variables = constraint.variables();
+        
+        let operands: Vec<ViewInfo> = variables.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            constraint,
+            ConstraintType::IfThenElse,
+            variables,
             metadata,
         )
     }

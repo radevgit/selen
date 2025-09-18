@@ -17,6 +17,9 @@ This library provides efficient algorithms and data structures for solving const
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
 - **Boolean Logic**: `and()`, `or()`, `not()` with array syntax `and([a,b,c])` and variadic syntax `and(a,b,c,d)`
 - **Global**: `alldiff()`, `allequal()`, element `x[y] = z`, `count(vars, value, count)`, `table(vars, tuples)`
+- **Ordering**: `between(lower, middle, upper)` for ternary ordering constraints
+- **Cardinality**: `at_least(vars, value, count)`, `at_most(vars, value, count)`, `exactly(vars, value, count)`
+- **Conditional**: `if_then(condition, constraint)`, `if_then_else(condition, then_constraint, else_constraint)`
 
 ## Installation
 
@@ -92,6 +95,18 @@ fn main() {
     post!(m, alldiff([x, y]));  // All different
     post!(m, allequal([x, y])); // All equal
     
+    // Ordering constraints - powerful ternary relationships
+    post!(m, between(x, y, z)); // x <= y <= z (ordering constraint)
+    
+    // Cardinality constraints - counting with fine-grained control
+    let tasks = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 1=low, 2=medium, 3=high priority
+    post!(m, at_least(tasks.clone(), int(3), int(1))); // At least 1 high priority task
+    post!(m, at_most(tasks.clone(), int(1), int(2)));   // At most 2 low priority tasks
+    post!(m, exactly(tasks, int(2), int(1)));           // Exactly 1 medium priority task
+    
+    // Conditional constraints - if-then logic
+    post!(m, if_then(x == int(5), y == int(10))); // If x=5 then y=10
+    
     // Count constraint - count how many variables equal a value
     let workers = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 1=day, 2=evening, 3=night
     let night_count = m.int(1, 2); // 1-2 workers on night shift
@@ -157,6 +172,23 @@ fn main() {
     post!(m, count(students.clone(), int(1), section1_count)); // Count students in section 1
     post!(m, count(students, int(2), section2_count));         // Count students in section 2
     
+    // Advanced cardinality constraints with precise control
+    let employees = vec![m.int(1, 4), m.int(1, 4), m.int(1, 4), m.int(1, 4), m.int(1, 4)]; // 5 employees, 4 departments
+    post!(m, at_least(employees.clone(), int(1), int(2)));  // At least 2 in department 1 
+    post!(m, at_most(employees.clone(), int(4), int(1)));   // At most 1 in department 4
+    post!(m, exactly(employees, int(2), int(2)));           // Exactly 2 in department 2
+    
+    // Ordering constraints for complex relationships
+    let start_time = m.int(9, 17);   // 9 AM to 5 PM
+    let meeting_time = m.int(9, 17); // Meeting time
+    let end_time = m.int(9, 17);     // End time
+    post!(m, between(start_time, meeting_time, end_time)); // start <= meeting <= end
+    
+    // Conditional constraints for business logic
+    let is_weekend = m.int(0, 1);    // 0=weekday, 1=weekend
+    let hours_open = m.int(8, 12);   // Store hours
+    post!(m, if_then(is_weekend == int(1), hours_open == int(8))); // Weekend stores open 8 hours
+    
     // Table constraints - express complex relationships with lookup tables
     let time = m.int(1, 4);    // Time slots: 1=9AM, 2=11AM, 3=1PM, 4=3PM
     let room = m.int(1, 3);    // Rooms: 1=Lab, 2=Classroom, 3=Auditorium
@@ -183,6 +215,42 @@ fn main() {
     }
 }
 ```
+
+### New Constraint Types (v0.5.11+)
+
+The latest version includes powerful new constraint types for advanced modeling:
+
+#### Between Constraints
+Enforce ternary ordering relationships with a single constraint:
+```rust
+let start = m.int(1, 10);
+let middle = m.int(5, 15); 
+let end = m.int(10, 20);
+post!(m, between(start, middle, end)); // start <= middle <= end
+```
+
+#### Cardinality Constraints  
+Precise counting control for resource allocation and capacity planning:
+```rust
+let workers = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 4 workers, 3 shifts
+post!(m, at_least(workers.clone(), int(3), int(2)));  // At least 2 on night shift (3)
+post!(m, at_most(workers.clone(), int(1), int(1)));   // At most 1 on day shift (1)  
+post!(m, exactly(workers, int(2), int(1)));           // Exactly 1 on evening shift (2)
+```
+
+#### Conditional Constraints
+Business logic and dependency modeling with if-then-else:
+```rust
+let weather = m.int(1, 3);      // 1=sunny, 2=cloudy, 3=rainy
+let activity = m.int(1, 3);     // 1=hiking, 2=museum, 3=shopping
+let backup = m.int(1, 3);       // Backup activity
+
+// If sunny (1) then hiking (1), if rainy (3) then shopping (3)
+post!(m, if_then(weather == int(1), activity == int(1)));
+post!(m, if_then(weather == int(3), activity == int(3)));
+```
+
+These constraints work seamlessly with the existing `post!` macro system and provide both helper methods and natural syntax for maximum usability.
 
 
 
