@@ -1,6 +1,7 @@
 .vscode
 
 /target
+/examples/misc/target
 **/*.rs.bk
 clippy.txt
 

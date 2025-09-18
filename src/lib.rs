@@ -143,7 +143,6 @@ pub mod math_syntax;
 #[doc(hidden)]
 pub mod constraint_macros;
 
-
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
