@@ -3,6 +3,7 @@ mod add;
 mod alldiff;
 mod allequal;
 mod bool_logic;
+mod count;
 mod div;
 mod element;
 mod eq;
@@ -939,6 +940,36 @@ impl Propagators {
         )
     }
 
+    /// Declare a new propagator to enforce that exactly count_var variables in vars equal target_value.
+    /// This is the count constraint: count(vars, target_value, count_var).
+    pub fn count_constraint(&mut self, vars: Vec<VarId>, target_value: crate::vars::Val, count_var: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo, ConstraintValue};
+        use crate::vars::Val;
+        
+        let mut operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: count_var });
+        
+        let value = match target_value {
+            Val::ValI(i) => ConstraintValue::Integer(i),
+            Val::ValF(f) => ConstraintValue::Float(f),
+        };
+        operands.push(ViewInfo::Constant { value });
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        let mut all_vars = vars.clone();
+        all_vars.push(count_var);
+        
+        self.push_new_prop_with_metadata(
+            self::count::Count::new(vars, target_value, count_var),
+            ConstraintType::Count,
+            all_vars,
+            metadata,
+        )
+    }
+
     /// Declare a new propagator to enforce that array[index] == value.
     /// This is the element constraint for array indexing operations.
     /// Supports both constant and variable indices with bidirectional propagation.
@@ -1197,3 +1228,4 @@ impl IndexMut<PropId> for Vec<Box<dyn Prune>> {
 // Public exports
 pub use alldiff::AllDifferent;
 pub use allequal::AllEqual;
+pub use count::Count;

@@ -16,7 +16,7 @@ This library provides efficient algorithms and data structures for solving const
 - **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
 - **Boolean Logic**: `and()`, `or()`, `not()` with array syntax `and([a,b,c])` and variadic syntax `and(a,b,c,d)`
-- **Global**: `alldiff()`, `allequal()`, element `x[y] = z`
+- **Global**: `alldiff()`, `allequal()`, element `x[y] = z`, `count(vars, value, count)`
 
 ## Installation
 
@@ -33,6 +33,8 @@ cspsolver = "0.5.11"
 ```bash
 cargo run --release --example sudoku
 cargo run --release --example n_queens
+cargo run --release --example count_demo      # Count constraint demonstrations
+cargo run --release --example magic_square    # Magic squares with enhanced constraints
 ```
 
 
@@ -89,6 +91,11 @@ fn main() {
     post!(m, alldiff([x, y]));  // All different
     post!(m, allequal([x, y])); // All equal
     
+    // Count constraint - count how many variables equal a value
+    let workers = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 1=day, 2=evening, 3=night
+    let night_count = m.int(1, 2); // 1-2 workers on night shift
+    post!(m, count(workers, int(3), night_count)); // Count night shift workers
+    
     // Element constraint (array indexing)
     let array = vec![x, y, z];
     let index = m.int(0, 2);
@@ -129,6 +136,14 @@ fn main() {
     post!(m, and([a, b, c, d]));           // Array syntax for multiple variables
     post!(m, or(a, b, c, d));              // Variadic syntax for multiple variables
     post!(m, not([a, b, c]));              // Array NOT (applies to each variable)
+    
+    // Count constraints - powerful cardinality constraints
+    let students = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 4 students, 3 sections
+    let section1_count = m.int(2, 2); // Exactly 2 students in section 1
+    let section2_count = m.int(1, 2); // 1-2 students in section 2
+    
+    post!(m, count(students.clone(), int(1), section1_count)); // Count students in section 1
+    post!(m, count(students, int(2), section2_count));         // Count students in section 2
     
     // Mixed type constraints with float
     let float_var = m.float(1.0, 10.0);

@@ -25,6 +25,16 @@ fn solve_magic_square(size: usize) -> Result<(), &'static str> {
     let all_vars: Vec<VarId> = grid.iter().flat_map(|row| row.iter().copied()).collect();
     post!(model, alldiff(all_vars));
     
+    // Optional: Demonstrate count constraint by ensuring each number appears exactly once
+    // This is redundant with alldiff but shows how count can be used for verification
+    if size <= 3 {  // Only for small examples to avoid too many constraints
+        for num in 1..=max_value {
+            let count_var = model.int(1, 1); // Each number appears exactly once
+            post!(model, count(all_vars.clone(), int(num), count_var));
+        }
+        println!("📝 Added count constraints to ensure each number 1-{} appears exactly once", max_value);
+    }
+    
     // Each row sums to magic constant
     for row in &grid {
         post!(model, sum(row.clone()) == int(magic_constant as i32));

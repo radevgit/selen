@@ -66,6 +66,8 @@ pub enum ConstraintType {
     BooleanOr,
     /// Boolean NOT constraint (result = NOT operand)
     BooleanNot,
+    /// Count constraint (count(vars, value) = count_var)
+    Count,
     /// Complex constraint that couldn't be categorized
     Complex {
         /// Number of variables involved
@@ -375,6 +377,7 @@ impl ConstraintRegistry {
                 ConstraintType::AllDifferent | 
                 ConstraintType::AllEqual |
                 ConstraintType::Element |
+                ConstraintType::Count |
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;
                 }

@@ -36,7 +36,7 @@ impl ConstraintRef {
 /// 
 /// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])`, variadic `and(a,b,c,d)`, and array not `not([a,b,c])`
 /// 
-/// **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
+/// **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`, `count(vars, target, count)`
 /// 
 /// **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
 /// 
@@ -1253,6 +1253,18 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
+    // Count constraint: count(vars, target_value, count_var)
+    ($model:expr, count($vars:expr, $target:expr, $count:ident)) => {{
+        $model.props.count_constraint($vars.to_vec(), $target, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Count constraint with array literal: count([x, y, z], value, count)
+    ($model:expr, count([$($vars:ident),+ $(,)?], $target:expr, $count:ident)) => {{
+        $model.props.count_constraint(vec![$($vars),+], $target, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
     // Enhanced modulo operations: x % y == int(0), x % y != int(0)
     
     // Modulo with literal divisor and variable remainder: x % 5 == y
@@ -1862,6 +1874,16 @@ macro_rules! postall_helper {
     // Element constraint with array literal
     ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident)) => {
         $crate::post!($model, element([$($vars),+], $index, $value));
+    };
+    
+    // Count constraint
+    ($model:expr, count($vars:expr, $target:expr, $count:ident)) => {
+        $crate::post!($model, count($vars, $target, $count));
+    };
+    
+    // Count constraint with array literal
+    ($model:expr, count([$($vars:ident),+ $(,)?], $target:expr, $count:ident)) => {
+        $crate::post!($model, count([$($vars),+], $target, $count));
     };
     
     // Logical operators - Array syntax
