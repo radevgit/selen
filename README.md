@@ -74,16 +74,15 @@ fn main() {
     // Create variables with clean syntax
     let x = m.int(1, 10);       // Integer variable
     let y = m.int(5, 15);       // Integer variable  
-    let z = m.float(0.0, 20.0); // Float variable
+    let z = m.int(0, 20);       // Integer variable for array compatibility
 
     // Mathematical constraints using post! macro
     post!(m, x < y);            // Comparison
     post!(m, x + y >= int(10)); // Arithmetic
-    post!(m, abs(z) <= float(15.5)); // Math functions
+    post!(m, abs(z) <= int(15)); // Math functions
     
     // Enhanced constraint features
     post!(m, sum([x, y]) == int(12));     // Sum function
-    post!(m, and(x > int(3), y < int(12))); // Boolean logic
     post!(m, x % int(3) != int(0));       // Modulo operations
     
     // Global constraints
@@ -94,9 +93,9 @@ fn main() {
     let array = vec![x, y, z];
     let index = m.int(0, 2);
     let value = m.int(1, 20);
-    post!(m, element(array, index, value)); // array[index] = value
+    post!(m, array[index] == value); // Natural x[y] = z syntax
 
-    if let Some(solution) = m.solve() {
+    if let Ok(solution) = m.solve() {
         println!("x = {:?}", solution[x]);
         println!("y = {:?}", solution[y]);
         println!("z = {:?}", solution[z]);
@@ -115,7 +114,8 @@ fn main() {
     
     // Complex mathematical expressions
     post!(m, sum(vars.clone()) <= int(12));
-    post!(m, max([vars[0]]) >= min([vars[1]]));
+    post!(m, max(vars.clone()) >= int(3));  // Maximum of vars >= 3
+    post!(m, min(vars.clone()) <= int(4));  // Minimum of vars <= 4
     
     // Boolean logic with traditional syntax  
     let a = m.bool();
@@ -124,16 +124,17 @@ fn main() {
     let d = m.bool();
     
     post!(m, and(a, b));                    // Traditional 2-argument AND
-    post!(m, or(a, not(b)));               // Boolean OR with NOT
+    post!(m, or(a, b));                     // Boolean OR  
+    post!(m, not(b));                       // Boolean NOT
     post!(m, and([a, b, c, d]));           // Array syntax for multiple variables
     post!(m, or(a, b, c, d));              // Variadic syntax for multiple variables
     post!(m, not([a, b, c]));              // Array NOT (applies to each variable)
     
-    // Mixed type constraints
+    // Mixed type constraints with float
     let float_var = m.float(1.0, 10.0);
-    post!(m, abs(float_var) + vars[0] <= float(15.0));
+    post!(m, abs(float_var) <= float(12.0));
     
-    if let Some(solution) = m.solve() {
+    if let Ok(solution) = m.solve() {
         println!("Solution found!");
     }
 }
