@@ -79,68 +79,23 @@ use cspsolver::prelude::*;
 fn main() {
     let mut m = Model::default();
 
-    // Create variables with clean syntax
-    let x = m.int(1, 10);       // Integer variable
-    let y = m.int(5, 15);       // Integer variable  
-    let z = m.int(0, 20);       // Integer variable for array compatibility
+    // Create variables
+    let x = m.int(1, 10);       // Integer variable from 1 to 10
+    let y = m.int(5, 15);       // Integer variable from 5 to 15
 
-    // Mathematical constraints using post! macro
-    post!(m, x < y);            // Comparison
-    post!(m, x + y >= int(10)); // Arithmetic
-    post!(m, abs(z) <= int(15)); // Math functions
+    // Add constraints
+    post!(m, x < y);            // x must be less than y
+    post!(m, x + y == int(12)); // x + y must equal 12
     
-    // Enhanced constraint features
-    post!(m, sum([x, y]) == int(12));     // Sum function
-    post!(m, x % int(3) != int(0));       // Modulo operations
-    
-    // Global constraints
-    post!(m, alldiff([x, y]));  // All different
-    post!(m, allequal([x, y])); // All equal
-    
-    // Ordering constraints - powerful ternary relationships
-    post!(m, x <= y <= z);       // Natural chained comparison syntax
-    post!(m, between(x, y, z));  // Alternative function syntax
-    
-    // Cardinality constraints - counting with fine-grained control
-    let tasks = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 1=low, 2=medium, 3=high priority
-    post!(m, at_least(tasks.clone(), int(3), int(1))); // At least 1 high priority task
-    post!(m, at_most(tasks.clone(), int(1), int(2)));   // At most 2 low priority tasks
-    post!(m, exactly(tasks, int(2), int(1)));           // Exactly 1 medium priority task
-    
-    // Conditional constraints - if-then logic
-    post!(m, if_then(x == int(5), y == int(10))); // If x=5 then y=10
-    
-    // Count constraint - count how many variables equal a value
-    let workers = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 1=day, 2=evening, 3=night
-    let night_count = m.int(1, 2); // 1-2 workers on night shift
-    post!(m, count(workers, int(3), night_count)); // Count night shift workers
-    
-    // Table constraint - specify valid combinations explicitly  
-    let cpu = m.int(1, 2);     // 1=Intel, 2=AMD
-    let gpu = m.int(1, 2);     // 1=NVIDIA, 2=AMD
-    let compatible_configs = vec![
-        vec![int(1), int(1)],  // Intel CPU + NVIDIA GPU
-        vec![int(1), int(2)],  // Intel CPU + AMD GPU  
-        vec![int(2), int(2)],  // AMD CPU + AMD GPU
-        // Note: AMD CPU + NVIDIA GPU not included (incompatible)
-    ];
-    post!(m, table([cpu, gpu], compatible_configs)); // Only valid combinations allowed
-    
-    // Element constraint (array indexing)
-    let array = vec![x, y, z];
-    let index = m.int(0, 2);
-    let value = m.int(1, 20);
-    post!(m, array[index] == value); // Natural x[y] = z syntax
-
+    // Solve the problem
     if let Ok(solution) = m.solve() {
-        println!("x = {:?}", solution[x]);
-        println!("y = {:?}", solution[y]);
-        println!("z = {:?}", solution[z]);
+        println!("x = {:?}", solution[x]);  // x = ValI(1)  
+        println!("y = {:?}", solution[y]);  // y = ValI(11)
     }
 }
 ```
 
-### Advanced Constraint Examples
+### Advanced Constraint Example
 
 ```rust
 use cspsolver::prelude::*;
@@ -218,51 +173,6 @@ fn main() {
     }
 }
 ```
-
-### New Constraint Types (v0.5.11+)
-
-The latest version includes powerful new constraint types for advanced modeling:
-
-#### Between Constraints
-Enforce ternary ordering relationships with natural chained comparison syntax:
-```rust
-let start = m.int(1, 10);
-let middle = m.int(5, 15); 
-let end = m.int(10, 20);
-
-// Natural chained comparison syntax (recommended)
-post!(m, start <= middle <= end);
-
-// Alternative function syntax
-post!(m, between(start, middle, end));
-
-// Other chained comparisons
-post!(m, start < middle < end);     // Strict inequalities
-post!(m, end >= middle >= start);   // Reverse order
-```
-
-#### Cardinality Constraints  
-Precise counting control for resource allocation and capacity planning:
-```rust
-let workers = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 4 workers, 3 shifts
-post!(m, at_least(workers.clone(), int(3), int(2)));  // At least 2 on night shift (3)
-post!(m, at_most(workers.clone(), int(1), int(1)));   // At most 1 on day shift (1)  
-post!(m, exactly(workers, int(2), int(1)));           // Exactly 1 on evening shift (2)
-```
-
-#### Conditional Constraints
-Business logic and dependency modeling with if-then-else:
-```rust
-let weather = m.int(1, 3);      // 1=sunny, 2=cloudy, 3=rainy
-let activity = m.int(1, 3);     // 1=hiking, 2=museum, 3=shopping
-let backup = m.int(1, 3);       // Backup activity
-
-// If sunny (1) then hiking (1), if rainy (3) then shopping (3)
-post!(m, if_then(weather == int(1), activity == int(1)));
-post!(m, if_then(weather == int(3), activity == int(3)));
-```
-
-These constraints work seamlessly with the existing `post!` macro system and provide both helper methods and natural syntax for maximum usability.
 
 
 
