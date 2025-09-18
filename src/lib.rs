@@ -13,8 +13,8 @@
 //!
 //! - **Arithmetic**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
 //! - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=`
-//! - **Boolean logic**: `and()`, `or()`, `not()`
-//! - **Global constraints**: `alldiff()`
+//! - **Boolean logic**: `and()`, `or()`, `not()` - supports array and variadic syntax
+//! - **Global constraints**: `alldiff()`, `allequal()`, `element()`
 //!
 //! 
 //! ## post() - Post a mathematical constraint to the model
@@ -23,8 +23,8 @@
 //! **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 //! **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 //! **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum` 
-//! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
-//! **Global**: `alldiff([vars...])`
+//! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])` and variadic `and(a,b,c,d)`
+//! **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
 //! **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
 //! 
 //! Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`
@@ -37,8 +37,8 @@
 //! **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 //! **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 //! **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
-//! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
-//! **Global**: `alldiff([vars...])`
+//! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])` and variadic `and(a,b,c,d)`
+//! **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
 //! **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
 //! 
 //! Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`

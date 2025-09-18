@@ -34,7 +34,7 @@ impl ConstraintRef {
 /// 
 /// **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
 /// 
-/// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
+/// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])`, variadic `and(a,b,c,d)`, and array not `not([a,b,c])`
 /// 
 /// **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
 /// 
@@ -1118,7 +1118,33 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
-    // Logical operators (traditional style)
+    // Logical operators - Array syntax
+    ($model:expr, and([$($vars:expr),* $(,)?])) => {{
+        let vars_vec = vec![$($vars),*];
+        let _and_result = $model.bool_and(&vars_vec);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, or([$($vars:expr),* $(,)?])) => {{
+        let vars_vec = vec![$($vars),*];
+        let _or_result = $model.bool_or(&vars_vec);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Logical operators - Variadic syntax (3+ arguments)
+    ($model:expr, and($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {{
+        let vars_vec = vec![$first, $second, $($rest),*];
+        let _and_result = $model.bool_and(&vars_vec);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, or($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {{
+        let vars_vec = vec![$first, $second, $($rest),*];
+        let _or_result = $model.bool_or(&vars_vec);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Logical operators (traditional 2-argument style)
     ($model:expr, and($c1:expr, $c2:expr)) => {{
         let _and_result = $model.bool_and(&[$c1, $c2]);
         $crate::constraint_macros::ConstraintRef::new(0)
@@ -1129,6 +1155,15 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
+    // Not operator - Array syntax for convenience (creates multiple not constraints)
+    ($model:expr, not([$($vars:expr),* $(,)?])) => {{
+        $(
+            let _not_result = $model.bool_not($vars);
+        )*
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Not operator - Single variable
     ($model:expr, not($var:ident)) => {{
         let _not_result = $model.bool_not($var);
         $crate::constraint_macros::ConstraintRef::new(0)
@@ -1829,7 +1864,30 @@ macro_rules! postall_helper {
         $crate::post!($model, element([$($vars),+], $index, $value));
     };
     
-    // Logical operators
+    // Logical operators - Array syntax
+    ($model:expr, and([$($vars:expr),* $(,)?])) => {
+        $crate::post!($model, and([$($vars),*]));
+    };
+    
+    ($model:expr, or([$($vars:expr),* $(,)?])) => {
+        $crate::post!($model, or([$($vars),*]));
+    };
+    
+    // Logical operators - Variadic syntax (3+ arguments)
+    ($model:expr, and($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {
+        $crate::post!($model, and($first, $second, $($rest),*));
+    };
+    
+    ($model:expr, or($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {
+        $crate::post!($model, or($first, $second, $($rest),*));
+    };
+    
+    // Not operator - Array syntax
+    ($model:expr, not([$($vars:expr),* $(,)?])) => {
+        $crate::post!($model, not([$($vars),*]));
+    };
+    
+    // Logical operators - Traditional 2-argument
     ($model:expr, and($c1:expr, $c2:expr)) => {
         $crate::post!($model, and($c1, $c2));
     };
@@ -2547,6 +2605,52 @@ mod tests {
         let _c28 = post!(m, 2 >= vars[3]);
         let _c29 = post!(m, 8 == vars[4]);
         let _c30 = post!(m, 9 != vars[0]);
+        
+        // Should compile without errors
+        assert!(true);
+    }
+
+    #[test]
+    fn test_boolean_array_operations() {
+        let mut m = Model::default();
+        let a = m.bool();
+        let b = m.bool();
+        let c = m.bool();
+        let d = m.bool();
+        let e = m.bool();
+        
+        // Test array syntax for and()
+        let _and_array = post!(m, and([a, b, c]));
+        let _and_array_4 = post!(m, and([a, b, c, d]));
+        
+        // Test array syntax for or()
+        let _or_array = post!(m, or([a, b, c]));
+        let _or_array_4 = post!(m, or([a, b, c, d]));
+        
+        // Test variadic syntax for and()
+        let _and_variadic_3 = post!(m, and(a, b, c));
+        let _and_variadic_4 = post!(m, and(a, b, c, d));
+        let _and_variadic_5 = post!(m, and(a, b, c, d, e));
+        
+        // Test variadic syntax for or()
+        let _or_variadic_3 = post!(m, or(a, b, c));
+        let _or_variadic_4 = post!(m, or(a, b, c, d));
+        let _or_variadic_5 = post!(m, or(a, b, c, d, e));
+        
+        // Test array not()
+        let _not_array = post!(m, not([a, b, c]));
+        
+        // Test traditional 2-argument still works
+        let _and_traditional = post!(m, and(a, b));
+        let _or_traditional = post!(m, or(a, b));
+        let _not_traditional = post!(m, not(a));
+        
+        // Test with separate post! calls for postall! compatibility
+        post!(m, and([a, b]));
+        post!(m, or([c, d]));
+        post!(m, not([e]));
+        post!(m, and(a, b, c));
+        post!(m, or(a, b, c, d));
         
         // Should compile without errors
         assert!(true);

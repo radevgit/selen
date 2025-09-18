@@ -15,7 +15,7 @@ This library provides efficient algorithms and data structures for solving const
 **Constraint Categories**:
 - **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
-- **Boolean Logic**: `and()`, `or()`, `not()` with clean function syntax
+- **Boolean Logic**: `and()`, `or()`, `not()` with array syntax `and([a,b,c])` and variadic syntax `and(a,b,c,d)`
 - **Global**: `alldiff()`, `allequal()`, element `x[y] = z`
 
 ## Installation
@@ -120,8 +120,14 @@ fn main() {
     // Boolean logic with traditional syntax  
     let a = m.bool();
     let b = m.bool();
-    post!(m, and(a, b));        // Boolean AND
-    post!(m, or(a, not(b)));    // Boolean OR with NOT
+    let c = m.bool();
+    let d = m.bool();
+    
+    post!(m, and(a, b));                    // Traditional 2-argument AND
+    post!(m, or(a, not(b)));               // Boolean OR with NOT
+    post!(m, and([a, b, c, d]));           // Array syntax for multiple variables
+    post!(m, or(a, b, c, d));              // Variadic syntax for multiple variables
+    post!(m, not([a, b, c]));              // Array NOT (applies to each variable)
     
     // Mixed type constraints
     let float_var = m.float(1.0, 10.0);
