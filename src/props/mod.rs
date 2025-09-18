@@ -1,8 +1,14 @@
 mod abs;
 mod add;
 mod alldiff;
+mod allequal;
+pub mod between;
 mod bool_logic;
+pub mod cardinality;
+pub mod conditional;
+mod count;
 mod div;
+mod element;
 mod eq;
 mod leq;
 mod max;
@@ -12,6 +18,7 @@ mod mul;
 mod neq;
 mod noop;
 mod sum;
+mod table;
 
 use std::ops::{Index, IndexMut};
 use std::rc::Rc;
@@ -917,6 +924,206 @@ impl Propagators {
         )
     }
 
+    /// Declare a new propagator to enforce that all variables have the same value.
+    /// This is the complement of AllDifferent constraint.
+    /// Uses efficient domain intersection for value propagation.
+    pub fn all_equal(&mut self, vars: Vec<VarId>) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<_> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::allequal::AllEqual::new(vars.clone()),
+            ConstraintType::AllEqual,
+            vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce that exactly count_var variables in vars equal target_value.
+    /// This is the count constraint: count(vars, target_value, count_var).
+    pub fn count_constraint(&mut self, vars: Vec<VarId>, target_value: crate::vars::Val, count_var: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo, ConstraintValue};
+        use crate::vars::Val;
+        
+        let mut operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: count_var });
+        
+        let value = match target_value {
+            Val::ValI(i) => ConstraintValue::Integer(i),
+            Val::ValF(f) => ConstraintValue::Float(f),
+        };
+        operands.push(ViewInfo::Constant { value });
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        let mut all_vars = vars.clone();
+        all_vars.push(count_var);
+        
+        self.push_new_prop_with_metadata(
+            self::count::Count::new(vars, target_value, count_var),
+            ConstraintType::Count,
+            all_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce that array[index] == value.
+    /// This is the element constraint for array indexing operations.
+    /// Supports both constant and variable indices with bidirectional propagation.
+    pub fn element(&mut self, array: Vec<VarId>, index: VarId, value: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let mut operands: Vec<ViewInfo> = array.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: index });
+        operands.push(ViewInfo::Variable { var_id: value });
+            
+        let metadata = ConstraintData::NAry { operands };
+        let trigger_vars = {
+            let mut vars = array.clone();
+            vars.push(index);
+            vars.push(value);
+            vars
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::element::Element::new(array, index, value),
+            ConstraintType::Element,
+            trigger_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce a between constraint: lower <= middle <= upper
+    pub fn between_constraint(&mut self, lower: VarId, middle: VarId, upper: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let variables = vec![lower, middle, upper];
+        let operands = vec![
+            ViewInfo::Variable { var_id: lower },
+            ViewInfo::Variable { var_id: middle },
+            ViewInfo::Variable { var_id: upper },
+        ];
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::between::BetweenConstraint::new(lower, middle, upper),
+            ConstraintType::Between,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce "at least N" cardinality constraint
+    pub fn at_least_constraint(&mut self, vars: Vec<VarId>, target_value: i32, count: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::cardinality::CardinalityConstraint::at_least(vars.clone(), target_value, count),
+            ConstraintType::AtLeast,
+            vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce "at most N" cardinality constraint
+    pub fn at_most_constraint(&mut self, vars: Vec<VarId>, target_value: i32, count: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::cardinality::CardinalityConstraint::at_most(vars.clone(), target_value, count),
+            ConstraintType::AtMost,
+            vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce "exactly N" cardinality constraint
+    pub fn exactly_constraint(&mut self, vars: Vec<VarId>, target_value: i32, count: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::cardinality::CardinalityConstraint::exactly(vars.clone(), target_value, count),
+            ConstraintType::Exactly,
+            vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce if-then-else constraint
+    pub fn if_then_else_constraint(
+        &mut self, 
+        condition: self::conditional::Condition,
+        then_constraint: self::conditional::SimpleConstraint,
+        else_constraint: Option<self::conditional::SimpleConstraint>
+    ) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let constraint = self::conditional::IfThenElseConstraint::new(condition, then_constraint, else_constraint);
+        let variables = constraint.variables();
+        
+        let operands: Vec<ViewInfo> = variables.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            constraint,
+            ConstraintType::IfThenElse,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce a table constraint.
+    /// Variables must take values that correspond to tuples in the allowed table.
+    /// This constraint is useful for expressing complex relationships between variables
+    /// by explicitly listing all valid combinations.
+    pub fn table_constraint(&mut self, vars: Vec<VarId>, tuples: Vec<Vec<crate::vars::Val>>) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::table::Table::new(vars.clone(), tuples),
+            ConstraintType::Table,
+            vars,
+            metadata,
+        )
+    }
+
     /// Create a no-operation propagator for branching operations that have already applied domain filtering.
     pub fn noop(&mut self) -> PropId {
         self.push_new_prop(self::noop::NoOp::new())
@@ -1146,3 +1353,5 @@ impl IndexMut<PropId> for Vec<Box<dyn Prune>> {
 
 // Public exports
 pub use alldiff::AllDifferent;
+pub use allequal::AllEqual;
+pub use count::Count;

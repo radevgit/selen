@@ -28,15 +28,15 @@ impl ConstraintRef {
 /// 
 /// **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 /// 
-/// **Array indexing**: `vars[i] op vars[j]`, `vars[i] op var`, `var op vars[i]`, `vars[i] op literal`, `literal op vars[i]`
+/// **Array indexing**: `vars[i] op vars[j]`, `vars[i] op var`, `var op vars[i]`, `vars[i] op literal`, `literal op vars[i]`, `array[var] == value` (Element)
 /// 
 /// **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 /// 
 /// **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
 /// 
-/// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
+/// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])`, variadic `and(a,b,c,d)`, and array not `not([a,b,c])`
 /// 
-/// **Global**: `alldiff([vars...])`
+/// **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`, `count(vars, target, count)`
 /// 
 /// **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
 /// 
@@ -71,6 +71,18 @@ macro_rules! post {
     
     ($model:expr, $left:ident != $right:ident) => {{
         $model.props.not_equals($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Element constraint syntax: array[variable] == value
+    // These patterns must come BEFORE general array indexing to match variable indices
+    ($model:expr, $array:ident[$index:ident] == $value:ident) => {{
+        $model.props.element($array.to_vec(), $index, $value);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $value:ident == $array:ident[$index:ident]) => {{
+        $model.props.element($array.to_vec(), $index, $value);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
 
@@ -1106,7 +1118,33 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
-    // Logical operators (traditional style)
+    // Logical operators - Array syntax
+    ($model:expr, and([$($vars:expr),* $(,)?])) => {{
+        let vars_vec = vec![$($vars),*];
+        let _and_result = $model.bool_and(&vars_vec);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, or([$($vars:expr),* $(,)?])) => {{
+        let vars_vec = vec![$($vars),*];
+        let _or_result = $model.bool_or(&vars_vec);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Logical operators - Variadic syntax (3+ arguments)
+    ($model:expr, and($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {{
+        let vars_vec = vec![$first, $second, $($rest),*];
+        let _and_result = $model.bool_and(&vars_vec);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, or($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {{
+        let vars_vec = vec![$first, $second, $($rest),*];
+        let _or_result = $model.bool_or(&vars_vec);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Logical operators (traditional 2-argument style)
     ($model:expr, and($c1:expr, $c2:expr)) => {{
         let _and_result = $model.bool_and(&[$c1, $c2]);
         $crate::constraint_macros::ConstraintRef::new(0)
@@ -1117,6 +1155,15 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
+    // Not operator - Array syntax for convenience (creates multiple not constraints)
+    ($model:expr, not([$($vars:expr),* $(,)?])) => {{
+        $(
+            let _not_result = $model.bool_not($vars);
+        )*
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Not operator - Single variable
     ($model:expr, not($var:ident)) => {{
         let _not_result = $model.bool_not($var);
         $crate::constraint_macros::ConstraintRef::new(0)
@@ -1179,6 +1226,96 @@ macro_rules! post {
     // Global constraints: alldiff with array expressions
     ($model:expr, alldiff($array:expr)) => {{
         $model.props.all_different($array.to_vec());
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Global constraints: allequal([x, y, z])
+    ($model:expr, allequal([$($vars:ident),+ $(,)?])) => {{
+        $model.props.all_equal(vec![$($vars),+]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Global constraints: allequal with array expressions
+    ($model:expr, allequal($array:expr)) => {{
+        $model.props.all_equal($array.to_vec());
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Element constraint: element(array, index, value)
+    ($model:expr, element($array:expr, $index:ident, $value:ident)) => {{
+        $model.props.element($array.to_vec(), $index, $value);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Element constraint: element with array literal
+    ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident)) => {{
+        $model.props.element(vec![$($vars),+], $index, $value);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Count constraint: count(vars, target_value, count_var)
+    ($model:expr, count($vars:expr, $target:expr, $count:ident)) => {{
+        $model.props.count_constraint($vars.to_vec(), $target, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Count constraint with array literal: count([x, y, z], value, count)
+    ($model:expr, count([$($vars:ident),+ $(,)?], $target:expr, $count:ident)) => {{
+        $model.props.count_constraint(vec![$($vars),+], $target, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Table constraint: table(vars, tuples)
+    ($model:expr, table($vars:expr, $tuples:expr)) => {{
+        $model.props.table_constraint($vars.to_vec(), $tuples);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Table constraint with array literal: table([x, y, z], tuples)
+    ($model:expr, table([$($vars:ident),+ $(,)?], $tuples:expr)) => {{
+        $model.props.table_constraint(vec![$($vars),+], $tuples);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Between constraint: between(lower, middle, upper)
+    ($model:expr, between($lower:ident, $middle:ident, $upper:ident)) => {{
+        $model.props.between_constraint($lower, $middle, $upper);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // At least constraint: at_least(vars, value, count)
+    ($model:expr, at_least($vars:expr, $value:expr, $count:expr)) => {{
+        $model.props.at_least_constraint($vars.to_vec(), $value, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // At least constraint with array literal: at_least([x, y, z], value, count)
+    ($model:expr, at_least([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {{
+        $model.props.at_least_constraint(vec![$($vars),+], $value, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // At most constraint: at_most(vars, value, count)
+    ($model:expr, at_most($vars:expr, $value:expr, $count:expr)) => {{
+        $model.props.at_most_constraint($vars.to_vec(), $value, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // At most constraint with array literal: at_most([x, y, z], value, count)
+    ($model:expr, at_most([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {{
+        $model.props.at_most_constraint(vec![$($vars),+], $value, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Exactly constraint: exactly(vars, value, count)
+    ($model:expr, exactly($vars:expr, $value:expr, $count:expr)) => {{
+        $model.props.exactly_constraint($vars.to_vec(), $value, $count);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // Exactly constraint with array literal: exactly([x, y, z], value, count)
+    ($model:expr, exactly([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {{
+        $model.props.exactly_constraint(vec![$($vars),+], $value, $count);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
@@ -1660,6 +1797,43 @@ macro_rules! post {
         $model.props.not_equals(_mod_var, $crate::prelude::int($remainder));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
+
+    // If-then constraint: if_then(condition, then_constraint)
+    // Example: post!(m, if_then(x == 1, y == 5));
+    ($model:expr, if_then($cond_var:ident == $cond_val:expr, $then_var:ident == $then_val:expr)) => {{
+        use $crate::props::conditional::{Condition, SimpleConstraint, IfThenElseConstraint};
+        let condition = Condition::Equals($cond_var, $cond_val);
+        let then_constraint = SimpleConstraint::Equals($then_var, $then_val);
+        $model.props.if_then_else_constraint(condition, then_constraint, None);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, if_then($cond_var:ident != $cond_val:expr, $then_var:ident == $then_val:expr)) => {{
+        use $crate::props::conditional::{Condition, SimpleConstraint, IfThenElseConstraint};
+        let condition = Condition::NotEquals($cond_var, $cond_val);
+        let then_constraint = SimpleConstraint::Equals($then_var, $then_val);
+        $model.props.if_then_else_constraint(condition, then_constraint, None);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    ($model:expr, if_then($cond_var:ident > $cond_val:expr, $then_var:ident <= $then_val:expr)) => {{
+        use $crate::props::conditional::{Condition, SimpleConstraint, IfThenElseConstraint};
+        let condition = Condition::GreaterThan($cond_var, $cond_val);
+        let then_constraint = SimpleConstraint::LessOrEqual($then_var, $then_val);
+        $model.props.if_then_else_constraint(condition, then_constraint, None);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
+    // If-then-else constraint: if_then_else(condition, then_constraint, else_constraint)
+    // Example: post!(m, if_then_else(x == 1, y == 5, y == 3));
+    ($model:expr, if_then_else($cond_var:ident == $cond_val:expr, $then_var:ident == $then_val:expr, $else_var:ident == $else_val:expr)) => {{
+        use $crate::props::conditional::{Condition, SimpleConstraint, IfThenElseConstraint};
+        let condition = Condition::Equals($cond_var, $cond_val);
+        let then_constraint = SimpleConstraint::Equals($then_var, $then_val);
+        let else_constraint = SimpleConstraint::Equals($else_var, $else_val);
+        $model.props.if_then_else_constraint(condition, then_constraint, Some(else_constraint));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
 }
 
 #[doc(hidden)]
@@ -1728,6 +1902,15 @@ macro_rules! postall_helper {
         $crate::post!($model, $var != int($target));
     };
     
+    // Element constraint syntax (single)
+    ($model:expr, $array:ident[$index:ident] == $value:ident) => {
+        $crate::post!($model, $array[$index] == $value);
+    };
+    
+    ($model:expr, $value:ident == $array:ident[$index:ident]) => {
+        $crate::post!($model, $value == $array[$index]);
+    };
+    
     // Arithmetic operations
     ($model:expr, $left:ident + $right:ident <= $target:ident) => {
         $crate::post!($model, $left + $right <= $target);
@@ -1764,7 +1947,109 @@ macro_rules! postall_helper {
         $crate::post!($model, alldiff($array));
     };
     
-    // Logical operators
+    // Global constraints: allequal
+    ($model:expr, allequal([$($vars:ident),+ $(,)?])) => {
+        $crate::post!($model, allequal([$($vars),+]));
+    };
+    
+    // Global constraints: allequal with array expressions
+    ($model:expr, allequal($array:expr)) => {
+        $crate::post!($model, allequal($array));
+    };
+    
+    // Element constraint
+    ($model:expr, element($array:expr, $index:ident, $value:ident)) => {
+        $crate::post!($model, element($array, $index, $value));
+    };
+    
+    // Element constraint with array literal
+    ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident)) => {
+        $crate::post!($model, element([$($vars),+], $index, $value));
+    };
+    
+    // Count constraint
+    ($model:expr, count($vars:expr, $target:expr, $count:ident)) => {
+        $crate::post!($model, count($vars, $target, $count));
+    };
+    
+    // Count constraint with array literal
+    ($model:expr, count([$($vars:ident),+ $(,)?], $target:expr, $count:ident)) => {
+        $crate::post!($model, count([$($vars),+], $target, $count));
+    };
+    
+    // Table constraint
+    ($model:expr, table($vars:expr, $tuples:expr)) => {
+        $crate::post!($model, table($vars, $tuples));
+    };
+    
+    // Table constraint with array literal
+    ($model:expr, table([$($vars:ident),+ $(,)?], $tuples:expr)) => {
+        $crate::post!($model, table([$($vars),+], $tuples));
+    };
+
+    // Between constraint
+    ($model:expr, between($lower:ident, $middle:ident, $upper:ident)) => {
+        $crate::post!($model, between($lower, $middle, $upper));
+    };
+
+    // Cardinality constraints
+    ($model:expr, at_least($vars:expr, $value:expr, $count:expr)) => {
+        $crate::post!($model, at_least($vars, $value, $count));
+    };
+
+    ($model:expr, at_least([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {
+        $crate::post!($model, at_least([$($vars),+], $value, $count));
+    };
+
+    ($model:expr, at_most($vars:expr, $value:expr, $count:expr)) => {
+        $crate::post!($model, at_most($vars, $value, $count));
+    };
+
+    ($model:expr, at_most([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {
+        $crate::post!($model, at_most([$($vars),+], $value, $count));
+    };
+
+    ($model:expr, exactly($vars:expr, $value:expr, $count:expr)) => {
+        $crate::post!($model, exactly($vars, $value, $count));
+    };
+
+    ($model:expr, exactly([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {
+        $crate::post!($model, exactly([$($vars),+], $value, $count));
+    };
+
+    // Conditional constraints
+    ($model:expr, if_then($cond_var:ident == $cond_val:expr, $then_var:ident == $then_val:expr)) => {
+        $crate::post!($model, if_then($cond_var == $cond_val, $then_var == $then_val));
+    };
+
+    ($model:expr, if_then_else($cond_var:ident == $cond_val:expr, $then_var:ident == $then_val:expr, $else_var:ident == $else_val:expr)) => {
+        $crate::post!($model, if_then_else($cond_var == $cond_val, $then_var == $then_val, $else_var == $else_val));
+    };
+    
+    // Logical operators - Array syntax
+    ($model:expr, and([$($vars:expr),* $(,)?])) => {
+        $crate::post!($model, and([$($vars),*]));
+    };
+    
+    ($model:expr, or([$($vars:expr),* $(,)?])) => {
+        $crate::post!($model, or([$($vars),*]));
+    };
+    
+    // Logical operators - Variadic syntax (3+ arguments)
+    ($model:expr, and($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {
+        $crate::post!($model, and($first, $second, $($rest),*));
+    };
+    
+    ($model:expr, or($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {
+        $crate::post!($model, or($first, $second, $($rest),*));
+    };
+    
+    // Not operator - Array syntax
+    ($model:expr, not([$($vars:expr),* $(,)?])) => {
+        $crate::post!($model, not([$($vars),*]));
+    };
+    
+    // Logical operators - Traditional 2-argument
     ($model:expr, and($c1:expr, $c2:expr)) => {
         $crate::post!($model, and($c1, $c2));
     };
@@ -1805,6 +2090,17 @@ macro_rules! postall_helper {
     
     ($model:expr, $var:ident != $target:ident, $($rest:tt)*) => {
         $crate::post!($model, $var != $target);
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Element constraint syntax (multiple)
+    ($model:expr, $array:ident[$index:ident] == $value:ident, $($rest:tt)*) => {
+        $crate::post!($model, $array[$index] == $value);
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    ($model:expr, $value:ident == $array:ident[$index:ident], $($rest:tt)*) => {
+        $crate::post!($model, $value == $array[$index]);
         $crate::postall_helper!($model, $($rest)*);
     };
     
@@ -1880,6 +2176,90 @@ macro_rules! postall_helper {
     // Global constraints with array expressions (multiple)
     ($model:expr, alldiff($array:expr), $($rest:tt)*) => {
         $crate::post!($model, alldiff($array));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Global constraints: allequal (multiple)
+    ($model:expr, allequal([$($vars:ident),+ $(,)?]), $($rest:tt)*) => {
+        $crate::post!($model, allequal([$($vars),+]));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Global constraints: allequal with array expressions (multiple)
+    ($model:expr, allequal($array:expr), $($rest:tt)*) => {
+        $crate::post!($model, allequal($array));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Element constraint (multiple)
+    ($model:expr, element($array:expr, $index:ident, $value:ident), $($rest:tt)*) => {
+        $crate::post!($model, element($array, $index, $value));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Element constraint with array literal (multiple)
+    ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident), $($rest:tt)*) => {
+        $crate::post!($model, element([$($vars),+], $index, $value));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Table constraint (multiple)
+    ($model:expr, table($vars:expr, $tuples:expr), $($rest:tt)*) => {
+        $crate::post!($model, table($vars, $tuples));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Table constraint with array literal (multiple)
+    ($model:expr, table([$($vars:ident),+ $(,)?], $tuples:expr), $($rest:tt)*) => {
+        $crate::post!($model, table([$($vars),+], $tuples));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    // Between constraint (multiple)
+    ($model:expr, between($lower:ident, $middle:ident, $upper:ident), $($rest:tt)*) => {
+        $crate::post!($model, between($lower, $middle, $upper));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    // Cardinality constraints (multiple)
+    ($model:expr, at_least($vars:expr, $value:expr, $count:expr), $($rest:tt)*) => {
+        $crate::post!($model, at_least($vars, $value, $count));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    ($model:expr, at_least([$($vars:ident),+ $(,)?], $value:expr, $count:expr), $($rest:tt)*) => {
+        $crate::post!($model, at_least([$($vars),+], $value, $count));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    ($model:expr, at_most($vars:expr, $value:expr, $count:expr), $($rest:tt)*) => {
+        $crate::post!($model, at_most($vars, $value, $count));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    ($model:expr, at_most([$($vars:ident),+ $(,)?], $value:expr, $count:expr), $($rest:tt)*) => {
+        $crate::post!($model, at_most([$($vars),+], $value, $count));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    ($model:expr, exactly($vars:expr, $value:expr, $count:expr), $($rest:tt)*) => {
+        $crate::post!($model, exactly($vars, $value, $count));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    ($model:expr, exactly([$($vars:ident),+ $(,)?], $value:expr, $count:expr), $($rest:tt)*) => {
+        $crate::post!($model, exactly([$($vars),+], $value, $count));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    // Conditional constraints (multiple)
+    ($model:expr, if_then($cond_var:ident == $cond_val:expr, $then_var:ident == $then_val:expr), $($rest:tt)*) => {
+        $crate::post!($model, if_then($cond_var == $cond_val, $then_var == $then_val));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+
+    ($model:expr, if_then_else($cond_var:ident == $cond_val:expr, $then_var:ident == $then_val:expr, $else_var:ident == $else_val:expr), $($rest:tt)*) => {
+        $crate::post!($model, if_then_else($cond_var == $cond_val, $then_var == $then_val, $else_var == $else_val));
         $crate::postall_helper!($model, $($rest)*);
     };
     
@@ -2065,6 +2445,52 @@ mod tests {
         // Should compile without errors
         assert!(true);
     }
+
+    #[test]
+    fn test_post_macro_allequal() {
+        let mut m = Model::default();
+        let x = m.int(1, 10);
+        let y = m.int(5, 15);
+        let z = m.int(3, 8);
+        let w = m.int(1, 10);
+        
+        // Test allequal constraint
+        let _c1 = post!(m, allequal([x, y, z]));
+        let _c2 = post!(m, allequal([x, y, z, w]));
+        
+        // Test with array expression
+        let vars = vec![x, y, z];
+        let _c3 = post!(m, allequal(vars));
+        
+        // Should compile without errors
+        assert!(true);
+    }
+
+    #[test]
+    fn test_post_macro_element() {
+        let mut m = Model::default();
+        let a0 = m.int(10, 10);
+        let a1 = m.int(20, 20);
+        let a2 = m.int(30, 30);
+        let index = m.int(0, 2);
+        let value = m.int(10, 30);
+        
+        // Test element constraint with array literal
+        let _c1 = post!(m, element([a0, a1, a2], index, value));
+        
+        // Test element constraint with array expression
+        let array = vec![a0, a1, a2];
+        let _c2 = post!(m, element(array.clone(), index, value));
+        
+        // Test natural array[index] == value syntax
+        let _c3 = post!(m, array[index] == value);
+        
+        // Test reverse syntax: value == array[index]
+        let _c4 = post!(m, value == array[index]);
+        
+        // Should compile without errors
+        assert!(true);
+    }
     
     #[test]
     fn test_post_macro_enhanced_modulo() {
@@ -2133,11 +2559,15 @@ mod tests {
         let b = m.int(0, 1);
         
         // Test direct constraint posting with simple comma syntax
+        let array = vec![x, y, z];
         postall!(m, 
             x < y,
             y > int(5),
             x + y <= z,
             alldiff([x, y, z]),
+            allequal([x, y]),
+            element([x, y, z], a, b),
+            array[a] == b,
             and(a, b),
             or(a, b),
             not(a)
@@ -2397,6 +2827,52 @@ mod tests {
         let _c28 = post!(m, 2 >= vars[3]);
         let _c29 = post!(m, 8 == vars[4]);
         let _c30 = post!(m, 9 != vars[0]);
+        
+        // Should compile without errors
+        assert!(true);
+    }
+
+    #[test]
+    fn test_boolean_array_operations() {
+        let mut m = Model::default();
+        let a = m.bool();
+        let b = m.bool();
+        let c = m.bool();
+        let d = m.bool();
+        let e = m.bool();
+        
+        // Test array syntax for and()
+        let _and_array = post!(m, and([a, b, c]));
+        let _and_array_4 = post!(m, and([a, b, c, d]));
+        
+        // Test array syntax for or()
+        let _or_array = post!(m, or([a, b, c]));
+        let _or_array_4 = post!(m, or([a, b, c, d]));
+        
+        // Test variadic syntax for and()
+        let _and_variadic_3 = post!(m, and(a, b, c));
+        let _and_variadic_4 = post!(m, and(a, b, c, d));
+        let _and_variadic_5 = post!(m, and(a, b, c, d, e));
+        
+        // Test variadic syntax for or()
+        let _or_variadic_3 = post!(m, or(a, b, c));
+        let _or_variadic_4 = post!(m, or(a, b, c, d));
+        let _or_variadic_5 = post!(m, or(a, b, c, d, e));
+        
+        // Test array not()
+        let _not_array = post!(m, not([a, b, c]));
+        
+        // Test traditional 2-argument still works
+        let _and_traditional = post!(m, and(a, b));
+        let _or_traditional = post!(m, or(a, b));
+        let _not_traditional = post!(m, not(a));
+        
+        // Test with separate post! calls for postall! compatibility
+        post!(m, and([a, b]));
+        post!(m, or([c, d]));
+        post!(m, not([e]));
+        post!(m, and(a, b, c));
+        post!(m, or(a, b, c, d));
         
         // Should compile without errors
         assert!(true);

@@ -40,6 +40,10 @@ pub enum ConstraintType {
     NotEquals,
     /// AllDifferent constraint
     AllDifferent,
+    /// AllEqual constraint
+    AllEqual,
+    /// Element constraint (array[index] = value)
+    Element,
     /// Sum constraint
     Sum,
     /// Addition constraint (x + y = z)
@@ -62,6 +66,20 @@ pub enum ConstraintType {
     BooleanOr,
     /// Boolean NOT constraint (result = NOT operand)
     BooleanNot,
+    /// Count constraint (count(vars, value) = count_var)
+    Count,
+    /// Table constraint (table(vars, tuples))
+    Table,
+    /// Between constraint (lower <= middle <= upper)
+    Between,
+    /// At least N constraint (at_least(vars, value, count))
+    AtLeast,
+    /// At most N constraint (at_most(vars, value, count))
+    AtMost,
+    /// Exactly N constraint (exactly(vars, value, count))
+    Exactly,
+    /// If-then-else constraint (if condition then constraint1 else constraint2)
+    IfThenElse,
     /// Complex constraint that couldn't be categorized
     Complex {
         /// Number of variables involved
@@ -369,6 +387,15 @@ impl ConstraintRegistry {
                 ConstraintType::BooleanOr |
                 ConstraintType::BooleanNot |
                 ConstraintType::AllDifferent | 
+                ConstraintType::AllEqual |
+                ConstraintType::Element |
+                ConstraintType::Count |
+                ConstraintType::Table |
+                ConstraintType::Between |
+                ConstraintType::AtLeast |
+                ConstraintType::AtMost |
+                ConstraintType::Exactly |
+                ConstraintType::IfThenElse |
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;
                 }
