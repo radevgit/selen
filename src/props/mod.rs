@@ -15,6 +15,7 @@ mod mul;
 mod neq;
 mod noop;
 mod sum;
+mod table;
 
 use std::ops::{Index, IndexMut};
 use std::rc::Rc;
@@ -994,6 +995,27 @@ impl Propagators {
             self::element::Element::new(array, index, value),
             ConstraintType::Element,
             trigger_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a new propagator to enforce a table constraint.
+    /// Variables must take values that correspond to tuples in the allowed table.
+    /// This constraint is useful for expressing complex relationships between variables
+    /// by explicitly listing all valid combinations.
+    pub fn table_constraint(&mut self, vars: Vec<VarId>, tuples: Vec<Vec<crate::vars::Val>>) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::table::Table::new(vars.clone(), tuples),
+            ConstraintType::Table,
+            vars,
             metadata,
         )
     }

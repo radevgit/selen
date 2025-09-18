@@ -1265,6 +1265,18 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
+    // Table constraint: table(vars, tuples)
+    ($model:expr, table($vars:expr, $tuples:expr)) => {{
+        $model.props.table_constraint($vars.to_vec(), $tuples);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Table constraint with array literal: table([x, y, z], tuples)
+    ($model:expr, table([$($vars:ident),+ $(,)?], $tuples:expr)) => {{
+        $model.props.table_constraint(vec![$($vars),+], $tuples);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
     // Enhanced modulo operations: x % y == int(0), x % y != int(0)
     
     // Modulo with literal divisor and variable remainder: x % 5 == y
@@ -1886,6 +1898,16 @@ macro_rules! postall_helper {
         $crate::post!($model, count([$($vars),+], $target, $count));
     };
     
+    // Table constraint
+    ($model:expr, table($vars:expr, $tuples:expr)) => {
+        $crate::post!($model, table($vars, $tuples));
+    };
+    
+    // Table constraint with array literal
+    ($model:expr, table([$($vars:ident),+ $(,)?], $tuples:expr)) => {
+        $crate::post!($model, table([$($vars),+], $tuples));
+    };
+    
     // Logical operators - Array syntax
     ($model:expr, and([$($vars:expr),* $(,)?])) => {
         $crate::post!($model, and([$($vars),*]));
@@ -2060,6 +2082,18 @@ macro_rules! postall_helper {
     // Element constraint with array literal (multiple)
     ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident), $($rest:tt)*) => {
         $crate::post!($model, element([$($vars),+], $index, $value));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Table constraint (multiple)
+    ($model:expr, table($vars:expr, $tuples:expr), $($rest:tt)*) => {
+        $crate::post!($model, table($vars, $tuples));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Table constraint with array literal (multiple)
+    ($model:expr, table([$($vars:ident),+ $(,)?], $tuples:expr), $($rest:tt)*) => {
+        $crate::post!($model, table([$($vars),+], $tuples));
         $crate::postall_helper!($model, $($rest)*);
     };
     

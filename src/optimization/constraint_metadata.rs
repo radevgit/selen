@@ -68,6 +68,8 @@ pub enum ConstraintType {
     BooleanNot,
     /// Count constraint (count(vars, value) = count_var)
     Count,
+    /// Table constraint (table(vars, tuples))
+    Table,
     /// Complex constraint that couldn't be categorized
     Complex {
         /// Number of variables involved
@@ -378,6 +380,7 @@ impl ConstraintRegistry {
                 ConstraintType::AllEqual |
                 ConstraintType::Element |
                 ConstraintType::Count |
+                ConstraintType::Table |
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;
                 }

@@ -16,7 +16,7 @@ This library provides efficient algorithms and data structures for solving const
 - **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
 - **Boolean Logic**: `and()`, `or()`, `not()` with array syntax `and([a,b,c])` and variadic syntax `and(a,b,c,d)`
-- **Global**: `alldiff()`, `allequal()`, element `x[y] = z`, `count(vars, value, count)`
+- **Global**: `alldiff()`, `allequal()`, element `x[y] = z`, `count(vars, value, count)`, `table(vars, tuples)`
 
 ## Installation
 
@@ -34,6 +34,7 @@ cspsolver = "0.5.11"
 cargo run --release --example sudoku
 cargo run --release --example n_queens
 cargo run --release --example count_demo      # Count constraint demonstrations
+cargo run --release --example table_demo      # Table constraint with practical examples
 cargo run --release --example magic_square    # Magic squares with enhanced constraints
 ```
 
@@ -96,6 +97,17 @@ fn main() {
     let night_count = m.int(1, 2); // 1-2 workers on night shift
     post!(m, count(workers, int(3), night_count)); // Count night shift workers
     
+    // Table constraint - specify valid combinations explicitly  
+    let cpu = m.int(1, 2);     // 1=Intel, 2=AMD
+    let gpu = m.int(1, 2);     // 1=NVIDIA, 2=AMD
+    let compatible_configs = vec![
+        vec![int(1), int(1)],  // Intel CPU + NVIDIA GPU
+        vec![int(1), int(2)],  // Intel CPU + AMD GPU  
+        vec![int(2), int(2)],  // AMD CPU + AMD GPU
+        // Note: AMD CPU + NVIDIA GPU not included (incompatible)
+    ];
+    post!(m, table([cpu, gpu], compatible_configs)); // Only valid combinations allowed
+    
     // Element constraint (array indexing)
     let array = vec![x, y, z];
     let index = m.int(0, 2);
@@ -144,6 +156,23 @@ fn main() {
     
     post!(m, count(students.clone(), int(1), section1_count)); // Count students in section 1
     post!(m, count(students, int(2), section2_count));         // Count students in section 2
+    
+    // Table constraints - express complex relationships with lookup tables
+    let time = m.int(1, 4);    // Time slots: 1=9AM, 2=11AM, 3=1PM, 4=3PM
+    let room = m.int(1, 3);    // Rooms: 1=Lab, 2=Classroom, 3=Auditorium
+    let capacity = m.int(10, 100); // Room capacity
+    
+    // Room availability and capacity table: (time, room, capacity)
+    let schedule_table = vec![
+        vec![int(1), int(1), int(20)],  // 9AM: Lab has 20 capacity
+        vec![int(1), int(2), int(30)],  // 9AM: Classroom has 30 capacity
+        vec![int(2), int(2), int(30)],  // 11AM: Classroom has 30 capacity  
+        vec![int(2), int(3), int(100)], // 11AM: Auditorium has 100 capacity
+        vec![int(3), int(1), int(20)],  // 1PM: Lab has 20 capacity
+        vec![int(4), int(3), int(100)], // 3PM: Auditorium has 100 capacity
+        // Note: Some time/room combinations unavailable (maintenance, etc.)
+    ];
+    post!(m, table([time, room, capacity], schedule_table));
     
     // Mixed type constraints with float
     let float_var = m.float(1.0, 10.0);
