@@ -28,6 +28,8 @@ impl ConstraintRef {
 /// 
 /// **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 /// 
+/// **Chained comparisons**: `a <= b <= c`, `a < b < c`, `a >= b >= c`, `a > b > c` (natural between constraints)
+/// 
 /// **Array indexing**: `vars[i] op vars[j]`, `vars[i] op var`, `var op vars[i]`, `vars[i] op literal`, `literal op vars[i]`, `array[var] == value` (Element)
 /// 
 /// **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
@@ -43,6 +45,30 @@ impl ConstraintRef {
 /// Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`
 #[macro_export]
 macro_rules! post {
+    // Chained comparisons for between constraints: a <= b <= c, a < b < c, etc.
+    ($model:expr, $lower:ident <= $middle:ident <= $upper:ident) => {{
+        $model.props.between_constraint($lower, $middle, $upper);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $lower:ident < $middle:ident < $upper:ident) => {{
+        $model.props.less_than($lower, $middle);
+        $model.props.less_than($middle, $upper);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $lower:ident >= $middle:ident >= $upper:ident) => {{
+        $model.props.greater_than_or_equals($lower, $middle);
+        $model.props.greater_than_or_equals($middle, $upper);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $lower:ident > $middle:ident > $upper:ident) => {{
+        $model.props.greater_than($lower, $middle);
+        $model.props.greater_than($middle, $upper);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+
     // Handle simple variable comparisons: x < y, x <= y, etc.
     ($model:expr, $left:ident < $right:ident) => {{
         $model.props.less_than($left, $right);
@@ -2827,6 +2853,32 @@ mod tests {
         let _c28 = post!(m, 2 >= vars[3]);
         let _c29 = post!(m, 8 == vars[4]);
         let _c30 = post!(m, 9 != vars[0]);
+        
+        // Should compile without errors
+        assert!(true);
+    }
+
+    #[test]
+    fn test_chained_comparison_syntax() {
+        let mut m = Model::default();
+        let a = m.int(1, 10);
+        let b = m.int(1, 10);
+        let c = m.int(1, 10);
+        let x = m.int(1, 10);
+        let y = m.int(1, 10);
+        let z = m.int(1, 10);
+        
+        // Test chained <= (between constraint)
+        let _c1 = post!(m, a <= b <= c);
+        
+        // Test chained >= 
+        let _c2 = post!(m, x >= y >= z);
+        
+        // Test chained < (strict inequality)
+        let _c3 = post!(m, a < b < c);
+        
+        // Test chained > (strict inequality)
+        let _c4 = post!(m, x > y > z);
         
         // Should compile without errors
         assert!(true);

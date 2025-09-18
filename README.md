@@ -17,7 +17,7 @@ This library provides efficient algorithms and data structures for solving const
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
 - **Boolean Logic**: `and()`, `or()`, `not()` with array syntax `and([a,b,c])` and variadic syntax `and(a,b,c,d)`
 - **Global**: `alldiff()`, `allequal()`, element `x[y] = z`, `count(vars, value, count)`, `table(vars, tuples)`
-- **Ordering**: `between(lower, middle, upper)` for ternary ordering constraints
+- **Ordering**: `a <= b <= c`, `a < b < c`, `a >= b >= c`, `a > b > c` (natural `between` constraints) 
 - **Cardinality**: `at_least(vars, value, count)`, `at_most(vars, value, count)`, `exactly(vars, value, count)`
 - **Conditional**: `if_then(condition, constraint)`, `if_then_else(condition, then_constraint, else_constraint)`
 
@@ -33,13 +33,15 @@ cspsolver = "0.5.15"
 
 ## Examples
 
+
 ```bash
 cargo run --release --example sudoku
 cargo run --release --example n_queens
-cargo run --release --example count_demo      # Count constraint demonstrations
-cargo run --release --example table_demo      # Table constraint with practical examples
-cargo run --release --example magic_square    # Magic squares with enhanced constraints
+cargo run --release --example count_demo 
+cargo run --release --example table_demo
+cargo run --release --example magic_square
 ```
+
 
 
 
@@ -96,7 +98,8 @@ fn main() {
     post!(m, allequal([x, y])); // All equal
     
     // Ordering constraints - powerful ternary relationships
-    post!(m, between(x, y, z)); // x <= y <= z (ordering constraint)
+    post!(m, x <= y <= z);       // Natural chained comparison syntax
+    post!(m, between(x, y, z));  // Alternative function syntax
     
     // Cardinality constraints - counting with fine-grained control
     let tasks = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 1=low, 2=medium, 3=high priority
@@ -221,12 +224,21 @@ fn main() {
 The latest version includes powerful new constraint types for advanced modeling:
 
 #### Between Constraints
-Enforce ternary ordering relationships with a single constraint:
+Enforce ternary ordering relationships with natural chained comparison syntax:
 ```rust
 let start = m.int(1, 10);
 let middle = m.int(5, 15); 
 let end = m.int(10, 20);
-post!(m, between(start, middle, end)); // start <= middle <= end
+
+// Natural chained comparison syntax (recommended)
+post!(m, start <= middle <= end);
+
+// Alternative function syntax
+post!(m, between(start, middle, end));
+
+// Other chained comparisons
+post!(m, start < middle < end);     // Strict inequalities
+post!(m, end >= middle >= start);   // Reverse order
 ```
 
 #### Cardinality Constraints  
