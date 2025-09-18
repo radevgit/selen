@@ -16,7 +16,7 @@ This library provides efficient algorithms and data structures for solving const
 - **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
 - **Boolean Logic**: `and()`, `or()`, `not()` with clean function syntax
-- **Global**: `alldiff()`
+- **Global**: `alldiff()`, `allequal()`
 
 ## Installation
 
@@ -31,12 +31,8 @@ cspsolver = "0.5.11"
 ## Examples
 
 ```bash
-
 cargo run --release --example sudoku
 cargo run --release --example n_queens
-cargo run --release --example pc_builder
-cargo run --release --example resource_allocation
-cargo run --release --example portfolio_optimization
 ```
 
 
@@ -92,6 +88,7 @@ fn main() {
     
     // Global constraints
     post!(m, alldiff([x, y]));  // All different
+    post!(m, allequal([x, y])); // All equal
 
     if let Some(solution) = m.solve() {
         println!("x = {:?}", solution[x]);

@@ -36,7 +36,7 @@ impl ConstraintRef {
 /// 
 /// **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)`
 /// 
-/// **Global**: `alldiff([vars...])`
+/// **Global**: `alldiff([vars...])`, `allequal([vars...])`
 /// 
 /// **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
 /// 
@@ -1182,6 +1182,18 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
+    // Global constraints: allequal([x, y, z])
+    ($model:expr, allequal([$($vars:ident),+ $(,)?])) => {{
+        $model.props.all_equal(vec![$($vars),+]);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Global constraints: allequal with array expressions
+    ($model:expr, allequal($array:expr)) => {{
+        $model.props.all_equal($array.to_vec());
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
     // Enhanced modulo operations: x % y == int(0), x % y != int(0)
     
     // Modulo with literal divisor and variable remainder: x % 5 == y
@@ -1764,6 +1776,16 @@ macro_rules! postall_helper {
         $crate::post!($model, alldiff($array));
     };
     
+    // Global constraints: allequal
+    ($model:expr, allequal([$($vars:ident),+ $(,)?])) => {
+        $crate::post!($model, allequal([$($vars),+]));
+    };
+    
+    // Global constraints: allequal with array expressions
+    ($model:expr, allequal($array:expr)) => {
+        $crate::post!($model, allequal($array));
+    };
+    
     // Logical operators
     ($model:expr, and($c1:expr, $c2:expr)) => {
         $crate::post!($model, and($c1, $c2));
@@ -1880,6 +1902,18 @@ macro_rules! postall_helper {
     // Global constraints with array expressions (multiple)
     ($model:expr, alldiff($array:expr), $($rest:tt)*) => {
         $crate::post!($model, alldiff($array));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Global constraints: allequal (multiple)
+    ($model:expr, allequal([$($vars:ident),+ $(,)?]), $($rest:tt)*) => {
+        $crate::post!($model, allequal([$($vars),+]));
+        $crate::postall_helper!($model, $($rest)*);
+    };
+    
+    // Global constraints: allequal with array expressions (multiple)
+    ($model:expr, allequal($array:expr), $($rest:tt)*) => {
+        $crate::post!($model, allequal($array));
         $crate::postall_helper!($model, $($rest)*);
     };
     
@@ -2065,6 +2099,26 @@ mod tests {
         // Should compile without errors
         assert!(true);
     }
+
+    #[test]
+    fn test_post_macro_allequal() {
+        let mut m = Model::default();
+        let x = m.int(1, 10);
+        let y = m.int(5, 15);
+        let z = m.int(3, 8);
+        let w = m.int(1, 10);
+        
+        // Test allequal constraint
+        let _c1 = post!(m, allequal([x, y, z]));
+        let _c2 = post!(m, allequal([x, y, z, w]));
+        
+        // Test with array expression
+        let vars = vec![x, y, z];
+        let _c3 = post!(m, allequal(vars));
+        
+        // Should compile without errors
+        assert!(true);
+    }
     
     #[test]
     fn test_post_macro_enhanced_modulo() {
@@ -2138,6 +2192,7 @@ mod tests {
             y > int(5),
             x + y <= z,
             alldiff([x, y, z]),
+            allequal([x, y]),
             and(a, b),
             or(a, b),
             not(a)

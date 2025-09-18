@@ -40,6 +40,8 @@ pub enum ConstraintType {
     NotEquals,
     /// AllDifferent constraint
     AllDifferent,
+    /// AllEqual constraint
+    AllEqual,
     /// Sum constraint
     Sum,
     /// Addition constraint (x + y = z)
@@ -369,6 +371,7 @@ impl ConstraintRegistry {
                 ConstraintType::BooleanOr |
                 ConstraintType::BooleanNot |
                 ConstraintType::AllDifferent | 
+                ConstraintType::AllEqual |
                 ConstraintType::Sum => {
                     analysis.has_complex_constraints = true;
                 }

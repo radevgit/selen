@@ -1,6 +1,7 @@
 mod abs;
 mod add;
 mod alldiff;
+mod allequal;
 mod bool_logic;
 mod div;
 mod eq;
@@ -917,6 +918,26 @@ impl Propagators {
         )
     }
 
+    /// Declare a new propagator to enforce that all variables have the same value.
+    /// This is the complement of AllDifferent constraint.
+    /// Uses efficient domain intersection for value propagation.
+    pub fn all_equal(&mut self, vars: Vec<VarId>) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<_> = vars.iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+            
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::allequal::AllEqual::new(vars.clone()),
+            ConstraintType::AllEqual,
+            vars,
+            metadata,
+        )
+    }
+
     /// Create a no-operation propagator for branching operations that have already applied domain filtering.
     pub fn noop(&mut self) -> PropId {
         self.push_new_prop(self::noop::NoOp::new())
@@ -1146,3 +1167,4 @@ impl IndexMut<PropId> for Vec<Box<dyn Prune>> {
 
 // Public exports
 pub use alldiff::AllDifferent;
+pub use allequal::AllEqual;
