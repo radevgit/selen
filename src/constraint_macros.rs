@@ -1509,6 +1509,105 @@ macro_rules! post {
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
+    // Array arithmetic: vars[i] + vars[j] <op> <expr>
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] < $target:ident) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.less_than(_sum_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] <= $target:ident) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.less_than_or_equals(_sum_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] > $target:ident) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.greater_than(_sum_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] >= $target:ident) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.greater_than_or_equals(_sum_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] == $target:ident) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.equals(_sum_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] != $target:ident) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.not_equals(_sum_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Array arithmetic with constants: vars[i] + vars[j] <= int(150)
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] <= int($target:expr)) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.less_than_or_equals(_sum_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] < int($target:expr)) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.less_than(_sum_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] >= int($target:expr)) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.greater_than_or_equals(_sum_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] > int($target:expr)) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.greater_than(_sum_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] == int($target:expr)) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.equals(_sum_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right_array:ident[$right_index:expr] != int($target:expr)) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right_array[$right_index]);
+        $model.props.not_equals(_sum_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    // Mixed array and variable arithmetic: vars[i] + var <= target
+    ($model:expr, $left_array:ident[$left_index:expr] + $right:ident <= $target:ident) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right);
+        $model.props.less_than_or_equals(_sum_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident + $right_array:ident[$right_index:expr] <= $target:ident) => {{
+        let _sum_var = $model.add($left, $right_array[$right_index]);
+        $model.props.less_than_or_equals(_sum_var, $target);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left_array:ident[$left_index:expr] + $right:ident <= int($target:expr)) => {{
+        let _sum_var = $model.add($left_array[$left_index], $right);
+        $model.props.less_than_or_equals(_sum_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, $left:ident + $right_array:ident[$right_index:expr] <= int($target:expr)) => {{
+        let _sum_var = $model.add($left, $right_array[$right_index]);
+        $model.props.less_than_or_equals(_sum_var, $crate::prelude::int($target));
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
     // Subtraction: x - y <op> <expr>
     ($model:expr, $left:ident - $right:ident < $target:ident) => {{
         let _diff_var = $model.sub($left, $right);
