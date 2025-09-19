@@ -133,6 +133,9 @@ pub mod domain;
 pub mod optimization;
 pub mod prelude;
 
+// Runtime constraint API
+pub mod runtime_api;
+
 #[doc(hidden)]
 // Clean constraint API modules
 pub mod constraint_builder;
@@ -144,13 +147,10 @@ pub mod math_syntax;
 pub mod constraint_macros;
 
 #[cfg(test)]
-mod tests;
+mod constraint_macros_programmatic_tests;
+
 #[cfg(test)]
 mod debug;
-
-// Benchmarks module for performance validation
-#[doc(hidden)]
-pub mod benchmarks;
 
 
 

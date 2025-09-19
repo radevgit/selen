@@ -273,6 +273,7 @@ impl Propagators {
             ConstraintType::BooleanAnd,
             ConstraintType::BooleanOr,
             ConstraintType::BooleanNot,
+            ConstraintType::Count, // CRITICAL FIX: Include Count constraints in optimization
         ];
         
         // Pre-calculate variable connectivity map for all constraint types
@@ -950,6 +951,11 @@ impl Propagators {
         use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo, ConstraintValue};
         use crate::vars::Val;
         
+        eprintln!("count_constraint called for target_value={:?}", target_value);
+        
+        let count_instance = count::Count::new(vars.clone(), target_value, count_var);
+        eprintln!("Created Count instance: {:?}", count_instance);
+        
         let mut operands: Vec<ViewInfo> = vars.iter()
             .map(|&var_id| ViewInfo::Variable { var_id })
             .collect();
@@ -966,12 +972,15 @@ impl Propagators {
         let mut all_vars = vars.clone();
         all_vars.push(count_var);
         
-        self.push_new_prop_with_metadata(
-            self::count::Count::new(vars, target_value, count_var),
+        let prop_id = self.push_new_prop_with_metadata(
+            count_instance,
             ConstraintType::Count,
             all_vars,
             metadata,
-        )
+        );
+        
+        eprintln!("count_constraint returning PropId({:?})", prop_id);
+        prop_id
     }
 
     /// Declare a new propagator to enforce that array[index] == value.
@@ -1133,14 +1142,19 @@ impl Propagators {
     fn push_new_prop(&mut self, state: impl Propagate) -> PropId {
         // Create new handle to refer to propagator state and dependencies
         let p = PropId(self.state.len());
-
+        
         // Register dependencies listed by trait implementor
         for v in state.list_trigger_vars() {
+            // Ensure the dependencies matrix is large enough
+            while self.dependencies.len() <= v.to_index() {
+                self.dependencies.push(Vec::new());
+            }
             self.dependencies[v].push(p);
         }
 
         // Store propagator state as shared trait object
-        self.state.push(Rc::new(Box::new(state)));
+        let boxed = Box::new(state);
+        self.state.push(Rc::new(boxed));
 
         p
     }

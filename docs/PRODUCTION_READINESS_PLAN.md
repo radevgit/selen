@@ -67,14 +67,14 @@ This plan focuses on transforming our hybrid CSP solver from a research prototyp
 - [✅] **Short constraint names** (`le`, `ge`, `eq`, `ne`, `lt`, `gt`) - **COMPLETED**
 - [✅] **Greater than** (`gt`): `x > y` (strict inequality) - **COMPLETED**
 - [✅] **Less than** (`lt`): `x < y` (strict inequality) - **COMPLETED**
-- [ ] **Between constraint**: `x ≤ y ≤ z`
-- [ ] **Element constraint**: `array[index] = value`
+- [✅] **Between constraint**: `x ≤ y ≤ z`
+- [✅] **Element constraint**: `array[index] = value`
 
 **9.1.3: Logical Constraints**
 - [✅] **Boolean AND/OR/NOT** for constraint combinations - **COMPLETED**
-- [ ] **If-then-else** constraints: `if condition then constraint1 else constraint2`
+- [✅] **If-then-else** constraints: `if condition then constraint1 else constraint2`
 - [ ] **Reification**: convert constraints to boolean variables
-- [ ] **Cardinality constraints**: exactly/at-most/at-least N variables are true
+- [✅] **Cardinality constraints**: exactly/at-most/at-least N variables are true
 
 **Estimated Time**: 3-4 weeks
 **Priority**: HIGH

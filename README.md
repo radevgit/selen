@@ -21,6 +21,17 @@ This library provides efficient algorithms and data structures for solving const
 - **Cardinality**: `at_least(vars, value, count)`, `at_most(vars, value, count)`, `exactly(vars, value, count)`
 - **Conditional**: `if_then(condition, constraint)`, `if_then_else(condition, then_constraint, else_constraint)`
 
+**Programmatic version of constraints**
+```
+m.post(x.lt(y));                        // x < y
+m.post(y.le(z));                        // y <= z
+m.post(z.gt(5));                        // z > 5
+m.post(x.add(y).le(z));                 // x + y <= z
+m.post(y.sub(x).ge(0));                 // y - x >= 0
+m.post(x.mul(y).eq(12));                // x * y == 12
+m.post(z.div(y).ne(0));                 // z / y != 0
+```
+
 ## Installation
 
 Add this to your `Cargo.toml`:

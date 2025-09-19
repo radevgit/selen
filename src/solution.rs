@@ -223,6 +223,84 @@ impl Solution {
     {
         vs.into_iter().map(|v| self.get_value_binary(v))
     }
+    
+    /// Get the integer value for a variable (convenience method)
+    /// Returns the integer value if the variable contains an integer, panics otherwise
+    #[must_use]
+    pub fn get_int(&self, var: VarId) -> i32 {
+        match self[var] {
+            Val::ValI(i) => i,
+            Val::ValF(_) => panic!("Variable {:?} contains a float value, not an integer", var),
+        }
+    }
+    
+    /// Get the float value for a variable (convenience method)
+    /// Returns the float value if the variable contains a float, panics otherwise
+    #[must_use] 
+    pub fn get_float(&self, var: VarId) -> f64 {
+        match self[var] {
+            Val::ValF(f) => f,
+            Val::ValI(_) => panic!("Variable {:?} contains an integer value, not a float", var),
+        }
+    }
+    
+    /// Get the value for a variable as an integer if possible
+    /// Returns Some(i32) if the value is an integer, None otherwise
+    #[must_use]
+    pub fn try_get_int(&self, var: VarId) -> Option<i32> {
+        match self[var] {
+            Val::ValI(i) => Some(i),
+            Val::ValF(_) => None,
+        }
+    }
+    
+    /// Get the value for a variable as a float if possible
+    /// Returns Some(f64) if the value is a float, None otherwise
+    #[must_use]
+    pub fn try_get_float(&self, var: VarId) -> Option<f64> {
+        match self[var] {
+            Val::ValF(f) => Some(f),
+            Val::ValI(_) => None,
+        }
+    }
+    
+    /// Generic get method using type inference
+    /// This allows `let x: i32 = solution.get(var);` syntax
+    pub fn get<T>(&self, var: VarId) -> T 
+    where 
+        Self: GetValue<T>
+    {
+        self.get_value(var)
+    }
+}
+
+/// Trait for type-safe value extraction
+pub trait GetValue<T> {
+    fn get_value(&self, var: VarId) -> T;
+}
+
+impl GetValue<i32> for Solution {
+    fn get_value(&self, var: VarId) -> i32 {
+        self.get_int(var)
+    }
+}
+
+impl GetValue<f64> for Solution {
+    fn get_value(&self, var: VarId) -> f64 {
+        self.get_float(var)
+    }
+}
+
+impl GetValue<Option<i32>> for Solution {
+    fn get_value(&self, var: VarId) -> Option<i32> {
+        self.try_get_int(var)
+    }
+}
+
+impl GetValue<Option<f64>> for Solution {
+    fn get_value(&self, var: VarId) -> Option<f64> {
+        self.try_get_float(var)
+    }
 }
 
 
