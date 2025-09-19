@@ -146,7 +146,6 @@ mod test_count_direct {
         // This should work now - our implementation should run
         let result = count.prune(&mut ctx);
         
-        eprintln!("Direct test completed - result: {:?}", result);
         assert!(result.is_some());
     }
 
