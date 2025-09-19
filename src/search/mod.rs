@@ -402,9 +402,10 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
 pub fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> {
     // Track which domains got updated, to schedule next propagators in batch
     let mut events = Vec::new();
-
+    
     // Agenda establishes the order in which scheduled propagators get run
     while let Some(p) = agenda.pop() {
+        
         // Increment the propagation step counter
         space.props.increment_propagation_count();
 
@@ -413,10 +414,11 @@ pub fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> 
 
         // Wrap engine objects before passing them to user-controlled propagation logic
         let mut ctx = Context::new(&mut space.vars, &mut events);
-
+        
         // Prune decision variable domains to enforce constraints
-        prop.as_ref().prune(&mut ctx)?;
-
+        let result = prop.as_ref().prune(&mut ctx);
+        result?;
+        
         // Schedule propagators that depend on changed variables
         #[allow(clippy::iter_with_drain)]
         for v in events.drain(..) {

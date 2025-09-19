@@ -812,19 +812,8 @@ impl ModelExt for Model {
     }
     
     fn alleq(&mut self, vars: &[VarId]) -> PropId {
-        // Implement all equal using pairwise equality constraints
-        if vars.len() < 2 {
-            // For trivial cases, create a dummy variable and make it equal to itself
-            let dummy = self.int(0, 0);
-            return self.props.equals(dummy, dummy);
-        }
-        
-        // Post equality constraints between first variable and all others
-        let mut prop_id = self.props.equals(vars[0], vars[1]);
-        for i in 2..vars.len() {
-            prop_id = self.props.equals(vars[0], vars[i]);
-        }
-        prop_id
+        // Use the proper all_equal constraint implementation
+        self.props.all_equal(vars.to_vec())
     }
     
     fn elem(&mut self, array: &[VarId], index: VarId, value: VarId) -> PropId {
