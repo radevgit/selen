@@ -16,7 +16,7 @@ pub use crate::props::*;
 pub use crate::search::*;
 
 // Runtime constraint API
-pub use crate::runtime_api::{ExprBuilder, Constraint, Builder, VarIdExt, ModelExt};
+pub use crate::runtime_api::{ExprBuilder, Constraint, Builder, VarIdExt, ModelExt, ConstraintVecExt, and_all, or_all, all_of, any_of};
 
 // Mathematical constraint macros
 pub use crate::{post, postall};

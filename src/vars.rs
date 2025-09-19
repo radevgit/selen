@@ -79,7 +79,7 @@ impl Val {
         }
     }
 
-    /// Get the next representable value
+    /// Get the next representable value  
     pub fn next(self) -> Self {
         match self {
             Val::ValI(i) => Val::ValI(i + 1),
@@ -90,8 +90,22 @@ impl Val {
             }
         }
     }
-
-    /// Check if this value is safe to divide by (not zero or close to zero)
+    
+    /// Extract integer value if this is an integer, None otherwise
+    pub fn as_int(self) -> Option<i32> {
+        match self {
+            Val::ValI(i) => Some(i),
+            Val::ValF(_) => None,
+        }
+    }
+    
+    /// Extract float value if this is a float, None otherwise  
+    pub fn as_float(self) -> Option<f64> {
+        match self {
+            Val::ValF(f) => Some(f),
+            Val::ValI(_) => None,
+        }
+    }    /// Check if this value is safe to divide by (not zero or close to zero)
     pub fn is_safe_divisor(self) -> bool {
         match self {
             Val::ValI(i) => i != 0,
