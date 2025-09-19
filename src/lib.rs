@@ -133,6 +133,9 @@ pub mod domain;
 pub mod optimization;
 pub mod prelude;
 
+// Runtime constraint API
+pub mod runtime_api;
+
 #[doc(hidden)]
 // Clean constraint API modules
 pub mod constraint_builder;
