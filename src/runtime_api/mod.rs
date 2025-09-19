@@ -621,6 +621,18 @@ pub trait ModelExt {
     /// Count constraint: count occurrences of value in vars
     fn count(&mut self, vars: &[VarId], value: i32, result: VarId) -> PropId;
     
+    /// Between constraint: min <= var <= max (cardinality constraint)
+    fn betw(&mut self, var: VarId, min: i32, max: i32) -> PropId;
+    
+    /// At most constraint: var <= value (cardinality constraint)
+    fn atmost(&mut self, var: VarId, value: i32) -> PropId;
+    
+    /// At least constraint: var >= value (cardinality constraint)  
+    fn atleast(&mut self, var: VarId, value: i32) -> PropId;
+    
+    /// Global cardinality constraint: count values in vars must match cardinalities
+    fn gcc(&mut self, vars: &[VarId], values: &[i32], counts: &[VarId]) -> Vec<PropId>;
+    
     /// Phase 3: Post multiple constraints with AND semantics (all must be satisfied)
     fn post_all(&mut self, constraints: Vec<Constraint>) -> Vec<PropId>;
     
@@ -669,6 +681,36 @@ impl ModelExt for Model {
     fn count(&mut self, vars: &[VarId], value: i32, result: VarId) -> PropId {
         // Use existing count constraint
         self.props.count_constraint(vars.to_vec(), Val::int(value), result)
+    }
+    
+    fn betw(&mut self, var: VarId, min: i32, max: i32) -> PropId {
+        // Between constraint: min <= var <= max
+        // Post two constraints: var >= min AND var <= max
+        self.props.greater_than_or_equals(var, Val::int(min));
+        self.props.less_than_or_equals(var, Val::int(max))
+    }
+    
+    fn atmost(&mut self, var: VarId, value: i32) -> PropId {
+        // At most constraint: var <= value
+        self.props.less_than_or_equals(var, Val::int(value))
+    }
+    
+    fn atleast(&mut self, var: VarId, value: i32) -> PropId {
+        // At least constraint: var >= value
+        self.props.greater_than_or_equals(var, Val::int(value))
+    }
+    
+    fn gcc(&mut self, vars: &[VarId], values: &[i32], counts: &[VarId]) -> Vec<PropId> {
+        // Global cardinality constraint: count each value in vars and match cardinalities
+        let mut prop_ids = Vec::new();
+        
+        for (&value, &count_var) in values.iter().zip(counts.iter()) {
+            // For each value, create a count constraint
+            let prop_id = self.props.count_constraint(vars.to_vec(), Val::int(value), count_var);
+            prop_ids.push(prop_id);
+        }
+        
+        prop_ids
     }
     
     /// Phase 3: Post multiple constraints with AND semantics (all must be satisfied)

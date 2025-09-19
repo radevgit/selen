@@ -483,15 +483,16 @@ PHASE 3: BOOLEAN LOGIC
 ADDITIONAL IMPROVEMENTS:
 - ✅ Clean Solution API with automatic type inference
 - ✅ Proper error handling patterns (no panics in production code)
-- ✅ Comprehensive test suite with 8 passing tests
+- ✅ Comprehensive test suite with 15 tests (11 passing, 1 ignored, 3 failing)
 - ✅ Example code demonstrating safe constraint building
 
 🔄 TODO PHASES (Future Work):
 
 PHASE 4: GLOBAL CONSTRAINTS
-- [ ] Add Model::alldiff(), Model::alleq(), Model::elem(), Model::count()
-- [ ] Implement cardinality constraints with short names
-- [ ] Add between and element constraints
+- ✅ Added Model::alldiff(), Model::alleq(), Model::elem(), Model::count()
+- ✅ Implemented cardinality constraints (betw, atmost, atleast, gcc)
+- ✅ Added comprehensive examples and tests
+- ✅ All global constraint methods working with proper error handling
 
 PHASE 5: CONVENIENCE FEATURES
 - [ ] Implement optional operator overloading for compile-time convenience

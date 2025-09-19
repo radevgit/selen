@@ -338,3 +338,247 @@ fn test_safe_constraint_building_no_panics() {
     
     println!("✓ Safe constraint building - no panics, graceful error handling!");
 }
+
+// =================== PHASE 4: GLOBAL CONSTRAINTS TESTS ===================
+
+#[test]
+fn test_all_different_constraint() {
+    let mut m = Model::default();
+    let vars: Vec<_> = (0..3).map(|_| m.int(1, 3)).collect();
+    
+    // All variables must have different values
+    m.alldiff(&vars);
+    
+    let result = m.solve();
+    assert!(result.is_ok());
+    
+    if let Ok(solution) = result {
+        let values: Vec<i32> = vars.iter().map(|&v| solution.get_int(v)).collect();
+        
+        // Verify all values are different
+        for i in 0..values.len() {
+            for j in i+1..values.len() {
+                assert_ne!(values[i], values[j], "Values should all be different");
+            }
+        }
+        
+        // Verify all values are in valid range
+        for &value in &values {
+            assert!(value >= 1 && value <= 3);
+        }
+    }
+    
+    println!("✓ All different constraint test passed!");
+}
+
+#[test]
+fn test_all_equal_constraint() {
+    let mut m = Model::default();
+    let vars: Vec<_> = (0..3).map(|_| m.int(1, 10)).collect();
+    
+    // All variables must have the same value
+    m.alleq(&vars);
+    
+    // Add additional constraint
+    m.post(vars[0].ge(5));
+    
+    let result = m.solve();
+    assert!(result.is_ok());
+    
+    if let Ok(solution) = result {
+        let values: Vec<i32> = vars.iter().map(|&v| solution.get_int(v)).collect();
+        
+        // Verify all values are equal
+        let first_value = values[0];
+        for &value in &values {
+            assert_eq!(value, first_value, "All values should be equal");
+        }
+        
+        // Verify constraint is satisfied
+        assert!(first_value >= 5);
+    }
+    
+    println!("✓ All equal constraint test passed!");
+}
+
+#[test]
+fn test_element_constraint() {
+    let mut m = Model::default();
+    
+    // Create array with specific values
+    let array: Vec<_> = (0..3).map(|i| m.int(i * 10, i * 10)).collect(); // [0, 10, 20]
+    let index = m.int(0, 2);
+    let value = m.int(0, 20);
+    
+    // Element constraint: array[index] == value
+    m.elem(&array, index, value);
+    
+    let result = m.solve();
+    assert!(result.is_ok());
+    
+    if let Ok(solution) = result {
+        let idx = solution.get_int(index) as usize;
+        let val = solution.get_int(value);
+        let array_val = solution.get_int(array[idx]);
+        
+        // Verify element constraint
+        assert_eq!(array_val, val, "array[index] should equal value");
+        
+        // Verify index is in valid range
+        assert!(idx < array.len());
+    }
+    
+    println!("✓ Element constraint test passed!");
+}
+
+#[test]
+fn test_count_constraint() {
+    let mut m = Model::default();
+    let vars: Vec<_> = (0..5).map(|_| m.int(1, 3)).collect();
+    let count_result = m.int(0, 5);
+    
+    // Count occurrences of value 2
+    m.count(&vars, 2, count_result);
+    
+    // Force exactly 2 occurrences of value 2
+    m.post(count_result.eq(2));
+    
+    let result = m.solve();
+    assert!(result.is_ok());
+    
+    if let Ok(solution) = result {
+        let values: Vec<i32> = vars.iter().map(|&v| solution.get_int(v)).collect();
+        let count = solution.get_int(count_result);
+        
+        // Count manually
+        let actual_count = values.iter().filter(|&&v| v == 2).count();
+        
+        // Verify count constraint
+        assert_eq!(count, 2, "Count should be exactly 2");
+        assert_eq!(actual_count, 2, "Actual count should match");
+    }
+    
+    println!("✓ Count constraint test passed!");
+}
+
+#[test] 
+fn test_cardinality_constraints() {
+    let mut m = Model::default();
+    let x = m.int(0, 100);
+    let y = m.int(0, 100);
+    let z = m.int(0, 100);
+    
+    // Between constraint: x must be between 10 and 20
+    m.betw(x, 10, 20);
+    
+    // At most constraint: y must be at most 50
+    m.atmost(y, 50);
+    
+    // At least constraint: z must be at least 75
+    m.atleast(z, 75);
+    
+    let result = m.solve();
+    assert!(result.is_ok());
+    
+    if let Ok(solution) = result {
+        let x_val = solution.get_int(x);
+        let y_val = solution.get_int(y);
+        let z_val = solution.get_int(z);
+        
+        // Verify cardinality constraints
+        assert!(x_val >= 10 && x_val <= 20, "x should be between 10 and 20");
+        assert!(y_val <= 50, "y should be at most 50");
+        assert!(z_val >= 75, "z should be at least 75");
+    }
+    
+    println!("✓ Cardinality constraints test passed!");
+}
+
+#[test]
+fn test_global_cardinality_constraint() {
+    let mut m = Model::default();
+    let vars: Vec<_> = (0..6).map(|_| m.int(1, 3)).collect();
+    
+    // Count variables with values 1, 2, 3
+    let values = [1, 2, 3];
+    let counts: Vec<_> = (0..3).map(|_| m.int(0, 6)).collect();
+    
+    // Global cardinality constraint
+    m.gcc(&vars, &values, &counts);
+    
+    // Force specific counts
+    m.post(counts[0].eq(2)); // Exactly 2 ones
+    m.post(counts[1].eq(3)); // Exactly 3 twos
+    m.post(counts[2].eq(1)); // Exactly 1 three
+    
+    let result = m.solve();
+    assert!(result.is_ok());
+    
+    if let Ok(solution) = result {
+        let var_values: Vec<i32> = vars.iter().map(|&v| solution.get_int(v)).collect();
+        let count_values: Vec<i32> = counts.iter().map(|&c| solution.get_int(c)).collect();
+        
+        // Verify counts manually
+        for (i, &target_value) in values.iter().enumerate() {
+            let actual_count = var_values.iter().filter(|&&v| v == target_value).count() as i32;
+            let constraint_count = count_values[i];
+            
+            assert_eq!(actual_count, constraint_count, 
+                "Count of value {} should match constraint", target_value);
+        }
+        
+        // Verify specific constraints
+        assert_eq!(count_values[0], 2, "Should have exactly 2 ones");
+        assert_eq!(count_values[1], 3, "Should have exactly 3 twos");  
+        assert_eq!(count_values[2], 1, "Should have exactly 1 three");
+    }
+    
+    println!("✓ Global cardinality constraint test passed!");
+}
+
+#[test]
+fn test_combined_global_constraints() {
+    let mut m = Model::default();
+    
+    // Create scheduling problem with global constraints
+    let tasks: Vec<_> = (0..3).map(|_| m.int(1, 5)).collect(); // Start times
+    let resources: Vec<_> = (0..3).map(|_| m.int(1, 2)).collect(); // Resource assignments
+    
+    // All tasks must start at different times
+    m.alldiff(&tasks);
+    
+    // Count resource usage
+    let resource_counts: Vec<_> = (0..2).map(|_| m.int(0, 3)).collect();
+    m.gcc(&resources, &[1, 2], &resource_counts);
+    
+    // Each resource should be used at least once
+    for &count_var in &resource_counts {
+        m.atleast(count_var, 1);
+    }
+    
+    let result = m.solve();
+    assert!(result.is_ok());
+    
+    if let Ok(solution) = result {
+        let task_times: Vec<i32> = tasks.iter().map(|&t| solution.get_int(t)).collect();
+        let resource_counts_vals: Vec<i32> = resource_counts.iter().map(|&c| solution.get_int(c)).collect();
+        
+        // Verify all different constraint
+        for i in 0..task_times.len() {
+            for j in i+1..task_times.len() {
+                assert_ne!(task_times[i], task_times[j], "Task times should be different");
+            }
+        }
+        
+        // Verify each resource is used at least once
+        for &count in &resource_counts_vals {
+            assert!(count >= 1, "Each resource should be used at least once");
+        }
+        
+        // Verify resource count totals
+        let total_usage: i32 = resource_counts_vals.iter().sum();
+        assert_eq!(total_usage, 3, "Total resource usage should equal number of tasks");
+    }
+    
+    println!("✓ Combined global constraints test passed!");
+}
