@@ -3,6 +3,16 @@
 //! This module provides a runtime-programmable constraint building API
 //! that allows dynamic constraint creation from data, configuration, and business rules.
 //!
+//! # Phase 1: Core Expression System
+//! - ExprBuilder for mathematical expression building (x.add(y).eq(z))
+//! - VarIdExt trait for direct variable constraint methods
+//! - ModelExt trait for posting constraints
+//!
+//! # Phase 2: Constraint Builder (NEW)
+//! - Builder struct for fluent constraint building
+//! - Model::c() method for ultra-short syntax (m.c(x).eq(5))
+//! - Global constraint shortcuts (alldiff, alleq, elem, count)
+//!
 //! Key features:
 //! - Pure runtime expression building (no macro syntax required)
 //! - Ultra-short method names for concise code
@@ -36,6 +46,12 @@ pub enum ExprBuilder {
 #[derive(Clone)]
 pub struct Constraint {
     kind: ConstraintKind,
+}
+
+/// Phase 2: Fluent constraint builder for step-by-step constraint construction
+pub struct Builder {
+    model: *mut Model,  // Raw pointer for fluent interface
+    current_expr: ExprBuilder,
 }
 
 #[derive(Clone)]
@@ -180,6 +196,76 @@ impl Constraint {
         Constraint {
             kind: ConstraintKind::Not(Box::new(self)),
         }
+    }
+}
+
+impl Builder {
+    /// Create a new constraint builder from a variable
+    pub fn new(model: &mut Model, var: VarId) -> Self {
+        Builder {
+            model: model as *mut Model,
+            current_expr: ExprBuilder::from_var(var),
+        }
+    }
+
+    /// Add to the current expression
+    pub fn add(mut self, other: impl Into<ExprBuilder>) -> Self {
+        self.current_expr = self.current_expr.add(other);
+        self
+    }
+
+    /// Subtract from the current expression
+    pub fn sub(mut self, other: impl Into<ExprBuilder>) -> Self {
+        self.current_expr = self.current_expr.sub(other);
+        self
+    }
+
+    /// Multiply the current expression
+    pub fn mul(mut self, other: impl Into<ExprBuilder>) -> Self {
+        self.current_expr = self.current_expr.mul(other);
+        self
+    }
+
+    /// Divide the current expression
+    pub fn div(mut self, other: impl Into<ExprBuilder>) -> Self {
+        self.current_expr = self.current_expr.div(other);
+        self
+    }
+
+    /// Create and post an equality constraint
+    pub fn eq(self, other: impl Into<ExprBuilder>) -> PropId {
+        let constraint = self.current_expr.eq(other);
+        unsafe { &mut *self.model }.post(constraint)
+    }
+
+    /// Create and post a not-equal constraint
+    pub fn ne(self, other: impl Into<ExprBuilder>) -> PropId {
+        let constraint = self.current_expr.ne(other);
+        unsafe { &mut *self.model }.post(constraint)
+    }
+
+    /// Create and post a less-than constraint
+    pub fn lt(self, other: impl Into<ExprBuilder>) -> PropId {
+        let constraint = self.current_expr.lt(other);
+        unsafe { &mut *self.model }.post(constraint)
+    }
+
+    /// Create and post a less-than-or-equal constraint
+    pub fn le(self, other: impl Into<ExprBuilder>) -> PropId {
+        let constraint = self.current_expr.le(other);
+        unsafe { &mut *self.model }.post(constraint)
+    }
+
+    /// Create and post a greater-than constraint
+    pub fn gt(self, other: impl Into<ExprBuilder>) -> PropId {
+        let constraint = self.current_expr.gt(other);
+        unsafe { &mut *self.model }.post(constraint)
+    }
+
+    /// Create and post a greater-than-or-equal constraint
+    pub fn ge(self, other: impl Into<ExprBuilder>) -> PropId {
+        let constraint = self.current_expr.ge(other);
+        unsafe { &mut *self.model }.post(constraint)
     }
 }
 
@@ -351,6 +437,13 @@ impl From<Val> for ExprBuilder {
     }
 }
 
+// Reference implementations for convenience
+impl From<&VarId> for ExprBuilder {
+    fn from(value: &VarId) -> Self {
+        ExprBuilder::from_var(*value)
+    }
+}
+
 /// Extension trait for VarId to enable direct constraint building
 pub trait VarIdExt {
     /// Create an expression builder from this variable
@@ -437,11 +530,62 @@ impl VarIdExt for VarId {
 pub trait ModelExt {
     /// Post a constraint to the model
     fn post(&mut self, constraint: Constraint) -> PropId;
+    
+    /// Phase 2: Start building a constraint from a variable (ultra-short syntax)
+    /// Usage: m.c(x).eq(5), m.c(x).add(y).le(10)
+    fn c(&mut self, var: VarId) -> Builder;
+    
+    /// Global constraint: all variables must have different values
+    fn alldiff(&mut self, vars: &[VarId]) -> PropId;
+    
+    /// Global constraint: all variables must have the same value
+    fn alleq(&mut self, vars: &[VarId]) -> PropId;
+    
+    /// Element constraint: array[index] == value
+    fn elem(&mut self, array: &[VarId], index: VarId, value: VarId) -> PropId;
+    
+    /// Count constraint: count occurrences of value in vars
+    fn count(&mut self, vars: &[VarId], value: i32, result: VarId) -> PropId;
 }
 
 impl ModelExt for Model {
     fn post(&mut self, constraint: Constraint) -> PropId {
         post_constraint_kind(self, &constraint.kind)
+    }
+    
+    fn c(&mut self, var: VarId) -> Builder {
+        Builder::new(self, var)
+    }
+    
+    fn alldiff(&mut self, vars: &[VarId]) -> PropId {
+        // Convert slice to Vec for props method
+        self.props.all_different(vars.to_vec())
+    }
+    
+    fn alleq(&mut self, vars: &[VarId]) -> PropId {
+        // Implement all equal using pairwise equality constraints
+        if vars.len() < 2 {
+            // For trivial cases, create a dummy variable and make it equal to itself
+            let dummy = self.int(0, 0);
+            return self.props.equals(dummy, dummy);
+        }
+        
+        // Post equality constraints between first variable and all others
+        let mut prop_id = self.props.equals(vars[0], vars[1]);
+        for i in 2..vars.len() {
+            prop_id = self.props.equals(vars[0], vars[i]);
+        }
+        prop_id
+    }
+    
+    fn elem(&mut self, array: &[VarId], index: VarId, value: VarId) -> PropId {
+        // Convert slice to Vec for props method
+        self.props.element(array.to_vec(), index, value)
+    }
+    
+    fn count(&mut self, vars: &[VarId], value: i32, result: VarId) -> PropId {
+        // Use existing count constraint
+        self.props.count_constraint(vars.to_vec(), Val::int(value), result)
     }
 }
 
