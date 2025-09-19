@@ -147,11 +147,10 @@ pub mod math_syntax;
 pub mod constraint_macros;
 
 #[cfg(test)]
-mod debug;
+mod constraint_macros_programmatic_tests;
 
-// Benchmarks module for performance validation
-#[doc(hidden)]
-pub mod benchmarks;
+#[cfg(test)]
+mod debug;
 
 
 
