@@ -4,4 +4,4 @@ version = 4
 
 [[package]]
 name = "cspsolver"
-version = "0.5.17"
+version = "0.6.0"
