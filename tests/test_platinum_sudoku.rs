@@ -102,11 +102,11 @@ fn print_grid(title: &str, grid: &[[i32; 9]; 9]) {
     println!("└───────┴───────┴───────┘");
 }
 
-fn main() {
+#[test]
+fn test_platinum_sudoku_solution() {
     println!("💎 PLATINUM SUDOKU BENCHMARK");
     println!("=============================");
     println!("Testing the ultimate computational challenge: 'Platinum Blonde'");
-    println!("Expected time: ~14 seconds (down from ~74 seconds due to architectural improvements)");
     
     // "Platinum Blonde" - The ultimate computational challenge
     let platinum_puzzle = [
@@ -123,8 +123,7 @@ fn main() {
     
     // Count clues
     let clue_count = platinum_puzzle.iter().flatten().filter(|&&x| x != 0).count();
-    println!("📊 Puzzle stats: {} clues given, {} empty cells", clue_count, 81 - clue_count);
-    println!("🏆 This is one of the hardest Sudoku puzzles ever created!");
+    assert_eq!(clue_count, 17, "Platinum puzzle should have exactly 17 clues");
     
     print_grid("Platinum Puzzle:", &platinum_puzzle);
     
@@ -134,32 +133,110 @@ fn main() {
     let result = solve_sudoku(&platinum_puzzle);
     let duration = start.elapsed();
     
-    match result {
-        Some((grid, propagations, nodes)) => {
-            println!("✅ PLATINUM SOLVED in {:.2} seconds!", duration.as_secs_f64());
-            println!("📊 Final Statistics:");
-            println!("   • {} propagations total", propagations);
-            println!("   • {} nodes explored", nodes);
-            
-            // Performance analysis
-            let efficiency = if nodes > 0 { 
-                format!("{:.1} propagations/node", propagations as f64 / nodes as f64)
-            } else {
-                "Pure propagation (no search)".to_string()
-            };
-            println!("   • {} efficiency", efficiency);
-            
-            print_grid("PLATINUM SOLUTION:", &grid);
-            
-            println!("\n🎯 PERFORMANCE SUMMARY:");
-            println!("   ⏱️  Current time: {:.2}s", duration.as_secs_f64());
-            println!("   📈 Historical improvement: ~5.2x faster than previous architecture");
-            println!("   🏗️  Thanks to: dyn-clone removal and Rc-based propagator sharing");
-            println!("   💪 Production ready: Handles extreme complexity efficiently");
-        }
-        None => {
-            println!("❌ No solution found (took {:.2}s)", duration.as_secs_f64());
-            println!("   This should not happen - Platinum Blonde has a unique solution!");
+    // Verify solution exists
+    assert!(result.is_some(), "Platinum Blonde should have a solution");
+    
+    let (grid, propagations, nodes) = result.unwrap();
+    
+    println!("✅ PLATINUM SOLVED in {:.2} seconds!", duration.as_secs_f64());
+    println!("📊 Final Statistics:");
+    println!("   • {} propagations total", propagations);
+    println!("   • {} nodes explored", nodes);
+    
+    // Performance analysis
+    let efficiency = if nodes > 0 { 
+        format!("{:.1} propagations/node", propagations as f64 / nodes as f64)
+    } else {
+        "Pure propagation (no search)".to_string()
+    };
+    println!("   • {} efficiency", efficiency);
+    
+    print_grid("PLATINUM SOLUTION:", &grid);
+    
+    // Verify it's a valid Sudoku solution
+    // Check rows have all digits 1-9
+    for row in 0..9 {
+        let mut seen = [false; 10]; // index 0 unused, 1-9 for digits
+        for col in 0..9 {
+            let val = grid[row][col];
+            assert!(val >= 1 && val <= 9, "Invalid digit {} at ({},{})", val, row, col);
+            assert!(!seen[val as usize], "Duplicate digit {} in row {}", val, row);
+            seen[val as usize] = true;
         }
     }
+    
+    // Check columns have all digits 1-9
+    for col in 0..9 {
+        let mut seen = [false; 10];
+        for row in 0..9 {
+            let val = grid[row][col];
+            assert!(!seen[val as usize], "Duplicate digit {} in column {}", val, col);
+            seen[val as usize] = true;
+        }
+    }
+    
+    // Check 3x3 blocks have all digits 1-9
+    for block_row in 0..3 {
+        for block_col in 0..3 {
+            let mut seen = [false; 10];
+            for row in block_row * 3..(block_row + 1) * 3 {
+                for col in block_col * 3..(block_col + 1) * 3 {
+                    let val = grid[row][col];
+                    assert!(!seen[val as usize], "Duplicate digit {} in block ({},{})", val, block_row, block_col);
+                    seen[val as usize] = true;
+                }
+            }
+        }
+    }
+    
+    // Verify initial clues are preserved
+    for row in 0..9 {
+        for col in 0..9 {
+            if platinum_puzzle[row][col] != 0 {
+                assert_eq!(grid[row][col], platinum_puzzle[row][col], 
+                    "Initial clue at ({},{}) should be preserved", row, col);
+            }
+        }
+    }
+    
+    println!("\n🎯 PERFORMANCE SUMMARY:");
+    println!("   ⏱️  Current time: {:.2}s", duration.as_secs_f64());
+    println!("   📈 Historical improvement: ~5.2x faster than previous architecture");
+    println!("   🏗️  Thanks to: dyn-clone removal and Rc-based propagator sharing");
+    println!("   💪 Production ready: Handles extreme complexity efficiently");
+    
+    // Performance expectations for the "Platinum Blonde" puzzle
+    assert!(propagations > 0, "Should perform some propagations");
+    assert!(duration.as_secs() < 300, "Should solve within reasonable time (5 minutes), took {:.2}s", duration.as_secs_f64());
+}
+
+#[test]
+fn test_platinum_performance_stress() {
+    // Test that Platinum Blonde can be solved multiple times consistently
+    let platinum_puzzle = [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 3, 0, 8, 5],
+        [0, 0, 1, 0, 2, 0, 0, 0, 0],
+        [0, 0, 0, 5, 0, 7, 0, 0, 0],
+        [0, 0, 4, 0, 0, 0, 1, 0, 0],
+        [0, 9, 0, 0, 0, 0, 0, 0, 0],
+        [5, 0, 0, 0, 0, 0, 0, 7, 3],
+        [0, 0, 2, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 4, 0, 0, 0, 9],
+    ];
+    
+    // Solve twice to ensure consistency
+    let result1 = solve_sudoku(&platinum_puzzle);
+    let result2 = solve_sudoku(&platinum_puzzle);
+    
+    assert!(result1.is_some(), "First solve should succeed");
+    assert!(result2.is_some(), "Second solve should succeed");
+    
+    let (grid1, _, _) = result1.unwrap();
+    let (grid2, _, _) = result2.unwrap();
+    
+    // Both solutions should be valid (they might be different if multiple solutions exist)
+    assert_eq!(grid1, grid2, "Solver should be deterministic and produce same solution");
+    
+    eprintln!("✅ Platinum Sudoku stress test passed - consistent results");
 }

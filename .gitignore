@@ -4,6 +4,7 @@
 /examples/misc/target
 **/*.rs.bk
 clippy.txt
+/coverage/results
 
 # Binary executables and object files
 *.exe

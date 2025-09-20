@@ -1,6 +1,5 @@
 use cspsolver::prelude::*;
 use cspsolver::{post};
-use std::time::Instant;
 
 fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)> {
     let mut m = Model::default();
@@ -101,10 +100,8 @@ fn print_grid(title: &str, grid: &[[i32; 9]; 9]) {
     println!("└───────┴───────┴───────┘");
 }
 
-fn main() {
-    println!("🔢 Testing EASY Sudoku Only");
-    println!("============================");
-    
+#[test]
+fn test_easy_sudoku_solution() {
     // Easy Sudoku puzzle (26 clues)
     let easy_puzzle = [
         [5, 3, 0, 0, 7, 0, 0, 0, 0],
@@ -118,36 +115,126 @@ fn main() {
         [0, 0, 0, 0, 8, 0, 0, 7, 0],
     ];
     
-    // Count clues
-    let clue_count = easy_puzzle.iter().flatten().filter(|&&x| x != 0).count();
-    println!("📊 Puzzle stats: {} clues given, {} empty cells", clue_count, 81 - clue_count);
-    
-    print_grid("Easy Puzzle:", &easy_puzzle);
-    
     // Solve the puzzle
-    let start = Instant::now();
+    let result = solve_sudoku(&easy_puzzle);
+    
+    // Verify solution exists
+    assert!(result.is_some(), "Easy Sudoku should have a solution");
+    
+    let (solution, propagations, nodes) = result.unwrap();
+    
+    // Verify the solution is valid (not necessarily matching expected exactly)
+    // Check rows have all digits 1-9
+    for row in 0..9 {
+        let mut seen = [false; 10]; // index 0 unused, 1-9 for digits
+        for col in 0..9 {
+            let val = solution[row][col];
+            assert!(val >= 1 && val <= 9, "Invalid digit {} at ({},{})", val, row, col);
+            assert!(!seen[val as usize], "Duplicate digit {} in row {}", val, row);
+            seen[val as usize] = true;
+        }
+    }
+    
+    // Check columns have all digits 1-9
+    for col in 0..9 {
+        let mut seen = [false; 10];
+        for row in 0..9 {
+            let val = solution[row][col];
+            assert!(!seen[val as usize], "Duplicate digit {} in column {}", val, col);
+            seen[val as usize] = true;
+        }
+    }
+    
+    // Check 3x3 blocks have all digits 1-9
+    for block_row in 0..3 {
+        for block_col in 0..3 {
+            let mut seen = [false; 10];
+            for row in block_row * 3..(block_row + 1) * 3 {
+                for col in block_col * 3..(block_col + 1) * 3 {
+                    let val = solution[row][col];
+                    assert!(!seen[val as usize], "Duplicate digit {} in block ({},{})", val, block_row, block_col);
+                    seen[val as usize] = true;
+                }
+            }
+        }
+    }
+    
+    // Verify initial clues are preserved
+    for row in 0..9 {
+        for col in 0..9 {
+            if easy_puzzle[row][col] != 0 {
+                assert_eq!(solution[row][col], easy_puzzle[row][col], 
+                    "Initial clue at ({},{}) should be preserved", row, col);
+            }
+        }
+    }
+    
+    // Verify performance characteristics
+    assert!(propagations > 0, "Should perform some propagations");
+    assert!(nodes >= 0, "Node count should be non-negative");
+    
+    // Print results for manual inspection during development
+    eprintln!("✅ Easy Sudoku solved with {} propagations, {} nodes", propagations, nodes);
+}
+
+#[test]
+fn test_sudoku_constraint_validation() {
+    // Test that the solver properly handles invalid/unsolvable Sudoku puzzles
+    let invalid_puzzle = [
+        [1, 1, 0, 0, 0, 0, 0, 0, 0],  // Two 1s in same row - invalid
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    
+    // This should either fail to solve or detect the constraint violation
+    let result = solve_sudoku(&invalid_puzzle);
+    assert!(result.is_none(), "Invalid Sudoku with duplicate values should not have a solution");
+    
+    // Test a valid but minimally constrained puzzle should solve
+    let minimal_puzzle = [
+        [1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ];
+    
+    let result = solve_sudoku(&minimal_puzzle);
+    assert!(result.is_some(), "Minimal valid Sudoku should have a solution");
+}
+
+#[test]
+fn test_sudoku_performance_reasonable() {
+    // Test that easy Sudoku solves in reasonable time
+    let easy_puzzle = [
+        [5, 3, 0, 0, 7, 0, 0, 0, 0],
+        [6, 0, 0, 1, 9, 5, 0, 0, 0],
+        [0, 9, 0, 0, 0, 0, 0, 6, 0],
+        [8, 0, 0, 0, 6, 0, 0, 0, 0],
+        [4, 0, 0, 8, 0, 3, 0, 0, 1],
+        [7, 0, 0, 0, 2, 0, 0, 0, 6],
+        [0, 6, 0, 0, 0, 0, 0, 8, 0],
+        [0, 0, 0, 4, 1, 9, 0, 0, 5],
+        [0, 0, 0, 0, 8, 0, 0, 7, 0],
+    ];
+    
+    let start = std::time::Instant::now();
     let result = solve_sudoku(&easy_puzzle);
     let duration = start.elapsed();
     
-    match result {
-        Some((grid, propagations, nodes)) => {
-            println!("✅ Solution found in {:.3}ms!", duration.as_secs_f64() * 1000.0);
-            println!("📊 Statistics: {} propagations, {} nodes explored", propagations, nodes);
-            
-            // Performance analysis
-            let efficiency = if nodes > 0 { 
-                format!("{:.1} propagations/node", propagations as f64 / nodes as f64)
-            } else {
-                "Pure propagation (no search)".to_string()
-            };
-            println!("🔍 Efficiency: {}", efficiency);
-            
-            print_grid("Solution:", &grid);
-            println!("{}", "─".repeat(50));
-        }
-        None => {
-            println!("❌ No solution found (took {:.3}ms)", duration.as_secs_f64() * 1000.0);
-            println!("{}", "─".repeat(50));
-        }
-    }
+    assert!(result.is_some(), "Should solve easy puzzle");
+    assert!(duration.as_millis() < 1000, "Easy Sudoku should solve in under 1 second");
+    
+    let (_, propagations, _) = result.unwrap();
+    assert!(propagations < 10000, "Should not require excessive propagations for easy puzzle");
 }

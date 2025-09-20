@@ -131,13 +131,12 @@ fn test_phase3_boolean_logic_with_clean_api() {
 }
 
 #[test]
-#[ignore = "OR constraints need more work on single variables"]
 fn test_constraint_or_with_clean_api() {
     let mut m = Model::default();
     let x = m.int(0, 10);
     
     // Create constraints: x == 2 OR x == 8
-    // TODO: This currently fails because OR logic for single variables needs work
+    // Testing OR logic for single variables
     let c1 = x.eq(int(2));
     let c2 = x.eq(int(8));
     let combined = c1.or(c2);
