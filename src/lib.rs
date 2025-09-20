@@ -17,26 +17,16 @@
 //! - **Global constraints**: `alldiff()`, `allequal()`, `element()`
 //!
 //! 
-//! ## post() - Post a mathematical constraint to the model
+//! ## Post a mathematical constraint to the model
+//! 
+//! post() - Post single contrraint to the model. 
+//! postall() -  Post multiple constraints to the model in a single call.
+//! Accepts comma-separated constraint expressions, each following the same patterns as `post!`
 //!
 //! Supported constraint patterns:
 //! **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 //! **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 //! **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum` 
-//! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])` and variadic `and(a,b,c,d)`
-//! **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
-//! **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
-//! 
-//! Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`
-//! 
-//! 
-//! 
-//! ## postall() - Post multiple constraints to the model in a single call
-//!
-//! Accepts comma-separated constraint expressions, each following the same patterns as `post!`:
-//! **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
-//! **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
-//! **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
 //! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])` and variadic `and(a,b,c,d)`
 //! **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
 //! **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`

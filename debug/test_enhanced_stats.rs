@@ -23,9 +23,8 @@ fn main() {
             println!("\n📊 Enhanced Statistics:");
             println!("   Propagations: {}", stats.propagation_count);
             println!("   Search nodes: {}", stats.node_count);
-            println!("   Backtracks: {}", stats.backtrack_count);
             println!("   Solve time: {:.3}ms", stats.solve_time.as_secs_f64() * 1000.0);
-            println!("   Peak memory: {}KB", stats.peak_memory_kb);
+            println!("   Peak memory: {}MB", stats.peak_memory_mb);
             println!("   Problem size: {} variables, {} constraints", 
                      stats.variable_count, stats.constraint_count);
             

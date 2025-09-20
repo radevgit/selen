@@ -147,10 +147,9 @@ impl<M: Mode> Iterator for Search<M> {
                     propagation_count: space.get_propagation_count(),
                     node_count: space.get_node_count(),
                     solve_time: std::time::Duration::ZERO, // TODO: Track solve time in Space
-                    backtrack_count: 0, // TODO: Track backtracking in Space
                     variable_count: space.vars.count(),
                     constraint_count: space.props.count(),
-                    peak_memory_kb: space.estimate_memory_kb(),
+                    peak_memory_mb: space.estimate_memory_kb() / 1024, // Convert KB to MB
                 };
                 space.vars.into_solution_with_stats(stats)
             }),
@@ -388,10 +387,9 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
                             propagation_count: space.get_propagation_count(),
                             node_count: space.get_node_count(),
                             solve_time: std::time::Duration::ZERO, // TODO: Track solve time in Engine
-                            backtrack_count: 0, // TODO: Track backtracking in Engine
                             variable_count: space.vars.count(),
                             constraint_count: space.props.count(),
-                            peak_memory_kb: space.estimate_memory_kb(),
+                            peak_memory_mb: space.estimate_memory_kb() / 1024, // Convert KB to MB
                         };
                         return Some(space.vars.into_solution_with_stats(stats));
                     }

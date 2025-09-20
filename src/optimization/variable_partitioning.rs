@@ -261,13 +261,13 @@ impl SubproblemBuilder {
                         float_interval.min,
                         float_interval.max
                     );
-                    // TODO: Map old VarId to new VarId for constraint reconstruction
+                    // VarId mapping not implemented - constraint reconstruction abandoned
                 },
                 _ => return Err(PartitionError::InvalidVariableType),
             }
         }
         
-        // TODO: Reconstruct constraints that only involve float variables
+        // Constraint reconstruction for float subproblems not implemented
         // This requires mapping constraints from original to subproblem
         
         Ok(subproblem)
@@ -295,13 +295,13 @@ impl SubproblemBuilder {
                         sparse_set.min(),
                         sparse_set.max()
                     );
-                    // TODO: Map old VarId to new VarId for constraint reconstruction
+                    // VarId mapping not implemented - constraint reconstruction abandoned
                 },
                 _ => return Err(PartitionError::InvalidVariableType),
             }
         }
         
-        // TODO: Reconstruct constraints that only involve integer variables
+        // Constraint reconstruction for integer subproblems not implemented
         
         Ok(subproblem)
     }

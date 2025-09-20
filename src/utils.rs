@@ -39,7 +39,7 @@ pub const FLOAT_INT_EPS: u32 = 10;
 //     almost_equal_as_int(a, b, FLOAT_INT_EPS)
 // }
 
-// TODO: Consider removing these ULP-based functions in favor of FloatInterval
+// ULP-based functions deprecated in favor of FloatInterval
 // Commented out for now to preserve existing functionality
 
 /*

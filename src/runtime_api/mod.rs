@@ -321,7 +321,8 @@ impl Constraint {
             return None;
         }
         
-        Some(constraints.into_iter().reduce(|acc, c| acc.and(c)).unwrap())
+        // Use reduce which returns Option, then map to handle the None case explicitly
+        constraints.into_iter().reduce(|acc, c| acc.and(c))
     }
     
     /// Combine multiple constraints with OR logic
@@ -330,7 +331,8 @@ impl Constraint {
             return None;
         }
         
-        Some(constraints.into_iter().reduce(|acc, c| acc.or(c)).unwrap())
+        // Use reduce which returns Option, then map to handle the None case explicitly
+        constraints.into_iter().reduce(|acc, c| acc.or(c))
     }
 }
 
@@ -591,8 +593,26 @@ fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
             post_constraint_kind(model, &right.kind)
         }
         ConstraintKind::Or(left, right) => {
-            // For OR, we need to use boolean variables and logic
-            // This is a simplified implementation - a full implementation would use reification
+            // Special case: multiple equality constraints on the same variable
+            // e.g., x == 2 OR x == 8 becomes x ∈ {2, 8}
+            if let (ConstraintKind::Binary { left: left_var, op: ComparisonOp::Eq, right: left_val }, 
+                    ConstraintKind::Binary { left: right_var, op: ComparisonOp::Eq, right: right_val }) = 
+                (&left.kind, &right.kind) {
+                if matches!((left_var, right_var), (ExprBuilder::Var(a), ExprBuilder::Var(b)) if a == b) {
+                    // Both constraints are on the same variable - create domain constraint
+                    if let (ExprBuilder::Var(var_id), ExprBuilder::Val(left_const), ExprBuilder::Val(right_const)) = 
+                        (left_var, left_val, right_val) {
+                        if let (Val::ValI(left_int), Val::ValI(right_int)) = (left_const, right_const) {
+                            // Create a new variable with domain {left_val, right_val} and unify it with the original
+                            let domain_var = model.ints(vec![*left_int, *right_int]);
+                            return model.props.equals(*var_id, domain_var);
+                        }
+                    }
+                }
+            }
+            
+            // For general OR cases, we need proper reification (not yet implemented)
+            // For now, fall back to posting both constraints (which may conflict for some cases)
             post_constraint_kind(model, &left.kind);
             post_constraint_kind(model, &right.kind)
         }

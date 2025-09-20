@@ -27,22 +27,22 @@ impl Display for SparseSet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
         use std::fmt::Write;
-        write!(s, "[").unwrap();
+        write!(s, "[").expect("writing to String should never fail");
         if self.size == 0 {
-            write!(s, "|").unwrap();
+            write!(s, "|").expect("writing to String should never fail");
         }
         for i in 0..self.n {
-            write!(s, "{},", (self.val[i as usize] as i32 + self.off)).unwrap();
+            write!(s, "{},", (self.val[i as usize] as i32 + self.off)).expect("writing to String should never fail");
             if i + 1 == self.size {
                 s.pop(); // remove comma
-                write!(s, "|").unwrap();
+                write!(s, "|").expect("writing to String should never fail");
             } else {
             }
         }
         if self.size != self.n {
             s.pop(); // remove comma
         }
-        write!(s, "]").unwrap();
+        write!(s, "]").expect("writing to String should never fail");
         write!(f, "{}", s)
     }
 }

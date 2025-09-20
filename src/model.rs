@@ -645,8 +645,10 @@ impl Model {
             });
         }
 
-        let result_min = min_of_mins.unwrap(); // Safe because we checked for empty
-        let result_max = min_of_maxs.unwrap(); // Safe because we checked for empty
+        // These unwraps are safe because we already checked for empty vars at the beginning
+        // However, for better error handling practices, we can use expect with context
+        let result_min = min_of_mins.expect("internal error: min_of_mins should be Some after empty check");
+        let result_max = min_of_maxs.expect("internal error: min_of_maxs should be Some after empty check");
 
         let result = self.new_var_unchecked(result_min, result_max);
         let _p = self.props.min(vars.to_vec(), result);
@@ -703,8 +705,10 @@ impl Model {
             });
         }
 
-        let result_min = max_of_mins.unwrap(); // Safe because we checked for empty
-        let result_max = max_of_maxs.unwrap(); // Safe because we checked for empty
+        // These unwraps are safe because we already checked for empty vars at the beginning
+        // However, for better error handling practices, we can use expect with context  
+        let result_min = max_of_mins.expect("internal error: max_of_mins should be Some after empty check");
+        let result_max = max_of_maxs.expect("internal error: max_of_maxs should be Some after empty check");
 
         let result = self.new_var_unchecked(result_min, result_max);
         let _p = self.props.max(vars.to_vec(), result);
@@ -881,10 +885,9 @@ impl Model {
                     propagation_count: 0,
                     node_count: 0,
                     solve_time: std::time::Duration::ZERO,
-                    backtrack_count: 0,
                     variable_count: solution.stats.variable_count, // Preserve if already set
                     constraint_count: solution.stats.constraint_count, // Preserve if already set
-                    peak_memory_kb: 0,
+                    peak_memory_mb: solution.stats.peak_memory_mb, // Preserve from optimization
                 };
                 Ok(solution)
             }
@@ -913,10 +916,9 @@ impl Model {
                     propagation_count: current_count,
                     node_count: search_iter.get_node_count(),
                     solve_time: search_iter.elapsed_time(),
-                    backtrack_count: 0, // TODO: Track backtracking in search engine
                     variable_count: var_count,
                     constraint_count,
-                    peak_memory_kb: 0, // TODO: Track peak memory usage
+                    peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
                 };
                 
                 // Check if search terminated due to timeout
@@ -1000,10 +1002,9 @@ impl Model {
                     propagation_count: 0,
                     node_count: 0,
                     solve_time: std::time::Duration::ZERO,
-                    backtrack_count: 0,
                     variable_count: solution.stats.variable_count, // Preserve if already set
                     constraint_count: solution.stats.constraint_count, // Preserve if already set
-                    peak_memory_kb: 0,
+                    peak_memory_mb: solution.stats.peak_memory_mb, // Preserve from optimization
                 };
                 Ok(solution)
             }
@@ -1177,10 +1178,9 @@ impl Model {
             propagation_count: search_iter.get_propagation_count(),
             node_count: search_iter.get_node_count(),
             solve_time: search_iter.elapsed_time(),
-            backtrack_count: 0, // TODO: Track backtracking in search engine
             variable_count: var_count,
             constraint_count,
-            peak_memory_kb: 0, // TODO: Track peak memory usage
+            peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
         };
         
         // Check if search terminated due to timeout
@@ -1369,10 +1369,9 @@ impl Model {
                     propagation_count: 0,
                     node_count: 0,
                     solve_time: std::time::Duration::ZERO,
-                    backtrack_count: 0,
                     variable_count: 0, // Unknown due to validation failure
                     constraint_count: 0, // Unknown due to validation failure
-                    peak_memory_kb: 0,
+                    peak_memory_mb: 0, // No memory used if validation failed
                 };
                 return (Vec::new(), stats);
             }
@@ -1395,10 +1394,9 @@ impl Model {
             propagation_count: search_iter.get_propagation_count(),
             node_count: search_iter.get_node_count(),
             solve_time: search_iter.elapsed_time(),
-            backtrack_count: 0, // TODO: Track backtracking in search engine
             variable_count: var_count,
             constraint_count,
-            peak_memory_kb: 0, // TODO: Track peak memory usage
+            peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
         };
         
         // Note: If timeout occurred, we return partial solutions found before timeout

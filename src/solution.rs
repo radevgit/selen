@@ -38,9 +38,8 @@
 //! let stats = &solution.stats;
 //! println!("Propagations: {}", stats.propagation_count);
 //! println!("Search nodes: {}", stats.node_count);
-//! println!("Backtracking operations: {}", stats.backtrack_count);
 //! println!("Solve time: {:.3}ms", stats.solve_time.as_secs_f64() * 1000.0);
-//! println!("Peak memory usage: {}KB", stats.peak_memory_kb);
+//! println!("Peak memory usage: {}MB", stats.peak_memory_mb);
 //! println!("Problem size: {} variables, {} constraints", 
 //!          stats.variable_count, stats.constraint_count);
 //!
@@ -78,11 +77,10 @@
 //! println!("Core metrics:");
 //! println!("  Propagations: {}", stats.propagation_count);
 //! println!("  Search nodes: {}", stats.node_count);
-//! println!("  Backtracks: {}", stats.backtrack_count);
 //! 
 //! println!("Performance metrics:");
 //! println!("  Solve time: {:.3}ms", stats.solve_time.as_secs_f64() * 1000.0);
-//! println!("  Peak memory: {}KB", stats.peak_memory_kb);
+//! println!("  Peak memory: {}MB", stats.peak_memory_mb);
 //! 
 //! println!("Problem characteristics:");
 //! println!("  Variables: {}", stats.variable_count);
@@ -101,7 +99,7 @@
 //! 
 //! // Create statistics manually using constructor
 //! let custom_stats = SolveStats::new(100, 10, 
-//!     std::time::Duration::from_millis(5), 3, 20, 15, 256);
+//!     std::time::Duration::from_millis(5), 20, 15, 8);
 //! println!("Custom stats efficiency: {:.1}", custom_stats.efficiency());
 //! ```
 
@@ -120,14 +118,12 @@ pub struct SolveStats {
     pub node_count: usize,
     /// Total time spent solving
     pub solve_time: Duration,
-    /// Number of backtracking operations performed
-    pub backtrack_count: usize,
     /// Number of variables in the problem
     pub variable_count: usize,
     /// Number of constraints in the problem
     pub constraint_count: usize,
-    /// Peak memory usage estimate during solving (in KB)
-    pub peak_memory_kb: usize,
+    /// Peak memory usage estimate during solving (in MB)
+    pub peak_memory_mb: usize,
 }
 
 impl SolveStats {
@@ -136,19 +132,17 @@ impl SolveStats {
         propagation_count: usize,
         node_count: usize,
         solve_time: Duration,
-        backtrack_count: usize,
         variable_count: usize,
         constraint_count: usize,
-        peak_memory_kb: usize,
+        peak_memory_mb: usize,
     ) -> Self {
         Self {
             propagation_count,
             node_count,
             solve_time,
-            backtrack_count,
             variable_count,
             constraint_count,
-            peak_memory_kb,
+            peak_memory_mb,
         }
     }
 
@@ -183,10 +177,10 @@ impl SolveStats {
     pub fn display_summary(&self) {
         println!("=== Solving Statistics ===");
         println!("Time: {:.3}ms", self.solve_time.as_secs_f64() * 1000.0);
-        println!("Memory: {}KB peak usage", self.peak_memory_kb);
+        println!("Memory: {}MB peak usage", self.peak_memory_mb);
         println!("Problem: {} variables, {} constraints", self.variable_count, self.constraint_count);
-        println!("Search: {} propagations, {} nodes, {} backtracks", 
-                 self.propagation_count, self.node_count, self.backtrack_count);
+        println!("Search: {} propagations, {} nodes", 
+                 self.propagation_count, self.node_count);
         
         if self.node_count > 0 {
             println!("Efficiency: {:.1} propagations/node", self.efficiency());

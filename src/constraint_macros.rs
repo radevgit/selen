@@ -1959,6 +1959,37 @@ macro_rules! post {
         $model.props.if_then_else_constraint(condition, then_constraint, Some(else_constraint));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
+
+    // Negation patterns: !(x < y) becomes x >= y, etc.
+    ($model:expr, !($left:ident < $right:ident)) => {{
+        $model.props.greater_than_or_equals($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, !($left:ident <= $right:ident)) => {{
+        $model.props.greater_than($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, !($left:ident > $right:ident)) => {{
+        $model.props.less_than_or_equals($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, !($left:ident >= $right:ident)) => {{
+        $model.props.less_than($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, !($left:ident == $right:ident)) => {{
+        $model.props.not_equals($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
+    
+    ($model:expr, !($left:ident != $right:ident)) => {{
+        $model.props.equals($left, $right);
+        $crate::constraint_macros::ConstraintRef::new(0)
+    }};
 }
 
 #[doc(hidden)]
@@ -2502,8 +2533,8 @@ mod tests {
         // Test simple modulo operations (literals only for now)
         let _c1 = post!(m, x % 3 == 1);  // x % 3 == 1
         
-        // TODO: More complex patterns with int() helpers:
-        // let _c2 = post!(m, x % int(5) != int(0));  // x % 5 != 0
+        // Complex patterns with int() helpers now work:
+        let _c2 = post!(m, x % int(5) != int(0));  // x % 5 != 0
         
         // Should compile without errors
         assert!(true);
@@ -2658,8 +2689,8 @@ mod tests {
         let x = m.int(1, 10);
         let y = m.int(1, 10);
         
-        // TODO: Negation to implement:
-        // let _c1 = post!(m, !(x < y));  // NOT(x < y) should be x >= y
+        // Negation now implemented:
+        let _c1 = post!(m, !(x < y));  // NOT(x < y) should be x >= y
         
         // For now, basic comparisons work:
         let _c2 = post!(m, x >= y);  // Direct equivalent

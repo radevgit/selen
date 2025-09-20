@@ -338,7 +338,7 @@ impl OptimizationRouter {
         }
         
         // For multiple float variables with complex objectives, fall back to search
-        // TODO: In the future, implement proper AST analysis of the View
+        // Complex objective AST analysis not implemented
         None
     }
     
@@ -464,70 +464,6 @@ impl OptimizationRouter {
         }
     }
     
-    // /// Attempt unconstrained float minimization (Step 2.3.2 conservative implementation)
-    // /// TODO: This method is not currently used but contains valuable optimization logic
-    // fn try_unconstrained_float_minimize(
-    //     &self,
-    //     vars: &Vars,
-    //     var_idx: usize,
-    // ) -> OptimizationAttempt {
-    //     // For constraint-free problems, we can safely use the direct float optimizer
-    //     let all_vars: Vec<_> = vars.iter_with_indices().collect();
-    //     if var_idx >= all_vars.len() {
-    //         return OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression);
-    //     }
-        
-    //     // Check if it's a float variable
-    //     match &all_vars[var_idx].1 {
-    //         crate::vars::Var::VarF(interval) => {
-    //             // For minimization without constraints, the minimum is just the lower bound
-    //             let optimal_value = interval.min;
-                
-    //             // Create a solution with this optimal value
-    //             match self.create_unconstrained_solution(vars, var_idx, optimal_value) {
-    //                 Ok(solution) => OptimizationAttempt::Success(solution),
-    //                 Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
-    //             }
-    //         },
-    //         crate::vars::Var::VarI(_) => {
-    //             // Not a float variable
-    //             OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
-    //         }
-    //     }
-    // }
-    
-    // /// Attempt unconstrained float maximization (Step 2.3.2 conservative implementation)
-    // /// TODO: This method is not currently used but contains valuable optimization logic
-    // fn try_unconstrained_float_maximize(
-    //     &self,
-    //     vars: &Vars,
-    //     var_idx: usize,
-    // ) -> OptimizationAttempt {
-    //     // For constraint-free problems, we can safely use the direct float optimizer
-    //     let all_vars: Vec<_> = vars.iter_with_indices().collect();
-    //     if var_idx >= all_vars.len() {
-    //         return OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression);
-    //     }
-        
-    //     // Check if it's a float variable
-    //     match &all_vars[var_idx].1 {
-    //         crate::vars::Var::VarF(interval) => {
-    //             // For maximization without constraints, the maximum is just the upper bound
-    //             let optimal_value = interval.max;
-                
-    //             // Create a solution with this optimal value
-    //             match self.create_unconstrained_solution(vars, var_idx, optimal_value) {
-    //                 Ok(solution) => OptimizationAttempt::Success(solution),
-    //                 Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
-    //             }
-    //         },
-    //         crate::vars::Var::VarI(_) => {
-    //             // Not a float variable
-    //             OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
-    //         }
-    //     }
-    // }
-    
     /// Create a solution for unconstrained optimization
     fn create_unconstrained_solution(
         &self,
@@ -564,58 +500,6 @@ impl OptimizationRouter {
         
         Ok(Solution::from(values))
     }
-    
-    // /// Attempt float minimization using constraint-aware optimizer
-    // /// TODO: This method is not currently used but contains valuable optimization logic
-    // fn try_float_minimize(
-    //     &self,
-    //     vars: &Vars,
-    //     _props: &Propagators,
-    //     var_idx: usize,
-    // ) -> OptimizationAttempt {
-    //     // Convert usize to VarId for the constraint optimizer
-    //     // VarId is a newtype around usize, so we create it from the index
-    //     // Since we're in the same crate, we can access the internals if needed
-    //     // For now, let's use a workaround by creating a fake VarId
-    //     // Note: This is a temporary solution until we have proper API access
-        
-    //     // Create a temporary vars reference to get a proper VarId
-    //     let all_vars: Vec<_> = vars.iter_with_indices().collect();
-    //     if var_idx >= all_vars.len() {
-    //         return OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
-    //             SolutionCreationError::InvalidVariableDomain { var_id: index_to_var_id(var_idx) }
-    //         ));
-    //     }
-        
-    //     // Find a way to get VarId from the variable collection
-    //     // For now, we'll work around this by using the direct optimization approach
-    //     // TODO: Fix this once we have proper VarId conversion
-        
-    //     return OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
-    //         OptimizerFailure::NotFloatVariable
-    //     ));
-    // }
-    
-    // /// Attempt float maximization using constraint-aware optimizer
-    // /// TODO: This method is not currently used but contains valuable optimization logic
-    // fn try_float_maximize(
-    //     &self,
-    //     vars: &Vars,
-    //     _props: &Propagators,
-    //     var_idx: usize,
-    // ) -> OptimizationAttempt {
-    //     // Same workaround as minimize
-    //     let all_vars: Vec<_> = vars.iter_with_indices().collect();
-    //     if var_idx >= all_vars.len() {
-    //         return OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
-    //             SolutionCreationError::InvalidVariableDomain { var_id: index_to_var_id(var_idx) }
-    //         ));
-    //     }
-        
-    //     return OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
-    //         OptimizerFailure::NotFloatVariable
-    //     ));
-    // }
     
     /// Step 6.5: Try hybrid optimization for separable mixed problems with objective
     fn try_hybrid_optimize_minimize(

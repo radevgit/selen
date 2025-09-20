@@ -197,10 +197,10 @@ impl ProblemClassifier {
         // without access to the Vars collection. This is a limitation of the current design.
         // We'll return false for now and enhance this later when we have access to the m.
         // 
-        // TODO: Enhance this by either:
-        // 1. Passing the Vars collection to this function
-        // 2. Encoding type information in VarId itself
-        // 3. Using a different approach for type detection
+        // Variable type detection from VarId not implemented:
+        // 1. Passing the Vars collection to this function would require refactoring
+        // 2. Encoding type information in VarId itself would change core architecture  
+        // 3. Using a different approach for type detection would require design changes
         false
     }
 
