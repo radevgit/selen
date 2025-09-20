@@ -353,7 +353,7 @@ pub fn any_of(constraints: Vec<Constraint>) -> Option<Constraint> {
     or_all(constraints)
 }
 
-/// Extension trait for Vec<Constraint> to enable fluent constraint array operations
+/// Extension trait for `Vec<Constraint>` to enable fluent constraint array operations
 pub trait ConstraintVecExt {
     /// Combine all constraints with AND logic
     fn and_all(self) -> Option<Constraint>;
@@ -769,7 +769,7 @@ pub trait ModelExt {
     /// Global constraint: all variables must have the same value
     fn alleq(&mut self, vars: &[VarId]) -> PropId;
     
-    /// Element constraint: array[index] == value
+    /// Element constraint: array\[index\] == value
     fn elem(&mut self, array: &[VarId], index: VarId, value: VarId) -> PropId;
     
     /// Count constraint: count occurrences of value in vars

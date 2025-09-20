@@ -42,7 +42,7 @@ pub enum ConstraintType {
     AllDifferent,
     /// AllEqual constraint
     AllEqual,
-    /// Element constraint (array[index] = value)
+    /// Element constraint (array\[index\] = value)
     Element,
     /// Sum constraint
     Sum,
