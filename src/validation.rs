@@ -132,12 +132,26 @@ impl<'a> ModelValidator<'a> {
         for (var_id, var) in self.vars.iter_with_indices() {
             match var {
                 Var::VarI(sparse_set) => {
+                    // Check for empty domain which might indicate invalid bounds
                     if sparse_set.is_empty() {
-                        return Err(SolverError::InvalidDomain {
-                            message: "Variable domain is empty".to_string(),
-                            variable_name: Some(format!("var_{:?}", var_id)),
-                            domain_info: Some("integer domain with no valid values".to_string()),
-                        });
+                        // For empty domains, check if this might be due to invalid input bounds
+                        let min_val = sparse_set.min_universe_value();
+                        let max_val = sparse_set.max_universe_value();
+                        
+                        // If max_universe_value < min_universe_value, this suggests invalid input bounds
+                        if max_val < min_val {
+                            return Err(SolverError::InvalidDomain {
+                                message: format!("Variable created with invalid bounds: min ({}) > max ({})", min_val, max_val),
+                                variable_name: Some(format!("var_{:?}", var_id)),
+                                domain_info: Some("integer variable bounds are reversed".to_string()),
+                            });
+                        } else {
+                            return Err(SolverError::InvalidDomain {
+                                message: "Variable domain is empty".to_string(),
+                                variable_name: Some(format!("var_{:?}", var_id)),
+                                domain_info: Some("integer domain with no valid values".to_string()),
+                            });
+                        }
                     }
                     
                     let min_val = sparse_set.min_universe_value();
@@ -164,9 +178,9 @@ impl<'a> ModelValidator<'a> {
                 Var::VarF(interval) => {
                     if interval.min > interval.max {
                         return Err(SolverError::InvalidDomain {
-                            message: "Float variable bounds are invalid".to_string(),
+                            message: format!("Float variable created with invalid bounds: min ({}) > max ({})", interval.min, interval.max),
                             variable_name: Some(format!("var_{:?}", var_id)),
-                            domain_info: Some(format!("min ({}) > max ({})", interval.min, interval.max)),
+                            domain_info: Some("float variable bounds are reversed".to_string()),
                         });
                     }
                     
@@ -402,6 +416,45 @@ impl<'a> ModelValidator<'a> {
                                     });
                                 }
                             }
+                        }
+                    },
+                    ConstraintType::Minimum | ConstraintType::Maximum => {
+                        // Min/Max constraints need at least 2 input variables plus 1 result variable
+                        if metadata.variables.len() < 2 {
+                            return Err(SolverError::InvalidInput {
+                                message: format!(
+                                    "{:?} constraint requires at least 1 input variable, got {}",
+                                    metadata.constraint_type, 
+                                    metadata.variables.len().saturating_sub(1) // Subtract result variable
+                                ),
+                                function_name: Some(match metadata.constraint_type {
+                                    ConstraintType::Minimum => "min".to_string(),
+                                    ConstraintType::Maximum => "max".to_string(),
+                                    _ => unreachable!(),
+                                }),
+                                expected: Some("non-empty slice of variable IDs".to_string()),
+                            });
+                        }
+                        
+                        // Check for empty input list (all variables except the last one which is the result)
+                        let input_var_count = metadata.variables.len().saturating_sub(1);
+                        if input_var_count == 0 {
+                            return Err(SolverError::InvalidInput {
+                                message: format!(
+                                    "Cannot compute {} of empty variable list",
+                                    match metadata.constraint_type {
+                                        ConstraintType::Minimum => "minimum",
+                                        ConstraintType::Maximum => "maximum", 
+                                        _ => unreachable!(),
+                                    }
+                                ),
+                                function_name: Some(match metadata.constraint_type {
+                                    ConstraintType::Minimum => "min".to_string(),
+                                    ConstraintType::Maximum => "max".to_string(),
+                                    _ => unreachable!(),
+                                }),
+                                expected: Some("non-empty slice of variable IDs".to_string()),
+                            });
                         }
                     },
                     _ => {

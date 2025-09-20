@@ -314,6 +314,9 @@ impl Model {
     /// * `min` - Minimum value for the variable (inclusive)
     /// * `max` - Maximum value for the variable (inclusive)
     ///
+    /// # Note
+    /// If `min > max`, an invalid variable will be created that will be caught during validation.
+    ///
     /// # Example
     /// ```
     /// use cspsolver::prelude::*;
@@ -322,7 +325,9 @@ impl Model {
     /// let y = m.int(-5, 15);    // Variable from -5 to 15
     /// ```
     pub fn int(&mut self, min: i32, max: i32) -> VarId {
-        self.new_var(Val::ValI(min), Val::ValI(max))
+        // Create the variable with the bounds as given (don't auto-swap)
+        // If min > max, this will create an invalid variable that validation will catch
+        self.new_var_unchecked(Val::ValI(min), Val::ValI(max))
     }
 
     /// Create a floating-point variable with specified bounds.
@@ -334,6 +339,9 @@ impl Model {
     /// * `min` - Minimum value for the variable (inclusive)
     /// * `max` - Maximum value for the variable (inclusive)
     ///
+    /// # Note
+    /// If `min > max`, an invalid variable will be created that will be caught during validation.
+    ///
     /// # Example
     /// ```
     /// use cspsolver::prelude::*;
@@ -342,7 +350,9 @@ impl Model {
     /// let y = m.float(-1.5, 3.14);   // Variable from -1.5 to 3.14
     /// ```
     pub fn float(&mut self, min: f64, max: f64) -> VarId {
-        self.new_var(Val::ValF(min), Val::ValF(max))
+        // Create the variable with the bounds as given (don't auto-swap)
+        // If min > max, this will create an invalid variable that validation will catch
+        self.new_var_unchecked(Val::ValF(min), Val::ValF(max))
     }
 
     /// Create a binary variable (0 or 1).
@@ -599,11 +609,19 @@ impl Model {
     /// let x = m.int(1, 10);
     /// let y = m.int(5, 15);
     /// let z = m.int(3, 8);
-    /// let minimum = m.min(&[x, y, z]);
+    /// let minimum = m.min(&[x, y, z]).expect("non-empty variable list");
     /// ```
-    pub fn min(&mut self, vars: &[VarId]) -> VarId {
+    ///
+    /// # Errors
+    /// Returns `SolverError::InvalidInput` if the variable list is empty.
+    pub fn min(&mut self, vars: &[VarId]) -> SolverResult<VarId> {
+        // Check for empty input
         if vars.is_empty() {
-            panic!("Cannot compute minimum of empty variable list");
+            return Err(SolverError::InvalidInput {
+                message: "Cannot compute minimum of empty variable list".to_string(),
+                function_name: Some("min".to_string()),
+                expected: Some("At least one variable".to_string()),
+            });
         }
 
         // Calculate bounds for minimum result
@@ -627,12 +645,12 @@ impl Model {
             });
         }
 
-        let result_min = min_of_mins.unwrap();
-        let result_max = min_of_maxs.unwrap();
+        let result_min = min_of_mins.unwrap(); // Safe because we checked for empty
+        let result_max = min_of_maxs.unwrap(); // Safe because we checked for empty
 
         let result = self.new_var_unchecked(result_min, result_max);
         let _p = self.props.min(vars.to_vec(), result);
-        result
+        Ok(result)
     }
 
     /// Create a new variable that holds the maximum value of the given variables.
@@ -649,11 +667,19 @@ impl Model {
     /// let x = m.int(1, 10);
     /// let y = m.int(5, 15);
     /// let z = m.int(3, 8);
-    /// let maximum = m.max(&[x, y, z]);
+    /// let maximum = m.max(&[x, y, z]).expect("non-empty variable list");
     /// ```
-    pub fn max(&mut self, vars: &[VarId]) -> VarId {
+    ///
+    /// # Errors
+    /// Returns `SolverError::InvalidInput` if the variable list is empty.
+    pub fn max(&mut self, vars: &[VarId]) -> SolverResult<VarId> {
+        // Check for empty input
         if vars.is_empty() {
-            panic!("Cannot compute maximum of empty variable list");
+            return Err(SolverError::InvalidInput {
+                message: "Cannot compute maximum of empty variable list".to_string(),
+                function_name: Some("max".to_string()),
+                expected: Some("At least one variable".to_string()),
+            });
         }
 
         // Calculate bounds for maximum result
@@ -677,12 +703,12 @@ impl Model {
             });
         }
 
-        let result_min = max_of_mins.unwrap();
-        let result_max = max_of_maxs.unwrap();
+        let result_min = max_of_mins.unwrap(); // Safe because we checked for empty
+        let result_max = max_of_maxs.unwrap(); // Safe because we checked for empty
 
         let result = self.new_var_unchecked(result_min, result_max);
         let _p = self.props.max(vars.to_vec(), result);
-        result
+        Ok(result)
     }
 
     /// Create a new variable that holds the result of `x / y` (division).
@@ -1056,37 +1082,14 @@ impl Model {
     ///
     /// Returns `Ok(())` if validation succeeds, or `Err(String)` with error details if validation fails.
     pub fn validate(&self) -> Result<(), String> {
-        for (i, var) in self.vars.iter_with_indices() {
-            match var {
-                Var::VarI(sparse_set) => {
-                    let domain_size = sparse_set.universe_size();
-                    if domain_size > 1_000_000 {
-                        return Err(format!(
-                            "Variable {} has domain size {} which exceeds the maximum of 1_000_000 for u32 optimization. \
-                            Consider using smaller domains or splitting large domains into multiple variables.",
-                            i, domain_size
-                        ));
-                    }
-
-                    // Additional validation: check if domain range is reasonable
-                    let min_val = sparse_set.min_universe_value();
-                    let max_val = sparse_set.max_universe_value();
-                    let actual_range = max_val - min_val + 1;
-
-                    if actual_range < 0 || actual_range > 1_000_000 {
-                        return Err(format!(
-                            "Variable {} has invalid domain range [{}, {}] which results in {} values. \
-                            Domain range must be positive and ≤ 1_000_000.",
-                            i, min_val, max_val, actual_range
-                        ));
-                    }
-                }
-                Var::VarF { .. } => {
-                    // Float variables use interval representation, no validation needed
-                }
-            }
+        use crate::validation::ModelValidator;
+        
+        // Use the comprehensive validation system
+        let validator = ModelValidator::new(&self.vars, &self.props);
+        match validator.validate() {
+            Ok(()) => Ok(()),
+            Err(solver_error) => Err(format!("{}", solver_error)),
         }
-        Ok(())
     }
 
     /// Optimize constraint processing order based on constraint characteristics.

@@ -116,6 +116,16 @@ pub enum SolverError {
         /// Additional debugging context
         debug_info: Option<String>,
     },
+    
+    /// Invalid input provided to a function
+    InvalidInput {
+        /// Description of what makes the input invalid
+        message: String,
+        /// Name of the function that received invalid input
+        function_name: Option<String>,
+        /// Expected input format or constraints
+        expected: Option<String>,
+    },
 }
 
 impl std::fmt::Display for SolverError {
@@ -204,6 +214,16 @@ impl std::fmt::Display for SolverError {
                 }
                 if let Some(debug) = debug_info {
                     write!(f, " [{}]", debug)?;
+                }
+                Ok(())
+            },
+            Self::InvalidInput { message, function_name, expected } => {
+                write!(f, "Invalid input: {}", message)?;
+                if let Some(func) = function_name {
+                    write!(f, " in function '{}'", func)?;
+                }
+                if let Some(exp) = expected {
+                    write!(f, " (expected: {})", exp)?;
                 }
                 Ok(())
             },

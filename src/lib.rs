@@ -140,7 +140,7 @@
 //! let sum_result = m.sum(&vars);
 //! m.post(sum_result.le(10));      // sum(vars) <= 10
 //!
-//! let max_result = m.max(&vars);
+//! let max_result = m.max(&vars).expect("non-empty variable list");
 //! m.post(max_result.ge(3));       // max(vars) >= 3
 //!
 //! if let Ok(solution) = m.solve() {

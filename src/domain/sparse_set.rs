@@ -67,6 +67,28 @@ impl SparseSet {
         }
     }
 
+    /// Create a SparseSet without bound checking - may create invalid domains
+    /// This is used to create intentionally invalid domains that validation can catch
+    pub fn new_unchecked(min: i32, max: i32) -> Self {
+        if min > max {
+            // Create an invalid domain that preserves the original bounds
+            // We'll create a domain where the universe bounds show the invalid range
+            // but the domain itself is empty
+            SparseSet {
+                off: min,
+                min: 0,
+                max: 0,
+                n: 0,
+                size: 0,
+                ind: Vec::new(),
+                val: Vec::new(),
+            }
+        } else {
+            // Valid bounds - use normal creation
+            Self::new(min, max)
+        }
+    }
+
     /// Create a SparseSet from a vector of specific values
     /// Memory efficient - creates full range then removes unwanted values
     pub fn new_from_values(values: Vec<i32>) -> Self {

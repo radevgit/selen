@@ -103,9 +103,9 @@ mod tests {
         m.alldiff(&vars_vec);                    // Equivalent to: post!(m, alldiff(vars_vec))
         
         // Test min/max with arrays - programmatic equivalents
-        let min_result = m.min(&vars);
+        let min_result = m.min(&vars).expect("non-empty variable list");
         m.post(min_result.le(5));               // Equivalent to: post!(m, min(vars) <= int(5))
-        let max_result = m.max(&vars_vec);
+        let max_result = m.max(&vars_vec).expect("non-empty variable list");
         m.post(max_result.ge(8));               // Equivalent to: post!(m, max(vars_vec) >= int(8))
         
         // Should compile without errors
@@ -234,12 +234,12 @@ mod tests {
         m.post(abs_x.le(y));                    // Equivalent to: post!(m, abs(x) <= y)
         
         // Test min function - programmatic equivalents
-        let min_yz = m.min(&[y, z]);
+        let min_yz = m.min(&[y, z]).expect("non-empty variable list");
         m.post(min_yz.eq(5));                   // Equivalent to: post!(m, min([y, z]) == int(5))
         m.post(min_yz.ge(x));                   // Equivalent to: post!(m, min([y, z]) >= x)
         
         // Test max function - programmatic equivalents  
-        let max_yz = m.max(&[y, z]);
+        let max_yz = m.max(&[y, z]).expect("non-empty variable list");
         m.post(max_yz.le(10));                  // Equivalent to: post!(m, max([y, z]) <= int(10))
         m.post(max_yz.ne(x));                   // Equivalent to: post!(m, max([y, z]) != x)
         
@@ -340,7 +340,7 @@ mod tests {
         
         // Macro: post!(m, max([x, y]) == z)
         // Programmatic: m.max(&[x, y]).eq(z)
-        let max_xy = m.max(&[x, y]);
+        let max_xy = m.max(&[x, y]).expect("non-empty variable list");
         let _c3 = m.post(max_xy.eq(z));
         
         // Macro: post!(m, x % y != int(0))
@@ -452,10 +452,10 @@ mod tests {
         let abs_x = m.abs(x);
         m.post(abs_x.ge(1));                    // abs(x) >= 1
         
-        let min_vars = m.min(&vars);
+        let min_vars = m.min(&vars).expect("non-empty variable list");
         m.post(min_vars.eq(1));                 // min([x, y, z]) == 1
         
-        let max_vars = m.max(&vars);
+        let max_vars = m.max(&vars).expect("non-empty variable list");
         m.post(max_vars.le(10));                // max([x, y, z]) <= 10
         
         // Test 5: Modulo operations - equivalent to post! modulo

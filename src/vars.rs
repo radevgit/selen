@@ -486,21 +486,21 @@ impl Vars {
 
         match (min, max) {
             (Val::ValI(min), Val::ValI(max)) => {
-                // Create SparseSet for integer variables
-                let sparse_set = SparseSet::new(min, max);
+                // Create SparseSet for integer variables - use unchecked to preserve invalid bounds
+                let sparse_set = SparseSet::new_unchecked(min, max);
                 self.0.push(Var::VarI(sparse_set))
             },
             (Val::ValF(min), Val::ValF(max)) => {
-                let interval = FloatInterval::with_step(min as f64, max as f64, float_step);
+                let interval = FloatInterval::with_step_unchecked(min as f64, max as f64, float_step);
                 self.0.push(Var::VarF(interval))
             },
             // type coercion
             (Val::ValI(min), Val::ValF(max)) => {
-                let interval = FloatInterval::with_step(min as f64, max as f64, float_step);
+                let interval = FloatInterval::with_step_unchecked(min as f64, max as f64, float_step);
                 self.0.push(Var::VarF(interval))
             },
             (Val::ValF(min), Val::ValI(max)) => {
-                let interval = FloatInterval::with_step(min as f64, max as f64, float_step);
+                let interval = FloatInterval::with_step_unchecked(min as f64, max as f64, float_step);
                 self.0.push(Var::VarF(interval))
             },
         }

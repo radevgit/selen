@@ -628,370 +628,370 @@ macro_rules! post {
     
     // Min function: min([x, y]) <op> <expr>
     ($model:expr, min([$($vars:ident),+ $(,)?]) < $target:ident) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.less_than(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) <= $target:ident) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.less_than_or_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) > $target:ident) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.greater_than(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) >= $target:ident) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) == $target:ident) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) != $target:ident) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.not_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Min function with constants: min([x, y]) <= int(5)
     ($model:expr, min([$($vars:ident),+ $(,)?]) < int($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.less_than(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) <= int($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.less_than_or_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) > int($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.greater_than(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) >= int($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) == int($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) != int($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.not_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Min function with float constants: min([x, y]) <= float(5.0)
     ($model:expr, min([$($vars:ident),+ $(,)?]) < float($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.less_than(_min_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) <= float($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.less_than_or_equals(_min_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) > float($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.greater_than(_min_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) >= float($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_min_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) == float($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.equals(_min_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min([$($vars:ident),+ $(,)?]) != float($target:expr)) => {{
-        let _min_var = $model.min(&[$($vars),+]);
+        let _min_var = $model.min(&[$($vars),+]).expect("min macro requires non-empty variable list");
         $model.props.not_equals(_min_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Max function: max([x, y]) <op> <expr>
     ($model:expr, max([$($vars:ident),+ $(,)?]) < $target:ident) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.less_than(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) <= $target:ident) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.less_than_or_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) > $target:ident) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.greater_than(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) >= $target:ident) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) == $target:ident) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) != $target:ident) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.not_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Max function with constants: max([x, y]) >= int(10)
     ($model:expr, max([$($vars:ident),+ $(,)?]) < int($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.less_than(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) <= int($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.less_than_or_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) > int($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.greater_than(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) >= int($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) == int($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) != int($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.not_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Max function with float constants: max([x, y]) >= float(10.0)
     ($model:expr, max([$($vars:ident),+ $(,)?]) < float($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.less_than(_max_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) <= float($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.less_than_or_equals(_max_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) > float($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.greater_than(_max_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) >= float($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_max_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) == float($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.equals(_max_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max([$($vars:ident),+ $(,)?]) != float($target:expr)) => {{
-        let _max_var = $model.max(&[$($vars),+]);
+        let _max_var = $model.max(&[$($vars),+]).expect("max macro requires non-empty variable list");
         $model.props.not_equals(_max_var, $crate::prelude::float($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Min function with array expressions: min(array) <op> <expr>
     ($model:expr, min($array:expr) < $target:ident) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.less_than(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) <= $target:ident) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.less_than_or_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) > $target:ident) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.greater_than(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) >= $target:ident) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) == $target:ident) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) != $target:ident) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.not_equals(_min_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Min function with array expressions and constants: min(array) <= int(5)
     ($model:expr, min($array:expr) < int($target:expr)) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.less_than(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) <= int($target:expr)) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.less_than_or_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) > int($target:expr)) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.greater_than(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) >= int($target:expr)) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) == int($target:expr)) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, min($array:expr) != int($target:expr)) => {{
-        let _min_var = $model.min(&$array);
+        let _min_var = $model.min(&$array).expect("min macro requires non-empty variable list");
         $model.props.not_equals(_min_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Max function with array expressions: max(array) <op> <expr>
     ($model:expr, max($array:expr) < $target:ident) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.less_than(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) <= $target:ident) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.less_than_or_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) > $target:ident) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.greater_than(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) >= $target:ident) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) == $target:ident) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) != $target:ident) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.not_equals(_max_var, $target);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     // Max function with array expressions and constants: max(array) >= int(10)
     ($model:expr, max($array:expr) < int($target:expr)) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.less_than(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) <= int($target:expr)) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.less_than_or_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) > int($target:expr)) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.greater_than(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) >= int($target:expr)) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.greater_than_or_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) == int($target:expr)) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, max($array:expr) != int($target:expr)) => {{
-        let _max_var = $model.max(&$array);
+        let _max_var = $model.max(&$array).expect("max macro requires non-empty variable list");
         $model.props.not_equals(_max_var, $crate::prelude::int($target));
         $crate::constraint_macros::ConstraintRef::new(0)
     }};

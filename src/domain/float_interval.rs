@@ -64,6 +64,12 @@ impl FloatInterval {
         
         FloatInterval { min, max, step }
     }
+
+    /// Create a FloatInterval without bound checking - may create invalid domains
+    /// This is used to create intentionally invalid domains that validation can catch
+    pub fn with_step_unchecked(min: f64, max: f64, step: f64) -> Self {
+        FloatInterval { min, max, step }
+    }
     
     /// Get the next representable value
     pub fn next(&self, value: f64) -> f64 {

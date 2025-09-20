@@ -17,8 +17,8 @@ fn main() {
         let b = m.int(5, 15);
         let c = m.int(3, 8);
         
-        let minimum = m.min(&[a, b, c]);
-        let maximum = m.max(&[a, b, c]);
+        let minimum = m.min(&[a, b, c]).expect("non-empty variable list");
+        let maximum = m.max(&[a, b, c]).expect("non-empty variable list");
         
         // Add some constraints
         post!(m, minimum == 4);  // min must be 4
@@ -49,7 +49,7 @@ fn main() {
         let bottleneck = m.min(&[engineering, marketing, sales, support]);
         
         // Find the department with maximum resources
-        let largest_dept = m.max(&[engineering, marketing, sales, support]);
+        let largest_dept = m.max(&[engineering, marketing, sales, support]).expect("non-empty variable list");
         
         // Constraint: bottleneck should be at least 25
         post!(m, bottleneck >= 25);
@@ -92,7 +92,7 @@ fn main() {
         post!(m, overall_performance >= 75);
         
         // Best case scenario - what's the highest we can achieve?
-        let best_metric = m.max(&scores);
+        let best_metric = m.max(&scores).expect("non-empty variable list");
         
         // Constraint: total "effort" is limited (trade-offs between metrics)
         let total_effort = m.sum(&scores);
@@ -125,7 +125,7 @@ fn main() {
         
         // Find minimum and maximum temperatures
         let min_temp = m.min(&sensors);
-        let max_temp = m.max(&sensors);
+        let max_temp = m.max(&sensors).expect("non-empty sensors list");
         
         // Constraint: temperature range should not exceed 5 degrees
         let temp_range = m.sub(max_temp, min_temp);
