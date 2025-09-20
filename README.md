@@ -106,6 +106,41 @@ fn main() {
 }
 ```
 
+### Programmatic API Example
+
+For developers who prefer a more explicit, programmatic approach, the same constraints can be built using the runtime API:
+
+```rust
+use cspsolver::prelude::*;
+use cspsolver::runtime_api::{VarIdExt, ModelExt};
+
+fn main() {
+    let mut m = Model::default();
+
+    // Create variables
+    let x = m.int(1, 10);
+    let y = m.int(5, 15);
+
+    // Add constraints using programmatic API
+    m.post(x.lt(y));                    // x < y
+    m.post(x.add(y).eq(12));            // x + y == 12
+
+    // Global constraints
+    let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
+    m.alldiff(&vars);                   // All different
+    
+    // Mathematical functions
+    let abs_result = m.abs(x);
+    m.post(abs_result.ge(1));           // abs(x) >= 1
+    
+    // Solve the problem
+    if let Ok(solution) = m.solve() {
+        println!("x = {:?}", solution[x]);
+        println!("y = {:?}", solution[y]);
+    }
+}
+```
+
 ### Advanced Constraint Example
 
 ```rust
@@ -117,8 +152,8 @@ fn main() {
     
     // Complex mathematical expressions
     post!(m, sum(vars.clone()) <= int(12));
-    post!(m, max(vars.clone()) >= int(3));  // Maximum of vars >= 3
-    post!(m, min(vars.clone()) <= int(4));  // Minimum of vars <= 4
+    post!(m, max(vars.clone()) >= int(3));
+    post!(m, min(vars.clone()) <= int(4));
     
     // Boolean logic with traditional syntax  
     let a = m.bool();
@@ -126,52 +161,51 @@ fn main() {
     let c = m.bool();
     let d = m.bool();
     
-    post!(m, and(a, b));                    // Traditional 2-argument AND
-    post!(m, or(a, b));                     // Boolean OR  
-    post!(m, not(b));                       // Boolean NOT
-    post!(m, and([a, b, c, d]));           // Array syntax for multiple variables
-    post!(m, or(a, b, c, d));              // Variadic syntax for multiple variables
-    post!(m, not([a, b, c]));              // Array NOT (applies to each variable)
+    post!(m, and(a, b));            // Traditional 2-argument AND
+    post!(m, or(a, b));             // Boolean OR  
+    post!(m, not(b));               // Boolean NOT
+    post!(m, and([a, b, c, d]));    // Array syntax
+    post!(m, or(a, b, c, d));       // Variadic syntax
+    post!(m, not([a, b, c]));       // Array NOT
     
-    // Count constraints - powerful cardinality constraints
-    let students = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3), m.int(1, 3)]; // 4 students, 3 sections
-    let section1_count = m.int(2, 2); // Exactly 2 students in section 1
-    let section2_count = m.int(1, 2); // 1-2 students in section 2
+    // Count constraints - cardinality constraints
+    let students = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3), m.int(1, 3)];
+    let section1_count = m.int(2, 2);      // Exactly 2 students in section 1
+    let section2_count = m.int(1, 2);      // 1-2 students in section 2
     
-    post!(m, count(students.clone(), int(1), section1_count)); // Count students in section 1
-    post!(m, count(students, int(2), section2_count));         // Count students in section 2
+    post!(m, count(students.clone(), int(1), section1_count));
+    post!(m, count(students, int(2), section2_count));
     
-    // Advanced cardinality constraints with precise control
-    let employees = vec![m.int(1, 4), m.int(1, 4), m.int(1, 4), m.int(1, 4), m.int(1, 4)]; // 5 employees, 4 departments
-    post!(m, at_least(employees.clone(), int(1), int(2)));  // At least 2 in department 1 
-    post!(m, at_most(employees.clone(), int(4), int(1)));   // At most 1 in department 4
-    post!(m, exactly(employees, int(2), int(2)));           // Exactly 2 in department 2
+    // Advanced cardinality constraints
+    let employees = vec![m.int(1, 4), m.int(1, 4), m.int(1, 4), m.int(1, 4), m.int(1, 4)];
+    post!(m, at_least(employees.clone(), int(1), int(2)));  // At least 2
+    post!(m, at_most(employees.clone(), int(4), int(1)));   // At most 1
+    post!(m, exactly(employees, int(2), int(2)));           // Exactly 2
     
-    // Ordering constraints for complex relationships
-    let start_time = m.int(9, 17);   // 9 AM to 5 PM
-    let meeting_time = m.int(9, 17); // Meeting time
-    let end_time = m.int(9, 17);     // End time
-    post!(m, between(start_time, meeting_time, end_time)); // start <= meeting <= end
+    // Ordering constraints
+    let start_time = m.int(9, 17);
+    let meeting_time = m.int(9, 17);
+    let end_time = m.int(9, 17);
+    post!(m, between(start_time, meeting_time, end_time));  // start <= meeting <= end
     
-    // Conditional constraints for business logic
-    let is_weekend = m.int(0, 1);    // 0=weekday, 1=weekend
-    let hours_open = m.int(8, 12);   // Store hours
-    post!(m, if_then(is_weekend == int(1), hours_open == int(8))); // Weekend stores open 8 hours
+    // Conditional constraints
+    let is_weekend = m.int(0, 1);          // 0=weekday, 1=weekend
+    let hours_open = m.int(8, 12);         // Store hours
+    post!(m, if_then(is_weekend == int(1), hours_open == int(8)));
     
-    // Table constraints - express complex relationships with lookup tables
-    let time = m.int(1, 4);    // Time slots: 1=9AM, 2=11AM, 3=1PM, 4=3PM
-    let room = m.int(1, 3);    // Rooms: 1=Lab, 2=Classroom, 3=Auditorium
-    let capacity = m.int(10, 100); // Room capacity
+    // Table constraints - lookup tables
+    let time = m.int(1, 4);                // Time slots
+    let room = m.int(1, 3);                // Rooms
+    let capacity = m.int(10, 100);         // Room capacity
     
-    // Room availability and capacity table: (time, room, capacity)
+    // Room availability table: (time, room, capacity)
     let schedule_table = vec![
-        vec![int(1), int(1), int(20)],  // 9AM: Lab has 20 capacity
-        vec![int(1), int(2), int(30)],  // 9AM: Classroom has 30 capacity
-        vec![int(2), int(2), int(30)],  // 11AM: Classroom has 30 capacity  
-        vec![int(2), int(3), int(100)], // 11AM: Auditorium has 100 capacity
-        vec![int(3), int(1), int(20)],  // 1PM: Lab has 20 capacity
-        vec![int(4), int(3), int(100)], // 3PM: Auditorium has 100 capacity
-        // Note: Some time/room combinations unavailable (maintenance, etc.)
+        vec![int(1), int(1), int(20)],      // 9AM: Lab has 20 capacity
+        vec![int(1), int(2), int(30)],      // 9AM: Classroom has 30 capacity
+        vec![int(2), int(2), int(30)],      // 11AM: Classroom has 30 capacity  
+        vec![int(2), int(3), int(100)],     // 11AM: Auditorium has 100 capacity
+        vec![int(3), int(1), int(20)],      // 1PM: Lab has 20 capacity
+        vec![int(4), int(3), int(100)],     // 3PM: Auditorium has 100 capacity
     ];
     post!(m, table([time, room, capacity], schedule_table));
     
