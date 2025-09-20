@@ -1,9 +1,17 @@
 use cspsolver::prelude::*;
+use std::fmt;
 
 #[derive(Debug)]
 enum ConstraintError {
     UnknownOperator(String),
-    InvalidValue(i32),
+}
+
+impl fmt::Display for ConstraintError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ConstraintError::UnknownOperator(op) => write!(f, "Unknown operator: {}", op),
+        }
+    }
 }
 
 /// Build a constraint safely without panicking
@@ -54,7 +62,7 @@ fn main() {
                 successful_constraints.push(constraint);
             }
             Err(e) => {
-                println!("  ❌ {var_name} {op} {value} → {e:?}");
+                println!("  ❌ {var_name} {op} {value} → {e}");
                 errors.push(e);
             }
         }

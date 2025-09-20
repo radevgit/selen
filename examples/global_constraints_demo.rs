@@ -12,7 +12,6 @@
 use cspsolver::{
     model::Model,
     runtime_api::{ModelExt, VarIdExt},
-    solution::GetValue,
 };
 
 fn main() {
