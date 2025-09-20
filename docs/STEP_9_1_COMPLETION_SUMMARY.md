@@ -22,7 +22,7 @@ Successfully implemented all three constraint types specified in Step 9.1 of the
 - **`src/constraint_macros.rs`** - Added macro patterns for post! syntax support
 
 ### Documentation and Examples
-- **`examples/step_9_1_constraints_demo.rs`** - Comprehensive demonstration of all new constraints
+- **`examples/advanced_constraints.rs`** - User-friendly demonstration of advanced constraint types
 - **`docs/STEP_9_1_COMPLETION_SUMMARY.md`** - This summary document
 
 ## 🔧 Technical Implementation Details
@@ -98,7 +98,7 @@ cargo test --lib props::conditional
 cargo test --lib constraint_macros
 
 # Run demonstration
-cargo run --example step_9_1_constraints_demo
+cargo run --example advanced_constraints
 ```
 
 ## 🚀 Production Readiness Features

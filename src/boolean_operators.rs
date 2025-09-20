@@ -2,6 +2,35 @@
 //!
 //! This module implements operator overloading for VarId to enable:
 //! - Function-style boolean operations: and(a, b), or(a, b), not(a) that work directly with post()
+//! - Runtime API boolean operations: constraint.and(), constraint.or(), constraint.not()
+//!
+//! ## Function-Style API (Macro-based)
+//! ```rust
+//! use cspsolver::prelude::*;
+//! 
+//! let mut m = Model::default();
+//! let a = m.bool();
+//! let b = m.bool();
+//! 
+//! post!(m, and(a, b));        // Boolean AND
+//! post!(m, or(a, b));         // Boolean OR
+//! post!(m, not(a));           // Boolean NOT
+//! ```
+//!
+//! ## Runtime API (Programmatic)
+//! ```rust
+//! use cspsolver::prelude::*;
+//! use cspsolver::runtime_api::{VarIdExt, ModelExt};
+//! 
+//! let mut m = Model::default();
+//! let a = m.bool();
+//! let b = m.bool();
+//! 
+//! // Create constraint expressions first, then post them
+//! m.post(a.eq(1).and(b.eq(1)));     // (a == 1) && (b == 1)
+//! m.post(a.eq(1).or(b.eq(1)));      // (a == 1) || (b == 1)
+//! m.post(a.eq(1).not());            // !(a == 1)
+//! ```
 
 use crate::vars::VarId;
 use crate::model::Model;

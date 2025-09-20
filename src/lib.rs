@@ -101,6 +101,81 @@
 //!              solution[red], solution[blue], solution[green]);
 //! }
 //! ```
+//!
+//! ## Example 4: Programmatic API - Basic Constraints
+//!
+//! For developers who prefer explicit, method-based constraint building:
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//! use cspsolver::runtime_api::{VarIdExt, ModelExt};
+//!
+//! let mut m = Model::default();
+//! let x = m.int(1, 10);
+//! let y = m.int(1, 10);
+//!
+//! // Build constraints programmatically
+//! m.post(x.add(y).eq(12));        // x + y == 12
+//! m.post(x.gt(y));                // x > y
+//! m.post(x.mul(2).le(15));        // x * 2 <= 15
+//!
+//! if let Ok(solution) = m.solve() {
+//!     println!("x = {:?}, y = {:?}", solution[x], solution[y]);
+//! }
+//! ```
+//!
+//! ## Example 5: Programmatic API - Global Constraints
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//! use cspsolver::runtime_api::{VarIdExt, ModelExt};
+//!
+//! let mut m = Model::default();
+//! let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
+//!
+//! // Global constraints using programmatic API
+//! m.alldiff(&vars);               // All variables must be different
+//!
+//! // Mathematical functions
+//! let sum_result = m.sum(&vars);
+//! m.post(sum_result.le(10));      // sum(vars) <= 10
+//!
+//! let max_result = m.max(&vars);
+//! m.post(max_result.ge(3));       // max(vars) >= 3
+//!
+//! if let Ok(solution) = m.solve() {
+//!     println!("Variables: {:?}", vars.iter().map(|&v| solution[v]).collect::<Vec<_>>());
+//! }
+//! ```
+//!
+//! ## Example 6: Programmatic API - Complex Operations
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//! use cspsolver::runtime_api::{VarIdExt, ModelExt};
+//!
+//! let mut m = Model::default();
+//! let x = m.int(-10, 10);
+//! let y = m.int(1, 10);
+//! let z = m.int(1, 20);
+//!
+//! // Arithmetic and mathematical functions
+//! let abs_x = m.abs(x);
+//! m.post(abs_x.ge(5));            // abs(x) >= 5
+//!
+//! // Modulo operations
+//! let mod_result = m.modulo(z, Val::from(3));
+//! m.post(mod_result.eq(1));       // z % 3 == 1
+//!
+//! // Logical operations on constraints
+//! let constraint1 = x.gt(0);
+//! let constraint2 = y.lt(5);
+//! m.post(constraint1.and(constraint2));  // (x > 0) && (y < 5)
+//!
+//! if let Ok(solution) = m.solve() {
+//!     println!("x = {:?}, y = {:?}, z = {:?}", solution[x], solution[y], solution[z]);
+//! }
+//! ```
 
 
 pub mod model;

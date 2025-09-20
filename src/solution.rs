@@ -11,9 +11,11 @@
 //!
 //! # Statistics
 //!
-//! The solver collects statistics about the solving process, including the number
-//! of propagations performed and search nodes explored. These are automatically
-//! included with every solution.
+//! The solver collects comprehensive statistics about the solving process, including:
+//! - **Search metrics**: propagation steps, search nodes, and backtracking operations
+//! - **Performance data**: total solve time, time per operation, and memory usage
+//! - **Problem characteristics**: number of variables and constraints
+//! 
 //!
 //! # Example
 //!
@@ -25,16 +27,82 @@
 //! let y = m.int(1, 10);
 //! post!(m, x + y == int(15));
 //!
-//! // Solve and get solution with statistics
+//! // Solve and get solution with enhanced statistics
 //! let solution = m.solve().unwrap();
 //!
 //! // Access solution values
 //! println!("x = {:?}", solution[x]);
 //! println!("y = {:?}", solution[y]);
 //!
-//! // Access statistics
-//! println!("Propagations: {}", solution.stats.propagation_count);
-//! println!("Search nodes: {}", solution.stats.node_count);
+//! // Access all enhanced statistics fields
+//! let stats = &solution.stats;
+//! println!("Propagations: {}", stats.propagation_count);
+//! println!("Search nodes: {}", stats.node_count);
+//! println!("Backtracking operations: {}", stats.backtrack_count);
+//! println!("Solve time: {:.3}ms", stats.solve_time.as_secs_f64() * 1000.0);
+//! println!("Peak memory usage: {}KB", stats.peak_memory_kb);
+//! println!("Problem size: {} variables, {} constraints", 
+//!          stats.variable_count, stats.constraint_count);
+//!
+//! // Use convenience analysis methods
+//! println!("Search efficiency: {:.1} propagations/node", stats.efficiency());
+//! println!("Time per propagation: {:.2}μs", 
+//!          stats.time_per_propagation().as_nanos() as f64 / 1000.0);
+//! println!("Time per search node: {:.2}μs", 
+//!          stats.time_per_node().as_nanos() as f64 / 1000.0);
+//!
+//! // Display comprehensive summary
+//! stats.display_summary();
+//! ```
+//!
+//! # Runtime API Example
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//! use cspsolver::runtime_api::{VarIdExt, ModelExt};
+//!
+//! let mut m = Model::default();
+//! let x = m.int(1, 10);
+//! let y = m.int(1, 10);
+//!
+//! // Build constraints programmatically
+//! m.post(x.add(y).eq(15));
+//! m.post(x.mul(2).le(y));
+//!
+//! // Solve and access solution with comprehensive statistics
+//! let solution = m.solve().unwrap();
+//! println!("x = {:?}, y = {:?}", solution[x], solution[y]);
+//!
+//! // Access all enhanced statistics fields
+//! let stats = &solution.stats;
+//! println!("Core metrics:");
+//! println!("  Propagations: {}", stats.propagation_count);
+//! println!("  Search nodes: {}", stats.node_count);
+//! println!("  Backtracks: {}", stats.backtrack_count);
+//! 
+//! println!("Performance metrics:");
+//! println!("  Solve time: {:.3}ms", stats.solve_time.as_secs_f64() * 1000.0);
+//! println!("  Peak memory: {}KB", stats.peak_memory_kb);
+//! 
+//! println!("Problem characteristics:");
+//! println!("  Variables: {}", stats.variable_count);
+//! println!("  Constraints: {}", stats.constraint_count);
+//! 
+//! // Use all convenience analysis methods
+//! if stats.node_count > 0 {
+//!     println!("Efficiency analysis:");
+//!     println!("  {:.2} propagations/node", stats.efficiency());
+//!     println!("  {:.2}μs/propagation", stats.time_per_propagation().as_nanos() as f64 / 1000.0);
+//!     println!("  {:.2}μs/node", stats.time_per_node().as_nanos() as f64 / 1000.0);
+//! }
+//! 
+//! // Display complete formatted summary
+//! stats.display_summary();
+//! 
+//! // Create statistics manually using constructor
+//! let custom_stats = SolveStats::new(100, 10, 
+//!     std::time::Duration::from_millis(5), 3, 20, 15, 256);
+//! println!("Custom stats efficiency: {:.1}", custom_stats.efficiency());
 //! ```
 
 use std::borrow::Borrow;
@@ -44,105 +112,98 @@ use std::time::Duration;
 use crate::vars::{Val, VarId, VarIdBin};
 
 /// Statistics collected during the solving process.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct SolveStats {
     /// Number of propagation steps performed during solving
     pub propagation_count: usize,
     /// Number of search nodes (branching points) explored during solving
     pub node_count: usize,
-}
-
-/// Enhanced statistics with detailed timing information for performance analysis.
-#[derive(Clone, Debug, Default)]
-pub struct EnhancedSolveStats {
-    /// Number of propagation steps performed during solving
-    pub propagation_count: usize,
-    /// Number of search nodes (branching points) explored during solving
-    pub node_count: usize,
-    /// Total time spent in search/solving
-    pub total_time: Duration,
-    /// Time spent in constraint propagation
-    pub propagation_time: Duration,
-    /// Time spent in search/branching
-    pub search_time: Duration,
-    /// Time spent in variable domain operations
-    pub domain_time: Duration,
-    /// Time spent in constraint evaluation
-    pub constraint_time: Duration,
-    /// Number of backtracking operations
+    /// Total time spent solving
+    pub solve_time: Duration,
+    /// Number of backtracking operations performed
     pub backtrack_count: usize,
-    /// Number of constraint checks performed
-    pub constraint_checks: usize,
-    /// Peak memory usage approximation (number of active search states)
-    pub peak_search_depth: usize,
+    /// Number of variables in the problem
+    pub variable_count: usize,
+    /// Number of constraints in the problem
+    pub constraint_count: usize,
+    /// Peak memory usage estimate during solving (in KB)
+    pub peak_memory_kb: usize,
 }
 
-impl EnhancedSolveStats {
-    /// Create a new enhanced stats tracker
-    pub fn new() -> Self {
-        Self::default()
-    }
-    
-    /// Get average time per propagation step
-    pub fn avg_propagation_time(&self) -> Duration {
-        if self.propagation_count > 0 {
-            self.propagation_time / self.propagation_count as u32
-        } else {
-            Duration::ZERO
+impl SolveStats {
+    /// Create new statistics with all fields
+    pub fn new(
+        propagation_count: usize,
+        node_count: usize,
+        solve_time: Duration,
+        backtrack_count: usize,
+        variable_count: usize,
+        constraint_count: usize,
+        peak_memory_kb: usize,
+    ) -> Self {
+        Self {
+            propagation_count,
+            node_count,
+            solve_time,
+            backtrack_count,
+            variable_count,
+            constraint_count,
+            peak_memory_kb,
         }
     }
-    
-    /// Get average time per search node
-    pub fn avg_search_time(&self) -> Duration {
+
+    /// Get solving efficiency as propagations per node
+    pub fn efficiency(&self) -> f64 {
         if self.node_count > 0 {
-            self.search_time / self.node_count as u32
+            self.propagation_count as f64 / self.node_count as f64
+        } else {
+            0.0
+        }
+    }
+
+    /// Get average time per propagation step
+    pub fn time_per_propagation(&self) -> Duration {
+        if self.propagation_count > 0 {
+            self.solve_time / self.propagation_count as u32
         } else {
             Duration::ZERO
         }
     }
-    
-    /// Convert to basic SolveStats for compatibility
-    pub fn to_basic(&self) -> SolveStats {
-        SolveStats {
-            propagation_count: self.propagation_count,
-            node_count: self.node_count,
+
+    /// Get average time per search node
+    pub fn time_per_node(&self) -> Duration {
+        if self.node_count > 0 {
+            self.solve_time / self.node_count as u32
+        } else {
+            Duration::ZERO
         }
     }
-    
-    /// Display detailed performance analysis
-    pub fn display_analysis(&self) {
-        println!("=== Performance Analysis ===");
-        println!("Total time: {:.3}ms", self.total_time.as_secs_f64() * 1000.0);
-        println!("Propagation: {} steps, {:.3}ms total, {:.6}ms avg", 
-                 self.propagation_count, 
-                 self.propagation_time.as_secs_f64() * 1000.0,
-                 self.avg_propagation_time().as_secs_f64() * 1000.0);
-        println!("Search: {} nodes, {:.3}ms total, {:.6}ms avg", 
-                 self.node_count,
-                 self.search_time.as_secs_f64() * 1000.0,
-                 self.avg_search_time().as_secs_f64() * 1000.0);
-        println!("Domain ops: {:.3}ms", self.domain_time.as_secs_f64() * 1000.0);
-        println!("Constraints: {:.3}ms ({} checks)", 
-                 self.constraint_time.as_secs_f64() * 1000.0,
-                 self.constraint_checks);
-        println!("Backtracking: {} operations", self.backtrack_count);
-        println!("Peak search depth: {}", self.peak_search_depth);
+
+    /// Display a summary of the solving statistics
+    pub fn display_summary(&self) {
+        println!("=== Solving Statistics ===");
+        println!("Time: {:.3}ms", self.solve_time.as_secs_f64() * 1000.0);
+        println!("Memory: {}KB peak usage", self.peak_memory_kb);
+        println!("Problem: {} variables, {} constraints", self.variable_count, self.constraint_count);
+        println!("Search: {} propagations, {} nodes, {} backtracks", 
+                 self.propagation_count, self.node_count, self.backtrack_count);
         
-        if self.total_time.as_nanos() > 0 {
-            let prop_pct = (self.propagation_time.as_nanos() * 100) / self.total_time.as_nanos();
-            let search_pct = (self.search_time.as_nanos() * 100) / self.total_time.as_nanos();
-            let domain_pct = (self.domain_time.as_nanos() * 100) / self.total_time.as_nanos();
-            let constraint_pct = (self.constraint_time.as_nanos() * 100) / self.total_time.as_nanos();
-            
-            println!("Time breakdown: {}% propagation, {}% search, {}% domain, {}% constraints",
-                     prop_pct, search_pct, domain_pct, constraint_pct);
+        if self.node_count > 0 {
+            println!("Efficiency: {:.1} propagations/node", self.efficiency());
+        } else {
+            println!("Efficiency: Pure propagation (no search required)");
         }
-        println!("=============================");
+        
+        if self.propagation_count > 0 {
+            println!("Performance: {:.2}μs/propagation", 
+                     self.time_per_propagation().as_nanos() as f64 / 1000.0);
+        }
+        println!("==========================");
     }
 }
 
 /// Assignment for decision variables that satisfies all constraints.
-#[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq)]
 pub struct Solution {
     values: Vec<Val>,
     /// Statistics collected during the solving process

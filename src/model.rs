@@ -854,6 +854,11 @@ impl Model {
                 solution.stats = crate::solution::SolveStats {
                     propagation_count: 0,
                     node_count: 0,
+                    solve_time: std::time::Duration::ZERO,
+                    backtrack_count: 0,
+                    variable_count: solution.stats.variable_count, // Preserve if already set
+                    constraint_count: solution.stats.constraint_count, // Preserve if already set
+                    peak_memory_kb: 0,
                 };
                 Ok(solution)
             }
@@ -862,6 +867,10 @@ impl Model {
                 let timeout = self.timeout_duration();
                 let memory_limit = self.memory_limit_mb();
                 let (vars, props) = self.prepare_for_search()?;
+
+                // Capture counts before moving to search
+                let var_count = vars.count();
+                let constraint_count = props.count();
 
                 let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
                 let mut last_solution = None;
@@ -877,6 +886,11 @@ impl Model {
                 let stats = crate::solution::SolveStats {
                     propagation_count: current_count,
                     node_count: search_iter.get_node_count(),
+                    solve_time: search_iter.elapsed_time(),
+                    backtrack_count: 0, // TODO: Track backtracking in search engine
+                    variable_count: var_count,
+                    constraint_count,
+                    peak_memory_kb: 0, // TODO: Track peak memory usage
                 };
                 
                 // Check if search terminated due to timeout
@@ -959,6 +973,11 @@ impl Model {
                 solution.stats = crate::solution::SolveStats {
                     propagation_count: 0,
                     node_count: 0,
+                    solve_time: std::time::Duration::ZERO,
+                    backtrack_count: 0,
+                    variable_count: solution.stats.variable_count, // Preserve if already set
+                    constraint_count: solution.stats.constraint_count, // Preserve if already set
+                    peak_memory_kb: 0,
                 };
                 Ok(solution)
             }
@@ -1141,6 +1160,11 @@ impl Model {
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
         let (vars, props) = self.prepare_for_search()?;
+        
+        // Capture counts before moving to search
+        let var_count = vars.count();
+        let constraint_count = props.count();
+        
         let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
         
         let result = search_iter.next();
@@ -1149,6 +1173,11 @@ impl Model {
         let stats = crate::solution::SolveStats {
             propagation_count: search_iter.get_propagation_count(),
             node_count: search_iter.get_node_count(),
+            solve_time: search_iter.elapsed_time(),
+            backtrack_count: 0, // TODO: Track backtracking in search engine
+            variable_count: var_count,
+            constraint_count,
+            peak_memory_kb: 0, // TODO: Track peak memory usage
         };
         
         // Check if search terminated due to timeout
@@ -1336,10 +1365,19 @@ impl Model {
                 let stats = crate::solution::SolveStats {
                     propagation_count: 0,
                     node_count: 0,
+                    solve_time: std::time::Duration::ZERO,
+                    backtrack_count: 0,
+                    variable_count: 0, // Unknown due to validation failure
+                    constraint_count: 0, // Unknown due to validation failure
+                    peak_memory_kb: 0,
                 };
                 return (Vec::new(), stats);
             }
         };
+
+        // Capture counts before moving to search
+        let var_count = vars.count();
+        let constraint_count = props.count();
 
         let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
         let mut solutions = Vec::new();
@@ -1353,6 +1391,11 @@ impl Model {
         let stats = crate::solution::SolveStats {
             propagation_count: search_iter.get_propagation_count(),
             node_count: search_iter.get_node_count(),
+            solve_time: search_iter.elapsed_time(),
+            backtrack_count: 0, // TODO: Track backtracking in search engine
+            variable_count: var_count,
+            constraint_count,
+            peak_memory_kb: 0, // TODO: Track peak memory usage
         };
         
         // Note: If timeout occurred, we return partial solutions found before timeout
