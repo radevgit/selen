@@ -169,6 +169,7 @@
 
 
 pub mod model;
+pub mod model_core;
 pub mod vars;
 pub mod solution;
 pub mod config;
@@ -210,6 +211,13 @@ pub mod math_syntax;
 
 #[doc(hidden)]
 pub mod constraint_macros;
+
+// Modular organization (Phase 1: Foundation)
+#[doc(hidden)]
+pub mod constraints;
+#[doc(hidden)] 
+pub mod variables;
+pub mod api;
 
 #[cfg(test)]
 mod constraint_macros_programmatic_tests;
