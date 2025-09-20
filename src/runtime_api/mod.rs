@@ -102,8 +102,8 @@ pub struct Constraint {
 }
 
 /// Phase 2: Fluent constraint builder for step-by-step constraint construction
-pub struct Builder {
-    model: *mut Model,  // Raw pointer for fluent interface
+pub struct Builder<'a> {
+    model: &'a mut Model,  // Safe mutable reference with lifetime
     current_expr: ExprBuilder,
 }
 
@@ -381,11 +381,11 @@ impl ConstraintVecExt for Vec<Constraint> {
     }
 }
 
-impl Builder {
+impl<'a> Builder<'a> {
     /// Create a new constraint builder from a variable
-    pub fn new(model: &mut Model, var: VarId) -> Self {
+    pub fn new(model: &'a mut Model, var: VarId) -> Self {
         Builder {
-            model: model as *mut Model,
+            model,
             current_expr: ExprBuilder::from_var(var),
         }
     }
@@ -417,37 +417,37 @@ impl Builder {
     /// Create and post an equality constraint
     pub fn eq(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.eq(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.post(constraint)
     }
 
     /// Create and post a not-equal constraint
     pub fn ne(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.ne(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.post(constraint)
     }
 
     /// Create and post a less-than constraint
     pub fn lt(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.lt(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.post(constraint)
     }
 
     /// Create and post a less-than-or-equal constraint
     pub fn le(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.le(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.post(constraint)
     }
 
     /// Create and post a greater-than constraint
     pub fn gt(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.gt(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.post(constraint)
     }
 
     /// Create and post a greater-than-or-equal constraint
     pub fn ge(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.ge(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.post(constraint)
     }
 }
 
@@ -761,7 +761,7 @@ pub trait ModelExt {
     
     /// Phase 2: Start building a constraint from a variable (ultra-short syntax)
     /// Usage: m.c(x).eq(5), m.c(x).add(y).le(10)
-    fn c(&mut self, var: VarId) -> Builder;
+    fn c(&mut self, var: VarId) -> Builder<'_>;
     
     /// Global constraint: all variables must have different values
     fn alldiff(&mut self, vars: &[VarId]) -> PropId;
@@ -802,7 +802,7 @@ impl ModelExt for Model {
         post_constraint_kind(self, &constraint.kind)
     }
     
-    fn c(&mut self, var: VarId) -> Builder {
+    fn c(&mut self, var: VarId) -> Builder<'_> {
         Builder::new(self, var)
     }
     

@@ -4,11 +4,12 @@
 [![Documentation](https://docs.rs/cspsolver/badge.svg)](https://docs.rs/cspsolver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A Constraint Satisfaction Problem (CSP) solver library written in Rust.
+A Constraint Satisfaction Problem (CSP) solver library written in Rust with zero external dependencies.
 
 ## Overview
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
+
 
 **Variable Types**: `int`, `float`, mixed constraints
 

@@ -125,8 +125,8 @@ impl VariablePartitioner {
         // Iterate through all variables to classify by type
         for (index, var) in vars.iter_with_indices() {
             total_count += 1;
-            // Create VarId using the known public construction pattern
-            let var_id = unsafe { std::mem::transmute::<usize, VarId>(index) };
+            // Create VarId using the safe public constructor
+            let var_id = VarId::from_index(index);
             
             match var {
                 Var::VarF(_) => {
