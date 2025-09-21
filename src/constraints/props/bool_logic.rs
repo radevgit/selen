@@ -4,6 +4,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::{VarId, Val}, var
 /// This constraint enforces that the result variable equals the logical AND of all input variables.
 /// All variables are treated as boolean: 0 = false, non-zero = true.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct BoolAnd {
     operands: Vec<VarId>,
     result: VarId,
@@ -107,6 +108,7 @@ impl Propagate for BoolAnd {
 /// This constraint enforces that the result variable equals the logical OR of all input variables.
 /// All variables are treated as boolean: 0 = false, non-zero = true.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct BoolOr {
     operands: Vec<VarId>,
     result: VarId,
@@ -210,6 +212,7 @@ impl Propagate for BoolOr {
 /// This constraint enforces that the result variable equals the logical NOT of the operand.
 /// Variables are treated as boolean: 0 = false, non-zero = true.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct BoolNot {
     operand: VarId,
     result: VarId,

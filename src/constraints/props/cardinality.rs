@@ -15,6 +15,7 @@ pub enum CardinalityType {
 /// Cardinality constraint: counts variables equal to a target value
 /// Supports at_least, at_most, and exactly variants
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub struct CardinalityConstraint {
     variables: Vec<VarId>,
     target_value: Val,

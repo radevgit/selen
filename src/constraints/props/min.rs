@@ -3,6 +3,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::{VarId, Val}, var
 /// Global minimum constraint: `result = min(vars...)`.
 /// This constraint enforces that the result variable equals the minimum value among all input variables.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct Min {
     vars: Vec<VarId>,
     result: VarId,

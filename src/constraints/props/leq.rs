@@ -2,6 +2,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::VarId, variables:
 
 /// Enforce inequality between two views: `x <= y`.
 #[derive(Clone, Copy, Debug)]
+#[doc(hidden)]
 pub struct LessThanOrEquals<U, V> {
     x: U,
     y: V,

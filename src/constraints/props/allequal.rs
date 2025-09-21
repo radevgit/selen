@@ -9,6 +9,7 @@ use crate::{
 /// Ensures all variables in the set have the same value by computing
 /// the intersection of all variable domains and propagating it to each variable.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct AllEqual {
     vars: Vec<VarId>,
 }

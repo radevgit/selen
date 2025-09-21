@@ -2,6 +2,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::{VarId, Val}, var
 
 /// Add a list of views together: `sum(x) == s`.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct Sum<V> {
     xs: Vec<V>,
     s: VarId,

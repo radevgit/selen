@@ -11,22 +11,38 @@
 //! The classification happens automatically when solve() or maximize() is called,
 //! ensuring optimal performance without requiring user intervention.
 
+#[doc(hidden)]
 pub mod classification;
+#[doc(hidden)]
 pub mod float_direct;
+#[doc(hidden)]
 pub mod constraint_integration;
+#[doc(hidden)]
 pub mod precision_handling;
+#[doc(hidden)]
 pub mod model_integration;
+#[doc(hidden)]
 pub mod constraint_metadata;
+#[doc(hidden)]
 pub mod precision_optimizer;
+#[doc(hidden)]
 pub mod variable_partitioning;
+#[doc(hidden)]
 pub mod subproblem_solving;
+#[doc(hidden)]
 pub mod solution_integration;
+#[doc(hidden)]
 pub mod precision_propagator;
+#[doc(hidden)]
 pub mod ulp_utils;
 
+#[doc(hidden)]
 pub use classification::*;
+#[doc(hidden)]
 pub use float_direct::*;
+#[doc(hidden)]
 pub use constraint_integration::*;
+#[doc(hidden)]
 pub use model_integration::*;
 pub use precision_optimizer::*;
 pub use precision_propagator::*;  // Re-enabled - dependencies exist

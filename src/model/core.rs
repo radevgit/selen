@@ -4,10 +4,11 @@ use crate::optimization::model_integration::{OptimizationRouter, OptimizationAtt
 use crate::core::error::{SolverError, SolverResult};
 use std::ops::Index;
 
-#[doc(hidden)]
 #[derive(Debug)]
 pub struct Model {
+    #[doc(hidden)]
     pub vars: Vars,
+    #[doc(hidden)]
     pub props: Propagators,
     /// Precision for float variables (decimal places)
     pub float_precision_digits: i32,
@@ -250,6 +251,7 @@ impl Model {
     /// let mut m = Model::default();
     /// let var = m.new_var(Val::int(1), Val::int(10));
     /// ```
+    #[doc(hidden)]
     pub fn new_var(&mut self, min: Val, max: Val) -> VarId {
         if min < max {
             self.new_var_unchecked(min, max)
@@ -272,6 +274,7 @@ impl Model {
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.new_vars(3, Val::int(0), Val::int(5)).collect();
     /// ```
+    #[doc(hidden)]
     pub fn new_vars(&mut self, n: usize, min: Val, max: Val) -> impl Iterator<Item = VarId> + '_ {
         let (actual_min, actual_max) = if min < max { (min, max) } else { (max, min) };
         std::iter::repeat_with(move || self.new_var_unchecked(actual_min, actual_max)).take(n)
@@ -387,6 +390,7 @@ impl Model {
     /// let mut m = Model::default();
     /// let var = m.new_var_binary();
     /// ```
+    #[doc(hidden)]
     pub fn new_var_binary(&mut self) -> VarIdBin {
         VarIdBin(self.new_var_unchecked(Val::ValI(0), Val::ValI(1)))
     }
@@ -400,6 +404,7 @@ impl Model {
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.new_vars_binary(4).collect();
     /// ```
+    #[doc(hidden)]
     pub fn new_vars_binary(&mut self, n: usize) -> impl Iterator<Item = VarIdBin> + '_ {
         std::iter::repeat_with(|| self.new_var_binary()).take(n)
     }
@@ -476,6 +481,7 @@ impl Model {
     /// Both lower and upper bounds are included in the domain.
     ///
     /// This function assumes that `min < max`.
+    #[doc(hidden)]
     pub fn new_var_unchecked(&mut self, min: Val, max: Val) -> VarId {
         match self.new_var_checked(min, max) {
             Ok(var_id) => var_id,

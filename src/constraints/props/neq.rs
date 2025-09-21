@@ -10,6 +10,7 @@ use crate::{
 /// It uses interval-aware precision for float comparisons to properly handle
 /// values from different FloatInterval instances with different discretizations.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct NotEquals<U, V> {
     x: U,
     y: V,

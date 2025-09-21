@@ -2,6 +2,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::VarId, variables:
 
 /// Add two views together: `x + y == s`.
 #[derive(Clone, Copy, Debug)]
+#[doc(hidden)]
 pub struct Add<U, V> {
     x: U,
     y: V,

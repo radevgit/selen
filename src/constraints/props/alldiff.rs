@@ -14,11 +14,12 @@ use std::collections::HashSet;
 /// 3. Scalable propagation for larger problems
 /// 4. Proper integration with the constraint propagation framework
 #[derive(Clone, Debug)]
-pub struct AllDifferent {
+#[doc(hidden)]
+pub struct AllDiff {
     vars: Vec<VarId>,
 }
 
-impl AllDifferent {
+impl AllDiff {
     pub fn new(vars: Vec<VarId>) -> Self {
         Self { vars }
     }
@@ -238,7 +239,7 @@ impl AllDifferent {
     }
 }
 
-impl Prune for AllDifferent {
+impl Prune for AllDiff {
     fn prune(&self, ctx: &mut Context) -> Option<()> {
         let n = self.vars.len();
         
@@ -263,7 +264,7 @@ impl Prune for AllDifferent {
     }
 }
 
-impl Propagate for AllDifferent {
+impl Propagate for AllDiff {
     fn list_trigger_vars(&self) -> impl Iterator<Item = VarId> {
         self.vars.iter().copied()
     }

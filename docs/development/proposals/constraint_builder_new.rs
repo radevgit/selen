@@ -81,6 +81,7 @@ impl From<BoolExpr> for ConstraintInput {
     }
 }
 
+#[doc(hidden)]
 /// Extension trait for Model to provide unified constraint posting
 pub trait ModelConstraints {
     /// Post a constraint to the model - unified method that accepts multiple input types

@@ -16,6 +16,7 @@ use crate::{
 /// - Changes to index/value constrain the possible values in array elements
 /// - Changes to array elements constrain the possible index/value combinations
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct Element {
     array: Vec<VarId>,
     index: VarId,

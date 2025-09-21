@@ -6,6 +6,7 @@ use crate::{
 
 /// Represents a simple condition for if-then-else constraints
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub enum Condition {
     /// Variable equals a specific value
     Equals(VarId, Val),
@@ -79,6 +80,7 @@ impl Condition {
 
 /// Simple constraint representation for then/else branches
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub enum SimpleConstraint {
     /// Variable equals value
     Equals(VarId, Val),
@@ -142,6 +144,7 @@ impl SimpleConstraint {
 
 /// If-then-else constraint: if condition then constraint1 else constraint2
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub struct IfThenElseConstraint {
     condition: Condition,
     then_constraint: SimpleConstraint,

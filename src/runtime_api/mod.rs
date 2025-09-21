@@ -80,6 +80,7 @@ use crate::{
 /// - Implements Copy for simple variants to avoid cloning
 /// - Inlined common operations for better performance
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub enum ExprBuilder {
     /// A variable reference
     Var(VarId),
@@ -97,11 +98,13 @@ pub enum ExprBuilder {
 
 /// A constraint that can be posted to the model
 #[derive(Clone)]
+#[doc(hidden)]
 pub struct Constraint {
     kind: ConstraintKind,
 }
 
 /// Phase 2: Fluent constraint builder for step-by-step constraint construction
+#[doc(hidden)]
 pub struct Builder<'a> {
     model: &'a mut Model,  // Safe mutable reference with lifetime
     current_expr: ExprBuilder,
@@ -131,6 +134,7 @@ enum ComparisonOp {
     Ge,  // >=
 }
 
+#[doc(hidden)]
 impl ExprBuilder {
     /// Create a new expression builder from a variable
     #[inline]
@@ -289,6 +293,7 @@ impl ExprBuilder {
     }
 }
 
+#[doc(hidden)]
 impl Constraint {
     /// Combine this constraint with another using AND logic
     pub fn and(self, other: Constraint) -> Constraint {
@@ -314,6 +319,7 @@ impl Constraint {
 
 // =================== PHASE 3: BOOLEAN LOGIC ===================
 
+#[doc(hidden)]
 impl Constraint {
     /// Combine multiple constraints with AND logic
     pub fn and_all(constraints: Vec<Constraint>) -> Option<Constraint> {
@@ -356,6 +362,7 @@ pub fn any_of(constraints: Vec<Constraint>) -> Option<Constraint> {
 }
 
 /// Extension trait for `Vec<Constraint>` to enable fluent constraint array operations
+#[doc(hidden)]
 pub trait ConstraintVecExt {
     /// Combine all constraints with AND logic
     fn and_all(self) -> Option<Constraint>;
@@ -383,6 +390,7 @@ impl ConstraintVecExt for Vec<Constraint> {
     }
 }
 
+#[doc(hidden)]
 impl<'a> Builder<'a> {
     /// Create a new constraint builder from a variable
     pub fn new(model: &'a mut Model, var: VarId) -> Self {
@@ -696,6 +704,7 @@ impl From<&VarId> for ExprBuilder {
 }
 
 /// Extension trait for VarId to enable direct constraint building
+#[doc(hidden)]
 pub trait VarIdExt {
     /// Create an expression builder from this variable
     fn expr(self) -> ExprBuilder;
@@ -778,6 +787,7 @@ impl VarIdExt for VarId {
 }
 
 /// Extension trait for Model to support runtime constraint posting
+#[doc(hidden)]
 pub trait ModelExt {
     /// Post a new constraint to the model using runtime API
     fn new(&mut self, constraint: Constraint) -> PropId;

@@ -3,6 +3,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::{VarId, Val}, var
 /// Global maximum constraint: `result = max(vars...)`.
 /// This constraint enforces that the result variable equals the maximum value among all input variables.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct Max {
     vars: Vec<VarId>,
     result: VarId,

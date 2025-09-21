@@ -23,6 +23,7 @@ use crate::variables::{Val, Var, VarId, VarIdBin, Vars};
 #[doc(hidden)]
 /// Represents the result type that a view produces
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[doc(hidden)]
 pub enum ViewType {
     /// View produces integer values only
     Integer,
@@ -65,6 +66,7 @@ pub trait View: ViewRaw {
 
 #[doc(hidden)]
 /// Extension trait to provide helper methods on views.
+#[doc(hidden)]
 pub trait ViewExt: View {
     /// Invert the sign of the bounds of the underlying view.
     fn opposite(self) -> Opposite<Self>;
@@ -101,6 +103,7 @@ pub trait ViewExt: View {
 
 #[doc(hidden)]
 /// Extension trait for debug formatting views with domain information.
+#[doc(hidden)]
 pub trait ViewDebugExt: View {
     /// Format view with domain bounds for debugging.
     fn debug_with_domain(&self, vars: &Vars) -> String {
@@ -158,6 +161,7 @@ impl<V: View> ViewDebugExt for V {}
 
 /// Wrapper around search space object to restrict exposed interface and track changes.
 #[derive(Debug)]
+#[doc(hidden)]
 pub struct Context<'s> {
     vars: &'s mut Vars,
     events: &'s mut Vec<VarId>,
@@ -500,6 +504,7 @@ impl View for VarIdBin {
 #[doc(hidden)]
 /// Invert the sign of the bounds of the underlying view.
 #[derive(Clone, Copy)]
+#[doc(hidden)]
 pub struct Opposite<V>(V);
 
 impl<V: std::fmt::Debug> std::fmt::Debug for Opposite<V> {
@@ -511,6 +516,7 @@ impl<V: std::fmt::Debug> std::fmt::Debug for Opposite<V> {
 #[doc(hidden)]
 /// Apply next operation using ULP-based approach.
 #[derive(Clone, Copy)]
+#[doc(hidden)]
 pub struct Next<V> {
     x: V,
 }
@@ -524,6 +530,7 @@ impl<V: std::fmt::Debug> std::fmt::Debug for Next<V> {
 #[doc(hidden)]
 /// Apply prev operation using ULP-based approach.
 #[derive(Clone, Copy)]
+#[doc(hidden)]
 pub struct Prev<V> {
     x: V,
 }
@@ -799,6 +806,7 @@ impl<V: View> View for Prev<V> {
 
 /// Add a constant offset to the underlying view.
 #[derive(Clone, Copy)]
+#[doc(hidden)]
 pub struct Plus<V> {
     x: V,
     offset: Val,
@@ -896,6 +904,7 @@ impl<V: View> View for Plus<V> {
 #[doc(hidden)]
 /// Scale the underlying view by a constant factor.
 #[derive(Clone, Copy)]
+#[doc(hidden)]
 pub enum Times<V: View> {
     /// Provided factor was strictly negative.
     Neg(TimesNeg<V>),
@@ -1015,6 +1024,7 @@ impl<V: View> View for Times<V> {
 #[doc(hidden)]
 /// Scale the underlying view by a strictly positive constant factor.
 #[derive(Clone, Copy)]
+#[doc(hidden)]
 pub struct TimesPos<V> {
     x: V,
     scale_pos: Val,

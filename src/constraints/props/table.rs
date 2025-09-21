@@ -15,6 +15,7 @@ use crate::{
 /// - Lookup tables and compatibility constraints
 /// - Non-linear relationships that can't be expressed with arithmetic constraints
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct Table {
     vars: Vec<VarId>,
     tuples: Vec<Vec<Val>>,

@@ -3,6 +3,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::{VarId, Val}, var
 /// Division constraint: `x / y == s`.
 /// This constraint enforces that x divided by y equals s.
 #[derive(Clone, Copy, Debug)]
+#[doc(hidden)]
 pub struct Div<U, V> {
     x: U,
     y: V,

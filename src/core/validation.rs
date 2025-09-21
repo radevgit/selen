@@ -245,7 +245,7 @@ impl<'a> ModelValidator<'a> {
         }
         
         // Check for obvious conflicts
-        for (var_id, constraints) in variable_constraints.iter() {
+        for (_var_id, constraints) in variable_constraints.iter() {
             // Look for multiple equality constraints on the same variable
             let mut equality_constraints = Vec::new();
             for &(constraint_id, constraint_type) in constraints {
@@ -254,12 +254,13 @@ impl<'a> ModelValidator<'a> {
                 }
             }
             
+            // For now, we'll be more permissive with multiple equality constraints.
+            // The original logic was too strict and flagged valid cases like x==y and x==5.
+            // We should only flag conflicts when we can prove they're incompatible.
+            // TODO: Implement more sophisticated conflict detection that analyzes constraint values
             if equality_constraints.len() > 1 {
-                return Err(SolverError::ConflictingConstraints {
-                    constraint_names: Some(equality_constraints.iter().map(|id| format!("constraint_{}", id)).collect()),
-                    variables: Some(vec![format!("var_{:?}", var_id)]),
-                    context: Some("Multiple equality constraints on same variable may conflict".to_string()),
-                });
+                // Skip validation for now - let the solver handle constraint compatibility
+                // This avoids false positives while allowing valid constraint combinations
             }
         }
         

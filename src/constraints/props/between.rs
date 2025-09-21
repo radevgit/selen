@@ -7,6 +7,7 @@ use crate::{
 /// Between constraint: ensures lower <= middle <= upper
 /// This is a ternary constraint that enforces ordering relationships
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub struct BetweenConstraint {
     lower: VarId,
     middle: VarId,

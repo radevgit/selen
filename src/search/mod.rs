@@ -1,11 +1,15 @@
 use crate::{prelude::Solution, constraints::props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, variables::Vars, variables::views::Context};
 
+#[doc(hidden)]
 pub mod mode;
 
+#[doc(hidden)]
 pub mod agenda;
+#[doc(hidden)]
 pub mod branch;
 
 /// Data required to perform search, now uses Clone for efficient backtracking.
+#[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct Space {
     pub vars: Vars,
@@ -40,11 +44,13 @@ impl Space {
 }
 
 /// Perform search, iterating over assignments that satisfy all constraints.
+#[doc(hidden)]
 pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
     search_with_timeout(vars, props, mode, None)
 }
 
 /// Perform search with timeout support.
+#[doc(hidden)]
 pub fn search_with_timeout<M: Mode>(
     vars: Vars, 
     props: Propagators, 
@@ -55,6 +61,7 @@ pub fn search_with_timeout<M: Mode>(
 }
 
 /// Perform search with timeout and memory limit support.
+#[doc(hidden)]
 pub fn search_with_timeout_and_memory<M: Mode>(
     vars: Vars, 
     props: Propagators, 
@@ -407,6 +414,7 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::constraints::props::PropId)>> It
 }
 
 /// Apply scheduled propagators, pruning domains until space is failed, stalled, or assigned.
+#[doc(hidden)]
 pub fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> {
     // Track which domains got updated, to schedule next propagators in batch
     let mut events = Vec::with_capacity(16);

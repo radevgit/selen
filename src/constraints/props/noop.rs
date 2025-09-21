@@ -5,6 +5,7 @@ use crate::constraints::props::{Prune};
 /// A no-operation propagator that does nothing when invoked.
 /// Used for branching operations that have already applied domain filtering directly.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct NoOp;
 
 impl NoOp {

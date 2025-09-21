@@ -2,6 +2,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::{VarId, Val}, var
 
 /// Multiply two views together: `x * y == s`.
 #[derive(Clone, Copy, Debug)]
+#[doc(hidden)]
 pub struct Mul<U, V> {
     x: U,
     y: V,

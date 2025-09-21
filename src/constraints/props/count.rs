@@ -10,6 +10,7 @@ use crate::{
 /// This is a global constraint commonly used in scheduling, resource allocation,
 /// and counting problems.
 #[derive(Clone, Debug)]
+#[doc(hidden)]
 pub struct Count {
     vars: Vec<VarId>,
     target_value: Val,

@@ -42,6 +42,7 @@ pub trait Propagate: Prune + 'static {
 }
 
 /// Store internal state for each propagators, along with dependencies for when to schedule each.
+#[doc(hidden)]
 #[derive(Clone, Debug, Default)]
 pub struct Propagators {
     state: Vec<SharedPropagator>,
@@ -54,6 +55,7 @@ pub struct Propagators {
     constraint_registry: crate::optimization::constraint_metadata::ConstraintRegistry,
 }
 
+#[doc(hidden)]
 impl Propagators {
     /// Extend dependencies matrix with a row for the new decision variable.
     pub fn on_new_var(&mut self) {
@@ -918,7 +920,7 @@ impl Propagators {
         let metadata = ConstraintData::NAry { operands };
         
         self.push_new_prop_with_metadata(
-            self::alldiff::AllDifferent::new(vars.clone()),
+            self::alldiff::AllDiff::new(vars.clone()),
             ConstraintType::AllDifferent,
             vars,
             metadata,
@@ -1366,6 +1368,9 @@ impl IndexMut<PropId> for Vec<Box<dyn Prune>> {
 }
 
 // Public exports
-pub use alldiff::AllDifferent;
+#[doc(hidden)]
+pub use alldiff::AllDiff;
+#[doc(hidden)]
 pub use allequal::AllEqual;
+#[doc(hidden)]
 pub use count::Count;

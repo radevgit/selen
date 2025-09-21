@@ -189,13 +189,18 @@
 
 // Core functionality
 pub mod core;
+#[doc(hidden)]
 pub mod utils;
 
 // Domain-specific modules  
 pub mod model;
+#[doc(hidden)]
 pub mod variables;
+#[doc(hidden)]
 pub mod constraints;
+#[doc(hidden)]
 pub mod search;
+#[doc(hidden)]
 pub mod optimization;
 
 // API and convenience modules
@@ -204,8 +209,10 @@ pub mod prelude;
 pub mod runtime_api;
 
 // Development and testing modules
+#[doc(hidden)]
 pub mod benchmarks;
 
+#[doc(hidden)]
 #[cfg(test)]
 mod debug;
 

@@ -2,6 +2,7 @@ use crate::{constraints::props::{Propagate, Prune}, variables::VarId, variables:
 
 /// Enforce equality between two views: `x == y`.
 #[derive(Clone, Copy, Debug)]
+#[doc(hidden)]
 pub struct Eq<U, V> {
     x: U,
     y: V,

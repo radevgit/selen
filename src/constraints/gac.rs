@@ -9,14 +9,17 @@ use crate::variables::domain::sparse_set::SparseSet;
 
 /// Represents a variable in the bipartite graph
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[doc(hidden)]
 pub struct Variable(pub usize);
 
 /// Represents a value in the bipartite graph
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[doc(hidden)]
 pub struct Value(pub i32);
 
 /// A bipartite graph between variables and their possible values
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub struct BipartiteGraph {
     /// Variables and their domains using SparseSet for efficiency
     pub var_domains: HashMap<Variable, SparseSet>,
@@ -269,6 +272,7 @@ impl BitMatrix {
 
 /// Maximum bipartite matching using augmenting paths
 #[derive(Debug)]
+#[doc(hidden)]
 pub struct Matching {
     /// Variable to value mapping
     pub var_to_val: HashMap<Variable, Value>,
@@ -399,6 +403,7 @@ impl Matching {
 }
 
 /// AllDiffbit GAC propagator using bitwise operations
+#[doc(hidden)]
 pub struct AllDiffbit;
 
 impl AllDiffbit {
@@ -496,6 +501,7 @@ impl AllDiffbit {
 
 /// Residual graph for GAC analysis
 #[derive(Debug)]
+#[doc(hidden)]
 pub struct ResidualGraph {
     /// Adjacency list representation
     pub adj: HashMap<String, Vec<String>>,
@@ -555,6 +561,7 @@ impl ResidualGraph {
 
 /// Strongly Connected Components using Tarjan's algorithm
 #[derive(Debug)]
+#[doc(hidden)]
 pub struct SCCFinder {
     index: usize,
     stack: Vec<String>,
@@ -627,6 +634,7 @@ impl SCCFinder {
 }
 
 /// Legacy alias for compatibility with existing code
+#[doc(hidden)]
 pub struct GACAllDifferent;
 
 impl GACAllDifferent {
@@ -782,6 +790,7 @@ mod tests {
 /// Enhanced GAC implementation using SparseSet for efficient domain operations
 /// This integrates the robust sparse_set with GAC to provide better performance
 /// and memory efficiency compared to vector-based implementations.
+#[doc(hidden)]
 pub struct SparseSetGAC {
     /// Variable domains using SparseSet for O(1) operations
     pub domains: HashMap<Variable, SparseSet>,
@@ -1028,6 +1037,7 @@ impl SparseSetGAC {
 
 /// Statistics about GAC state
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub struct GACStats {
     pub total_variables: usize,
     pub assigned_variables: usize,
