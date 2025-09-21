@@ -2,10 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - 2025-09-20
+## [0.7.0] - 2025-09-21
+- Hidden internal API methods from documentation
+- Removed broken constraint builder imports
+- Cleaned up public API documentation
+
+## [0.6.4] - 2025-09-20
 - Memory safety improvements - eliminated all unsafe blocks
-- Result-based error handling for min/max functions instead of panics
-- Fixed test suite validation error message format
+- Result-based error handling
+- Major refactoring of module structure
 
 ## [0.6.3] - 2025-09-20
 - Enhanced SolveStats with timing, memory, and problem size tracking
