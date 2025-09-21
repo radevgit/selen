@@ -3,8 +3,7 @@
 //! This module contains methods for creating different types of variables.
 //! Currently all implementations are in model_core.rs and will be moved here in a future phase.
 
-use crate::vars::{VarId, Val, VarIdBin};
-use crate::model_core::Model;
+use crate::model::core::Model;
 
 impl Model {
     // Note: Variable factory methods are currently implemented in model_core.rs

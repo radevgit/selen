@@ -2,8 +2,8 @@
 //!
 //! This module contains the decomposed Model functionality organized by purpose.
 
-// Re-export everything from the original model_core module for backward compatibility
-pub use crate::model_core::*;
+// Core model functionality (the main Model struct moved from model_core.rs)
+mod core;
 
 // Organized model functionality
 pub mod factory;
@@ -11,8 +11,5 @@ pub mod constraints;
 pub mod solving;
 pub mod precision;
 
-// Re-export organized modules (they contain only documentation and future placeholders for now)
-pub use factory::*;
-pub use constraints::*;
-pub use solving::*;
-pub use precision::*;
+// Re-export everything for backward compatibility
+pub use core::*;

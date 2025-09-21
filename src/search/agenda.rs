@@ -1,6 +1,6 @@
 use std::collections::{HashSet, VecDeque};
 
-use crate::props::PropId;
+use crate::constraints::props::PropId;
 
 /// Collection of propagators scheduled to be run.
 #[derive(Debug, Default)]

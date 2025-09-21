@@ -5,9 +5,9 @@
 //! future refactoring when the props module is split.
 
 // Note: Arithmetic propagators are currently implemented in:
-// - crate::props::add (for addition constraints)
-// - crate::props::mul (for multiplication constraints)  
-// - crate::props::div (for division constraints)
-// - crate::props::modulo (for modulo constraints)
+// - crate::constraints::props::add (for addition constraints)
+// - crate::constraints::props::mul (for multiplication constraints)  
+// - crate::constraints::props::div (for division constraints)
+// - crate::constraints::props::modulo (for modulo constraints)
 //
 // These will be moved here in a future phase of the modularization.

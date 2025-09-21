@@ -1,7 +1,6 @@
 //! Tests for the runtime constraint API - Clean version with improved Solution API
 
 use crate::prelude::*;
-use crate::runtime_api::{VarIdExt, ModelExt, ConstraintVecExt};
 
 #[test]
 fn test_clean_solution_api_demo() {
@@ -10,8 +9,8 @@ fn test_clean_solution_api_demo() {
     let y = m.int(0, 5);
     
     // Simple constraints
-    m.post(x.ge(int(7)));
-    m.post(y.le(int(3)));
+    m.new(x.ge(int(7)));
+    m.new(y.le(int(3)));
     
     let result = m.solve();
     assert!(result.is_ok());
@@ -52,8 +51,8 @@ fn test_automatic_type_inference() {
     let y = m.float(0.0, 5.0);
     
     // Add constraints
-    m.post(x.ge(int(5)));
-    m.post(y.le(float(3.0)));
+    m.new(x.ge(int(5)));
+    m.new(y.le(float(3.0)));
     
     let result = m.solve();
     assert!(result.is_ok());
@@ -113,7 +112,7 @@ fn test_phase3_boolean_logic_with_clean_api() {
     
     // Combine with AND
     let combined = c1.and(c2);
-    m.post(combined);
+    m.new(combined);
     
     let result = m.solve();
     assert!(result.is_ok());
@@ -140,7 +139,7 @@ fn test_constraint_or_with_clean_api() {
     let c1 = x.eq(int(2));
     let c2 = x.eq(int(8));
     let combined = c1.or(c2);
-    m.post(combined);
+    m.new(combined);
     
     let result = m.solve();
     
@@ -173,7 +172,7 @@ fn test_constraint_vec_operations() {
     
     // Use ConstraintVecExt trait
     if let Some(combined) = constraints.and_all() {
-        m.post(combined);
+        m.new(combined);
     }
     
     let result = m.solve();
@@ -307,7 +306,7 @@ fn test_safe_constraint_building_no_panics() {
     for (var, op, value) in constraint_specs {
         match build_constraint_safe(var, op, value) {
             Some(constraint) => {
-                m.post(constraint);
+                m.new(constraint);
                 successful_constraints += 1;
             }
             None => {
@@ -379,7 +378,7 @@ fn test_all_equal_constraint() {
     m.alleq(&vars);
     
     // Add additional constraint
-    m.post(vars[0].ge(5));
+    m.new(vars[0].ge(5));
     
     let result = m.solve();
     assert!(result.is_ok());
@@ -440,7 +439,7 @@ fn test_count_constraint() {
     m.count(&vars, 2, count_result);
     
     // Force exactly 2 occurrences of value 2
-    m.post(count_result.eq(2));
+    m.new(count_result.eq(2));
     
     let result = m.solve();
     assert!(result.is_ok());
@@ -512,9 +511,9 @@ fn test_global_cardinality_constraint() {
     println!("GCC PropIds: {:?}", gcc_props);
     
     // Force exactly 1 of each (so 3 variables total)
-    let eq1 = m.post(counts[0].eq(1)); // Exactly 1 one
-    let eq2 = m.post(counts[1].eq(1)); // Exactly 1 two
-    let eq3 = m.post(counts[2].eq(1)); // Exactly 1 three
+    let eq1 = m.new(counts[0].eq(1)); // Exactly 1 one
+    let eq2 = m.new(counts[1].eq(1)); // Exactly 1 two
+    let eq3 = m.new(counts[2].eq(1)); // Exactly 1 three
     println!("Posted equality constraints: {:?}, {:?}, {:?}", eq1, eq2, eq3);
     
     let result = m.solve();

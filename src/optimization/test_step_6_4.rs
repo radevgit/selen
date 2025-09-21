@@ -9,7 +9,7 @@ mod tests {
     use super::super::subproblem_solving::*;
     use super::super::variable_partitioning::*;
     use crate::model::Model;
-    use crate::vars::{VarId, Val};
+    use crate::variables::{VarId, Val};
     use std::collections::HashMap;
     use std::time::Duration;
     

@@ -3,7 +3,7 @@
 //! This module contains functionality for managing floating-point precision.
 //! Currently all implementations are in model_core.rs and will be moved here in a future phase.
 
-use crate::model_core::Model;
+use crate::model::core::Model;
 
 impl Model {
     // Note: Precision management methods are currently implemented in model_core.rs

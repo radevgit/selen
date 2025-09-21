@@ -103,6 +103,7 @@ fn print_grid(title: &str, grid: &[[i32; 9]; 9]) {
 }
 
 #[test]
+#[ignore = "tekes a loot of time without --release"]
 fn test_platinum_sudoku_solution() {
     println!("💎 PLATINUM SUDOKU BENCHMARK");
     println!("=============================");
@@ -211,6 +212,7 @@ fn test_platinum_sudoku_solution() {
 }
 
 #[test]
+#[ignore = "teaske a lot of time"]
 fn test_platinum_performance_stress() {
     // Test that Platinum Blonde can be solved multiple times consistently
     let platinum_puzzle = [

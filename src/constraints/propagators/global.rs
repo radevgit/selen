@@ -5,10 +5,10 @@
 //! future refactoring when the props module is split.
 
 // Note: Global constraint propagators are currently implemented in:
-// - crate::props::alldiff (for all-different constraints)
-// - crate::props::allequal (for all-equal constraints)  
-// - crate::props::element (for element constraints)
-// - crate::props::count (for counting constraints)
-// - crate::props::table (for table constraints)
+// - crate::constraints::props::alldiff (for all-different constraints)
+// - crate::constraints::props::allequal (for all-equal constraints)  
+// - crate::constraints::props::element (for element constraints)
+// - crate::constraints::props::count (for counting constraints)
+// - crate::constraints::props::table (for table constraints)
 //
 // These will be moved here in a future phase of the modularization.

@@ -5,7 +5,7 @@
 //! future refactoring when the props module is split.
 
 // Note: Logical propagators are currently implemented in:
-// - crate::props::bool_logic (for boolean operations)
-// - crate::props::conditional (for conditional constraints)
+// - crate::constraints::props::bool_logic (for boolean operations)
+// - crate::constraints::props::conditional (for conditional constraints)
 //
 // These will be moved here in a future phase of the modularization.

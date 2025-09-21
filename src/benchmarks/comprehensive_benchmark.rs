@@ -1,6 +1,7 @@
-use cspsolver::prelude::*;
+use crate::prelude::*;
 use std::time::Instant;
 
+#[allow(dead_code)]
 fn main() -> SolverResult<()> {
     println!("=== CSP Solver Comprehensive Benchmarks ===");
     println!("Testing optimization performance after the multi-variable fix\n");

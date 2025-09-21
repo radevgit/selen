@@ -8,7 +8,7 @@ mod tests {
     use super::super::subproblem_solving::*;
     use super::super::variable_partitioning::*;
     use crate::model::Model;
-    use crate::vars::VarId;
+    use crate::variables::VarId;
     use std::time::Duration;
     
     fn create_float_model() -> (Model, Vec<VarId>) {

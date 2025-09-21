@@ -12,10 +12,10 @@
 //! by applying the most appropriate algorithm to each subproblem type.
 
 use crate::model::Model;
-use crate::solution::Solution;
+use crate::core::solution::Solution;
 use crate::optimization::variable_partitioning::{VariablePartition, PartitionResult};
-use crate::vars::{Var, VarId};
-use crate::domain::float_interval::precision_to_step_size;
+use crate::variables::{Var, VarId};
+use crate::variables::domain::float_interval::precision_to_step_size;
 use std::time::{Duration, Instant};
 use std::collections::HashMap;
 

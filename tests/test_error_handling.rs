@@ -138,8 +138,8 @@ fn test_model_solving_with_constraints() {
     let maximum = m.max(&[a, b, c]).expect("non-empty variable list");
     
     // Add some constraints
-    m.post(minimum.eq(4));  // min must be 4
-    m.post(maximum.le(12)); // max must be <= 12
+    m.new(minimum.eq(4));  // min must be 4
+    m.new(maximum.le(12)); // max must be <= 12
     
     // Should pass validation
     let validation_result = m.validate();

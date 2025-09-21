@@ -75,6 +75,7 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     }
 }
 
+#[allow(dead_code)]
 fn print_grid(title: &str, grid: &[[i32; 9]; 9]) {
     println!("\n{}", title);
     println!("┌───────┬───────┬───────┐");
@@ -171,7 +172,7 @@ fn test_easy_sudoku_solution() {
     
     // Verify performance characteristics
     assert!(propagations > 0, "Should perform some propagations");
-    assert!(nodes >= 0, "Node count should be non-negative");
+    // nodes is unsigned, so always >= 0
     
     // Print results for manual inspection during development
     eprintln!("✅ Easy Sudoku solved with {} propagations, {} nodes", propagations, nodes);

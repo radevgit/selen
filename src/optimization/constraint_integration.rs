@@ -5,10 +5,10 @@
 //! binary search with constraint propagation, we analyze constraints to compute
 //! the effective bounds directly.
 
-use crate::vars::{Vars, VarId};
-use crate::props::Propagators;
+use crate::variables::{Vars, VarId};
+use crate::constraints::props::Propagators;
 use crate::optimization::float_direct::{FloatBoundsOptimizer, OptimizationResult, OptimizationOperation, VariableError, DomainError};
-use crate::domain::FloatInterval;
+use crate::variables::domain::FloatInterval;
 
 /// Extended optimizer that handles constraints by converting them to bounds
 #[derive(Debug)]
@@ -239,13 +239,13 @@ impl ConstraintAwareOptimizer {
     ) -> ConstrainedBounds {
         // Get the original variable bounds
         let original_interval = match &vars[var_id] {
-            crate::vars::Var::VarF(interval) => {
+            crate::variables::Var::VarF(interval) => {
                 if interval.is_empty() {
                     return ConstrainedBounds::infeasible(ConflictType::EmptyDomain);
                 }
                 interval
             },
-            crate::vars::Var::VarI(_) => {
+            crate::variables::Var::VarI(_) => {
                 return ConstrainedBounds::infeasible(ConflictType::NonFloatVariable);
             }
         };
@@ -311,7 +311,7 @@ impl ConstraintAwareOptimizer {
     fn analyze_single_constraint(
         &self,
         vars: &Vars,
-        constraint: &Box<dyn crate::props::Prune>,
+        constraint: &Box<dyn crate::constraints::props::Prune>,
         target_var: VarId,
     ) -> Option<(f64, f64)> {
         // Step 2.3.3: Implement conservative bounds analysis
@@ -328,8 +328,8 @@ impl ConstraintAwareOptimizer {
 
         // Get the current variable bounds
         let original_interval = match &vars[target_var] {
-            crate::vars::Var::VarF(interval) => interval,
-            crate::vars::Var::VarI(_) => return None, // Only handle float variables
+            crate::variables::Var::VarF(interval) => interval,
+            crate::variables::Var::VarI(_) => return None, // Only handle float variables
         };
 
         // Step 2.3.3: Conservative constraint analysis heuristic
@@ -375,13 +375,13 @@ impl ConstraintAwareOptimizer {
         bounds: &ConstrainedBounds,
     ) -> Result<(), String> {
         match &mut vars[var_id] {
-            crate::vars::Var::VarF(interval) => {
+            crate::variables::Var::VarF(interval) => {
                 // Create new interval with the constrained bounds
                 let step = interval.step;
                 *interval = FloatInterval::with_step(bounds.min, bounds.max, step);
                 Ok(())
             },
-            crate::vars::Var::VarI(_) => {
+            crate::variables::Var::VarI(_) => {
                 Err("Cannot apply float bounds to integer variable".to_string())
             }
         }
@@ -435,14 +435,14 @@ impl Default for ConstraintAwareOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vars::Vars;
-    use crate::props::Propagators;
+    use crate::variables::Vars;
+    use crate::constraints::props::Propagators;
 
     fn create_test_vars_with_float(min: f64, max: f64) -> (Vars, VarId) {
         let mut vars = Vars::new();
         let var_id = vars.new_var_with_bounds(
-            crate::vars::Val::float(min), 
-            crate::vars::Val::float(max)
+            crate::variables::Val::float(min), 
+            crate::variables::Val::float(max)
         );
         (vars, var_id)
     }
@@ -520,12 +520,12 @@ mod tests {
         
         // Create a float variable first, then make it empty
         let var_id = vars.new_var_with_bounds(
-            crate::vars::Val::float(1.0), 
-            crate::vars::Val::float(5.0)
+            crate::variables::Val::float(1.0), 
+            crate::variables::Val::float(5.0)
         );
         
         // Manually make the interval empty by setting min > max
-        if let crate::vars::Var::VarF(interval) = &mut vars[var_id] {
+        if let crate::variables::Var::VarF(interval) = &mut vars[var_id] {
             interval.min = 5.0;
             interval.max = 1.0; // This makes the interval empty (min > max)
         }
@@ -557,8 +557,8 @@ mod tests {
         let props = create_test_props();
         
         let int_var_id = vars.new_var_with_bounds(
-            crate::vars::Val::int(1), 
-            crate::vars::Val::int(10)
+            crate::variables::Val::int(1), 
+            crate::variables::Val::int(10)
         );
 
         let result = optimizer.maximize_with_constraints(&vars, &props, int_var_id);
@@ -586,7 +586,7 @@ mod tests {
         assert_eq!(result.optimal_value, 7.0, "Should find correct maximum");
 
         // Verify the variable domain was updated
-        if let crate::vars::Var::VarF(interval) = &vars[var_id] {
+        if let crate::variables::Var::VarF(interval) = &vars[var_id] {
             assert_eq!(interval.min, 7.0);
             assert_eq!(interval.max, 7.0);
         } else {
@@ -606,7 +606,7 @@ mod tests {
         assert_eq!(result.optimal_value, 2.5, "Should find correct minimum");
 
         // Verify the variable domain was updated
-        if let crate::vars::Var::VarF(interval) = &vars[var_id] {
+        if let crate::variables::Var::VarF(interval) = &vars[var_id] {
             assert_eq!(interval.min, 2.5);
             assert_eq!(interval.max, 2.5);
         } else {

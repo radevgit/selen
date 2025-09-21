@@ -24,7 +24,7 @@
 //! // Note: Benchmark shows Step 2.4 optimization is working with significant speedups
 //! ```
 
-use cspsolver::prelude::*;
+use crate::prelude::*;
 use std::time::{Duration, Instant};
 
 // Note: For chrono timestamp, using system time as fallback
@@ -536,6 +536,7 @@ impl PerformanceBenchmarker {
 }
 
 /// Main function to run performance benchmarks
+#[allow(dead_code)]
 fn main() {
     println!("Step 2.4 Performance Benchmarking System");
     println!("========================================");

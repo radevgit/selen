@@ -10,8 +10,8 @@
 //! 4. **Solution Construction**: Create valid Solution objects for the original model
 
 use crate::model::Model;
-use crate::solution::Solution;
-use crate::vars::{Var, VarId, Val};
+use crate::core::solution::Solution;
+use crate::variables::{Var, VarId, Val};
 use crate::optimization::subproblem_solving::{CombinedSolution, SubproblemValue};
 use crate::optimization::variable_partitioning::PartitionResult;
 use std::collections::HashMap;

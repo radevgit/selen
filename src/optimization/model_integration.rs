@@ -4,10 +4,10 @@
 //! specialized optimization algorithms. It handles automatic problem analysis,
 //! algorithm selection, and fallback to traditional search when needed.
 
-use crate::vars::{Vars, VarId};
-use crate::props::Propagators;
-use crate::solution::Solution;
-use crate::views::View;
+use crate::variables::{Vars, VarId};
+use crate::constraints::props::Propagators;
+use crate::core::solution::Solution;
+use crate::variables::views::View;
 use crate::optimization::{ProblemClassifier, ProblemType, ConstraintAwareOptimizer};
 use crate::optimization::precision_handling::PrecisionAwareOptimizer;
 
@@ -316,7 +316,7 @@ impl OptimizationRouter {
         if let Some(var_id) = objective.get_underlying_var_raw() {
             // Verify this is a float variable that exists in our model
             let var = &vars[var_id];
-            if matches!(var, crate::vars::Var::VarF(_)) {
+            if matches!(var, crate::variables::Var::VarF(_)) {
                 return Some(var_id);
             }
         }
@@ -325,7 +325,7 @@ impl OptimizationRouter {
         // Only when we have a single float variable (original logic for safety)
         let mut float_vars = Vec::new();
         for (var_idx, var) in vars.iter_with_indices() {
-            if matches!(var, crate::vars::Var::VarF(_)) {
+            if matches!(var, crate::variables::Var::VarF(_)) {
                 let var_id = index_to_var_id(var_idx);
                 float_vars.push(var_id);
             }
@@ -356,7 +356,7 @@ impl OptimizationRouter {
         }
         
         match &all_vars[var_idx].1 {
-            crate::vars::Var::VarF(interval) => {
+            crate::variables::Var::VarF(interval) => {
                 let var_id = index_to_var_id(var_idx);
                 
                 // Step 2.4: Use precision-aware optimization when constraints exist
@@ -389,7 +389,7 @@ impl OptimizationRouter {
                     Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
                 }
             },
-            crate::vars::Var::VarI(_) => {
+            crate::variables::Var::VarI(_) => {
                 OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
             }
         }
@@ -409,7 +409,7 @@ impl OptimizationRouter {
         }
         
         match &all_vars[var_idx].1 {
-            crate::vars::Var::VarF(interval) => {
+            crate::variables::Var::VarF(interval) => {
                 let var_id = index_to_var_id(var_idx);
                 
                 // Step 2.4: Use precision-aware optimization when constraints exist
@@ -458,7 +458,7 @@ impl OptimizationRouter {
                     }
                 }
             },
-            crate::vars::Var::VarI(_) => {
+            crate::variables::Var::VarI(_) => {
                 OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
             }
         }
@@ -477,22 +477,22 @@ impl OptimizationRouter {
         for (var_idx, var) in vars.iter_with_indices() {
             if var_idx == optimized_var_idx {
                 // Set the optimized variable to its optimal value
-                values.push(crate::vars::Val::ValF(optimal_value));
+                values.push(crate::variables::Val::ValF(optimal_value));
             } else {
                 // For other variables, use their current domain values
                 match var {
-                    crate::vars::Var::VarF(interval) => {
+                    crate::variables::Var::VarF(interval) => {
                         // Use the midpoint of the interval as a reasonable assignment
                         let value = if interval.is_fixed() {
                             interval.min
                         } else {
                             interval.mid()
                         };
-                        values.push(crate::vars::Val::ValF(value));
+                        values.push(crate::variables::Val::ValF(value));
                     },
-                    crate::vars::Var::VarI(sparse_set) => {
+                    crate::variables::Var::VarI(sparse_set) => {
                         // Use the minimum value for integer variables
-                        values.push(crate::vars::Val::ValI(sparse_set.min()));
+                        values.push(crate::variables::Val::ValI(sparse_set.min()));
                     },
                 }
             }
@@ -541,8 +541,8 @@ impl OptimizationRouter {
         
         for var in vars.iter() {
             match var {
-                crate::vars::Var::VarF(_) => has_float = true,
-                crate::vars::Var::VarI(_) => has_int = true,
+                crate::variables::Var::VarF(_) => has_float = true,
+                crate::variables::Var::VarI(_) => has_int = true,
             }
         }
         
@@ -566,14 +566,14 @@ impl Default for OptimizationRouter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vars::Vars;
-    use crate::props::Propagators;
+    use crate::variables::Vars;
+    use crate::constraints::props::Propagators;
 
     fn create_test_float_problem() -> (Vars, VarId) {
         let mut vars = Vars::new();
         let var_id = vars.new_var_with_bounds(
-            crate::vars::Val::float(1.0), 
-            crate::vars::Val::float(10.0)
+            crate::variables::Val::float(1.0), 
+            crate::variables::Val::float(10.0)
         );
         (vars, var_id)
     }
@@ -635,12 +635,12 @@ mod tests {
         
         // Create a mixed problem (both float and integer variables)
         let float_var = vars.new_var_with_bounds(
-            crate::vars::Val::float(1.0), 
-            crate::vars::Val::float(10.0)
+            crate::variables::Val::float(1.0), 
+            crate::variables::Val::float(10.0)
         );
         let _int_var = vars.new_var_with_bounds(
-            crate::vars::Val::int(1), 
-            crate::vars::Val::int(10)
+            crate::variables::Val::int(1), 
+            crate::variables::Val::int(10)
         );
         
         let result = router.try_maximize(&vars, &props, &float_var);

@@ -9,8 +9,8 @@
 //!
 //! The classifier enables automatic algorithm selection without user intervention.
 
-use crate::vars::{Vars, Var, VarId};
-use crate::props::Propagators;
+use crate::variables::{Vars, Var, VarId};
+use crate::constraints::props::Propagators;
 
 /// Classification of constraint satisfaction problems for algorithm selection
 #[derive(Debug, Clone, PartialEq)]

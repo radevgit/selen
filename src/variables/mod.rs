@@ -1,15 +1,20 @@
 //! Variable system module
 //!
-//! This module will contain the restructured variable system components.
-//! Currently re-exports from existing variable modules for compatibility.
+//! This module contains the restructured variable system components organized by functionality.
 
-// Re-export everything from existing variable modules
-pub use crate::vars::*;
-pub use crate::views::*;
+// Core variable files
+mod vars;
+pub mod views;
 
-// Future modular organization (will be populated in Phase 5)
-// pub mod core;
-// pub mod domains;
-// pub mod views;
-// pub mod operations;
-// pub mod values;
+// Domain management
+pub mod domain;
+
+// Additional modules 
+pub mod core;
+pub mod operations;
+pub mod values;
+
+// Re-export everything for backward compatibility
+pub use views::*;
+pub use domain::*;
+pub use core::*;

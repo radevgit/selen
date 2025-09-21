@@ -4,7 +4,7 @@
 //! common modeling errors before they cause runtime issues during solving.
 
 use cspsolver::prelude::*;
-use cspsolver::error::SolverError;
+use cspsolver::core::error::SolverError;
 use cspsolver::{post};
 
 #[test]

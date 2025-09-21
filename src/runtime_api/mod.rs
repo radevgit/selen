@@ -69,8 +69,8 @@
 
 use crate::{
     model::Model,
-    vars::{Val, VarId},
-    props::PropId,
+    variables::{Val, VarId},
+    constraints::props::PropId,
 };
 
 /// Represents an expression that can be built at runtime
@@ -376,9 +376,9 @@ impl ConstraintVecExt for Vec<Constraint> {
         Constraint::or_all(self)
     }
     
-    fn postall(self, model: &mut Model) -> Vec<PropId> {
+    fn postall(self, m: &mut Model) -> Vec<PropId> {
         self.into_iter()
-            .map(|constraint| model.post(constraint))
+            .map(|constraint| m.new(constraint))
             .collect()
     }
 }
@@ -419,37 +419,37 @@ impl<'a> Builder<'a> {
     /// Create and post an equality constraint
     pub fn eq(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.eq(other);
-        self.model.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a not-equal constraint
     pub fn ne(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.ne(other);
-        self.model.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a less-than constraint
     pub fn lt(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.lt(other);
-        self.model.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a less-than-or-equal constraint
     pub fn le(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.le(other);
-        self.model.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a greater-than constraint
     pub fn gt(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.gt(other);
-        self.model.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a greater-than-or-equal constraint
     pub fn ge(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.ge(other);
-        self.model.post(constraint)
+        self.model.new(constraint)
     }
 }
 
@@ -776,8 +776,8 @@ impl VarIdExt for VarId {
 
 /// Extension trait for Model to support runtime constraint posting
 pub trait ModelExt {
-    /// Post a constraint to the model
-    fn post(&mut self, constraint: Constraint) -> PropId;
+    /// Post a new constraint to the model using runtime API
+    fn new(&mut self, constraint: Constraint) -> PropId;
     
     /// Phase 2: Start building a constraint from a variable (ultra-short syntax)
     /// Usage: m.c(x).eq(5), m.c(x).add(y).le(10)
@@ -818,7 +818,7 @@ pub trait ModelExt {
 }
 
 impl ModelExt for Model {
-    fn post(&mut self, constraint: Constraint) -> PropId {
+    fn new(&mut self, constraint: Constraint) -> PropId {
         post_constraint_kind(self, &constraint.kind)
     }
     

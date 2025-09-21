@@ -1,4 +1,4 @@
-use crate::{prelude::Solution, props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, vars::Vars, views::Context};
+use crate::{prelude::Solution, constraints::props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, variables::Vars, variables::views::Context};
 
 pub mod mode;
 
@@ -143,7 +143,7 @@ impl<M: Mode> Iterator for Search<M> {
         match self {
             Self::Stalled(engine) => engine.next(),
             Self::Done(space_opt) => space_opt.take().map(|space| {
-                let stats = crate::solution::SolveStats {
+                let stats = crate::core::solution::SolveStats {
                     propagation_count: space.get_propagation_count(),
                     node_count: space.get_node_count(),
                     solve_time: std::time::Duration::ZERO, // TODO: Track solve time in Space
@@ -333,7 +333,7 @@ impl<M, B> Engine<M, B> {
     }
 }
 
-impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for Engine<M, B> {
+impl<M: Mode, B: Iterator<Item = (Space, crate::constraints::props::PropId)>> Iterator for Engine<M, B> {
     type Item = Solution;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -383,7 +383,7 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
                         self.mode.on_solution(&space.vars);
 
                         // Extract solution assignment for all decision variables with current statistics
-                        let stats = crate::solution::SolveStats {
+                        let stats = crate::core::solution::SolveStats {
                             propagation_count: space.get_propagation_count(),
                             node_count: space.get_node_count(),
                             solve_time: std::time::Duration::ZERO, // TODO: Track solve time in Engine

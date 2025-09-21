@@ -5,8 +5,8 @@
 //! future refactoring when the props module is split.
 
 // Note: Comparison propagators are currently implemented in:
-// - crate::props::eq (for equality constraints)
-// - crate::props::neq (for inequality constraints)
-// - crate::props::leq (for less-than-or-equal constraints)
+// - crate::constraints::props::eq (for equality constraints)
+// - crate::constraints::props::neq (for inequality constraints)
+// - crate::constraints::props::leq (for less-than-or-equal constraints)
 //
 // These will be moved here in a future phase of the modularization.

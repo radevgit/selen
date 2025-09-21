@@ -5,21 +5,27 @@
 //! - Propagators for constraint enforcement
 //! - Constraint builders for fluent API
 
-// Re-export everything from the original constraint_macros for backward compatibility
-pub use crate::constraint_macros::*;
-
-// Re-export everything from props for backward compatibility  
-pub use crate::props::*;
-
-// Re-export constraint builder functionality
-pub use crate::constraint_builder::*;
-pub use crate::boolean_operators::*;
-pub use crate::math_syntax::*;
-
-// Future modular organization (will be populated in later phases)
+// Core constraint modules
 pub mod macros;
 pub mod propagators;
 
-// Constraint builder module
-mod builder;
-pub use builder::*;
+// Moved files
+pub mod boolean_operators;
+pub mod math_syntax;
+pub mod builder_legacy;
+pub mod operators;
+pub mod gac;
+
+// Re-export everything from the organized constraint macros
+pub use macros::*;
+
+// Re-export moved files
+pub use boolean_operators::*;
+pub use math_syntax::*;
+pub use builder_legacy::*;
+pub use operators::*;
+pub use gac::*;
+
+// Props module  
+pub mod props;
+pub use props::*;

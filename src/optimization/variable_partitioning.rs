@@ -6,8 +6,8 @@
 //! The partitioning enables independent solving of each subproblem, leading to
 //! significant performance improvements (10-100x speedup potential).
 
-use crate::vars::{Vars, Var, VarId};
-use crate::props::Propagators;
+use crate::variables::{Vars, Var, VarId};
+use crate::constraints::props::Propagators;
 use crate::model::Model;
 use crate::optimization::classification::{ProblemClassifier, ProblemType};
 

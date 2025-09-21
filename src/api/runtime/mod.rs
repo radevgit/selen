@@ -9,6 +9,6 @@ pub use crate::runtime_api::*;
 pub mod dynamic;
 pub mod extensions;
 
-// Re-export modular components
-pub use dynamic::*;
-pub use extensions::*;
+// Re-export modular components (commented out to fix unused warnings)
+// pub use dynamic::*;
+// pub use extensions::*;

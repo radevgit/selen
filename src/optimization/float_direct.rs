@@ -16,8 +16,8 @@
 //!
 //! This avoids the exponential step enumeration that causes hanging in high precision.
 
-use crate::vars::{Vars, VarId};
-use crate::domain::FloatInterval;
+use crate::variables::{Vars, VarId};
+use crate::variables::domain::FloatInterval;
 
 /// Types of optimization outcomes for float bounds optimization
 #[derive(Debug, Clone, PartialEq)]
@@ -225,8 +225,8 @@ impl FloatBoundsOptimizer {
     fn get_float_bounds<'a>(&self, vars: &'a Vars, var_id: VarId) -> Option<&'a FloatInterval> {
         // Access the variable through the Vars indexing
         match &vars[var_id] {
-            crate::vars::Var::VarF(interval) => Some(interval),
-            crate::vars::Var::VarI(_) => None,
+            crate::variables::Var::VarF(interval) => Some(interval),
+            crate::variables::Var::VarI(_) => None,
         }
     }
 
@@ -246,7 +246,7 @@ impl FloatBoundsOptimizer {
 
         // Update the variable domain to the single optimal value
         match &mut vars[var_id] {
-            crate::vars::Var::VarF(interval) => {
+            crate::variables::Var::VarF(interval) => {
                 // Create a new interval containing only the optimal value
                 // We use a small epsilon to create a tiny interval around the optimal point
                 let optimal = result.optimal_value;
@@ -258,7 +258,7 @@ impl FloatBoundsOptimizer {
                 
                 Ok(())
             },
-            crate::vars::Var::VarI(_) => {
+            crate::variables::Var::VarI(_) => {
                 Err(DomainError::InvalidBounds)
             }
         }
@@ -322,13 +322,13 @@ fn var_id_to_string(var_id: VarId) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vars::Vars;
+    use crate::variables::Vars;
 
     fn create_test_vars_with_float(min: f64, max: f64) -> (Vars, VarId) {
         let mut vars = Vars::new();
         let var_id = vars.new_var_with_bounds(
-            crate::vars::Val::float(min), 
-            crate::vars::Val::float(max)
+            crate::variables::Val::float(min), 
+            crate::variables::Val::float(max)
         );
         (vars, var_id)
     }
@@ -398,8 +398,8 @@ mod tests {
         let optimizer = FloatBoundsOptimizer::new();
         let mut vars = Vars::new();
         let int_var_id = vars.new_var_with_bounds(
-            crate::vars::Val::int(1), 
-            crate::vars::Val::int(10)
+            crate::variables::Val::int(1), 
+            crate::variables::Val::int(10)
         );
 
         assert!(!optimizer.can_optimize(&vars, int_var_id), "Should not be able to optimize integer variable");
@@ -444,7 +444,7 @@ mod tests {
         assert_eq!(result.optimal_value, 7.0, "Should find correct maximum");
 
         // Verify the variable domain was updated
-        if let crate::vars::Var::VarF(interval) = &vars[var_id] {
+        if let crate::variables::Var::VarF(interval) = &vars[var_id] {
             assert_eq!(interval.min, 7.0);
             assert_eq!(interval.max, 7.0);
         } else {
@@ -463,7 +463,7 @@ mod tests {
         assert_eq!(result.optimal_value, 1.5, "Should find correct minimum");
 
         // Verify the variable domain was updated
-        if let crate::vars::Var::VarF(interval) = &vars[var_id] {
+        if let crate::variables::Var::VarF(interval) = &vars[var_id] {
             assert_eq!(interval.min, 1.5);
             assert_eq!(interval.max, 1.5);
         } else {

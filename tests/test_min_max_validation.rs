@@ -1,5 +1,5 @@
 use cspsolver::prelude::*;
-use cspsolver::error::SolverError;
+use cspsolver::core::error::SolverError;
 
 /// Tests for the new centralized validation system that catches empty min/max constraints
 /// and other validation scenarios.
@@ -7,42 +7,42 @@ use cspsolver::error::SolverError;
 #[test]
 fn test_validation_architecture_works() {
     // Test that the validation system is properly integrated
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Create valid constraints
-    let x = model.int(1, 10);
-    let y = model.int(5, 15);
-    let z = model.int(3, 8);
+    let x = m.int(1, 10);
+    let y = m.int(5, 15);
+    let z = m.int(3, 8);
     
-    let _min_xyz = model.min(&[x, y, z]);
-    let _max_xyz = model.max(&[x, y, z]);
+    let _min_xyz = m.min(&[x, y, z]);
+    let _max_xyz = m.max(&[x, y, z]);
     
     // Add some additional constraints
-    model.post(x.le(y));
-    model.post(y.le(z.add(int(5))));
+    m.new(x.le(y));
+    m.new(y.le(z.add(int(5))));
     
     // Validation should pass
-    let result = model.validate();
+    let result = m.validate();
     assert!(result.is_ok(), "Valid model should pass validation: {:?}", result);
     
     // Should be solvable
-    let solution = model.solve();
+    let solution = m.solve();
     assert!(solution.is_ok(), "Valid model should be solvable: {:?}", solution);
 }
 
 #[test]
 fn test_validation_catches_domain_issues() {
     // Test that validation catches various types of issues
-    let mut model = Model::default();
+    let mut m = Model::default();
     
-    let x = model.int(1, 10);
-    let y = model.int(15, 20);
+    let x = m.int(1, 10);
+    let y = m.int(15, 20);
     
     // Create conflicting constraints that make the model unsolvable
-    model.post(x.eq(y)); // x ∈ [1,10] and y ∈ [15,20] can't be equal
+    m.new(x.eq(y)); // x ∈ [1,10] and y ∈ [15,20] can't be equal
     
     // This should either be caught by validation or fail during solving
-    let result = model.solve();
+    let result = m.solve();
     
     // We expect either validation error or no solution
     match result {
@@ -63,19 +63,19 @@ fn test_validation_catches_domain_issues() {
 #[test]
 fn test_min_max_validation_with_edge_cases() {
     // Test edge cases for min/max validation
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Single variable min/max (valid edge case)
-    let x = model.int(1, 10);
-    let min_x = model.min(&[x]).expect("non-empty variable list");
-    let max_x = model.max(&[x]).expect("non-empty variable list");
+    let x = m.int(1, 10);
+    let min_x = m.min(&[x]).expect("non-empty variable list");
+    let max_x = m.max(&[x]).expect("non-empty variable list");
     
     // Should pass validation
-    let result = model.validate();
+    let result = m.validate();
     assert!(result.is_ok(), "Single-variable min/max should be valid: {:?}", result);
     
     // Should solve correctly
-    let solution = model.solve();
+    let solution = m.solve();
     assert!(solution.is_ok(), "Single-variable min/max should solve: {:?}", solution);
     
     if let Ok(sol) = solution {
@@ -92,13 +92,13 @@ fn test_min_max_validation_with_edge_cases() {
 #[test]
 fn test_validation_error_messages() {
     // Test that validation provides helpful error messages
-    let mut model = Model::default();
+    let mut m = Model::default();
     
     // Create some variables with problematic ranges
-    let _x = model.int(10, 5); // Invalid range: min > max
+    let _x = m.int(10, 5); // Invalid range: min > max
     
     // Validation should catch this now
-    let result = model.validate();
+    let result = m.validate();
     
     // We expect validation to fail for invalid variable range
     match result {
@@ -121,28 +121,28 @@ fn test_validation_error_messages() {
 #[test]
 fn test_validation_with_complex_constraints() {
     // Test validation with more complex constraint combinations
-    let mut model = Model::default();
+    let mut m = Model::default();
     
-    let a = model.int(1, 10);
-    let b = model.int(5, 15);
-    let c = model.int(8, 12);
-    let d = model.int(3, 7);
+    let a = m.int(1, 10);
+    let b = m.int(5, 15);
+    let c = m.int(8, 12);
+    let d = m.int(3, 7);
     
     // Create nested min/max operations
-    let min_ab = model.min(&[a, b]).expect("non-empty variable list");
-    let max_cd = model.max(&[c, d]).expect("non-empty variable list");
-    let final_min = model.min(&[min_ab, max_cd]).expect("non-empty variable list");
+    let min_ab = m.min(&[a, b]).expect("non-empty variable list");
+    let max_cd = m.max(&[c, d]).expect("non-empty variable list");
+    let final_min = m.min(&[min_ab, max_cd]).expect("non-empty variable list");
     
     // Add constraints
-    model.post(final_min.ge(int(4)));
-    model.post(final_min.le(int(9)));
+    m.new(final_min.ge(int(4)));
+    m.new(final_min.le(int(9)));
     
     // Should pass validation
-    let result = model.validate();
+    let result = m.validate();
     assert!(result.is_ok(), "Complex min/max model should pass validation: {:?}", result);
     
     // Should be solvable
-    let solution = model.solve();
+    let solution = m.solve();
     assert!(solution.is_ok(), "Complex min/max model should be solvable: {:?}", solution);
     
     if let Ok(sol) = solution {
