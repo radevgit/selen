@@ -23,6 +23,12 @@ crate-type = ["lib"]
 #rand = "0.9.2"
 #divan = "0.1.21"
 
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+
 
 [lints.rustdoc]
 missing_crate_level_docs = "warn"

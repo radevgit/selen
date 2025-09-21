@@ -120,7 +120,8 @@ macro_rules! post_impl {
     
     // Global constraints
     ($model:expr, alldiff([$($vars:ident),+ $(,)?])) => {{
-        $model.props.all_different(vec![$($vars),+]);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.all_different(vars_vec);
         $crate::constraint_macros::ConstraintRef::new(0)
     }};
     

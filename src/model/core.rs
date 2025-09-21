@@ -1093,7 +1093,7 @@ impl Model {
         let constraint_count = props.count();
 
         let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
-        let mut solutions = Vec::new();
+        let mut solutions = Vec::with_capacity(8); // Start with reasonable capacity for solution collection
 
         // Collect all solutions - the search iterator will track statistics as it goes
         while let Some(solution) = search_iter.next() {

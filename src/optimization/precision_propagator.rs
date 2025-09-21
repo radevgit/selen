@@ -31,7 +31,9 @@ impl PrecisionBoundaryPropagator {
 
     /// Create a propagator for a single variable
     pub fn for_variable(var_id: VarId, step_size: f64) -> Self {
-        Self::new(vec![var_id], step_size)
+        let mut variables = Vec::with_capacity(1);
+        variables.push(var_id);
+        Self::new(variables, step_size)
     }
 
     /// Apply precision optimization to all variables using constraint metadata

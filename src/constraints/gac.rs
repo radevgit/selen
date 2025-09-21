@@ -18,30 +18,36 @@ pub struct Value(pub i32);
 /// A bipartite graph between variables and their possible values
 #[derive(Debug, Clone)]
 pub struct BipartiteGraph {
-    /// Variables and their domains
-    pub var_domains: HashMap<Variable, Vec<Value>>,
+    /// Variables and their domains using SparseSet for efficiency
+    pub var_domains: HashMap<Variable, SparseSet>,
     /// Values and which variables can take them
     pub value_vars: HashMap<Value, Vec<Variable>>,
 }
 
 impl BipartiteGraph {
     pub fn new() -> Self {
+        Self::with_capacity(16) // Default reasonable capacity
+    }
+    
+    pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            var_domains: HashMap::new(),
-            value_vars: HashMap::new(),
+            var_domains: HashMap::with_capacity(capacity),
+            value_vars: HashMap::with_capacity(capacity * 4), // Values typically more numerous
         }
     }
     
     /// Add a variable with its domain
     pub fn add_variable(&mut self, var: Variable, domain: Vec<i32>) {
-        let values: Vec<Value> = domain.iter().map(|&v| Value(v)).collect();
+        // Create SparseSet directly from the domain values
+        let sparse_domain = SparseSet::new_from_values(domain.clone());
         
         // Add to var_domains
-        self.var_domains.insert(var, values.clone());
+        self.var_domains.insert(var, sparse_domain);
         
-        // Add to value_vars
-        for value in values {
-            self.value_vars.entry(value).or_insert_with(Vec::new).push(var);
+        // Add to value_vars (still needed for reverse lookup)
+        for value in domain {
+            let val = Value(value);
+            self.value_vars.entry(val).or_insert_with(Vec::new).push(var);
         }
     }
     
@@ -49,10 +55,9 @@ impl BipartiteGraph {
     pub fn remove_value(&mut self, var: Variable, val: Value) -> bool {
         let mut changed = false;
         
-        // Remove from var_domains
+        // Remove from var_domains using SparseSet
         if let Some(domain) = self.var_domains.get_mut(&var) {
-            if let Some(pos) = domain.iter().position(|&v| v == val) {
-                domain.remove(pos);
+            if domain.remove(val.0) {
                 changed = true;
             }
         }
@@ -80,19 +85,32 @@ impl BipartiteGraph {
     
     /// Get domain of a variable
     pub fn domain(&self, var: Variable) -> Vec<Value> {
-        self.var_domains.get(&var).cloned().unwrap_or_default()
+        if let Some(sparse_domain) = self.var_domains.get(&var) {
+            sparse_domain.iter().map(|val| Value(val)).collect()
+        } else {
+            Vec::new()
+        }
+    }
+    
+    /// Get domain values as an iterator (most efficient for SparseSet)
+    pub fn domain_iter(&self, var: Variable) -> impl Iterator<Item = Value> + '_ {
+        self.var_domains
+            .get(&var)
+            .map(|sparse_domain| sparse_domain.iter().map(|val| Value(val)))
+            .into_iter()
+            .flatten()
     }
     
     /// Check if variable is assigned (domain size = 1)
     pub fn is_assigned(&self, var: Variable) -> bool {
-        self.var_domains.get(&var).map_or(false, |d| d.len() == 1)
+        self.var_domains.get(&var).map_or(false, |d| d.is_fixed())
     }
     
     /// Get assigned value if variable is assigned
     pub fn assigned_value(&self, var: Variable) -> Option<Value> {
         let domain = self.var_domains.get(&var)?;
-        if domain.len() == 1 {
-            Some(domain[0])
+        if domain.is_fixed() {
+            Some(Value(domain.min()))
         } else {
             None
         }
@@ -115,10 +133,14 @@ struct BitMatrix {
 
 impl BitMatrix {
     fn new() -> Self {
+        Self::with_capacity(32) // Default reasonable capacity
+    }
+    
+    fn with_capacity(capacity: usize) -> Self {
         Self {
-            adjacency: HashMap::new(),
-            node_to_id: HashMap::new(),
-            id_to_node: HashMap::new(),
+            adjacency: HashMap::with_capacity(capacity),
+            node_to_id: HashMap::with_capacity(capacity),
+            id_to_node: HashMap::with_capacity(capacity),
             next_id: 0,
             chunks: 1, // Start with at least one chunk
         }
@@ -155,7 +177,9 @@ impl BitMatrix {
         
         self.node_to_id.insert(node.clone(), id);
         self.id_to_node.insert(id, node);
-        self.adjacency.insert(id, vec![0u64; self.chunks]);
+        let mut adjacency_row = Vec::with_capacity(self.chunks);
+        adjacency_row.resize(self.chunks, 0u64);
+        self.adjacency.insert(id, adjacency_row);
         id
     }
     
@@ -187,9 +211,11 @@ impl BitMatrix {
             None => return false,
         };
         
-        // Initialize frontier and visited using bit vectors
-        let mut visited = vec![0u64; self.chunks];
-        let mut frontier = vec![0u64; self.chunks];
+        // Initialize frontier and visited using bit vectors with capacity
+        let mut visited = Vec::with_capacity(self.chunks);
+        visited.resize(self.chunks, 0u64);
+        let mut frontier = Vec::with_capacity(self.chunks);
+        frontier.resize(self.chunks, 0u64);
         
         // Set starting node in frontier
         let from_chunk = from_id / 64;
@@ -213,7 +239,8 @@ impl BitMatrix {
             }
             
             // Expand frontier using bitwise operations on vectors
-            let mut new_frontier = vec![0u64; self.chunks];
+            let mut new_frontier = Vec::with_capacity(self.chunks);
+            new_frontier.resize(self.chunks, 0u64);
             for node_id in 0..self.next_id {
                 let node_chunk = node_id / 64;
                 let node_bit = node_id % 64;
@@ -252,8 +279,8 @@ pub struct Matching {
 impl Matching {
     pub fn new() -> Self {
         Self {
-            var_to_val: HashMap::new(),
-            val_to_var: HashMap::new(),
+            var_to_val: HashMap::with_capacity(16),
+            val_to_var: HashMap::with_capacity(16),
         }
     }
     
@@ -299,8 +326,8 @@ impl Matching {
         let mut queue = VecDeque::new();
         let mut visited_vars = HashSet::new();
         let mut visited_vals = HashSet::new();
-        let mut parent_var: HashMap<Variable, Value> = HashMap::new();
-        let mut parent_val: HashMap<Value, Variable> = HashMap::new();
+        let mut parent_var: HashMap<Variable, Value> = HashMap::with_capacity(16);
+        let mut parent_val: HashMap<Value, Variable> = HashMap::with_capacity(16);
         
         queue.push_back(start_var);
         visited_vars.insert(start_var);
@@ -477,7 +504,7 @@ pub struct ResidualGraph {
 impl ResidualGraph {
     /// Build residual graph from bipartite graph and matching
     pub fn build(graph: &BipartiteGraph, matching: &Matching) -> Self {
-        let mut adj = HashMap::new();
+        let mut adj = HashMap::with_capacity(64);
         
         // Add all nodes
         for var in graph.variables() {
@@ -542,8 +569,8 @@ impl SCCFinder {
         Self {
             index: 0,
             stack: Vec::new(),
-            indices: HashMap::new(),
-            lowlinks: HashMap::new(),
+            indices: HashMap::with_capacity(32),
+            lowlinks: HashMap::with_capacity(32),
             on_stack: HashSet::new(),
             sccs: Vec::new(),
         }
@@ -766,7 +793,7 @@ impl SparseSetGAC {
     /// Create a new SparseSet-based GAC instance
     pub fn new() -> Self {
         Self {
-            domains: HashMap::new(),
+            domains: HashMap::with_capacity(32),
             cached_matching: None,
         }
     }
@@ -843,6 +870,19 @@ impl SparseSetGAC {
         }
     }
     
+    /// Get domain bounds efficiently using SparseSet's O(1) min/max
+    pub fn get_domain_bounds(&self, var: Variable) -> Option<(i32, i32)> {
+        if let Some(domain) = self.domains.get(&var) {
+            if domain.is_empty() {
+                None
+            } else {
+                Some((domain.min(), domain.max()))
+            }
+        } else {
+            None
+        }
+    }
+    
     /// Check if a variable is assigned (domain size = 1)
     pub fn is_assigned(&self, var: Variable) -> bool {
         self.domains.get(&var).map_or(false, |d| d.is_fixed())
@@ -885,17 +925,26 @@ impl SparseSetGAC {
             return false; // Inconsistent
         }
         
-        // Update sparse sets with filtered domains
+        // Direct SparseSet access - no conversions needed!
         let mut changed = false;
         for (&var, sparse_domain) in &mut self.domains {
-            let new_domain = graph.domain(var);
-            let new_values: Vec<i32> = new_domain.iter().map(|v| v.0).collect();
-            
-            // Remove values that GAC eliminated
-            let current_values = sparse_domain.to_vec();
-            for val in current_values {
-                if !new_values.contains(&val) {
-                    if sparse_domain.remove(val) {
+            if let Some(new_sparse_domain) = graph.var_domains.get(&var) {
+                // Compare domain sizes first for quick check
+                if sparse_domain.size() != new_sparse_domain.size() {
+                    // Replace the entire domain efficiently
+                    *sparse_domain = new_sparse_domain.clone();
+                    changed = true;
+                } else {
+                    // Check if domains are actually different
+                    let mut domains_different = false;
+                    for val in sparse_domain.clone() {
+                        if !new_sparse_domain.contains(val) {
+                            domains_different = true;
+                            break;
+                        }
+                    }
+                    if domains_different {
+                        *sparse_domain = new_sparse_domain.clone();
                         changed = true;
                     }
                 }
@@ -950,17 +999,22 @@ impl SparseSetGAC {
         let assigned_vars = self.variables().into_iter()
             .filter(|&v| self.is_assigned(v))
             .count();
-        let total_domain_size: usize = self.domains.values()
-            .map(|d| d.size())
-            .sum();
-        let min_domain_size = self.domains.values()
-            .map(|d| d.size())
-            .min()
-            .unwrap_or(0);
-        let max_domain_size = self.domains.values()
-            .map(|d| d.size())
-            .max()
-            .unwrap_or(0);
+            
+        // Single pass to compute all domain size statistics
+        let mut total_domain_size = 0;
+        let mut min_domain_size = usize::MAX;
+        let mut max_domain_size = 0;
+        
+        for domain in self.domains.values() {
+            let size = domain.size();
+            total_domain_size += size;
+            min_domain_size = min_domain_size.min(size);
+            max_domain_size = max_domain_size.max(size);
+        }
+        
+        if self.domains.is_empty() {
+            min_domain_size = 0;
+        }
             
         GACStats {
             total_variables: total_vars,

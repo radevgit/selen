@@ -231,7 +231,7 @@ impl<'a> ModelValidator<'a> {
         let constraint_registry = self.props.get_constraint_registry();
         
         // Group constraints by the variables they affect
-        let mut variable_constraints: HashMap<VarId, Vec<(usize, &ConstraintType)>> = HashMap::new();
+        let mut variable_constraints: HashMap<VarId, Vec<(usize, &ConstraintType)>> = HashMap::with_capacity(64);
         
         for constraint_id in constraint_registry.get_all_constraint_ids() {
             if let Some(metadata) = constraint_registry.get_constraint(constraint_id) {

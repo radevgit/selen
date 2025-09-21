@@ -48,7 +48,7 @@ impl<U: View, V: View> Prune for Mul<U, V> {
         // Propagate to x bounds (when y is safe to divide by)
         if !Val::range_contains_unsafe_divisor(y_min, y_max) {
             // y doesn't contain zero or values close to zero, safe to divide
-            let mut x_candidates = Vec::new();
+            let mut x_candidates = Vec::with_capacity(4); // Max 4 combinations: s_min/y_min, s_min/y_max, s_max/y_min, s_max/y_max
             
             // Try all combinations and filter out unsafe divisions
             for &s_val in &[s_min, s_max] {
@@ -71,7 +71,7 @@ impl<U: View, V: View> Prune for Mul<U, V> {
         // Propagate to y bounds (when x is safe to divide by)
         if !Val::range_contains_unsafe_divisor(x_min, x_max) {
             // x doesn't contain zero or values close to zero, safe to divide
-            let mut y_candidates = Vec::new();
+            let mut y_candidates = Vec::with_capacity(4); // Max 4 combinations
             
             // Try all combinations and filter out unsafe divisions
             for &s_val in &[s_min, s_max] {

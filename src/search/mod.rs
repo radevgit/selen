@@ -409,7 +409,7 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::constraints::props::PropId)>> It
 /// Apply scheduled propagators, pruning domains until space is failed, stalled, or assigned.
 pub fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> {
     // Track which domains got updated, to schedule next propagators in batch
-    let mut events = Vec::new();
+    let mut events = Vec::with_capacity(16);
     
     // Agenda establishes the order in which scheduled propagators get run
     while let Some(p) = agenda.pop() {

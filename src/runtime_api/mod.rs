@@ -604,7 +604,10 @@ fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
                         (left_var, left_val, right_val) {
                         if let (Val::ValI(left_int), Val::ValI(right_int)) = (left_const, right_const) {
                             // Create a new variable with domain {left_val, right_val} and unify it with the original
-                            let domain_var = model.ints(vec![*left_int, *right_int]);
+                            let mut domain_vals = Vec::with_capacity(2);
+                            domain_vals.push(*left_int);
+                            domain_vals.push(*right_int);
+                            let domain_var = model.ints(domain_vals);
                             return model.props.equals(*var_id, domain_var);
                         }
                     }
@@ -865,7 +868,7 @@ impl ModelExt for Model {
     
     fn gcc(&mut self, vars: &[VarId], values: &[i32], counts: &[VarId]) -> Vec<PropId> {
         // Global cardinality constraint: count each value in vars and match cardinalities
-        let mut prop_ids = Vec::new();
+        let mut prop_ids = Vec::with_capacity(values.len());
         
         for (&value, &count_var) in values.iter().zip(counts.iter()) {
             // For each value, create a count constraint

@@ -1158,26 +1158,26 @@ macro_rules! post {
     
     // Logical operators - Array syntax
     ($model:expr, and([$($vars:expr),* $(,)?])) => {{
-        let vars_vec = vec![$($vars),*];
+        let vars_vec = [$($vars),*].to_vec();
         let _and_result = $model.bool_and(&vars_vec);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, or([$($vars:expr),* $(,)?])) => {{
-        let vars_vec = vec![$($vars),*];
+        let vars_vec = [$($vars),*].to_vec();
         let _or_result = $model.bool_or(&vars_vec);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
     
     // Logical operators - Variadic syntax (3+ arguments)
     ($model:expr, and($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {{
-        let vars_vec = vec![$first, $second, $($rest),*];
+        let vars_vec = [$first, $second, $($rest),*].to_vec();
         let _and_result = $model.bool_and(&vars_vec);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
     
     ($model:expr, or($first:expr, $second:expr, $($rest:expr),+ $(,)?)) => {{
-        let vars_vec = vec![$first, $second, $($rest),*];
+        let vars_vec = [$first, $second, $($rest),*].to_vec();
         let _or_result = $model.bool_or(&vars_vec);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
@@ -1257,7 +1257,8 @@ macro_rules! post {
     
     // Global constraints: alldiff([x, y, z])
     ($model:expr, alldiff([$($vars:ident),+ $(,)?])) => {{
-        $model.props.all_different(vec![$($vars),+]);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.all_different(vars_vec);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
     
@@ -1269,7 +1270,8 @@ macro_rules! post {
     
     // Global constraints: allequal([x, y, z])
     ($model:expr, allequal([$($vars:ident),+ $(,)?])) => {{
-        $model.props.all_equal(vec![$($vars),+]);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.all_equal(vars_vec);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
     
@@ -1287,7 +1289,8 @@ macro_rules! post {
     
     // Element constraint: element with array literal
     ($model:expr, element([$($vars:ident),+ $(,)?], $index:ident, $value:ident)) => {{
-        $model.props.element(vec![$($vars),+], $index, $value);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.element(vars_vec, $index, $value);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
     
@@ -1299,7 +1302,8 @@ macro_rules! post {
     
     // Count constraint with array literal: count([x, y, z], value, count)
     ($model:expr, count([$($vars:ident),+ $(,)?], $target:expr, $count:ident)) => {{
-        $model.props.count_constraint(vec![$($vars),+], $target, $count);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.count_constraint(vars_vec, $target, $count);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
     
@@ -1311,7 +1315,8 @@ macro_rules! post {
     
     // Table constraint with array literal: table([x, y, z], tuples)
     ($model:expr, table([$($vars:ident),+ $(,)?], $tuples:expr)) => {{
-        $model.props.table_constraint(vec![$($vars),+], $tuples);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.table_constraint(vars_vec, $tuples);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
 
@@ -1329,7 +1334,8 @@ macro_rules! post {
 
     // At least constraint with array literal: at_least([x, y, z], value, count)
     ($model:expr, at_least([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {{
-        $model.props.at_least_constraint(vec![$($vars),+], $value, $count);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.at_least_constraint(vars_vec, $value, $count);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
 
@@ -1341,7 +1347,8 @@ macro_rules! post {
 
     // At most constraint with array literal: at_most([x, y, z], value, count)
     ($model:expr, at_most([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {{
-        $model.props.at_most_constraint(vec![$($vars),+], $value, $count);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.at_most_constraint(vars_vec, $value, $count);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
 
@@ -1353,7 +1360,8 @@ macro_rules! post {
 
     // Exactly constraint with array literal: exactly([x, y, z], value, count)
     ($model:expr, exactly([$($vars:ident),+ $(,)?], $value:expr, $count:expr)) => {{
-        $model.props.exactly_constraint(vec![$($vars),+], $value, $count);
+        let vars_vec = [$($vars),+].to_vec();
+        $model.props.exactly_constraint(vars_vec, $value, $count);
         $crate::constraints::macros::ConstraintRef::new(0)
     }};
     

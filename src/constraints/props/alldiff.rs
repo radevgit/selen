@@ -1,5 +1,6 @@
 use crate::{
     constraints::props::{Propagate, Prune},
+    constraints::gac::{SparseSetGAC, Variable},
     variables::{Val, VarId},
     variables::views::{Context, View},
 };
@@ -92,96 +93,101 @@ impl AllDifferent {
         }
     }
     
-    /// Specialized propagation for small problems (≤ 10 variables)
-    fn propagate_small(&self, ctx: &mut Context) -> Option<()> {
-        let n = self.vars.len();
-        
-        // For very small problems, use direct domain checking
-        if n <= 3 {
-            return self.propagate_naive(ctx);
-        }
-        
-        // For small problems (4-10 variables), use simplified matching
-        let mut assigned_values = Vec::new();
-        let mut unassigned_vars = Vec::new();
-        
-        // Collect assigned variables
+    /// GAC-based propagation using SparseSetGAC for maximum efficiency
+    /// Minimal allocations - works directly with SparseSet bounds when possible
+    fn propagate_gac(&self, ctx: &mut Context) -> Option<()> {
+        // Check if all variables have integer domains (GAC requirement)
         for &var in &self.vars {
             let min_val = var.min(ctx);
             let max_val = var.max(ctx);
             
-            if self.is_singleton(min_val, max_val) {
-                // Variable is assigned
-                for existing_val in &assigned_values {
-                    if self.values_equal(min_val, *existing_val, var, ctx) {
-                        return None; // Conflict
-                    }
+            match (min_val, max_val) {
+                (Val::ValI(_), Val::ValI(_)) => {
+                    // Integer domain - can use GAC
                 }
-                assigned_values.push(min_val);
-            } else {
-                unassigned_vars.push(var);
+                _ => {
+                    // Float domain - fall back to basic propagation
+                    return self.propagate_basic(ctx);
+                }
             }
         }
         
-        // Remove assigned values from unassigned variables
-        for &var in &unassigned_vars {
-            for &assigned_val in &assigned_values {
-                self.exclude_value_from_domain(var, assigned_val, ctx)?;
+        // Create SparseSetGAC instance 
+        let mut gac = SparseSetGAC::new();
+        
+        // Add variables directly with their current domain bounds
+        for (var_idx, &var) in self.vars.iter().enumerate() {
+            let min_val = var.min(ctx);
+            let max_val = var.max(ctx);
+            
+            if let (Val::ValI(min_i), Val::ValI(max_i)) = (min_val, max_val) {
+                if min_i > max_i {
+                    return None; // Empty domain
+                }
+                
+                // Add variable to GAC with its current bounds
+                gac.add_variable(Variable(var_idx), min_i, max_i);
+            }
+        }
+        
+        // Apply GAC propagation
+        if !gac.fast_gac_propagate() {
+            return None; // GAC detected inconsistency
+        }
+        
+        // Apply GAC results back to variable domains using direct access to bounds
+        for (var_idx, &var) in self.vars.iter().enumerate() {
+            let gac_var = Variable(var_idx);
+            
+            if gac.is_assigned(gac_var) {
+                // Variable became assigned - set bounds to the single value
+                if let Some(assigned_val) = gac.get_assigned_value(gac_var) {
+                    var.try_set_min(Val::ValI(assigned_val), ctx)?;
+                    var.try_set_max(Val::ValI(assigned_val), ctx)?;
+                }
+            } else {
+                // For unassigned variables, use efficient O(1) bounds access
+                if let Some((new_min, new_max)) = gac.get_domain_bounds(gac_var) {
+                    var.try_set_min(Val::ValI(new_min), ctx)?;
+                    var.try_set_max(Val::ValI(new_max), ctx)?;
+                } else {
+                    return None; // Empty domain
+                }
             }
         }
         
         Some(())
     }
     
-    /// Naive propagation for very small problems (≤ 3 variables)
-    fn propagate_naive(&self, ctx: &mut Context) -> Option<()> {
-        let n = self.vars.len();
+    /// Basic propagation as fallback for GAC
+    fn propagate_basic(&self, ctx: &mut Context) -> Option<()> {
+        let mut assigned_values = Vec::new();
         
-        // For n=2: simple mutual exclusion
-        if n == 2 {
-            let var1 = self.vars[0];
-            let var2 = self.vars[1];
+        // First pass: collect assigned values and check for conflicts
+        for &var in &self.vars {
+            let min_val = var.min(ctx);
+            let max_val = var.max(ctx);
             
-            let min1 = var1.min(ctx);
-            let max1 = var1.max(ctx);
-            let min2 = var2.min(ctx);
-            let max2 = var2.max(ctx);
-            
-            // If both variables are assigned to the same value, fail
-            if self.is_singleton(min1, max1) && self.is_singleton(min2, max2) && self.values_equal(min1, min2, var1, ctx) {
-                return None;
-            }
-            
-            // If one is assigned, remove that value from the other
-            if self.is_singleton(min1, max1) {
-                self.exclude_value_from_domain(var2, min1, ctx)?;
-            }
-            if self.is_singleton(min2, max2) {
-                self.exclude_value_from_domain(var1, min2, ctx)?;
-            }
-            
-            return Some(());
-        }
-        
-        // For n=3: more complex but still manageable
-        if n == 3 {
-            // Apply simple propagation rules
-            for i in 0..3 {
-                let var_i = self.vars[i];
-                let min_i = var_i.min(ctx);
-                let max_i = var_i.max(ctx);
-                
-                if self.is_singleton(min_i, max_i) {
-                    // Variable i is assigned, remove this value from others
-                    for j in 0..3 {
-                        if i != j {
-                            self.exclude_value_from_domain(self.vars[j], min_i, ctx)?;
-                        }
+            if self.is_singleton(min_val, max_val) {
+                for existing_val in &assigned_values {
+                    if self.values_equal(min_val, *existing_val, var, ctx) {
+                        return None; // Conflict detected
                     }
                 }
+                assigned_values.push(min_val);
             }
+        }
+        
+        // Second pass: remove assigned values from unassigned variables
+        for &var in &self.vars {
+            let min_val = var.min(ctx);
+            let max_val = var.max(ctx);
             
-            return Some(());
+            if !self.is_singleton(min_val, max_val) { // Not assigned
+                for &assigned_val in &assigned_values {
+                    self.exclude_value_from_domain(var, assigned_val, ctx)?;
+                }
+            }
         }
         
         Some(())
@@ -251,42 +257,9 @@ impl Prune for AllDifferent {
             return None;
         }
         
-        // Use specialized algorithms based on problem size
-        if n <= 10 {
-            return self.propagate_small(ctx);
-        }
-        
-        // For large problems, use basic constraint propagation
-        let mut assigned_values = Vec::new();
-        
-        // First pass: collect assigned values and check for conflicts
-        for &var in &self.vars {
-            let min_val = var.min(ctx);
-            let max_val = var.max(ctx);
-            
-            if self.is_singleton(min_val, max_val) {
-                for existing_val in &assigned_values {
-                    if self.values_equal(min_val, *existing_val, var, ctx) {
-                        return None; // Conflict detected
-                    }
-                }
-                assigned_values.push(min_val);
-            }
-        }
-        
-        // Second pass: remove assigned values from unassigned variables
-        for &var in &self.vars {
-            let min_val = var.min(ctx);
-            let max_val = var.max(ctx);
-            
-            if !self.is_singleton(min_val, max_val) { // Not assigned
-                for &assigned_val in &assigned_values {
-                    self.exclude_value_from_domain(var, assigned_val, ctx)?;
-                }
-            }
-        }
-        
-        Some(())
+        // Use GAC as the preferred algorithm for all AllDifferent constraints
+        // GAC provides the strongest propagation and handles all problem sizes efficiently
+        self.propagate_gac(ctx)
     }
 }
 

@@ -56,14 +56,25 @@ impl SparseSet {
         
         let maxmin = (max - min) as u32;
         let n = (maxmin + 1) as u32;
+        
+        // Pre-allocate vectors with known capacity
+        let mut ind = Vec::with_capacity(n as usize);
+        let mut val = Vec::with_capacity(n as usize);
+        
+        // Fill with consecutive values
+        for i in 0..n {
+            ind.push(i);
+            val.push(i);
+        }
+        
         SparseSet {
             off: min,
             min: 0,
             max: maxmin,
             n,
             size: n,
-            ind: (0..n).collect(),
-            val: (0..n).collect(),
+            ind,
+            val,
         }
     }
 
@@ -310,7 +321,7 @@ impl SparseSet {
     /// Set intersection - modify this set to contain only elements in both sets
     pub fn intersect_with(&mut self, other: &SparseSet) {
         // Create a list of values to remove to avoid modifying while iterating
-        let mut to_remove = Vec::new();
+        let mut to_remove = Vec::with_capacity(self.size as usize);
         
         for val in self.iter() {
             if !other.contains(val) {
