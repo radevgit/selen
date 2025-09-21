@@ -1,6 +1,28 @@
 //! # CSP Solver
 //!
-//! A constraint satisfaction problem (CSP) solver library.
+//! A constraint satisfaction problem (CSP) solver library with built-in memory management
+//! and resource limiting for safe, production-ready constraint solving.
+//!
+//! ## 🛡️ Safety & Resource Management
+//!
+//! All models have **automatic memory and timeout limits** to prevent system exhaustion:
+//! - **Default memory limit**: 2GB
+//! - **Default timeout**: 60 seconds
+//! - **Memory tracking**: During variable creation (prevents crashes)
+//! - **Early failure**: Clear error messages when limits exceeded
+//!
+//! ```rust
+//! use cspsolver::prelude::*;
+//!
+//! // Automatic safety limits
+//! let mut m = Model::default(); // 2GB memory, 60s timeout
+//!
+//! // Custom limits
+//! let config = SolverConfig::default()
+//!     .with_max_memory_mb(512)      // 512MB limit
+//!     .with_timeout_seconds(30);    // 30 second timeout
+//! let mut m = Model::with_config(config);
+//! ```
 //!
 //! ## Variable Types
 //!
@@ -17,26 +39,16 @@
 //! - **Global constraints**: `alldiff()`, `allequal()`, `element()`
 //!
 //! 
-//! ## post() - Post a mathematical constraint to the model
+//! ## Post a mathematical constraint to the model
+//! 
+//! post() - Post single contrraint to the model. 
+//! postall() -  Post multiple constraints to the model in a single call.
+//! Accepts comma-separated constraint expressions, each following the same patterns as `post!`
 //!
 //! Supported constraint patterns:
 //! **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
 //! **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
 //! **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum` 
-//! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])` and variadic `and(a,b,c,d)`
-//! **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
-//! **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
-//! 
-//! Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`
-//! 
-//! 
-//! 
-//! ## postall() - Post multiple constraints to the model in a single call
-//!
-//! Accepts comma-separated constraint expressions, each following the same patterns as `post!`:
-//! **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
-//! **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
-//! **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum`
 //! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])` and variadic `and(a,b,c,d)`
 //! **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
 //! **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
@@ -108,16 +120,15 @@
 //!
 //! ```rust
 //! use cspsolver::prelude::*;
-//! use cspsolver::runtime_api::{VarIdExt, ModelExt};
 //!
 //! let mut m = Model::default();
 //! let x = m.int(1, 10);
 //! let y = m.int(1, 10);
 //!
 //! // Build constraints programmatically
-//! m.post(x.add(y).eq(12));        // x + y == 12
-//! m.post(x.gt(y));                // x > y
-//! m.post(x.mul(2).le(15));        // x * 2 <= 15
+//! m.new(x.add(y).eq(12));        // x + y == 12
+//! m.new(x.gt(y));                // x > y
+//! m.new(x.mul(2).le(15));        // x * 2 <= 15
 //!
 //! if let Ok(solution) = m.solve() {
 //!     println!("x = {:?}, y = {:?}", solution[x], solution[y]);
@@ -128,7 +139,6 @@
 //!
 //! ```rust
 //! use cspsolver::prelude::*;
-//! use cspsolver::runtime_api::{VarIdExt, ModelExt};
 //!
 //! let mut m = Model::default();
 //! let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
@@ -138,10 +148,10 @@
 //!
 //! // Mathematical functions
 //! let sum_result = m.sum(&vars);
-//! m.post(sum_result.le(10));      // sum(vars) <= 10
+//! m.new(sum_result.le(10));      // sum(vars) <= 10
 //!
-//! let max_result = m.max(&vars);
-//! m.post(max_result.ge(3));       // max(vars) >= 3
+//! let max_result = m.max(&vars).expect("non-empty variable list");
+//! m.new(max_result.ge(3));       // max(vars) >= 3
 //!
 //! if let Ok(solution) = m.solve() {
 //!     println!("Variables: {:?}", vars.iter().map(|&v| solution[v]).collect::<Vec<_>>());
@@ -152,7 +162,6 @@
 //!
 //! ```rust
 //! use cspsolver::prelude::*;
-//! use cspsolver::runtime_api::{VarIdExt, ModelExt};
 //!
 //! let mut m = Model::default();
 //! let x = m.int(-10, 10);
@@ -161,16 +170,16 @@
 //!
 //! // Arithmetic and mathematical functions
 //! let abs_x = m.abs(x);
-//! m.post(abs_x.ge(5));            // abs(x) >= 5
+//! m.new(abs_x.ge(5));            // abs(x) >= 5
 //!
 //! // Modulo operations
 //! let mod_result = m.modulo(z, Val::from(3));
-//! m.post(mod_result.eq(1));       // z % 3 == 1
+//! m.new(mod_result.eq(1));       // z % 3 == 1
 //!
 //! // Logical operations on constraints
 //! let constraint1 = x.gt(0);
 //! let constraint2 = y.lt(5);
-//! m.post(constraint1.and(constraint2));  // (x > 0) && (y < 5)
+//! m.new(constraint1.and(constraint2));  // (x > 0) && (y < 5)
 //!
 //! if let Ok(solution) = m.solve() {
 //!     println!("x = {:?}, y = {:?}, z = {:?}", solution[x], solution[y], solution[z]);
@@ -178,52 +187,32 @@
 //! ```
 
 
-pub mod model;
-pub mod vars;
-pub mod solution;
-pub mod config;
-pub mod error;
-pub mod validation;
-#[doc(hidden)]
-pub mod operators;
-
+// Core functionality
+pub mod core;
 #[doc(hidden)]
 pub mod utils;
-#[doc(hidden)]
-pub mod utils64;
 
-
+// Domain-specific modules  
+pub mod model;
 #[doc(hidden)]
-pub mod views;
-
+pub mod variables;
 #[doc(hidden)]
-pub mod props;
+pub mod constraints;
 #[doc(hidden)]
 pub mod search;
 #[doc(hidden)]
-pub mod gac;
-#[doc(hidden)]
-pub mod domain;
-#[doc(hidden)]
 pub mod optimization;
-pub mod prelude;
 
-// Runtime constraint API
+// API and convenience modules
+pub mod api;
+pub mod prelude;
 pub mod runtime_api;
 
+// Development and testing modules
 #[doc(hidden)]
-// Clean constraint API modules
-pub mod constraint_builder;
-pub mod boolean_operators;
-#[doc(hidden)]
-pub mod math_syntax;
+pub mod benchmarks;
 
 #[doc(hidden)]
-pub mod constraint_macros;
-
-#[cfg(test)]
-mod constraint_macros_programmatic_tests;
-
 #[cfg(test)]
 mod debug;
 

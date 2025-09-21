@@ -25,9 +25,8 @@ fn main() {
     let stats = &solution.stats;
     println!("Propagations: {}", stats.propagation_count);
     println!("Search nodes: {}", stats.node_count);
-    println!("Backtracking operations: {}", stats.backtrack_count);
     println!("Solve time: {:.3}ms", stats.solve_time.as_secs_f64() * 1000.0);
-    println!("Peak memory usage: {}KB", stats.peak_memory_kb);
+    println!("Peak memory usage: {}MB", stats.peak_memory_mb);
     println!("Problem size: {} variables, {} constraints", 
              stats.variable_count, stats.constraint_count);
 
@@ -62,11 +61,10 @@ fn main() {
     println!("Core metrics:");
     println!("  Propagations: {}", stats.propagation_count);
     println!("  Search nodes: {}", stats.node_count);
-    println!("  Backtracks: {}", stats.backtrack_count);
     
     println!("Performance metrics:");
     println!("  Solve time: {:.3}ms", stats.solve_time.as_secs_f64() * 1000.0);
-    println!("  Peak memory: {}KB", stats.peak_memory_kb);
+    println!("  Peak memory: {}MB", stats.peak_memory_mb);
     
     println!("Problem characteristics:");
     println!("  Variables: {}", stats.variable_count);

@@ -1,7 +1,8 @@
-use cspsolver::prelude::*;
+use crate::prelude::*;
 use std::time::{Duration, Instant};
 
 /// Simplified meaningful benchmarks that work with current constraint system
+#[allow(dead_code)]
 fn main() -> SolverResult<()> {
     println!("=== Step 2.4 Performance Benchmarks (Simplified) ===\n");
     

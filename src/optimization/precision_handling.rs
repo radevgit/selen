@@ -18,12 +18,12 @@
 //! This implementation leverages the constraint metadata collection system built in
 //! the previous phases to provide reliable, precise constraint boundary optimization.
 
-use crate::vars::{Vars, VarId};
-use crate::props::Propagators;
+use crate::variables::{Vars, VarId};
+use crate::constraints::props::Propagators;
 use crate::optimization::constraint_integration::{ConstraintAwareOptimizer};
 use crate::optimization::float_direct::{OptimizationResult, OptimizationOperation, DomainError};
 
-use crate::domain::FloatInterval;
+use crate::variables::domain::FloatInterval;
 
 /// Enhanced constraint analyzer for Step 2.4 that tries to extract actual constraint values
 #[derive(Debug)]
@@ -84,13 +84,13 @@ impl PrecisionAwareOptimizer {
     ) -> Option<OptimizationResult> {
         // Get variable domain
         let var_domain = match &vars[var_id] {
-            crate::vars::Var::VarF(interval) => {
+            crate::variables::Var::VarF(interval) => {
                 if interval.is_empty() {
                     return Some(OptimizationResult::domain_error(DomainError::EmptyDomain));
                 }
                 interval
             },
-            crate::vars::Var::VarI(_) => {
+            crate::variables::Var::VarI(_) => {
                 // Integer variables don't need precision optimization
                 return None;
             }
@@ -175,14 +175,14 @@ impl Default for PrecisionAwareOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vars::Vars;
-    use crate::props::Propagators;
+    use crate::variables::Vars;
+    use crate::constraints::props::Propagators;
 
     fn create_test_vars_with_float(min: f64, max: f64) -> (Vars, VarId) {
         let mut vars = Vars::new();
         let var_id = vars.new_var_with_bounds(
-            crate::vars::Val::float(min), 
-            crate::vars::Val::float(max)
+            crate::variables::Val::float(min), 
+            crate::variables::Val::float(max)
         );
         (vars, var_id)
     }

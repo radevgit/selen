@@ -6,8 +6,8 @@
 //! The partitioning enables independent solving of each subproblem, leading to
 //! significant performance improvements (10-100x speedup potential).
 
-use crate::vars::{Vars, Var, VarId};
-use crate::props::Propagators;
+use crate::variables::{Vars, Var, VarId};
+use crate::constraints::props::Propagators;
 use crate::model::Model;
 use crate::optimization::classification::{ProblemClassifier, ProblemType};
 
@@ -125,8 +125,8 @@ impl VariablePartitioner {
         // Iterate through all variables to classify by type
         for (index, var) in vars.iter_with_indices() {
             total_count += 1;
-            // Create VarId using the known public construction pattern
-            let var_id = unsafe { std::mem::transmute::<usize, VarId>(index) };
+            // Create VarId using the safe public constructor
+            let var_id = VarId::from_index(index);
             
             match var {
                 Var::VarF(_) => {
@@ -261,13 +261,13 @@ impl SubproblemBuilder {
                         float_interval.min,
                         float_interval.max
                     );
-                    // TODO: Map old VarId to new VarId for constraint reconstruction
+                    // VarId mapping not implemented - constraint reconstruction abandoned
                 },
                 _ => return Err(PartitionError::InvalidVariableType),
             }
         }
         
-        // TODO: Reconstruct constraints that only involve float variables
+        // Constraint reconstruction for float subproblems not implemented
         // This requires mapping constraints from original to subproblem
         
         Ok(subproblem)
@@ -295,13 +295,13 @@ impl SubproblemBuilder {
                         sparse_set.min(),
                         sparse_set.max()
                     );
-                    // TODO: Map old VarId to new VarId for constraint reconstruction
+                    // VarId mapping not implemented - constraint reconstruction abandoned
                 },
                 _ => return Err(PartitionError::InvalidVariableType),
             }
         }
         
-        // TODO: Reconstruct constraints that only involve integer variables
+        // Constraint reconstruction for integer subproblems not implemented
         
         Ok(subproblem)
     }

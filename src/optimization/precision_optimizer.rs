@@ -5,7 +5,7 @@
 //! constraints. It ensures that constraints like x < 5.5 properly respect
 //! floating-point precision and allow values as close as possible to the boundary.
 
-use crate::vars::{VarId, Vars};
+use crate::variables::{VarId, Vars};
 use crate::optimization::constraint_metadata::{
     ConstraintRegistry, VariableConstraintAnalysis
 };
@@ -78,8 +78,8 @@ impl PrecisionOptimizer {
         let var_domain = &vars[var_id];
         
         let (current_min, current_max) = match var_domain {
-            crate::vars::Var::VarF(interval) => (interval.min, interval.max),
-            crate::vars::Var::VarI(sparse_set) => {
+            crate::variables::Var::VarF(interval) => (interval.min, interval.max),
+            crate::variables::Var::VarI(sparse_set) => {
                 let min_val = sparse_set.min();
                 let max_val = sparse_set.max();
                 (min_val as f64, max_val as f64)

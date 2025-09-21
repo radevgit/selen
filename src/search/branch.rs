@@ -1,6 +1,6 @@
-use crate::props::PropId;
+use crate::constraints::props::PropId;
 use crate::search::Space;
-use crate::vars::{VarId, Val};
+use crate::variables::{VarId, Val};
 
 /// Perform a binary split on the first unassigned decision variable.
 /// Uses efficient clone-based state management.

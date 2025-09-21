@@ -4,8 +4,8 @@
 //! constraints as they are created. This enables optimization systems to introspect
 //! constraint patterns and extract constraint values for precision-aware optimization.
 
-use crate::vars::{VarId, Val};
-use crate::views::View;
+use crate::variables::{VarId, Val};
+use crate::variables::views::View;
 use std::collections::HashMap;
 
 /// Unique identifier for a constraint
@@ -42,7 +42,7 @@ pub enum ConstraintType {
     AllDifferent,
     /// AllEqual constraint
     AllEqual,
-    /// Element constraint (array[index] = value)
+    /// Element constraint (array\[index\] = value)
     Element,
     /// Sum constraint
     Sum,

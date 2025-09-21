@@ -4,10 +4,10 @@
 //! specialized optimization algorithms. It handles automatic problem analysis,
 //! algorithm selection, and fallback to traditional search when needed.
 
-use crate::vars::{Vars, VarId};
-use crate::props::Propagators;
-use crate::solution::Solution;
-use crate::views::View;
+use crate::variables::{Vars, VarId};
+use crate::constraints::props::Propagators;
+use crate::core::solution::Solution;
+use crate::variables::views::View;
 use crate::optimization::{ProblemClassifier, ProblemType, ConstraintAwareOptimizer};
 use crate::optimization::precision_handling::PrecisionAwareOptimizer;
 
@@ -316,7 +316,7 @@ impl OptimizationRouter {
         if let Some(var_id) = objective.get_underlying_var_raw() {
             // Verify this is a float variable that exists in our model
             let var = &vars[var_id];
-            if matches!(var, crate::vars::Var::VarF(_)) {
+            if matches!(var, crate::variables::Var::VarF(_)) {
                 return Some(var_id);
             }
         }
@@ -325,7 +325,7 @@ impl OptimizationRouter {
         // Only when we have a single float variable (original logic for safety)
         let mut float_vars = Vec::new();
         for (var_idx, var) in vars.iter_with_indices() {
-            if matches!(var, crate::vars::Var::VarF(_)) {
+            if matches!(var, crate::variables::Var::VarF(_)) {
                 let var_id = index_to_var_id(var_idx);
                 float_vars.push(var_id);
             }
@@ -338,7 +338,7 @@ impl OptimizationRouter {
         }
         
         // For multiple float variables with complex objectives, fall back to search
-        // TODO: In the future, implement proper AST analysis of the View
+        // Complex objective AST analysis not implemented
         None
     }
     
@@ -356,7 +356,7 @@ impl OptimizationRouter {
         }
         
         match &all_vars[var_idx].1 {
-            crate::vars::Var::VarF(interval) => {
+            crate::variables::Var::VarF(interval) => {
                 let var_id = index_to_var_id(var_idx);
                 
                 // Step 2.4: Use precision-aware optimization when constraints exist
@@ -389,7 +389,7 @@ impl OptimizationRouter {
                     Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
                 }
             },
-            crate::vars::Var::VarI(_) => {
+            crate::variables::Var::VarI(_) => {
                 OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
             }
         }
@@ -409,7 +409,7 @@ impl OptimizationRouter {
         }
         
         match &all_vars[var_idx].1 {
-            crate::vars::Var::VarF(interval) => {
+            crate::variables::Var::VarF(interval) => {
                 let var_id = index_to_var_id(var_idx);
                 
                 // Step 2.4: Use precision-aware optimization when constraints exist
@@ -458,75 +458,11 @@ impl OptimizationRouter {
                     }
                 }
             },
-            crate::vars::Var::VarI(_) => {
+            crate::variables::Var::VarI(_) => {
                 OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
             }
         }
     }
-    
-    // /// Attempt unconstrained float minimization (Step 2.3.2 conservative implementation)
-    // /// TODO: This method is not currently used but contains valuable optimization logic
-    // fn try_unconstrained_float_minimize(
-    //     &self,
-    //     vars: &Vars,
-    //     var_idx: usize,
-    // ) -> OptimizationAttempt {
-    //     // For constraint-free problems, we can safely use the direct float optimizer
-    //     let all_vars: Vec<_> = vars.iter_with_indices().collect();
-    //     if var_idx >= all_vars.len() {
-    //         return OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression);
-    //     }
-        
-    //     // Check if it's a float variable
-    //     match &all_vars[var_idx].1 {
-    //         crate::vars::Var::VarF(interval) => {
-    //             // For minimization without constraints, the minimum is just the lower bound
-    //             let optimal_value = interval.min;
-                
-    //             // Create a solution with this optimal value
-    //             match self.create_unconstrained_solution(vars, var_idx, optimal_value) {
-    //                 Ok(solution) => OptimizationAttempt::Success(solution),
-    //                 Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
-    //             }
-    //         },
-    //         crate::vars::Var::VarI(_) => {
-    //             // Not a float variable
-    //             OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
-    //         }
-    //     }
-    // }
-    
-    // /// Attempt unconstrained float maximization (Step 2.3.2 conservative implementation)
-    // /// TODO: This method is not currently used but contains valuable optimization logic
-    // fn try_unconstrained_float_maximize(
-    //     &self,
-    //     vars: &Vars,
-    //     var_idx: usize,
-    // ) -> OptimizationAttempt {
-    //     // For constraint-free problems, we can safely use the direct float optimizer
-    //     let all_vars: Vec<_> = vars.iter_with_indices().collect();
-    //     if var_idx >= all_vars.len() {
-    //         return OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression);
-    //     }
-        
-    //     // Check if it's a float variable
-    //     match &all_vars[var_idx].1 {
-    //         crate::vars::Var::VarF(interval) => {
-    //             // For maximization without constraints, the maximum is just the upper bound
-    //             let optimal_value = interval.max;
-                
-    //             // Create a solution with this optimal value
-    //             match self.create_unconstrained_solution(vars, var_idx, optimal_value) {
-    //                 Ok(solution) => OptimizationAttempt::Success(solution),
-    //                 Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
-    //             }
-    //         },
-    //         crate::vars::Var::VarI(_) => {
-    //             // Not a float variable
-    //             OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression)
-    //         }
-    //     }
-    // }
     
     /// Create a solution for unconstrained optimization
     fn create_unconstrained_solution(
@@ -541,22 +477,22 @@ impl OptimizationRouter {
         for (var_idx, var) in vars.iter_with_indices() {
             if var_idx == optimized_var_idx {
                 // Set the optimized variable to its optimal value
-                values.push(crate::vars::Val::ValF(optimal_value));
+                values.push(crate::variables::Val::ValF(optimal_value));
             } else {
                 // For other variables, use their current domain values
                 match var {
-                    crate::vars::Var::VarF(interval) => {
+                    crate::variables::Var::VarF(interval) => {
                         // Use the midpoint of the interval as a reasonable assignment
                         let value = if interval.is_fixed() {
                             interval.min
                         } else {
                             interval.mid()
                         };
-                        values.push(crate::vars::Val::ValF(value));
+                        values.push(crate::variables::Val::ValF(value));
                     },
-                    crate::vars::Var::VarI(sparse_set) => {
+                    crate::variables::Var::VarI(sparse_set) => {
                         // Use the minimum value for integer variables
-                        values.push(crate::vars::Val::ValI(sparse_set.min()));
+                        values.push(crate::variables::Val::ValI(sparse_set.min()));
                     },
                 }
             }
@@ -564,58 +500,6 @@ impl OptimizationRouter {
         
         Ok(Solution::from(values))
     }
-    
-    // /// Attempt float minimization using constraint-aware optimizer
-    // /// TODO: This method is not currently used but contains valuable optimization logic
-    // fn try_float_minimize(
-    //     &self,
-    //     vars: &Vars,
-    //     _props: &Propagators,
-    //     var_idx: usize,
-    // ) -> OptimizationAttempt {
-    //     // Convert usize to VarId for the constraint optimizer
-    //     // VarId is a newtype around usize, so we create it from the index
-    //     // Since we're in the same crate, we can access the internals if needed
-    //     // For now, let's use a workaround by creating a fake VarId
-    //     // Note: This is a temporary solution until we have proper API access
-        
-    //     // Create a temporary vars reference to get a proper VarId
-    //     let all_vars: Vec<_> = vars.iter_with_indices().collect();
-    //     if var_idx >= all_vars.len() {
-    //         return OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
-    //             SolutionCreationError::InvalidVariableDomain { var_id: index_to_var_id(var_idx) }
-    //         ));
-    //     }
-        
-    //     // Find a way to get VarId from the variable collection
-    //     // For now, we'll work around this by using the direct optimization approach
-    //     // TODO: Fix this once we have proper VarId conversion
-        
-    //     return OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
-    //         OptimizerFailure::NotFloatVariable
-    //     ));
-    // }
-    
-    // /// Attempt float maximization using constraint-aware optimizer
-    // /// TODO: This method is not currently used but contains valuable optimization logic
-    // fn try_float_maximize(
-    //     &self,
-    //     vars: &Vars,
-    //     _props: &Propagators,
-    //     var_idx: usize,
-    // ) -> OptimizationAttempt {
-    //     // Same workaround as minimize
-    //     let all_vars: Vec<_> = vars.iter_with_indices().collect();
-    //     if var_idx >= all_vars.len() {
-    //         return OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
-    //             SolutionCreationError::InvalidVariableDomain { var_id: index_to_var_id(var_idx) }
-    //         ));
-    //     }
-        
-    //     return OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
-    //         OptimizerFailure::NotFloatVariable
-    //     ));
-    // }
     
     /// Step 6.5: Try hybrid optimization for separable mixed problems with objective
     fn try_hybrid_optimize_minimize(
@@ -657,8 +541,8 @@ impl OptimizationRouter {
         
         for var in vars.iter() {
             match var {
-                crate::vars::Var::VarF(_) => has_float = true,
-                crate::vars::Var::VarI(_) => has_int = true,
+                crate::variables::Var::VarF(_) => has_float = true,
+                crate::variables::Var::VarI(_) => has_int = true,
             }
         }
         
@@ -682,14 +566,14 @@ impl Default for OptimizationRouter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vars::Vars;
-    use crate::props::Propagators;
+    use crate::variables::Vars;
+    use crate::constraints::props::Propagators;
 
     fn create_test_float_problem() -> (Vars, VarId) {
         let mut vars = Vars::new();
         let var_id = vars.new_var_with_bounds(
-            crate::vars::Val::float(1.0), 
-            crate::vars::Val::float(10.0)
+            crate::variables::Val::float(1.0), 
+            crate::variables::Val::float(10.0)
         );
         (vars, var_id)
     }
@@ -751,12 +635,12 @@ mod tests {
         
         // Create a mixed problem (both float and integer variables)
         let float_var = vars.new_var_with_bounds(
-            crate::vars::Val::float(1.0), 
-            crate::vars::Val::float(10.0)
+            crate::variables::Val::float(1.0), 
+            crate::variables::Val::float(10.0)
         );
         let _int_var = vars.new_var_with_bounds(
-            crate::vars::Val::int(1), 
-            crate::vars::Val::int(10)
+            crate::variables::Val::int(1), 
+            crate::variables::Val::int(10)
         );
         
         let result = router.try_maximize(&vars, &props, &float_var);

@@ -109,8 +109,8 @@ mod tests {
                         var_count += 1;
                         // Check that variables are float type
                         match var {
-                            crate::vars::Var::VarF(_) => {}, // Expected
-                            crate::vars::Var::VarI(_) => panic!("Float subproblem should not contain integer variables"),
+                            crate::variables::Var::VarF(_) => {}, // Expected
+                            crate::variables::Var::VarI(_) => panic!("Float subproblem should not contain integer variables"),
                         }
                     }
                     assert_eq!(var_count, 2);

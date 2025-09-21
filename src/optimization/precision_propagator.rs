@@ -3,9 +3,9 @@
 //! This module provides a propagator that uses constraint metadata and precision
 //! optimization to properly handle floating-point constraint boundaries.
 
-use crate::props::{Prune, Propagate};
-use crate::vars::VarId;
-use crate::views::Context;
+use crate::constraints::props::{Prune, Propagate};
+use crate::variables::VarId;
+use crate::variables::views::Context;
 use crate::optimization::precision_optimizer::PrecisionOptimizer;
 use crate::optimization::ulp_utils::UlpUtils;
 use crate::optimization::constraint_metadata::ConstraintRegistry;
@@ -31,7 +31,9 @@ impl PrecisionBoundaryPropagator {
 
     /// Create a propagator for a single variable
     pub fn for_variable(var_id: VarId, step_size: f64) -> Self {
-        Self::new(vec![var_id], step_size)
+        let mut variables = Vec::with_capacity(1);
+        variables.push(var_id);
+        Self::new(variables, step_size)
     }
 
     /// Apply precision optimization to all variables using constraint metadata
@@ -116,7 +118,7 @@ impl Prune for PrecisionBoundaryPropagator {
             let var = &ctx.vars()[var_id];
             
             // Check if we're dealing with floating-point values
-            if let crate::vars::Var::VarF(interval) = var {
+            if let crate::variables::Var::VarF(interval) = var {
                 let current_min = interval.min;
                 let current_max = interval.max;
                 
@@ -129,7 +131,7 @@ impl Prune for PrecisionBoundaryPropagator {
                     let precision_max = UlpUtils::strict_upper_bound(current_max);
                     if precision_max < current_max {
                         // Try to set the new maximum using the proper Context API
-                        ctx.try_set_max(var_id, crate::vars::Val::ValF(precision_max))?;
+                        ctx.try_set_max(var_id, crate::variables::Val::ValF(precision_max))?;
                     }
                 }
                 
@@ -138,7 +140,7 @@ impl Prune for PrecisionBoundaryPropagator {
                     let precision_min = UlpUtils::strict_lower_bound(current_min);
                     if precision_min > current_min {
                         // Try to set the new minimum using the proper Context API
-                        ctx.try_set_min(var_id, crate::vars::Val::ValF(precision_min))?;
+                        ctx.try_set_min(var_id, crate::variables::Val::ValF(precision_min))?;
                     }
                 }
             }

@@ -1,5 +1,4 @@
 use cspsolver::prelude::*;
-use cspsolver::operators::*;
 
 #[test]
 fn test_comparison_trait_usage() {

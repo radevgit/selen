@@ -1,11 +1,15 @@
-use crate::{prelude::Solution, props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, vars::Vars, views::Context};
+use crate::{prelude::Solution, constraints::props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, variables::Vars, variables::views::Context};
 
+#[doc(hidden)]
 pub mod mode;
 
+#[doc(hidden)]
 pub mod agenda;
+#[doc(hidden)]
 pub mod branch;
 
 /// Data required to perform search, now uses Clone for efficient backtracking.
+#[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct Space {
     pub vars: Vars,
@@ -40,11 +44,13 @@ impl Space {
 }
 
 /// Perform search, iterating over assignments that satisfy all constraints.
+#[doc(hidden)]
 pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
     search_with_timeout(vars, props, mode, None)
 }
 
 /// Perform search with timeout support.
+#[doc(hidden)]
 pub fn search_with_timeout<M: Mode>(
     vars: Vars, 
     props: Propagators, 
@@ -55,6 +61,7 @@ pub fn search_with_timeout<M: Mode>(
 }
 
 /// Perform search with timeout and memory limit support.
+#[doc(hidden)]
 pub fn search_with_timeout_and_memory<M: Mode>(
     vars: Vars, 
     props: Propagators, 
@@ -143,14 +150,13 @@ impl<M: Mode> Iterator for Search<M> {
         match self {
             Self::Stalled(engine) => engine.next(),
             Self::Done(space_opt) => space_opt.take().map(|space| {
-                let stats = crate::solution::SolveStats {
+                let stats = crate::core::solution::SolveStats {
                     propagation_count: space.get_propagation_count(),
                     node_count: space.get_node_count(),
                     solve_time: std::time::Duration::ZERO, // TODO: Track solve time in Space
-                    backtrack_count: 0, // TODO: Track backtracking in Space
                     variable_count: space.vars.count(),
                     constraint_count: space.props.count(),
-                    peak_memory_kb: space.estimate_memory_kb(),
+                    peak_memory_mb: space.estimate_memory_kb() / 1024, // Convert KB to MB
                 };
                 space.vars.into_solution_with_stats(stats)
             }),
@@ -334,7 +340,7 @@ impl<M, B> Engine<M, B> {
     }
 }
 
-impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for Engine<M, B> {
+impl<M: Mode, B: Iterator<Item = (Space, crate::constraints::props::PropId)>> Iterator for Engine<M, B> {
     type Item = Solution;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -384,14 +390,13 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
                         self.mode.on_solution(&space.vars);
 
                         // Extract solution assignment for all decision variables with current statistics
-                        let stats = crate::solution::SolveStats {
+                        let stats = crate::core::solution::SolveStats {
                             propagation_count: space.get_propagation_count(),
                             node_count: space.get_node_count(),
                             solve_time: std::time::Duration::ZERO, // TODO: Track solve time in Engine
-                            backtrack_count: 0, // TODO: Track backtracking in Engine
                             variable_count: space.vars.count(),
                             constraint_count: space.props.count(),
-                            peak_memory_kb: space.estimate_memory_kb(),
+                            peak_memory_mb: space.estimate_memory_kb() / 1024, // Convert KB to MB
                         };
                         return Some(space.vars.into_solution_with_stats(stats));
                     }
@@ -409,9 +414,10 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::props::PropId)>> Iterator for En
 }
 
 /// Apply scheduled propagators, pruning domains until space is failed, stalled, or assigned.
+#[doc(hidden)]
 pub fn propagate(mut space: Space, mut agenda: Agenda) -> Option<(bool, Space)> {
     // Track which domains got updated, to schedule next propagators in batch
-    let mut events = Vec::new();
+    let mut events = Vec::with_capacity(16);
     
     // Agenda establishes the order in which scheduled propagators get run
     while let Some(p) = agenda.pop() {

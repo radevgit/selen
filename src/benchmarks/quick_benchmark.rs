@@ -1,6 +1,8 @@
-use cspsolver::prelude::*;
+use crate::prelude::*;
+use crate::post;
 use std::time::Instant;
 
+#[allow(dead_code)]
 fn main() -> SolverResult<()> {
     println!("=== CSP Solver Performance Benchmarks ===");
     

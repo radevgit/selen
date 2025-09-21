@@ -69,8 +69,8 @@
 
 use crate::{
     model::Model,
-    vars::{Val, VarId},
-    props::PropId,
+    variables::{Val, VarId},
+    constraints::props::PropId,
 };
 
 /// Represents an expression that can be built at runtime
@@ -80,6 +80,7 @@ use crate::{
 /// - Implements Copy for simple variants to avoid cloning
 /// - Inlined common operations for better performance
 #[derive(Debug, Clone)]
+#[doc(hidden)]
 pub enum ExprBuilder {
     /// A variable reference
     Var(VarId),
@@ -97,13 +98,15 @@ pub enum ExprBuilder {
 
 /// A constraint that can be posted to the model
 #[derive(Clone)]
+#[doc(hidden)]
 pub struct Constraint {
     kind: ConstraintKind,
 }
 
 /// Phase 2: Fluent constraint builder for step-by-step constraint construction
-pub struct Builder {
-    model: *mut Model,  // Raw pointer for fluent interface
+#[doc(hidden)]
+pub struct Builder<'a> {
+    model: &'a mut Model,  // Safe mutable reference with lifetime
     current_expr: ExprBuilder,
 }
 
@@ -131,6 +134,7 @@ enum ComparisonOp {
     Ge,  // >=
 }
 
+#[doc(hidden)]
 impl ExprBuilder {
     /// Create a new expression builder from a variable
     #[inline]
@@ -289,6 +293,7 @@ impl ExprBuilder {
     }
 }
 
+#[doc(hidden)]
 impl Constraint {
     /// Combine this constraint with another using AND logic
     pub fn and(self, other: Constraint) -> Constraint {
@@ -314,6 +319,7 @@ impl Constraint {
 
 // =================== PHASE 3: BOOLEAN LOGIC ===================
 
+#[doc(hidden)]
 impl Constraint {
     /// Combine multiple constraints with AND logic
     pub fn and_all(constraints: Vec<Constraint>) -> Option<Constraint> {
@@ -321,7 +327,8 @@ impl Constraint {
             return None;
         }
         
-        Some(constraints.into_iter().reduce(|acc, c| acc.and(c)).unwrap())
+        // Use reduce which returns Option, then map to handle the None case explicitly
+        constraints.into_iter().reduce(|acc, c| acc.and(c))
     }
     
     /// Combine multiple constraints with OR logic
@@ -330,7 +337,8 @@ impl Constraint {
             return None;
         }
         
-        Some(constraints.into_iter().reduce(|acc, c| acc.or(c)).unwrap())
+        // Use reduce which returns Option, then map to handle the None case explicitly
+        constraints.into_iter().reduce(|acc, c| acc.or(c))
     }
 }
 
@@ -353,7 +361,8 @@ pub fn any_of(constraints: Vec<Constraint>) -> Option<Constraint> {
     or_all(constraints)
 }
 
-/// Extension trait for Vec<Constraint> to enable fluent constraint array operations
+/// Extension trait for `Vec<Constraint>` to enable fluent constraint array operations
+#[doc(hidden)]
 pub trait ConstraintVecExt {
     /// Combine all constraints with AND logic
     fn and_all(self) -> Option<Constraint>;
@@ -374,18 +383,19 @@ impl ConstraintVecExt for Vec<Constraint> {
         Constraint::or_all(self)
     }
     
-    fn postall(self, model: &mut Model) -> Vec<PropId> {
+    fn postall(self, m: &mut Model) -> Vec<PropId> {
         self.into_iter()
-            .map(|constraint| model.post(constraint))
+            .map(|constraint| m.new(constraint))
             .collect()
     }
 }
 
-impl Builder {
+#[doc(hidden)]
+impl<'a> Builder<'a> {
     /// Create a new constraint builder from a variable
-    pub fn new(model: &mut Model, var: VarId) -> Self {
+    pub fn new(model: &'a mut Model, var: VarId) -> Self {
         Builder {
-            model: model as *mut Model,
+            model,
             current_expr: ExprBuilder::from_var(var),
         }
     }
@@ -417,37 +427,37 @@ impl Builder {
     /// Create and post an equality constraint
     pub fn eq(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.eq(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a not-equal constraint
     pub fn ne(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.ne(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a less-than constraint
     pub fn lt(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.lt(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a less-than-or-equal constraint
     pub fn le(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.le(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a greater-than constraint
     pub fn gt(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.gt(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.new(constraint)
     }
 
     /// Create and post a greater-than-or-equal constraint
     pub fn ge(self, other: impl Into<ExprBuilder>) -> PropId {
         let constraint = self.current_expr.ge(other);
-        unsafe { &mut *self.model }.post(constraint)
+        self.model.new(constraint)
     }
 }
 
@@ -591,8 +601,29 @@ fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
             post_constraint_kind(model, &right.kind)
         }
         ConstraintKind::Or(left, right) => {
-            // For OR, we need to use boolean variables and logic
-            // This is a simplified implementation - a full implementation would use reification
+            // Special case: multiple equality constraints on the same variable
+            // e.g., x == 2 OR x == 8 becomes x ∈ {2, 8}
+            if let (ConstraintKind::Binary { left: left_var, op: ComparisonOp::Eq, right: left_val }, 
+                    ConstraintKind::Binary { left: right_var, op: ComparisonOp::Eq, right: right_val }) = 
+                (&left.kind, &right.kind) {
+                if matches!((left_var, right_var), (ExprBuilder::Var(a), ExprBuilder::Var(b)) if a == b) {
+                    // Both constraints are on the same variable - create domain constraint
+                    if let (ExprBuilder::Var(var_id), ExprBuilder::Val(left_const), ExprBuilder::Val(right_const)) = 
+                        (left_var, left_val, right_val) {
+                        if let (Val::ValI(left_int), Val::ValI(right_int)) = (left_const, right_const) {
+                            // Create a new variable with domain {left_val, right_val} and unify it with the original
+                            let mut domain_vals = Vec::with_capacity(2);
+                            domain_vals.push(*left_int);
+                            domain_vals.push(*right_int);
+                            let domain_var = model.ints(domain_vals);
+                            return model.props.equals(*var_id, domain_var);
+                        }
+                    }
+                }
+            }
+            
+            // For general OR cases, we need proper reification (not yet implemented)
+            // For now, fall back to posting both constraints (which may conflict for some cases)
             post_constraint_kind(model, &left.kind);
             post_constraint_kind(model, &right.kind)
         }
@@ -673,6 +704,7 @@ impl From<&VarId> for ExprBuilder {
 }
 
 /// Extension trait for VarId to enable direct constraint building
+#[doc(hidden)]
 pub trait VarIdExt {
     /// Create an expression builder from this variable
     fn expr(self) -> ExprBuilder;
@@ -755,13 +787,14 @@ impl VarIdExt for VarId {
 }
 
 /// Extension trait for Model to support runtime constraint posting
+#[doc(hidden)]
 pub trait ModelExt {
-    /// Post a constraint to the model
-    fn post(&mut self, constraint: Constraint) -> PropId;
+    /// Post a new constraint to the model using runtime API
+    fn new(&mut self, constraint: Constraint) -> PropId;
     
     /// Phase 2: Start building a constraint from a variable (ultra-short syntax)
     /// Usage: m.c(x).eq(5), m.c(x).add(y).le(10)
-    fn c(&mut self, var: VarId) -> Builder;
+    fn c(&mut self, var: VarId) -> Builder<'_>;
     
     /// Global constraint: all variables must have different values
     fn alldiff(&mut self, vars: &[VarId]) -> PropId;
@@ -769,7 +802,7 @@ pub trait ModelExt {
     /// Global constraint: all variables must have the same value
     fn alleq(&mut self, vars: &[VarId]) -> PropId;
     
-    /// Element constraint: array[index] == value
+    /// Element constraint: array\[index\] == value
     fn elem(&mut self, array: &[VarId], index: VarId, value: VarId) -> PropId;
     
     /// Count constraint: count occurrences of value in vars
@@ -798,11 +831,11 @@ pub trait ModelExt {
 }
 
 impl ModelExt for Model {
-    fn post(&mut self, constraint: Constraint) -> PropId {
+    fn new(&mut self, constraint: Constraint) -> PropId {
         post_constraint_kind(self, &constraint.kind)
     }
     
-    fn c(&mut self, var: VarId) -> Builder {
+    fn c(&mut self, var: VarId) -> Builder<'_> {
         Builder::new(self, var)
     }
     
@@ -845,7 +878,7 @@ impl ModelExt for Model {
     
     fn gcc(&mut self, vars: &[VarId], values: &[i32], counts: &[VarId]) -> Vec<PropId> {
         // Global cardinality constraint: count each value in vars and match cardinalities
-        let mut prop_ids = Vec::new();
+        let mut prop_ids = Vec::with_capacity(values.len());
         
         for (&value, &count_var) in values.iter().zip(counts.iter()) {
             // For each value, create a count constraint

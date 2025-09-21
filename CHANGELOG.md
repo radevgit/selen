@@ -1,15 +1,106 @@
 # Changelog
 
+All notable changes to this project will be documented in this file.
+
+## [Unreleased] - 2025-09-20
+- Memory safety improvements - eliminated all unsafe blocks
+- Result-based error handling for min/max functions instead of panics
+- Fixed test suite validation error message format
 
 ## [0.6.3] - 2025-09-20
 - Enhanced SolveStats with timing, memory, and problem size tracking
 - Advanced constraints: between, cardinality, conditional
 - Runtime API improvements (betw, atleast, atmost)
 - Fixed all compile warnings
-- Renamed examples for clarity
 
 ## [0.6.0] - 2025-09-19
 - Runtime API for dynamic constraint building
 - Enhanced statistics system
 - Global constraints support
 - Performance improvements
+
+## [0.5.17] - 2025-09-18
+- Documentation fixes
+
+## [0.5.15] - 2025-09-18
+- Between and cardinality constraints
+- Table, count, and element constraints
+- AllEqual constraint with array syntax
+- Refactored precision optimizer
+
+## [0.5.11] - 2025-09-16
+- New functionality implemented
+
+## [0.5.9] - 2025-09-15
+- Model validation before solving
+- Better static heuristics
+- Fixed multiplication constraints
+
+## [0.5.8] - 2025-09-15
+- Better static heuristics
+- Moved benchmarks
+
+## [0.5.5] - 2025-09-14
+- Indexed variable support
+- Timeout and memory limit handling
+- SolverConfig for time and memory configuration
+- Simple SolverError enum
+
+## [0.5.3] - 2025-09-13
+- Support for large domains in sparse_set
+- Boolean variable initialization improvements
+- Documentation fixes
+
+## [0.5.2] - 2025-09-13
+- New macro for float int
+
+## [0.5.1] - 2025-09-13
+- Renamed domain creation
+
+## [0.5.0] - 2025-09-13
+- Post! and postall! macros
+- Clean syntax for constraints
+- AND/OR/NOT operators
+- Min/max global constraints
+- Precision optimization with ULP
+- Core float bounds optimizer
+
+## [0.3.15] - 2025-09-09
+- Configurable model precision
+- FloatInterval struct implementation
+- Fixed intervals structure
+
+## [0.3.12] - 2025-07-08
+- Document examples
+- Missing doc attributes
+
+## [0.3.11] - 2025-06-08
+- new_var_with_values method for creating variables with specific values
+- Removed obsolete tests
+
+## [0.3.9] - 2025-05-07
+- Sparse_set implementation
+- Fixed propagation bugs
+
+## [0.3.7] - 2025-04-07
+- AllDifferent GAC and sparse set
+- Sudoku examples and image assets
+- Hybrid branching strategies
+- Next/Prev views
+
+## [0.3.5] - 2025-03-20
+- Node count implementation
+- solve_with_callback functionality
+
+## [0.3.4] - 2025-02-20
+- Tests for variable creation and domain constraints
+- GitHub Actions workflow
+- Fixed mixed int float constraints
+
+## [0.3.3-alpha] - 2025-01-20
+- Search functionality with state management
+- Renamed package from "csp" to "cspsolver"
+- Initial package setup
+
+## [0.1.x, 0.2.x] - 2016
+- Old architecture based on miniCP

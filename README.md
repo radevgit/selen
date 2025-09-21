@@ -4,11 +4,13 @@
 [![Documentation](https://docs.rs/cspsolver/badge.svg)](https://docs.rs/cspsolver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A Constraint Satisfaction Problem (CSP) solver library written in Rust.
+A Constraint Satisfaction Problem (CSP) solver library written in Rust with zero external dependencies. 
+
 
 ## Overview
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
+
 
 **Variable Types**: `int`, `float`, mixed constraints
 
@@ -41,21 +43,6 @@ Add this to your `Cargo.toml`:
 cspsolver = "0.6.0"
 ```
 
-
-## Examples
-
-
-```bash
-cargo run --release --example sudoku
-cargo run --release --example n_queens
-cargo run --release --example count_demo 
-cargo run --release --example table_demo
-cargo run --release --example magic_square
-```
-
-
-
-
 ```
 🧩 Solving PLATINUM puzzle:
 📊 Puzzle stats: 17 clues given, 64 empty cells
@@ -80,7 +67,38 @@ Puzzle:                                 Solution:
 
 ```
 
+## Examples
 
+### Core Problems
+```bash
+cargo run --release --example sudoku                 # Classic 9x9 Sudoku solver
+cargo run --release --example n_queens               # N-Queens backtracking
+cargo run --release --example send_more_money        # Cryptarithmetic puzzle
+cargo run --release --example graph_coloring         # Graph constraint problems
+cargo run --release --example zebra_puzzle           # Logic puzzle solving
+```
+
+### Constraint Types
+```bash
+cargo run --release --example constraint_global      # AllEqual, Count, AllDiff
+cargo run --release --example constraint_element     # Element constraint usage
+cargo run --release --example constraint_table       # Table constraints
+cargo run --release --example constraint_boolean     # Boolean arrays and logic
+```
+
+### Advanced Features
+```bash
+cargo run --release --example advanced_runtime_api   # Dynamic constraint building
+cargo run --release --example advanced_memory_limits # Memory management demo
+cargo run --release --example advanced_timeout       # Timeout handling
+```
+
+### Real Applications
+```bash
+cargo run --release --example app_manufacturing      # Industrial optimization
+cargo run --release --example app_portfolio          # Financial modeling
+cargo run --release --example app_resource_allocation # Resource planning
+```
 
 ### Basic Usage
 
@@ -141,83 +159,6 @@ fn main() {
 }
 ```
 
-### Advanced Constraint Example
-
-```rust
-use cspsolver::prelude::*;
-
-fn main() {
-    let mut m = Model::default();
-    let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
-    
-    // Complex mathematical expressions
-    post!(m, sum(vars.clone()) <= int(12));
-    post!(m, max(vars.clone()) >= int(3));
-    post!(m, min(vars.clone()) <= int(4));
-    
-    // Boolean logic with traditional syntax  
-    let a = m.bool();
-    let b = m.bool();
-    let c = m.bool();
-    let d = m.bool();
-    
-    post!(m, and(a, b));            // Traditional 2-argument AND
-    post!(m, or(a, b));             // Boolean OR  
-    post!(m, not(b));               // Boolean NOT
-    post!(m, and([a, b, c, d]));    // Array syntax
-    post!(m, or(a, b, c, d));       // Variadic syntax
-    post!(m, not([a, b, c]));       // Array NOT
-    
-    // Count constraints - cardinality constraints
-    let students = vec![m.int(1, 3), m.int(1, 3), m.int(1, 3), m.int(1, 3)];
-    let section1_count = m.int(2, 2);      // Exactly 2 students in section 1
-    let section2_count = m.int(1, 2);      // 1-2 students in section 2
-    
-    post!(m, count(students.clone(), int(1), section1_count));
-    post!(m, count(students, int(2), section2_count));
-    
-    // Advanced cardinality constraints
-    let employees = vec![m.int(1, 4), m.int(1, 4), m.int(1, 4), m.int(1, 4), m.int(1, 4)];
-    post!(m, at_least(employees.clone(), int(1), int(2)));  // At least 2
-    post!(m, at_most(employees.clone(), int(4), int(1)));   // At most 1
-    post!(m, exactly(employees, int(2), int(2)));           // Exactly 2
-    
-    // Ordering constraints
-    let start_time = m.int(9, 17);
-    let meeting_time = m.int(9, 17);
-    let end_time = m.int(9, 17);
-    post!(m, between(start_time, meeting_time, end_time));  // start <= meeting <= end
-    
-    // Conditional constraints
-    let is_weekend = m.int(0, 1);          // 0=weekday, 1=weekend
-    let hours_open = m.int(8, 12);         // Store hours
-    post!(m, if_then(is_weekend == int(1), hours_open == int(8)));
-    
-    // Table constraints - lookup tables
-    let time = m.int(1, 4);                // Time slots
-    let room = m.int(1, 3);                // Rooms
-    let capacity = m.int(10, 100);         // Room capacity
-    
-    // Room availability table: (time, room, capacity)
-    let schedule_table = vec![
-        vec![int(1), int(1), int(20)],      // 9AM: Lab has 20 capacity
-        vec![int(1), int(2), int(30)],      // 9AM: Classroom has 30 capacity
-        vec![int(2), int(2), int(30)],      // 11AM: Classroom has 30 capacity  
-        vec![int(2), int(3), int(100)],     // 11AM: Auditorium has 100 capacity
-        vec![int(3), int(1), int(20)],      // 1PM: Lab has 20 capacity
-        vec![int(4), int(3), int(100)],     // 3PM: Auditorium has 100 capacity
-    ];
-    post!(m, table([time, room, capacity], schedule_table));
-    
-    // Mixed type constraints with float
-    let float_var = m.float(1.0, 10.0);
-    post!(m, abs(float_var) <= float(12.0));
-    
-    if let Ok(solution) = m.solve() {
-        println!("Solution found!");
-    }
-}
-```
 
 
 

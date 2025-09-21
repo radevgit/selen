@@ -1,7 +1,7 @@
-use crate::props::PropId;
+use crate::constraints::props::PropId;
 use crate::search::Space;
-use crate::vars::{Vars, Val};
-use crate::views::View;
+use crate::variables::{Vars, Val};
+use crate::variables::views::View;
 
 /// Control search behavior when a solution is found.
 pub trait Mode: core::fmt::Debug {
@@ -43,9 +43,9 @@ impl<V: View> Mode for Minimize<V> {
             // let mut events = Vec::new();
             // let ctx = Context::new(&mut space.vars, &mut events);
             let prop_id = space.props.less_than(self.objective, minimum);
-            vec![prop_id].into_iter()
+            Some(prop_id).into_iter()
         } else {
-            vec![].into_iter()
+            None.into_iter()
         }
     }
 
