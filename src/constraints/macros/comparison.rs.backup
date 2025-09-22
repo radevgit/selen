@@ -1,12 +1,16 @@
-#[macro_export]#[macro_export]
+#[macro_export]
+macro_rules! post_comparison {
+    // ============================================================================
+    // BASIC COMPARISON PATTERNS
+    // ============================================================================
 
-macro_rules! post_comparison {macro_rules! post_comparison {
+    
 
-    // Basic variable comparisons    // ============================================================================
+    // x == y    // BASIC COMPARISON PATTERNS
 
-    ($model:expr, $left:ident == $right:ident) => {{    // BASIC COMPARISON PATTERNS
+    ($model:expr, $left:ident == $right:ident) => {{
 
-        $model.props.equals($left, $right);    // ============================================================================
+        $model.props.equals($left, $right);    // ============================================================================    // ============================================================================    // Basic comparisons
 
         $crate::constraints::macros::ConstraintRef::new(0)
 
@@ -14,211 +18,101 @@ macro_rules! post_comparison {macro_rules! post_comparison {
 
     
 
-    ($model:expr, $left:ident != $right:ident) => {{    // x == y    // BASIC COMPARISON PATTERNS
+    // x != y    // x == y    // BASIC COMPARISON PATTERNS - variables to variables    ($model:expr, $left:ident == $right:ident) => {{
 
-        $model.props.not_equals($left, $right);
+    ($model:expr, $left:ident != $right:ident) => {{
 
-        $crate::constraints::macros::ConstraintRef::new(0)    ($model:expr, $left:ident == $right:ident) => {{
+        $model.props.not_equals($left, $right);    ($model:expr, $left:ident == $right:ident) => {{
 
-    }};
+        $crate::constraints::macros::ConstraintRef::new(0)
 
-            $model.props.equals($left, $right);    // ============================================================================    // ============================================================================    // Basic comparisons
+    }};        $model.props.equals($left, $right);    // ============================================================================        $model.props.equals($left, $right);
+
+    
+
+    // x < y        $crate::constraints::macros::ConstraintRef::new(0)
 
     ($model:expr, $left:ident < $right:ident) => {{
 
-        $model.props.less_than($left, $right);        $crate::constraints::macros::ConstraintRef::new(0)
+        $model.props.less_than($left, $right);    }};            $crate::constraints::macros::ConstraintRef::new(0)
 
         $crate::constraints::macros::ConstraintRef::new(0)
 
-    }};    }};    
+    }};    
 
     
 
-    ($model:expr, $left:ident <= $right:ident) => {{    
-
+    // x <= y
+    ($model:expr, $left:ident <= $right:ident) => {{
         $model.props.less_than_or_equals($left, $right);
-
-        $crate::constraints::macros::ConstraintRef::new(0)    // x != y    // x == y    // BASIC COMPARISON PATTERNS - variables to variables    ($model:expr, $left:ident == $right:ident) => {{
-
+        $crate::constraints::macros::ConstraintRef::new(0)
     }};
+    
+    // x != y
+    ($model:expr, $left:ident != $right:ident) => {{
+        $model.props.not_equals($left, $right);
+        $crate::constraints::macros::ConstraintRef::new(0)
+    }};
+    
+    // x == y
+    ($model:expr, $left:ident == $right:ident) => {{
+        $model.props.equals($left, $right);
+        $crate::constraints::macros::ConstraintRef::new(0)
+    }};    
 
-        ($model:expr, $left:ident != $right:ident) => {{
+    
 
+    // x > y
     ($model:expr, $left:ident > $right:ident) => {{
-
-        $model.props.greater_than($left, $right);        $model.props.not_equals($left, $right);    ($model:expr, $left:ident == $right:ident) => {{
-
+        $model.props.greater_than($left, $right);
         $crate::constraints::macros::ConstraintRef::new(0)
-
-    }};        $crate::constraints::macros::ConstraintRef::new(0)
-
+    }};
     
-
-    ($model:expr, $left:ident >= $right:ident) => {{    }};        $model.props.equals($left, $right);    // ============================================================================        $model.props.equals($left, $right);
-
+    // x >= y
+    ($model:expr, $left:ident >= $right:ident) => {{
         $model.props.greater_than_or_equals($left, $right);
-
-        $crate::constraints::macros::ConstraintRef::new(0)    
-
+        $crate::constraints::macros::ConstraintRef::new(0)
     }};
-
-        // x < y        $crate::constraints::macros::ConstraintRef::new(0)
-
-    // Variable vs literal
-
-    ($model:expr, $left:ident == $right:literal) => {{    ($model:expr, $left:ident < $right:ident) => {{
-
-        $model.props.equals($left, $crate::variables::Val::from($right));
-
-        $crate::constraints::macros::ConstraintRef::new(0)        $model.props.less_than($left, $right);    }};            $crate::constraints::macros::ConstraintRef::new(0)
-
+    
+    // x < y
+    ($model:expr, $left:ident < $right:ident) => {{
+        $model.props.less_than($left, $right);
+        $crate::constraints::macros::ConstraintRef::new(0)
     }};
+    
+    // ============================================================================
+    // CONSTANTS WITH INT() AND FLOAT()
+    // ============================================================================
+    
+    // x == int(5)    
 
-            $crate::constraints::macros::ConstraintRef::new(0)
-
-    ($model:expr, $left:ident != $right:literal) => {{
-
-        $model.props.not_equals($left, $crate::variables::Val::from($right));    }};    
-
+    ($model:expr, $left:ident == int($right:expr)) => {{
+        // Create a singleton variable with domain {$right} instead of using Val constant
+        let singleton_var = match $crate::prelude::int($right) {
+            $crate::variables::Val::ValI(value) => $model.int(value, value),
+            $crate::variables::Val::ValF(value) => $model.float(value, value),
+        };
+        $model.props.equals($left, singleton_var);
+        $crate::constraints::macros::ConstraintRef::new(0)
+    }};
+    
+    // x <= y
+    ($model:expr, $left:ident <= $right:ident) => {{
+        $model.props.less_than_or_equals($left, $right);
+        $crate::constraints::macros::ConstraintRef::new(0)
+    }};
+    
+    // x != int(5)
+    ($model:expr, $left:ident != int($right:expr)) => {{
+        $model.props.not_equals($left, $crate::prelude::int($right));
+        $crate::constraints::macros::ConstraintRef::new(0)
+    }};
+    
+    // x < int(5)
+    ($model:expr, $left:ident < int($right:expr)) => {{
+        $model.props.less_than($left, $crate::prelude::int($right));
         $crate::constraints::macros::ConstraintRef::new(0)
 
-    }};    
-
-    
-
-    ($model:expr, $left:ident < $right:literal) => {{    // x <= y
-
-        $model.props.less_than($left, $crate::variables::Val::from($right));    ($model:expr, $left:ident <= $right:ident) => {{
-
-        $crate::constraints::macros::ConstraintRef::new(0)        $model.props.less_than_or_equals($left, $right);
-
-    }};        $crate::constraints::macros::ConstraintRef::new(0)
-
-        }};
-
-    ($model:expr, $left:ident <= $right:literal) => {{    
-
-        $model.props.less_than_or_equals($left, $crate::variables::Val::from($right));    // x != y
-
-        $crate::constraints::macros::ConstraintRef::new(0)    ($model:expr, $left:ident != $right:ident) => {{
-
-    }};        $model.props.not_equals($left, $right);
-
-            $crate::constraints::macros::ConstraintRef::new(0)
-
-    ($model:expr, $left:ident > $right:literal) => {{    }};
-
-        $model.props.greater_than($left, $crate::variables::Val::from($right));    
-
-        $crate::constraints::macros::ConstraintRef::new(0)    // x == y
-
-    }};    ($model:expr, $left:ident == $right:ident) => {{
-
-            $model.props.equals($left, $right);
-
-    ($model:expr, $left:ident >= $right:literal) => {{        $crate::constraints::macros::ConstraintRef::new(0)
-
-        $model.props.greater_than_or_equals($left, $crate::variables::Val::from($right));    }};    
-
-        $crate::constraints::macros::ConstraintRef::new(0)
-
-    }};    
-
-    
-
-    // Variable vs int() expressions    // x > y
-
-    ($model:expr, $left:ident == int($right:expr)) => {{    ($model:expr, $left:ident > $right:ident) => {{
-
-        $model.props.equals($left, $crate::prelude::int($right));        $model.props.greater_than($left, $right);
-
-        $crate::constraints::macros::ConstraintRef::new(0)        $crate::constraints::macros::ConstraintRef::new(0)
-
-    }};    }};
-
-        
-
-    ($model:expr, $left:ident != int($right:expr)) => {{    // x >= y
-
-        $model.props.not_equals($left, $crate::prelude::int($right));    ($model:expr, $left:ident >= $right:ident) => {{
-
-        $crate::constraints::macros::ConstraintRef::new(0)        $model.props.greater_than_or_equals($left, $right);
-
-    }};        $crate::constraints::macros::ConstraintRef::new(0)
-
-        }};
-
-    ($model:expr, $left:ident < int($right:expr)) => {{    
-
-        $model.props.less_than($left, $crate::prelude::int($right));    // x < y
-
-        $crate::constraints::macros::ConstraintRef::new(0)    ($model:expr, $left:ident < $right:ident) => {{
-
-    }};        $model.props.less_than($left, $right);
-
-            $crate::constraints::macros::ConstraintRef::new(0)
-
-    ($model:expr, $left:ident <= int($right:expr)) => {{    }};
-
-        $model.props.less_than_or_equals($left, $crate::prelude::int($right));    
-
-        $crate::constraints::macros::ConstraintRef::new(0)    // ============================================================================
-
-    }};    // CONSTANTS WITH INT() AND FLOAT()
-
-        // ============================================================================
-
-    ($model:expr, $left:ident > int($right:expr)) => {{    
-
-        $model.props.greater_than($left, $crate::prelude::int($right));    // x == int(5)    
-
-        $crate::constraints::macros::ConstraintRef::new(0)
-
-    }};    ($model:expr, $left:ident == int($right:expr)) => {{
-
-    
-
-    ($model:expr, $left:ident >= int($right:expr)) => {{        $model.props.equals($left, $crate::prelude::int($right));
-
-        $model.props.greater_than_or_equals($left, $crate::prelude::int($right));        $crate::constraints::macros::ConstraintRef::new(0)
-
-        $crate::constraints::macros::ConstraintRef::new(0)    }};
-
-    }};    
-
-        // x <= y
-
-    // Variable vs float() expressions    ($model:expr, $left:ident <= $right:ident) => {{
-
-    ($model:expr, $left:ident == float($right:expr)) => {{        $model.props.less_than_or_equals($left, $right);
-
-        $model.props.equals($left, $crate::prelude::float($right));        $crate::constraints::macros::ConstraintRef::new(0)
-
-        $crate::constraints::macros::ConstraintRef::new(0)    }};
-
-    }};    
-
-        // x != int(5)
-
-    ($model:expr, $left:ident <= float($right:expr)) => {{    ($model:expr, $left:ident != int($right:expr)) => {{
-
-        $model.props.less_than_or_equals($left, $crate::prelude::float($right));        $model.props.not_equals($left, $crate::prelude::int($right));
-
-        $crate::constraints::macros::ConstraintRef::new(0)        $crate::constraints::macros::ConstraintRef::new(0)
-
-    }};    }};
-
-        
-
-    ($model:expr, $left:ident >= float($right:expr)) => {{    // x < int(5)
-
-        $model.props.greater_than_or_equals($left, $crate::prelude::float($right));    ($model:expr, $left:ident < int($right:expr)) => {{
-
-        $crate::constraints::macros::ConstraintRef::new(0)        $model.props.less_than($left, $crate::prelude::int($right));
-
-    }};        $crate::constraints::macros::ConstraintRef::new(0)
-
-}
         $crate::constraints::macros::ConstraintRef::new(0)
 
     }};    ($model:expr, $left:ident > $right:ident) => {{

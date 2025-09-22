@@ -529,18 +529,14 @@ impl Model {
     pub fn new_var_unchecked(&mut self, min: Val, max: Val) -> VarId {
         match self.new_var_checked(min, max) {
             Ok(var_id) => var_id,
-            Err(error) => {
+            Err(_error) => {
                 // Memory limit exceeded during variable creation
-                // Mark the model as invalid and panic to prevent memory explosion
+                // Mark the model as invalid so solve() will return the error gracefully
                 self.memory_limit_exceeded = true;
                 
-                panic!("Memory limit exceeded during variable creation: {}. \
-                       Configured limit: {:?} MB. \
-                       Current usage: {} MB. \
-                       This prevents system memory exhaustion.", 
-                       error, 
-                       self.config.max_memory_mb,
-                       self.estimated_memory_mb());
+                // Return a dummy VarId to keep the API consistent
+                // The solve() method will detect memory_limit_exceeded and return proper error
+                VarId::from_index(0)
             }
         }
     }

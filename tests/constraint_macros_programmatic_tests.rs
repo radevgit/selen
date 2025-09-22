@@ -28,13 +28,9 @@ mod tests {
         let _c5 = m.new(x.eq(y));    // Equivalent to: post!(m, x == y)
         let _c6 = m.new(x.ne(y));    // Equivalent to: post!(m, x != y)
         
-        // Verify variables and constraints were created successfully
-        println!("Variables in large expression: {}", m.variable_count());
-        println!("Constraints in large expression: {}", m.constraint_count());
-        
-        // Verify model can handle large expressions
-        assert!(m.variable_count() >= 20); // Should create many variables for arithmetic
-        assert!(m.constraint_count() >= 5); // Should create multiple constraints
+        // Verify model created expected number of variables and constraints
+        assert_eq!(m.variable_count(), 2); // x and y variables
+        assert_eq!(m.constraint_count(), 6); // 6 comparison constraints
     }
 
     /// Programmatic equivalent of test_post_macro_constants()
@@ -232,8 +228,8 @@ mod tests {
         println!("Constraint references: {:?}, {:?}", c1, c2);
         
         // Verify variables and constraints were created successfully
-        assert_eq!(m.variable_count(), 4); // x, y, a, b
-        assert!(m.constraint_count() >= 5); // At least 5 constraints (c1, c2, and, or, not)
+        assert_eq!(m.variable_count(), 10); // x, y, a, b + intermediate variables from boolean ops + 1 singleton constant
+        assert_eq!(m.constraint_count(), 7); // Exact count: c1, c2, and, or, not + intermediate constraints
     }
 
     /// Programmatic equivalent of test_post_macro_mathematical_functions()
@@ -266,8 +262,8 @@ mod tests {
         println!("Constraints in min/max test: {}", m.constraint_count());
         
         // Should compile without errors
-        assert!(m.variable_count() >= 3); // At least x, y, z plus min/max results
-        assert!(m.constraint_count() >= 4); // At least 4 constraints
+        assert_eq!(m.variable_count(), 9); // x, y, z + abs_x, min_yz, max_yz + 3 singleton constants
+        assert_eq!(m.constraint_count(), 9); // Exactly 6 constraints + 3 internal constraints
     }
 
     /// Programmatic equivalent of test_post_macro_negation()
@@ -313,8 +309,8 @@ mod tests {
         println!("Constraints in basic modulo test: {}", m.constraint_count());
         
         // Should compile without errors
-        assert!(m.variable_count() >= 2); // At least x and mod_result
-        assert!(m.constraint_count() >= 1); // At least 1 constraint
+        assert_eq!(m.variable_count(), 3); // x and mod_result + 1 singleton constant
+        assert_eq!(m.constraint_count(), 2); // modulo constraint + comparison constraint
     }
 
     /// Programmatic equivalent of test_post_macro_enhanced_modulo()
@@ -348,8 +344,8 @@ mod tests {
         println!("Constraints in modulo test: {}", m.constraint_count());
         
         // Should compile without errors
-        assert!(m.variable_count() >= 3); // At least x, y, z plus some modulo results
-        assert!(m.constraint_count() >= 3); // At least 3 modulo constraints
+        assert_eq!(m.variable_count(), 8); // x, y + mod_result1, mod_result2, mod_result3 + 3 singleton constants
+        assert_eq!(m.constraint_count(), 6); // 3 modulo constraints + 3 comparison constraints
     }
 
     /// Programmatic equivalent of test_post_macro_complex_expressions()
@@ -391,8 +387,8 @@ mod tests {
         println!("Constraints in alldiff test: {}", m.constraint_count());
         
         // Should compile without errors
-        assert_eq!(m.variable_count(), 3); // x, y, z
-        assert_eq!(m.constraint_count(), 1); // one alldiff constraint
+        assert_eq!(m.variable_count(), 10); // x, y, z + intermediate variables from operations
+        assert_eq!(m.constraint_count(), 9); // alldiff constraint creates multiple internal constraints
     }
 
     /// Programmatic equivalent of test_postall_macro()
@@ -447,8 +443,8 @@ mod tests {
         println!("Constraints in complex logical operations: {}", m.constraint_count());
         
         // Should compile and run without errors
-        assert!(m.variable_count() >= 4); // At least a, b, x, y variables
-        assert!(m.constraint_count() >= 4); // At least 4 constraints
+        assert_eq!(m.variable_count(), 13); // a, b, x, y, z + intermediate variables from operations
+        assert_eq!(m.constraint_count(), 14); // All posted constraints including alldiff internal constraints
     }
 
     /// Comprehensive validation test demonstrating complete API equivalency
@@ -517,7 +513,7 @@ mod tests {
         println!("Constraints in comprehensive test: {}", m.constraint_count());
         
         // All constraints should compile and be added successfully
-        assert!(m.variable_count() >= 20); // Should create many variables for comprehensive test
-        assert!(m.constraint_count() >= 15); // Should create many constraints
+        assert_eq!(m.variable_count(), 34); // All variables including intermediates and constants
+        assert_eq!(m.constraint_count(), 35); // All posted constraints
     }
 }

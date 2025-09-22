@@ -533,16 +533,23 @@ mod core_coverage {
         // Test edge case with zero memory limit
         let config = SolverConfig::default().with_max_memory_mb(0);
         let mut model = Model::with_config(config);
-        let x = model.int(1, 5);
+        let x = model.int(1, 5);  // This should mark model as invalid due to 0 MB limit
         
         post!(model, x == int(3));
         
-        // Should handle zero memory limit edge case
+        // Should return memory limit error instead of panicking
         let result = model.solve();
-        // Implementation-defined behavior for zero limit
-        match result {
-            Ok(_) => {},  // Solver handled gracefully
-            Err(_) => {}  // Expected error for zero limit
+        assert!(result.is_err(), "Zero memory limit should cause solve to fail");
+        
+        if let Err(error) = result {
+            match error {
+                SolverError::MemoryLimit { .. } => {
+                    // Expected error type
+                },
+                other => {
+                    panic!("Expected MemoryLimit error, got: {:?}", other);
+                }
+            }
         }
     }
 }
