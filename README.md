@@ -34,6 +34,17 @@ m.post(x.mul(y).eq(12));                // x * y == 12
 m.post(z.div(y).ne(0));                 // z / y != 0
 ```
 
+**Mathematical syntax with post! macro**
+```
+post!(m, x < y);                        // x < y
+post!(m, y <= z);                       // y <= z
+post!(m, z > int(5));                   // z > 5
+post!(m, x + y <= z);                   // x + y <= z
+post!(m, y - x >= int(0));              // y - x >= 0
+post!(m, x * y == int(12));             // x * y == 12
+post!(m, z / y != int(0));              // z / y != 0
+```
+
 ## Installation
 
 Add this to your `Cargo.toml`:

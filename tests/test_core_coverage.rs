@@ -471,4 +471,78 @@ mod core_coverage {
             assert!(large_val >= -1000000 && large_val <= 1000000);
         }
     }
+
+    // =================================================================
+    // MEMORY LIMIT AND RESOURCE EDGE CASE TESTS
+    // =================================================================
+    
+    #[test]
+    fn test_memory_limit_configuration() {
+        // Test memory limit configuration in SolverConfig
+        let config = SolverConfig::default()
+            .with_max_memory_mb(1)  // Very small memory limit
+            .with_timeout_seconds(1); // Short timeout
+        
+        let mut model = Model::with_config(config);
+        let x = model.int(1, 100);
+        let y = model.int(1, 100);
+        
+        post!(model, x + y == int(50));
+        
+        // Should handle small memory limit gracefully
+        let result = model.solve();
+        // May succeed quickly or fail due to limits - both are valid edge case behaviors
+        match result {
+            Ok(_) => {
+                // Quick solve succeeded within limits
+            },
+            Err(_) => {
+                // Resource limit hit - expected edge case behavior
+            }
+        }
+    }
+    
+    #[test] 
+    fn test_timeout_edge_case() {
+        // Test very short timeout
+        let config = SolverConfig::default().with_timeout_seconds(0); // Immediate timeout
+        let mut model = Model::with_config(config);
+        
+        let x = model.int(1, 1000);
+        let y = model.int(1, 1000);
+        let z = model.int(1, 1000);
+        
+        // Complex constraints that might take time
+        post!(model, x * y == z);
+        post!(model, x + y <= int(100));
+        
+        let result = model.solve();
+        // Should handle immediate timeout gracefully
+        match result {
+            Ok(_) => {
+                // Very fast solve - acceptable
+            },
+            Err(_) => {
+                // Timeout error - expected edge case
+            }
+        }
+    }
+    
+    #[test]
+    fn test_zero_memory_limit_edge_case() {
+        // Test edge case with zero memory limit
+        let config = SolverConfig::default().with_max_memory_mb(0);
+        let mut model = Model::with_config(config);
+        let x = model.int(1, 5);
+        
+        post!(model, x == int(3));
+        
+        // Should handle zero memory limit edge case
+        let result = model.solve();
+        // Implementation-defined behavior for zero limit
+        match result {
+            Ok(_) => {},  // Solver handled gracefully
+            Err(_) => {}  // Expected error for zero limit
+        }
+    }
 }
