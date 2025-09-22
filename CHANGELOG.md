@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3] - 2025-09-22
+- Comprehensive constraint macro system overhaul with modular architecture
+- Fixed all core coverage test failures with missing constraint patterns
+- Implemented graceful error handling replacing panic-based memory limit handling
+- Enhanced constraint pattern matching for equality constraints (x == int(N), x == float(N))
+- Organized constraint macros into logical modules (arithmetic, comparison, global, logical)
+- Added comprehensive test coverage for constraint operations and edge cases
+- Improved memory management with proper SolverError::MemoryLimit handling
+- Enhanced validation system for complex constraint combinations
+
+## [0.7.2] - 2025-09-21
+- Modular constraint macro dispatch system implementation
+- Separated constraint patterns into specialized modules for better maintainability
+- Enhanced arithmetic constraint patterns (addition, multiplication, division, absolute value)
+- Improved global constraint support (alldiff, allequal, element, min/max)
+- Advanced logical operation patterns (and, or, not) with array syntax support
+- Runtime API equivalents for all constraint macro functionality
+- Comprehensive programmatic constraint building tests
+
+## [0.7.1] - 2025-09-21
+- Enhanced error handling infrastructure with proper Result types
+- Improved constraint macro pattern matching for complex expressions
+- Better support for array indexing in constraint expressions
+- Enhanced mathematical function constraints (abs, sum, min, max)
+- Optimized memory tracking and resource management
+- Fixed constraint dispatch system for better performance
+
 ## [0.7.0] - 2025-09-21
 - Hidden internal API methods from documentation
 - Removed broken constraint builder imports
