@@ -943,4 +943,953 @@ mod constraints_coverage {
         sorted_values.dedup();
         assert_eq!(sorted_values.len(), var_values.len()); // All different
     }
+
+    // ===== BOOLEAN OPERATORS COMPREHENSIVE COVERAGE TESTS =====
+    // Targeting: src/constraints/boolean_operators.rs (Function: 5.88%, Line: 13.43%)
+    
+    #[test]
+    fn test_varid_bitand_basic_operation() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        
+        // Test BitAnd for VarId - creates BoolExpr
+        let expr = a & b;
+        
+        // Apply the expression to model
+        let result_var = expr.apply_to(&mut model);
+        
+        // Set values for AND operation: both true
+        post!(model, a == 1);
+        post!(model, b == 1);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "VarId BitAnd with true values should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify AND logic: result should be 1 when both inputs are 1
+        assert_eq!(a_val, 1, "Input a should be true");
+        assert_eq!(b_val, 1, "Input b should be true");
+        assert_eq!(result_val, 1, "AND result should be true when both inputs are true");
+        assert_eq!(result_val, (a_val & b_val), "AND result should match bitwise AND of inputs");
+    }
+
+    #[test]
+    fn test_varid_bitor_basic_operation() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        
+        // Test BitOr for VarId - creates BoolExpr
+        let expr = a | b;
+        
+        // Apply the expression to model
+        let result_var = expr.apply_to(&mut model);
+        
+        // Set values for OR operation: one true, one false
+        post!(model, a == 1);
+        post!(model, b == 0);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "VarId BitOr with mixed values should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify OR logic: result should be 1 when at least one input is 1
+        assert_eq!(a_val, 1, "Input a should be true");
+        assert_eq!(b_val, 0, "Input b should be false");
+        assert_eq!(result_val, 1, "OR result should be true when at least one input is true");
+        assert_eq!(result_val, (a_val | b_val), "OR result should match bitwise OR of inputs");
+    }
+
+    #[test]
+    fn test_varid_not_basic_operation() {
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Test Not for VarId - creates BoolExpr
+        let expr = !a;
+        
+        // Apply the expression to model
+        let result_var = expr.apply_to(&mut model);
+        
+        // Set value for NOT operation: false -> true
+        post!(model, a == 0);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "VarId Not operation should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify NOT logic: result should be opposite of input
+        assert_eq!(a_val, 0, "Input a should be false");
+        assert_eq!(result_val, 1, "NOT result should be true when input is false");
+        assert_eq!(result_val, 1 - a_val, "NOT result should be the logical inverse of input");
+    }
+
+    #[test]
+    fn test_bool_expr_chaining_and() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test chained AND operations
+        let expr_ab = a & b;
+        let expr_abc = expr_ab & c;
+        
+        let result_var = expr_abc.apply_to(&mut model);
+        
+        // All should be true for AND chain to be true
+        post!(model, a == 1);
+        post!(model, b == 1);
+        post!(model, c == 1);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Chained AND operations should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let c_val = sol.get_int(c);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify chained AND logic: all inputs must be true for result to be true
+        assert_eq!(a_val, 1, "Input a should be true");
+        assert_eq!(b_val, 1, "Input b should be true");
+        assert_eq!(c_val, 1, "Input c should be true");
+        assert_eq!(result_val, 1, "Chained AND result should be true when all inputs are true");
+        assert_eq!(result_val, (a_val & b_val & c_val), "Chained AND should match logical AND of all inputs");
+    }
+
+    #[test]
+    fn test_bool_expr_chaining_or() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test chained OR operations
+        let expr_ab = a | b;
+        let expr_abc = expr_ab | c;
+        
+        let result_var = expr_abc.apply_to(&mut model);
+        
+        // Only one needs to be true for OR chain to be true
+        post!(model, a == 0);
+        post!(model, b == 0);
+        post!(model, c == 1);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Chained OR operations should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let c_val = sol.get_int(c);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify chained OR logic: at least one input must be true for result to be true
+        assert_eq!(a_val, 0, "Input a should be false");
+        assert_eq!(b_val, 0, "Input b should be false");
+        assert_eq!(c_val, 1, "Input c should be true");
+        assert_eq!(result_val, 1, "Chained OR result should be true when at least one input is true");
+        assert_eq!(result_val, (a_val | b_val | c_val), "Chained OR should match logical OR of all inputs");
+        assert!(a_val == 1 || b_val == 1 || c_val == 1, "At least one input should be true for OR to be true");
+    }
+
+    #[test]
+    fn test_bool_expr_mixed_and_or() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test mixed AND and OR: (a & b) | c
+        let expr_and = a & b;
+        let expr_mixed = expr_and | c;
+        
+        let result_var = expr_mixed.apply_to(&mut model);
+        
+        // Test case where AND part is false but OR makes it true
+        post!(model, a == 0);
+        post!(model, b == 1);
+        post!(model, c == 1);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Mixed AND/OR operations should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let c_val = sol.get_int(c);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify mixed AND/OR logic: (a & b) | c
+        assert_eq!(a_val, 0, "Input a should be false");
+        assert_eq!(b_val, 1, "Input b should be true");
+        assert_eq!(c_val, 1, "Input c should be true");
+        assert_eq!(result_val, 1, "Mixed AND/OR result should be true");
+        
+        let and_part = a_val & b_val;
+        let expected_result = and_part | c_val;
+        assert_eq!(result_val, expected_result, "Result should match (a & b) | c");
+        assert_eq!(and_part, 0, "AND part (a & b) should be false");
+        assert!(and_part == 1 || c_val == 1, "Either AND part is true OR c is true");
+    }
+
+    #[test]
+    fn test_bool_expr_not_chaining() {
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Test double NOT: !(!a)
+        let expr_not = !a;
+        let expr_double_not = !expr_not;
+        
+        let result_var = expr_double_not.apply_to(&mut model);
+        
+        // Double NOT should equal original value
+        post!(model, a == 1);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Double NOT should work correctly");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify double NOT logic: !!a should equal a
+        assert_eq!(a_val, 1, "Input a should be true");
+        assert_eq!(result_val, 1, "Double NOT result should be true");
+        assert_eq!(result_val, a_val, "Double NOT should preserve original value");
+        
+        // Additional verification: double NOT should be identity
+        let single_not = 1 - a_val;  // !a
+        let double_not = 1 - single_not;  // !!a
+        assert_eq!(result_val, double_not, "Double NOT should be mathematically correct");
+    }
+
+    #[test]
+    fn test_varid_boolexpr_mixed_operations() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test VarId AND BoolExpr: a & (b | c)
+        let expr_bc = b | c;
+        let expr_mixed = a & expr_bc;
+        
+        let result_var = expr_mixed.apply_to(&mut model);
+        
+        // a must be true, and at least one of b or c must be true
+        post!(model, a == 1);
+        post!(model, b == 0);
+        post!(model, c == 1);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "VarId & BoolExpr mixed operations should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let c_val = sol.get_int(c);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify mixed VarId & BoolExpr logic: a & (b | c)
+        assert_eq!(a_val, 1, "Input a should be true");
+        assert_eq!(b_val, 0, "Input b should be false");
+        assert_eq!(c_val, 1, "Input c should be true");
+        assert_eq!(result_val, 1, "Mixed operation result should be true");
+        
+        let or_part = b_val | c_val;
+        let expected_result = a_val & or_part;
+        assert_eq!(result_val, expected_result, "Result should match a & (b | c)");
+        assert_eq!(or_part, 1, "OR part (b | c) should be true");
+        assert!(b_val == 1 || c_val == 1, "At least one of b or c should be true for OR part");
+    }
+
+    #[test]
+    fn test_boolexpr_varid_mixed_operations() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test BoolExpr OR VarId: (a & b) | c
+        let expr_ab = a & b;
+        let expr_mixed = expr_ab | c;
+        
+        let result_var = expr_mixed.apply_to(&mut model);
+        
+        // Either both a and b are true, or c is true
+        post!(model, a == 0);
+        post!(model, b == 1);
+        post!(model, c == 1);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "BoolExpr | VarId mixed operations should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let c_val = sol.get_int(c);
+        let result_val = sol.get_int(result_var);
+        
+        // Verify mixed BoolExpr | VarId logic: (a & b) | c
+        assert_eq!(a_val, 0, "Input a should be false");
+        assert_eq!(b_val, 1, "Input b should be true");
+        assert_eq!(c_val, 1, "Input c should be true");
+        assert_eq!(result_val, 1, "Mixed operation result should be true");
+        
+        let and_part = a_val & b_val;
+        let expected_result = and_part | c_val;
+        assert_eq!(result_val, expected_result, "Result should match (a & b) | c");
+        assert_eq!(and_part, 0, "AND part (a & b) should be false");
+        assert!(and_part == 1 || c_val == 1, "Either AND part is true OR c is true");
+    }
+
+    #[test]
+    fn test_bool_expr_must_be_true() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        
+        // Test must_be_true method
+        let expr = a & b;
+        let constraint = expr.must_be_true(&mut model);
+        constraint.apply_to(&mut model);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "must_be_true should create valid constraint");
+        
+        if let Ok(sol) = solution {
+            // For AND to be true, both must be true
+            assert_eq!(sol.get_int(a), 1, "First variable should be true");
+            assert_eq!(sol.get_int(b), 1, "Second variable should be true");
+        }
+    }
+
+    #[test]
+    fn test_bool_expr_must_be_false() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        
+        // Test must_be_false method with AND expression
+        let expr = a & b;
+        let constraint = expr.must_be_false(&mut model);
+        constraint.apply_to(&mut model);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "must_be_false should create valid constraint");
+        
+        if let Ok(sol) = solution {
+            let a_val = sol.get_int(a);
+            let b_val = sol.get_int(b);
+            // For AND to be false, at least one must be false
+            assert!(a_val == 0 || b_val == 0, "At least one variable should be false for AND to be false");
+        }
+    }
+
+    #[test]
+    fn test_varid_from_trait() {
+        use cspsolver::constraints::boolean_operators::BoolExpr;
+        
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Test From<VarId> for BoolExpr
+        let expr: BoolExpr = a.into();
+        
+        // Should be able to apply it successfully
+        let result_var = expr.apply_to(&mut model);
+        assert_eq!(result_var, a, "From trait should preserve VarId for simple variable");
+    }
+
+    #[test]
+    fn test_boolean_model_post_true() {
+        use cspsolver::constraints::boolean_operators::BooleanModel;
+        
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Create boolean expression: a itself
+        let expr: cspsolver::constraints::boolean_operators::BoolExpr = a.into();
+        
+        // Test BooleanModel::post_true
+        model.post_true(expr);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "post_true should work correctly");
+        
+        if let Ok(sol) = solution {
+            assert_eq!(sol.get_int(a), 1, "Variable should be true after post_true");
+        }
+    }
+
+    #[test]
+    fn test_boolean_model_post_false() {
+        use cspsolver::constraints::boolean_operators::BooleanModel;
+        
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Create boolean expression: a itself
+        let expr: cspsolver::constraints::boolean_operators::BoolExpr = a.into();
+        
+        // Test BooleanModel::post_false
+        model.post_false(expr);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "post_false should work correctly");
+        
+        if let Ok(sol) = solution {
+            assert_eq!(sol.get_int(a), 0, "Variable should be false after post_false");
+        }
+    }
+
+    #[test]
+    fn test_complex_boolean_expression() {
+        use cspsolver::constraints::boolean_operators::BooleanModel;
+        
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        let d = model.bool();
+        
+        // Test complex expression: (a & b) | (!c & d)
+        let expr_ab = a & b;
+        let expr_not_c = !c;
+        let expr_not_c_and_d = expr_not_c & d;
+        let complex_expr = expr_ab | expr_not_c_and_d;
+        
+        // Post as true
+        model.post_true(complex_expr);
+        
+        // Set values that make the expression true via the second part: (!c & d)
+        post!(model, a == 0); // Makes (a & b) false
+        post!(model, b == 0); 
+        post!(model, c == 0); // Makes !c true
+        post!(model, d == 1); // Makes (!c & d) true
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Complex boolean expression should be satisfiable");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let c_val = sol.get_int(c);
+        let d_val = sol.get_int(d);
+        
+        // Verify complex expression logic: (a & b) | (!c & d)
+        assert_eq!(a_val, 0, "Input a should be false");
+        assert_eq!(b_val, 0, "Input b should be false");
+        assert_eq!(c_val, 0, "Input c should be false");
+        assert_eq!(d_val, 1, "Input d should be true");
+        
+        let left_part = a_val & b_val;  // Should be 0
+        let not_c = 1 - c_val;          // Should be 1
+        let right_part = not_c & d_val; // Should be 1
+        let total_result = left_part | right_part; // Should be 1
+        
+        assert_eq!(left_part, 0, "Left part (a & b) should be false");
+        assert_eq!(not_c, 1, "NOT c should be true");
+        assert_eq!(right_part, 1, "Right part (!c & d) should be true");
+        assert_eq!(total_result, 1, "Overall expression should be true");
+    }
+
+    // ===== ADDITIONAL BOOLEAN OPERATOR EDGE CASES =====
+    
+    #[test]
+    fn test_and_operation_false_case() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        
+        // Test AND operation when result should be false
+        let expr = a & b;
+        let result_var = expr.apply_to(&mut model);
+        
+        // Set values where AND should be false (one true, one false)
+        post!(model, a == 1);
+        post!(model, b == 0);
+        post!(model, result_var == 0);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "AND false case should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let result_val = sol.get_int(result_var);
+        
+        assert_eq!(a_val, 1, "Input a should be true");
+        assert_eq!(b_val, 0, "Input b should be false");
+        assert_eq!(result_val, 0, "AND result should be false when one input is false");
+        assert_eq!(result_val, (a_val & b_val), "AND result should match bitwise AND");
+    }
+    
+    #[test]
+    fn test_or_operation_false_case() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        
+        // Test OR operation when result should be false
+        let expr = a | b;
+        let result_var = expr.apply_to(&mut model);
+        
+        // Set values where OR should be false (both false)
+        post!(model, a == 0);
+        post!(model, b == 0);
+        post!(model, result_var == 0);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "OR false case should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let b_val = sol.get_int(b);
+        let result_val = sol.get_int(result_var);
+        
+        assert_eq!(a_val, 0, "Input a should be false");
+        assert_eq!(b_val, 0, "Input b should be false");
+        assert_eq!(result_val, 0, "OR result should be false when both inputs are false");
+        assert_eq!(result_val, (a_val | b_val), "OR result should match bitwise OR");
+    }
+    
+    #[test]
+    fn test_not_operation_true_input() {
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Test NOT operation with true input
+        let expr = !a;
+        let result_var = expr.apply_to(&mut model);
+        
+        // Set value for NOT operation: true -> false
+        post!(model, a == 1);
+        post!(model, result_var == 0);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "NOT with true input should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let result_val = sol.get_int(result_var);
+        
+        assert_eq!(a_val, 1, "Input a should be true");
+        assert_eq!(result_val, 0, "NOT result should be false when input is true");
+        assert_eq!(result_val, 1 - a_val, "NOT result should be logical inverse");
+    }
+    
+    #[test]
+    fn test_not_operation_false_case() {
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Test NOT operation when input is false
+        let expr = !a;
+        let result_var = expr.apply_to(&mut model);
+        
+        // Set value for NOT operation: false -> true
+        post!(model, a == 0);
+        post!(model, result_var == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "NOT false case should work");
+        
+        let sol = solution.unwrap();
+        let a_val = sol.get_int(a);
+        let result_val = sol.get_int(result_var);
+        
+        assert_eq!(a_val, 0, "Input a should be false");
+        assert_eq!(result_val, 1, "NOT result should be true when input is false");
+        assert_eq!(result_val, 1 - a_val, "NOT result should be logical inverse");
+    }
+
+    // ===== CARDINALITY CONSTRAINTS COMPREHENSIVE COVERAGE =====
+    // Targeting: src/constraints/props/cardinality.rs (Function: 66.67%, Line: 31.54%, Region: 27.80%)
+    
+    #[test]
+    fn test_at_least_cardinality_constraint() {
+        let mut model = Model::default();
+        let vars = vec![model.bool(), model.bool(), model.bool(), model.bool()];
+        
+        // At least 2 variables should be true (value 1)
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.ge(2));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "At least cardinality constraint should be satisfiable");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let true_count = values.iter().filter(|&&v| v == 1).count();
+        
+        assert!(true_count >= 2, "At least 2 variables should be true, got {}", true_count);
+        println!("At least constraint: {} true values out of {}", true_count, vars.len());
+    }
+
+    #[test]
+    fn test_at_least_cardinality_impossible() {
+        let mut model = Model::default();
+        // Create variables that cannot all be 1
+        let vars = vec![model.int(0, 0), model.int(0, 0), model.int(0, 1)]; // Only one can be 1
+        
+        // Require at least 3 variables to be 1 - impossible
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.ge(3));
+        
+        let solution = model.solve();
+        assert!(solution.is_err(), "Impossible at least constraint should fail");
+    }
+
+    #[test]
+    fn test_at_most_cardinality_constraint() {
+        let mut model = Model::default();
+        let vars = vec![model.bool(), model.bool(), model.bool(), model.bool()];
+        
+        // At most 2 variables should be true (value 1)
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.le(2));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "At most cardinality constraint should be satisfiable");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let true_count = values.iter().filter(|&&v| v == 1).count();
+        
+        assert!(true_count <= 2, "At most 2 variables should be true, got {}", true_count);
+        println!("At most constraint: {} true values out of {}", true_count, vars.len());
+    }
+
+    #[test]
+    fn test_at_most_cardinality_forced() {
+        let mut model = Model::default();
+        let vars = vec![model.bool(), model.bool(), model.bool()];
+        
+        // Force 2 variables to be true, then enforce at most 2
+        post!(model, vars[0] == 1);
+        post!(model, vars[1] == 1);
+        
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.le(2));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "At most with forced values should work");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let true_count = values.iter().filter(|&&v| v == 1).count();
+        
+        assert_eq!(true_count, 2, "Should have exactly 2 true values");
+        assert_eq!(sol.get_int(vars[2]), 0, "Third variable should be forced to false");
+    }
+
+    #[test]
+    fn test_exactly_cardinality_constraint() {
+        let mut model = Model::default();
+        let vars = vec![model.bool(), model.bool(), model.bool(), model.bool()];
+        
+        // Exactly 2 variables should be true (value 1)
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.eq(2));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Exactly cardinality constraint should be satisfiable");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let true_count = values.iter().filter(|&&v| v == 1).count();
+        
+        assert_eq!(true_count, 2, "Exactly 2 variables should be true, got {}", true_count);
+        
+        // Verify logical consistency
+        let false_count = values.iter().filter(|&&v| v == 0).count();
+        assert_eq!(false_count, 2, "Exactly 2 variables should be false");
+        assert_eq!(true_count + false_count, vars.len(), "All variables should be assigned");
+    }
+
+    #[test]
+    fn test_exactly_cardinality_impossible() {
+        let mut model = Model::default();
+        let vars = vec![model.int(1, 1), model.int(1, 1)]; // Both must be 1
+        
+        // Require exactly 1 variable to be 1 - impossible since both must be 1
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.eq(1));
+        
+        let solution = model.solve();
+        assert!(solution.is_err(), "Impossible exactly constraint should fail");
+    }
+
+    #[test]
+    fn test_cardinality_with_different_values() {
+        let mut model = Model::default();
+        let vars = vec![model.int(0, 2), model.int(0, 2), model.int(0, 2), model.int(0, 2)];
+        
+        // Exactly 2 variables should equal 2
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 2, count_var);
+        model.new(count_var.eq(2));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Cardinality with value 2 should work");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let count_2 = values.iter().filter(|&&v| v == 2).count();
+        
+        assert_eq!(count_2, 2, "Exactly 2 variables should equal 2, got {}", count_2);
+        
+        // Other values should be 0 or 1
+        for &value in &values {
+            assert!(value >= 0 && value <= 2, "All values should be in domain [0,2]");
+        }
+    }
+
+    #[test]
+    fn test_cardinality_edge_case_zero_count() {
+        let mut model = Model::default();
+        let vars = vec![model.bool(), model.bool(), model.bool()];
+        
+        // Exactly 0 variables should be true (all should be false)
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.eq(0));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Zero cardinality constraint should work");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let true_count = values.iter().filter(|&&v| v == 1).count();
+        
+        assert_eq!(true_count, 0, "No variables should be true");
+        for &value in &values {
+            assert_eq!(value, 0, "All variables should be false");
+        }
+    }
+
+    #[test]
+    fn test_cardinality_edge_case_all_count() {
+        let mut model = Model::default();
+        let vars = vec![model.bool(), model.bool(), model.bool()];
+        
+        // Exactly all variables should be true
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.eq(vars.len() as i32));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "All variables cardinality constraint should work");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let true_count = values.iter().filter(|&&v| v == 1).count();
+        
+        assert_eq!(true_count, vars.len(), "All variables should be true");
+        for &value in &values {
+            assert_eq!(value, 1, "All variables should be true");
+        }
+    }
+
+    #[test]
+    fn test_cardinality_with_fixed_variables() {
+        let mut model = Model::default();
+        let vars = vec![model.bool(), model.bool(), model.bool(), model.bool()];
+        
+        // Fix some variables and test cardinality
+        post!(model, vars[0] == 1); // Force first to true
+        post!(model, vars[1] == 0); // Force second to false
+        
+        // Exactly 2 variables should be true (including the forced one)
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.eq(2));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Cardinality with fixed variables should work");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        
+        // Verify fixed values
+        assert_eq!(values[0], 1, "First variable should be fixed to true");
+        assert_eq!(values[1], 0, "Second variable should be fixed to false");
+        
+        // Count true values
+        let true_count = values.iter().filter(|&&v| v == 1).count();
+        assert_eq!(true_count, 2, "Exactly 2 variables should be true");
+        
+        // One of the remaining variables should be true
+        let remaining_true_count = [values[2], values[3]].iter().filter(|&&v| v == 1).count();
+        assert_eq!(remaining_true_count, 1, "Exactly one of the remaining variables should be true");
+    }
+
+    #[test]
+    fn test_multiple_cardinality_constraints() {
+        let mut model = Model::default();
+        let vars = vec![model.int(0, 2), model.int(0, 2), model.int(0, 2), model.int(0, 2)];
+        
+        // At least 1 variable should equal 0
+        let count_0_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 0, count_0_var);
+        model.new(count_0_var.ge(1));
+        
+        // At most 2 variables should equal 1
+        let count_1_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_1_var);
+        model.new(count_1_var.le(2));
+        
+        // Exactly 1 variable should equal 2
+        let count_2_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 2, count_2_var);
+        model.new(count_2_var.eq(1));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Multiple cardinality constraints should be satisfiable");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        
+        // Verify all constraints
+        let count_0 = values.iter().filter(|&&v| v == 0).count();
+        let count_1 = values.iter().filter(|&&v| v == 1).count();
+        let count_2 = values.iter().filter(|&&v| v == 2).count();
+        
+        assert!(count_0 >= 1, "At least 1 variable should equal 0");
+        assert!(count_1 <= 2, "At most 2 variables should equal 1");
+        assert_eq!(count_2, 1, "Exactly 1 variable should equal 2");
+        
+        println!("Multiple cardinality: {} zeros, {} ones, {} twos", count_0, count_1, count_2);
+    }
+
+    #[test]
+    fn test_cardinality_large_domain() {
+        let mut model = Model::default();
+        let vars = vec![
+            model.int(1, 10), model.int(1, 10), model.int(1, 10), 
+            model.int(1, 10), model.int(1, 10)
+        ];
+        
+        // Exactly 3 variables should equal 5
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 5, count_var);
+        model.new(count_var.eq(3));
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Cardinality with large domain should work");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let count_5 = values.iter().filter(|&&v| v == 5).count();
+        
+        assert_eq!(count_5, 3, "Exactly 3 variables should equal 5");
+        
+        // All values should be in valid domain
+        for &value in &values {
+            assert!(value >= 1 && value <= 10, "All values should be in domain [1,10]");
+        }
+        
+        // Non-5 values should be something else in the domain
+        let non_5_values: Vec<i32> = values.iter().filter(|&&v| v != 5).cloned().collect();
+        for &value in &non_5_values {
+            assert!(value >= 1 && value <= 10 && value != 5, "Non-5 values should be in domain but not 5");
+        }
+    }
+
+    #[test]
+    fn test_cardinality_propagation_effects() {
+        let mut model = Model::default();
+        let vars = vec![model.bool(), model.bool()];
+        
+        // Exactly 1 variable should be true
+        let count_var = model.int(0, vars.len() as i32);
+        model.count(&vars, 1, count_var);
+        model.new(count_var.eq(1));
+        
+        // Force one variable to be true
+        post!(model, vars[0] == 1);
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Cardinality propagation should work");
+        
+        let sol = solution.unwrap();
+        
+        // The constraint should have propagated to force the second variable to false
+        assert_eq!(sol.get_int(vars[0]), 1, "First variable should be true");
+        assert_eq!(sol.get_int(vars[1]), 0, "Second variable should be propagated to false");
+        
+        // Verify cardinality is satisfied
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        let true_count = values.iter().filter(|&&v| v == 1).count();
+        assert_eq!(true_count, 1, "Exactly 1 variable should be true after propagation");
+    }
+
+    #[test]
+    fn test_gcc_cardinality_constraint() {
+        let mut model = Model::default();
+        let vars = vec![model.int(1, 3), model.int(1, 3), model.int(1, 3), model.int(1, 3)];
+        
+        // Use global cardinality constraint to specify counts for each value
+        let values = [1, 2, 3];
+        let counts = vec![model.int(0, 4), model.int(0, 4), model.int(0, 4)];
+        
+        model.gcc(&vars, &values, &counts);
+        
+        // Force specific counts: 2 ones, 1 two, 1 three
+        model.new(counts[0].eq(2)); // 2 variables equal 1
+        model.new(counts[1].eq(1)); // 1 variable equals 2
+        model.new(counts[2].eq(1)); // 1 variable equals 3
+        
+        let solution = model.solve();
+        assert!(solution.is_ok(), "Global cardinality constraint should be satisfiable");
+        
+        let sol = solution.unwrap();
+        let values: Vec<i32> = vars.iter().map(|&v| sol.get_int(v)).collect();
+        
+        // Verify counts
+        let count_1 = values.iter().filter(|&&v| v == 1).count();
+        let count_2 = values.iter().filter(|&&v| v == 2).count();
+        let count_3 = values.iter().filter(|&&v| v == 3).count();
+        
+        assert_eq!(count_1, 2, "Should have exactly 2 variables equal to 1");
+        assert_eq!(count_2, 1, "Should have exactly 1 variable equal to 2");
+        assert_eq!(count_3, 1, "Should have exactly 1 variable equal to 3");
+        
+        // Verify count variables are correct
+        assert_eq!(sol.get_int(counts[0]), 2, "Count variable for 1s should be 2");
+        assert_eq!(sol.get_int(counts[1]), 1, "Count variable for 2s should be 1");
+        assert_eq!(sol.get_int(counts[2]), 1, "Count variable for 3s should be 1");
+    }
 }
