@@ -79,7 +79,7 @@ pub fn search_with_timeout_and_memory<M: Mode>(
 
     // Explore space by alternating branching and propagation
     if is_stalled {
-        Search::Stalled(DefaultEngine::with_timeout_and_memory(space, mode, timeout, memory_limit_mb))
+        Search::Stalled(Box::new(DefaultEngine::with_timeout_and_memory(space, mode, timeout, memory_limit_mb)))
     } else {
         Search::Done(Some(space))
     }
@@ -87,7 +87,7 @@ pub fn search_with_timeout_and_memory<M: Mode>(
 
 /// Manual state machine until `gen` keyword is available (edition 2024).
 pub enum Search<M> {
-    Stalled(DefaultEngine<M>),
+    Stalled(Box<DefaultEngine<M>>),
     Done(Option<Space>),
 }
 

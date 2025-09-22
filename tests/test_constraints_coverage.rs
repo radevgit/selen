@@ -293,6 +293,205 @@ mod constraints_coverage {
         let solution = result.unwrap();
         assert_eq!(solution.get_int(a), 0);
     }
+
+    // ===== COMPREHENSIVE LOGICAL OPERATIONS COVERAGE =====
+    // Testing both single variable and array syntaxes for and/or/not
+
+    #[test]
+    fn test_logical_and_single_variables() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test and() with individual variables: and(a, b, c)
+        post!(model, and(a, b, c));
+        
+        let result = model.solve();
+        assert!(result.is_ok(), "AND with single variables should work");
+        
+        let solution = result.unwrap();
+        assert_eq!(solution.get_int(a), 1);
+        assert_eq!(solution.get_int(b), 1);
+        assert_eq!(solution.get_int(c), 1);
+    }
+
+    #[test]
+    fn test_logical_and_array_variables() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test and() with array syntax: and([a, b, c])
+        post!(model, and([a, b, c]));
+        
+        let result = model.solve();
+        assert!(result.is_ok(), "AND with array variables should work");
+        
+        let solution = result.unwrap();
+        assert_eq!(solution.get_int(a), 1);
+        assert_eq!(solution.get_int(b), 1);
+        assert_eq!(solution.get_int(c), 1);
+    }
+
+    #[test]
+    fn test_logical_or_single_variables() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test or() with individual variables: or(a, b, c)
+        post!(model, or(a, b, c));
+        post!(model, a == 0);  // Force a to be false
+        post!(model, b == 0);  // Force b to be false
+        
+        let result = model.solve();
+        assert!(result.is_ok(), "OR with single variables should work");
+        
+        let solution = result.unwrap();
+        assert_eq!(solution.get_int(a), 0);
+        assert_eq!(solution.get_int(b), 0);
+        assert_eq!(solution.get_int(c), 1); // c must be true for OR to be satisfied
+    }
+
+    #[test]
+    fn test_logical_or_array_variables() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test or() with array syntax: or([a, b, c])
+        post!(model, or([a, b, c]));
+        post!(model, a == 0);  // Force a to be false
+        post!(model, b == 0);  // Force b to be false
+        
+        let result = model.solve();
+        assert!(result.is_ok(), "OR with array variables should work");
+        
+        let solution = result.unwrap();
+        assert_eq!(solution.get_int(a), 0);
+        assert_eq!(solution.get_int(b), 0);
+        assert_eq!(solution.get_int(c), 1); // c must be true for OR to be satisfied
+    }
+
+    #[test]
+    fn test_logical_not_single_variable() {
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Test not() with single variable: not(a)
+        post!(model, not(a));
+        
+        let result = model.solve();
+        assert!(result.is_ok(), "NOT with single variable should work");
+        
+        let solution = result.unwrap();
+        assert_eq!(solution.get_int(a), 0);
+    }
+
+    #[test]
+    fn test_logical_not_array_variables() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        
+        // Test not() with array syntax: not([a, b, c])
+        // This should apply NOT to each variable individually
+        post!(model, not([a, b, c]));
+        
+        let result = model.solve();
+        assert!(result.is_ok(), "NOT with array variables should work");
+        
+        let solution = result.unwrap();
+        assert_eq!(solution.get_int(a), 0); // All should be false (NOT applied individually)
+        assert_eq!(solution.get_int(b), 0);
+        assert_eq!(solution.get_int(c), 0);
+    }
+
+    #[test]
+    fn test_mixed_logical_operations() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        let d = model.bool();
+        
+        // Test mixing single and array syntaxes
+        post!(model, and(a, b));        // Single variable syntax
+        post!(model, or([c, d]));       // Array syntax
+        post!(model, not(a));           // Single variable NOT (should conflict with and(a,b))
+        
+        let result = model.solve();
+        // This should be unsatisfiable because and(a,b) requires a=1, but not(a) requires a=0
+        assert!(result.is_err(), "Conflicting logical constraints should be unsatisfiable");
+    }
+
+    #[test]
+    fn test_logical_operations_with_constraints() {
+        let mut model = Model::default();
+        let a = model.bool();
+        let b = model.bool();
+        let c = model.bool();
+        let d = model.bool();
+        
+        // Complex logical scenario
+        post!(model, or([a, b]));       // At least one of a,b is true
+        post!(model, and([c, d]));      // Both c,d are true
+        post!(model, not(a));           // a is false
+        
+        let result = model.solve();
+        assert!(result.is_ok(), "Complex logical constraints should work");
+        
+        let solution = result.unwrap();
+        assert_eq!(solution.get_int(a), 0); // a is false (due to not(a))
+        assert_eq!(solution.get_int(b), 1); // b must be true (for or([a,b]) to hold)
+        assert_eq!(solution.get_int(c), 1); // c is true (due to and([c,d]))
+        assert_eq!(solution.get_int(d), 1); // d is true (due to and([c,d]))
+    }
+
+    #[test]
+    fn test_logical_edge_cases() {
+        let mut model = Model::default();
+        let a = model.bool();
+        
+        // Test single element arrays
+        post!(model, and([a]));         // Single element AND
+        post!(model, or([a]));          // Single element OR (redundant but should work)
+        post!(model, not([a]));         // Single element NOT
+        
+        let result = model.solve();
+        // This is unsatisfiable: and([a]) requires a=1, but not([a]) requires a=0
+        assert!(result.is_err(), "Conflicting single-element logical constraints should be unsatisfiable");
+    }
+
+    #[test]
+    fn test_large_logical_arrays() {
+        let mut model = Model::default();
+        let vars: Vec<VarId> = (0..10).map(|_| model.bool()).collect();
+        
+        // Test with larger arrays - use array syntax with spread
+        post!(model, or([vars[0], vars[1], vars[2], vars[3], vars[4], 
+                        vars[5], vars[6], vars[7], vars[8], vars[9]]));          // At least one must be true
+        
+        // Force most to be false, leaving only one that can be true
+        for i in 0..9 {
+            post!(model, vars[i] == 0);
+        }
+        
+        let result = model.solve();
+        assert!(result.is_ok(), "Large logical arrays should work");
+        
+        let solution = result.unwrap();
+        // First 9 should be false, last one should be true
+        for i in 0..9 {
+            assert_eq!(solution.get_int(vars[i]), 0);
+        }
+        assert_eq!(solution.get_int(vars[9]), 1);
+    }
     
     // ===== COVERAGE STRESS TESTS =====
     

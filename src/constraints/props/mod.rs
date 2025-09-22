@@ -572,7 +572,7 @@ impl Propagators {
         let s_info = ViewInfo::Variable { var_id: s };
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .chain(std::iter::once(s))
             .collect();
             
@@ -629,7 +629,7 @@ impl Propagators {
         let s_info = ViewInfo::Variable { var_id: s };
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .chain(std::iter::once(s))
             .collect();
             
@@ -654,7 +654,7 @@ impl Propagators {
         let s_info = ViewInfo::Variable { var_id: s };
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .chain(std::iter::once(s))
             .collect();
             
@@ -748,7 +748,7 @@ impl Propagators {
         let s_info = ViewInfo::Variable { var_id: s };
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .chain(std::iter::once(s))
             .collect();
             
@@ -801,7 +801,7 @@ impl Propagators {
         let y_info = self.analyze_view(&y);
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .collect();
             
         let metadata = ConstraintData::Binary {
@@ -825,7 +825,7 @@ impl Propagators {
         let y_info = self.analyze_view(&y);
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .collect();
             
         let metadata = ConstraintData::Binary {
@@ -863,7 +863,7 @@ impl Propagators {
         let y_info = self.analyze_view(&y);
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .collect();
             
         let metadata = ConstraintData::Binary {
@@ -896,7 +896,7 @@ impl Propagators {
         };
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .collect();
             
         self.push_new_prop_with_metadata(
@@ -1220,7 +1220,7 @@ impl Propagators {
         }
     }
 
-    /// Create enhanced constraint methods with metadata collection
+    // Create enhanced constraint methods with metadata collection
     
     /// Declare a new propagator to enforce `x <= y` with metadata collection.
     pub fn less_than_or_equals_with_metadata(&mut self, x: impl View, y: impl View) -> PropId {
@@ -1229,7 +1229,7 @@ impl Propagators {
         let x_info = self.analyze_view(&x);
         let y_info = self.analyze_view(&y);
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .collect();
             
         let metadata = ConstraintData::Binary {
@@ -1263,7 +1263,7 @@ impl Propagators {
         };
         
         let variables: Vec<_> = x.get_underlying_var().into_iter()
-            .chain(y.get_underlying_var().into_iter())
+            .chain(y.get_underlying_var())
             .collect();
             
         let metadata = ConstraintData::Binary {

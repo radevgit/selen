@@ -154,6 +154,50 @@ impl Model {
         self.memory_limit_exceeded
     }
     
+    /// Get the current number of variables in the model
+    /// 
+    /// This can be called at any time during model construction to check
+    /// how many variables have been created.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut m = Model::default();
+    /// 
+    /// assert_eq!(m.variable_count(), 0);
+    /// let x = m.int(1, 10);
+    /// assert_eq!(m.variable_count(), 1);
+    /// let y = m.float(0.0, 1.0);
+    /// assert_eq!(m.variable_count(), 2);
+    /// ```
+    pub fn variable_count(&self) -> usize {
+        self.vars.count()
+    }
+    
+    /// Get the current number of constraints in the model
+    /// 
+    /// This can be called at any time during model construction to check
+    /// how many constraints have been posted.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use cspsolver::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// 
+    /// assert_eq!(m.constraint_count(), 0);
+    /// post!(m, x != y);
+    /// assert_eq!(m.constraint_count(), 1);
+    /// post!(m, x <= int(8));
+    /// assert_eq!(m.constraint_count(), 2);
+    /// ```
+    pub fn constraint_count(&self) -> usize {
+        self.props.count()
+    }
+    
     /// Add to estimated memory usage and check limits
     fn add_memory_usage(&mut self, bytes: u64) -> Result<(), SolverError> {
         self.estimated_memory_bytes += bytes;
@@ -485,18 +529,14 @@ impl Model {
     pub fn new_var_unchecked(&mut self, min: Val, max: Val) -> VarId {
         match self.new_var_checked(min, max) {
             Ok(var_id) => var_id,
-            Err(error) => {
+            Err(_error) => {
                 // Memory limit exceeded during variable creation
-                // Mark the model as invalid and panic to prevent memory explosion
+                // Mark the model as invalid so solve() will return the error gracefully
                 self.memory_limit_exceeded = true;
                 
-                panic!("Memory limit exceeded during variable creation: {}. \
-                       Configured limit: {:?} MB. \
-                       Current usage: {} MB. \
-                       This prevents system memory exhaustion.", 
-                       error, 
-                       self.config.max_memory_mb,
-                       self.estimated_memory_mb());
+                // Return a dummy VarId to keep the API consistent
+                // The solve() method will detect memory_limit_exceeded and return proper error
+                VarId::from_index(0)
             }
         }
     }
@@ -922,8 +962,8 @@ impl Model {
         }
     }
     
-    /// Step 6.5: Try hybrid optimization approach for constraint satisfaction
-    /// Returns Some(solution) if hybrid solver succeeds, None if should fall back to search
+    // Step 6.5: Try hybrid optimization approach for constraint satisfaction
+    // Returns Some(solution) if hybrid solver succeeds, None if should fall back to search
     // fn try_hybrid_solve(&self) -> Option<Solution> {
     //     // Create a dummy objective (we're not optimizing, just solving constraints)
     //     // Use the first variable if available, otherwise return None

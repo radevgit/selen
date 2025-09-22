@@ -248,6 +248,12 @@ impl FloatSubproblemSolver {
     }
 }
 
+impl Default for IntegerSubproblemSolver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IntegerSubproblemSolver {
     /// Create a new integer subproblem solver
     pub fn new() -> Self {

@@ -16,7 +16,7 @@
 //! ### Baseline Results (Post-Architecture-Change)
 //! Date: 2025-09-14 (Post-Architecture-Change Baseline)
 //! Description: Post dependency removal and propagator copying changes
-//! ```
+//! ```text
 //! // Initial results from running the benchmark:
 //! // Unconstrained: Traditional=487ns avg, Step2.4=123ns avg, Speedup=3.96x
 //! // Simple Constraints: Traditional=TBDμs, Step2.4=TBDμs, Speedup=TBDx  

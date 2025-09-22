@@ -31,9 +31,10 @@ impl PrecisionBoundaryPropagator {
 
     /// Create a propagator for a single variable
     pub fn for_variable(var_id: VarId, step_size: f64) -> Self {
-        let mut variables = Vec::with_capacity(1);
-        variables.push(var_id);
-        Self::new(variables, step_size)
+        Self {
+            variables: vec![var_id],
+            step_size,
+        }
     }
 
     /// Apply precision optimization to all variables using constraint metadata
@@ -43,7 +44,6 @@ impl PrecisionBoundaryPropagator {
         registry: &ConstraintRegistry,
     ) -> Option<()> {
         let mut optimizer = PrecisionOptimizer::new(self.step_size);
-        let mut any_changed = false;
 
         for &var_id in &self.variables {
             // Optimize bounds for this variable
@@ -53,8 +53,6 @@ impl PrecisionBoundaryPropagator {
             let changed = self.apply_precision_bounds(var_id, &bounds, ctx).ok()?;
             
             if changed {
-                any_changed = true;
-                
                 // Log precision adjustments for debugging
                 if bounds.precision_adjusted {
                     #[cfg(debug_assertions)]
@@ -72,11 +70,7 @@ impl PrecisionBoundaryPropagator {
             }
         }
 
-        if any_changed {
-            Some(())
-        } else {
-            Some(())
-        }
+        Some(())
     }
 
     /// Apply precision bounds to a variable using the Context API

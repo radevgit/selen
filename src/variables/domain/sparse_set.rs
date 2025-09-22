@@ -36,7 +36,6 @@ impl Display for SparseSet {
             if i + 1 == self.size {
                 s.pop(); // remove comma
                 write!(s, "|").expect("writing to String should never fail");
-            } else {
             }
         }
         if self.size != self.n {

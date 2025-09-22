@@ -54,7 +54,7 @@ mod variables_coverage {
         if let Ok(solution) = solution {
             let value = solution.get_int(x);
             assert!(
-                value >= -10 && value <= 10,
+                (-10..=10).contains(&value),
                 "Variable value should be within expected range: got {}",
                 value
             );
@@ -72,7 +72,7 @@ mod variables_coverage {
         if let Ok(solution) = solution {
             let value = solution.get_int(x);
             assert!(
-                value >= 1000000 && value <= 3000000,
+                (1000000..=3000000).contains(&value),
                 "Variable value should be within expected range: got {}",
                 value
             );
@@ -110,7 +110,7 @@ mod variables_coverage {
         if let Ok(solution) = solution {
             let value = solution.get_float(x);
             assert!(
-                value >= 0.5 && value <= 1.0,
+                (0.5..=1.0).contains(&value),
                 "Float variable should respect bounds: got {}",
                 value
             );
@@ -173,8 +173,8 @@ mod variables_coverage {
             let x_val = solution.get_int(x);
             let y_val = solution.get_int(y);
             
-            assert!(x_val >= 20 && x_val <= 30, "x should be in [20,30]: got {}", x_val);
-            assert!(y_val >= 40 && y_val <= 50, "y should be in [40,50]: got {}", y_val);
+            assert!((20..=30).contains(&x_val), "x should be in [20,30]: got {}", x_val);
+            assert!((40..=50).contains(&y_val), "y should be in [40,50]: got {}", y_val);
         }
     }
 
@@ -283,7 +283,7 @@ mod variables_coverage {
             let x_val = solution.get_float(x);
             
             assert!(
-                x_val >= -0.000001 && x_val <= 0.000001,
+                (-0.000001..=0.000001).contains(&x_val),
                 "x should be within tight bounds: got x={}",
                 x_val
             );

@@ -75,9 +75,7 @@ impl BoolExpr {
                 let left_var = left.apply_to(model);
                 let right_var = right.apply_to(model);
                 let result = model.bool();
-                let mut vars = Vec::with_capacity(2);
-                vars.push(left_var);
-                vars.push(right_var);
+                let vars = vec![left_var, right_var];
                 model.props.bool_or(vars, result);
                 result
             }

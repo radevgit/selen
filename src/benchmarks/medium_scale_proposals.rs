@@ -213,7 +213,7 @@ pub fn run_medium_scale_optimization_proposals() {
     println!("=== ANALYSIS ===");
     
     // Find best approach
-    let approaches = vec![
+    let approaches = [
         ("Original", original_duration, original_success),
         ("Grouped", grouped_duration, grouped_success),
         ("Hierarchical", hierarchical_duration, hierarchical_success), 

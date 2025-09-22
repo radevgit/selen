@@ -199,7 +199,7 @@ impl ConstraintRegistry {
         for var_id in variables {
             self.var_to_constraints
                 .entry(var_id)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(id);
         }
 
