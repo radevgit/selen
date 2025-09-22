@@ -1,9 +1,8 @@
 //! # CSP Solver
 //!
-//! A constraint satisfaction problem (CSP) solver library with built-in memory management
-//! and resource limiting for safe, production-ready constraint solving.
+//! A constraint satisfaction problem (CSP) solver library in Rust.
 //!
-//! ## 🛡️ Safety & Resource Management
+//! ## Safety & Resource Management
 //!
 //! All models have **automatic memory and timeout limits** to prevent system exhaustion:
 //! - **Default memory limit**: 2GB
