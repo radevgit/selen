@@ -131,7 +131,7 @@ pub fn float(value: f64) -> TypedConstant {
     TypedConstant::Float(value)
 }
 
-/// Mathematical functions for constraint expressions
+// Mathematical functions for constraint expressions
 
 /// Create absolute value expression: abs(x)
 /// 

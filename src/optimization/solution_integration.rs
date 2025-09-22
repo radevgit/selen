@@ -325,7 +325,7 @@ impl SolutionIntegrator {
         &self,
         _model: &Model,
         _assignments: &HashMap<VarId, Val>,
-        _issues: &mut Vec<ValidationIssue>,
+        _issues: &mut [ValidationIssue],
     ) -> Result<usize, IntegrationError> {
         // For Step 6.4, we implement a simplified constraint validation
         // In a full implementation, this would:

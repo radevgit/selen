@@ -146,11 +146,7 @@ impl ProblemClassifier {
         let has_coupling = Self::detect_cross_type_coupling(constraint_registry);
         
         // Conservative assumption about coupling strength
-        let coupling_strength = if has_coupling {
-            CouplingStrength::Linear // Start with linear assumption
-        } else {
-            CouplingStrength::Linear
-        };
+        let coupling_strength = CouplingStrength::Linear; // Start with linear assumption
         
         CouplingAnalysisResult {
             has_coupling,

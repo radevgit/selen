@@ -612,9 +612,7 @@ fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
                         (left_var, left_val, right_val) {
                         if let (Val::ValI(left_int), Val::ValI(right_int)) = (left_const, right_const) {
                             // Create a new variable with domain {left_val, right_val} and unify it with the original
-                            let mut domain_vals = Vec::with_capacity(2);
-                            domain_vals.push(*left_int);
-                            domain_vals.push(*right_int);
+                            let domain_vals = vec![*left_int, *right_int];
                             let domain_var = model.ints(domain_vals);
                             return model.props.equals(*var_id, domain_var);
                         }

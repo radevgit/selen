@@ -3,7 +3,6 @@
 /// Based on "A Bitwise GAC Algorithm for Alldifferent Constraints" (IJCAI 2023)
 /// Key innovation: Use bitwise data structures and operations to efficiently
 /// determine if a node is in an SCC, rather than computing all SCCs explicitly.
-
 use std::collections::{HashMap, HashSet, VecDeque};
 use crate::variables::domain::sparse_set::SparseSet;
 
@@ -25,6 +24,12 @@ pub struct BipartiteGraph {
     pub var_domains: HashMap<Variable, SparseSet>,
     /// Values and which variables can take them
     pub value_vars: HashMap<Value, Vec<Variable>>,
+}
+
+impl Default for BipartiteGraph {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BipartiteGraph {
@@ -50,7 +55,7 @@ impl BipartiteGraph {
         // Add to value_vars (still needed for reverse lookup)
         for value in domain {
             let val = Value(value);
-            self.value_vars.entry(val).or_insert_with(Vec::new).push(var);
+            self.value_vars.entry(val).or_default().push(var);
         }
     }
     
@@ -278,6 +283,12 @@ pub struct Matching {
     pub var_to_val: HashMap<Variable, Value>,
     /// Value to variable mapping
     pub val_to_var: HashMap<Value, Variable>,
+}
+
+impl Default for Matching {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Matching {
@@ -571,6 +582,12 @@ pub struct SCCFinder {
     sccs: Vec<HashSet<String>>,
 }
 
+impl Default for SCCFinder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SCCFinder {
     pub fn new() -> Self {
         Self {
@@ -798,6 +815,12 @@ pub struct SparseSetGAC {
     pub cached_matching: Option<Matching>,
 }
 
+impl Default for SparseSetGAC {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SparseSetGAC {
     /// Create a new SparseSet-based GAC instance
     pub fn new() -> Self {
@@ -894,7 +917,7 @@ impl SparseSetGAC {
     
     /// Check if a variable is assigned (domain size = 1)
     pub fn is_assigned(&self, var: Variable) -> bool {
-        self.domains.get(&var).map_or(false, |d| d.is_fixed())
+        self.domains.get(&var).is_some_and(|d| d.is_fixed())
     }
     
     /// Get assigned value if variable is assigned

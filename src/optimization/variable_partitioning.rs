@@ -104,8 +104,8 @@ impl VariablePartitioner {
         
         // For Step 6.2, we use a conservative estimate for separability
         // In practice, this depends on the actual constraint analysis
-        let is_separable = variable_analysis.float_variables.len() > 0 && 
-                          variable_analysis.integer_variables.len() > 0;
+        let is_separable = !variable_analysis.float_variables.is_empty() && 
+                          !variable_analysis.integer_variables.is_empty();
         
         PartitionResult {
             float_partition,
