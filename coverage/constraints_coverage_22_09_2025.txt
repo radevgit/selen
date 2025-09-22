@@ -1,0 +1,37 @@
+
+UPDATED CONSTRAINT MODULE TEST COVERAGE REPORT
+======================================================================
+Module                                        Function     Line         Region      
+----------------------------------------------------------------------
+benchmarks/manufacturing_constraints.rs       0.00%        0.00%        0.00%       
+constraints/boolean_operators.rs              5.88%        13.43%       24.29%      
+constraints/builder_legacy.rs                 0.00%        0.00%        0.00%       
+constraints/gac.rs                            82.05%       77.50%       79.48%      
+constraints/macros/mod.rs                     50.00%       50.00%       50.00%      
+constraints/math_syntax.rs                    75.86%       76.26%       74.69%      
+constraints/operators.rs                      100.00%      100.00%      100.00%     
+constraints/props/abs.rs                      100.00%      69.12%       65.95%      
+constraints/props/add.rs                      100.00%      100.00%      94.81%      
+constraints/props/alldiff.rs                  45.45%       44.83%       42.90%      
+constraints/props/allequal.rs                 100.00%      89.47%       90.28%      
+constraints/props/between.rs                  80.00%       64.86%       48.91%      
+constraints/props/bool_logic.rs               100.00%      93.98%       82.95%      
+constraints/props/cardinality.rs              66.67%       31.54%       27.80%      
+constraints/props/conditional.rs              58.33%       42.19%       33.96%      
+constraints/props/count.rs                    100.00%      92.93%       88.67%      
+constraints/props/div.rs                      100.00%      85.53%       89.37%      
+constraints/props/element.rs                  100.00%      83.06%       75.17%      
+constraints/props/eq.rs                       100.00%      100.00%      95.65%      
+constraints/props/leq.rs                      100.00%      100.00%      96.67%      
+constraints/props/max.rs                      100.00%      92.21%       91.28%      
+constraints/props/min.rs                      100.00%      90.91%       88.95%      
+constraints/props/mod.rs                      86.84%       82.18%       81.15%      
+constraints/props/modulo.rs                   100.00%      68.83%       74.58%      
+constraints/props/mul.rs                      100.00%      96.72%       93.98%      
+constraints/props/neq.rs                      100.00%      67.59%       65.12%      
+constraints/props/noop.rs                     0.00%        0.00%        0.00%       
+constraints/props/sum.rs                      100.00%      100.00%      94.03%      
+constraints/props/table.rs                    100.00%      92.63%       92.23%      
+model/constraints.rs                          94.12%       73.33%       76.94%      
+----------------------------------------------------------------------
+CONSTRAINTS TOTAL                             78.88%      68.64%      68.07%
