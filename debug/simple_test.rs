@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() -> SolverResult<()> {
     println!("🔍 Simple test to debug statistics...");

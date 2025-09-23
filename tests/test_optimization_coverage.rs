@@ -3,8 +3,8 @@
 //! This file contains comprehensive tests targeting low-coverage areas in the optimization modules,
 //! particularly focusing on classification, constraint integration, precision handling, and model integration.
 
-use cspsolver::prelude::*;
-use cspsolver::optimization::classification::*;
+use selen::prelude::*;
+use selen::optimization::classification::*;
 
 #[cfg(test)]
 mod optimization_coverage {

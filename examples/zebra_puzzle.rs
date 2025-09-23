@@ -2,7 +2,7 @@
 //! 
 //! Who owns the zebra? Logical deduction puzzle with multiple constraints.
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("🦓 Einstein's Zebra Puzzle (Simplified)");

@@ -1,5 +1,5 @@
-use cspsolver::prelude::*;
-use cspsolver::core::error::SolverError;
+use selen::prelude::*;
+use selen::core::error::SolverError;
 
 /// Tests for the new centralized validation system that catches empty min/max constraints
 /// and other validation scenarios.

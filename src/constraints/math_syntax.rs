@@ -110,7 +110,7 @@ impl crate::variables::views::View for TypedConstant {
 /// # Examples
 /// 
 /// ```rust
-/// use cspsolver::prelude::math_syntax::int;
+/// use selen::prelude::math_syntax::int;
 /// 
 /// let five = int(5);  // Explicitly typed integer constant
 /// ```
@@ -123,7 +123,7 @@ pub fn int(value: i32) -> TypedConstant {
 /// # Examples
 /// 
 /// ```rust
-/// use cspsolver::prelude::math_syntax::float;
+/// use selen::prelude::math_syntax::float;
 /// 
 /// let pi = float(3.14159);  // Explicitly typed float constant
 /// ```
@@ -138,7 +138,7 @@ pub fn float(value: f64) -> TypedConstant {
 /// # Examples
 /// 
 /// ```rust
-/// use cspsolver::prelude::math_syntax::{abs, int};
+/// use selen::prelude::math_syntax::{abs, int};
 /// 
 /// // abs(variable) - will be handled by macro
 /// // abs(int(5)) creates absolute value of constant
@@ -153,7 +153,7 @@ pub fn abs<T: Into<MathExpr>>(expr: T) -> MathExpr {
 /// # Examples
 /// 
 /// ```rust
-/// use cspsolver::prelude::math_syntax::{max, int};
+/// use selen::prelude::math_syntax::{max, int};
 /// 
 /// // max(x, y) - variables handled by macro
 /// // max(int(5), int(10)) creates max of constants
@@ -168,7 +168,7 @@ pub fn max<T: Into<MathExpr>, U: Into<MathExpr>>(left: T, right: U) -> MathExpr 
 /// # Examples
 /// 
 /// ```rust
-/// use cspsolver::prelude::math_syntax::{min, int};
+/// use selen::prelude::math_syntax::{min, int};
 /// 
 /// // min(x, y) - variables handled by macro
 /// // min(int(2), int(7)) creates min of constants

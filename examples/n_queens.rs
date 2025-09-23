@@ -16,7 +16,7 @@
 //!   2. AllDifferent(queen_row[i] + i) - no two queens on same ascending diagonal
 //!   3. AllDifferent(queen_row[i] - i) - no two queens on same descending diagonal
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 use std::time::Instant;
 
 fn main() {

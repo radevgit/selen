@@ -7,9 +7,8 @@
 //! - src/constraints/props/conditional.rs (Function: 58.33%, Line: 42.19%, Region: 33.96%)
 //! - src/constraints/props/table.rs (Function: 0.00%, Line: 0.00%, Region: 0.00%)
 
-use cspsolver::{
+use selen::{
     model::Model,
-    runtime_api::{ModelExt, VarIdExt},
     post,
     constraints::props::conditional::{Condition, SimpleConstraint, IfThenElseConstraint},
     variables::Val,
@@ -27,7 +26,6 @@ mod constraints_coverage_2 {
         let mut model = Model::default();
         let condition_var = model.bool();
         let x = model.int(0, 10);
-        let y = model.int(0, 10);
         
         // If condition_var == 1, then x == 5
         let condition = Condition::Equals(condition_var, Val::ValI(1));

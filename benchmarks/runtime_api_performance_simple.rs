@@ -3,7 +3,7 @@
 //! This demonstrates the performance characteristics of the runtime API
 //! and compares it to traditional constraint building approaches.
 
-use cspsolver::{
+use selen::{
     model::Model,
     prelude::*,
     runtime_api::{ModelExt, VarIdExt},

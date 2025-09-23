@@ -1,9 +1,9 @@
 /// Demonstration of what happens when precision_digits is missing/ignored
 /// This would show exactly the bug that was in the original implementation
 
-use cspsolver::prelude::*;
-use cspsolver::optimization::subproblem_solving::{FloatSubproblemSolver, SubproblemValue};
-use cspsolver::optimization::variable_partitioning::VariablePartition;
+use selen::prelude::*;
+use selen::optimization::subproblem_solving::{FloatSubproblemSolver, SubproblemValue};
+use selen::optimization::variable_partitioning::VariablePartition;
 
 #[test]
 fn test_broken_implementation_simulation() {

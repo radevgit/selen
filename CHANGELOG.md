@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2025-09-23
+- Renamed project to **Selen**, for a lot of reasons.
+
 ## [0.7.3] - 2025-09-22
 - Comprehensive constraint macro system overhaul with modular architecture
 - Fixed all core coverage test failures with missing constraint patterns

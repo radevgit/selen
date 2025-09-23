@@ -1,6 +1,6 @@
 //! Simple Magic Square test to debug constraints
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("🔍 Testing basic 3x3 magic square constraints...");

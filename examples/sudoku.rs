@@ -13,8 +13,8 @@
 //! 
 //! The Platinum puzzle is computationally intensive and requires optimization.
 
-use cspsolver::prelude::*;
-use cspsolver::{post};
+use selen::prelude::*;
+use selen::{post};
 use std::time::Instant;
 
 fn main() {

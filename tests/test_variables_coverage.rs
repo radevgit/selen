@@ -1,7 +1,7 @@
 //! Coverage tests for variables module
 //! Target: Improve coverage for variables::core (60.71% line coverage) and variables::views (38.79% line coverage)
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[cfg(test)]
 mod variables_coverage {

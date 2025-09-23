@@ -5,7 +5,7 @@
 //! - HashMap capacity hints 
 //! - SparseSet preallocation
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 use std::time::Instant;
 
 fn main() {

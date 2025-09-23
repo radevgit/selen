@@ -6,7 +6,7 @@
 //! # Examples
 //!
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //!
 //! let mut m = Model::default();
 //! let x = m.int(1, 10);

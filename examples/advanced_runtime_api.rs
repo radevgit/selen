@@ -13,7 +13,7 @@
 //! - Model::c() ultra-short syntax (m.c(x).eq(5))
 //! - Global constraint shortcuts (alldiff, alleq, elem, count)
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("🚀 Runtime Constraint API Demo - Phase 1 & 2");

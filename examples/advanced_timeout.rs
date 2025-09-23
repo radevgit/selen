@@ -1,6 +1,6 @@
 // Demo of timeout functionality in CSP solver
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 use std::time::Instant;
 
 fn main() {

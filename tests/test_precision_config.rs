@@ -1,5 +1,5 @@
 /// Test script to demonstrate Model precision configuration
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[test]
 fn test_default_precision_configuration() {

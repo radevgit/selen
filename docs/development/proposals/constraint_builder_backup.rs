@@ -491,8 +491,8 @@ impl ModelConstraints for Model {
 /// # Examples
 /// 
 /// ```rust
-/// use cspsolver::prelude::*;
-/// use cspsolver::constraint_builder::*;
+/// use selen::prelude::*;
+/// use selen::constraint_builder::*;
 /// 
 /// let mut m = Model::default();
 /// let x = m.int(0, 10);

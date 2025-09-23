@@ -1,7 +1,7 @@
 //! Performance investigation comparing EXTREME vs PLATINUM puzzles
 //! This test uses basic timing to identify where the 1000x slowdown occurs
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 use std::time::Instant;
 
 fn main() {
@@ -43,7 +43,7 @@ fn main() {
     compare_performance(extreme_time, extreme_stats, platinum_time, platinum_stats);
 }
 
-fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration, cspsolver::solution::SolveStats) {
+fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration, selen::solution::SolveStats) {
     let total_start = Instant::now();
     
     // Build the model with timing
@@ -122,15 +122,15 @@ fn solve_with_timing(name: &str, puzzle: &[[i32; 9]; 9]) -> (std::time::Duration
     let stats = if let Ok(sol) = &solution {
         sol.stats.clone()
     } else {
-        cspsolver::solution::SolveStats::default()
+        selen::solution::SolveStats::default()
     };
     
     (total_time, stats)
 }
 
 fn compare_performance(
-    extreme_time: std::time::Duration, extreme_stats: cspsolver::solution::SolveStats,
-    platinum_time: std::time::Duration, platinum_stats: cspsolver::solution::SolveStats
+    extreme_time: std::time::Duration, extreme_stats: selen::solution::SolveStats,
+    platinum_time: std::time::Duration, platinum_stats: selen::solution::SolveStats
 ) {
     let time_ratio = platinum_time.as_nanos() as f64 / extreme_time.as_nanos() as f64;
     let prop_ratio = platinum_stats.propagation_count as f64 / extreme_stats.propagation_count as f64;

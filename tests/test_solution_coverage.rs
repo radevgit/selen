@@ -1,7 +1,7 @@
 //! Coverage tests for core::solution module
 //! Target: Improve coverage for core::solution (35.56% line coverage)
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[cfg(test)]
 mod solution_coverage {

@@ -8,7 +8,7 @@
 
 #[cfg(test)]
 mod tests {
-    use cspsolver::prelude::*;
+    use selen::prelude::*;
 
     /// Test basic constraint building with runtime API
     /// 

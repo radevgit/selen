@@ -8,7 +8,7 @@
 
 #[cfg(test)]
 mod tests {
-    use cspsolver::prelude::*;
+    use selen::prelude::*;
 
     /// Programmatic equivalent of test_post_macro_basic()
     /// 
@@ -410,6 +410,9 @@ mod tests {
         // Macro: post!(m, y > int(5))
         // Programmatic: m.new(y.gt(5))
         let c2 = m.new(y.gt(5));
+        
+        // Ensure constraints are created
+        let _ = (c1, c2);
         
         // Test boolean variables for logical operations
         let a = m.int(0, 1);

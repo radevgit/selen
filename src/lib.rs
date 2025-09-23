@@ -11,7 +11,7 @@
 //! - **Early failure**: Clear error messages when limits exceeded
 //!
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //!
 //! // Automatic safety limits
 //! let mut m = Model::default(); // 2GB memory, 60s timeout
@@ -59,7 +59,7 @@
 //! ## Example 1: Basic Integer Problem
 //!
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //!
 //! let mut m = Model::default();
 //! let x = m.int(1, 10);
@@ -76,7 +76,7 @@
 //! ## Example 2: Mixed Integer-Float Optimization
 //!
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //!
 //! let mut m = Model::default();
 //! let items = m.int(1, 100);        // Number of items
@@ -95,7 +95,7 @@
 //! ## Example 3: Custom Domains and Global Constraints
 //!
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //!
 //! let mut m = Model::default();
 //! 
@@ -118,7 +118,7 @@
 //! For developers who prefer explicit, method-based constraint building:
 //!
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //!
 //! let mut m = Model::default();
 //! let x = m.int(1, 10);
@@ -137,7 +137,7 @@
 //! ## Example 5: Programmatic API - Global Constraints
 //!
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //!
 //! let mut m = Model::default();
 //! let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
@@ -160,7 +160,7 @@
 //! ## Example 6: Programmatic API - Complex Operations
 //!
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //!
 //! let mut m = Model::default();
 //! let x = m.int(-10, 10);

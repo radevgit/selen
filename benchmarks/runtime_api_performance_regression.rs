@@ -3,7 +3,7 @@
 //! This test suite ensures that future changes to the runtime API don't
 //! introduce significant performance regressions.
 
-use cspsolver::{
+use selen::{
     model::Model,
     prelude::*,
     runtime_api::{ModelExt, VarIdExt},

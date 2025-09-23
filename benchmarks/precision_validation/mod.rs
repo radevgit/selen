@@ -1,5 +1,5 @@
 use std::time::{Duration, Instant};
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 // Benchmark timing utilities
 pub struct BenchmarkResult {

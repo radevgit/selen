@@ -308,7 +308,7 @@ fn looks_like_constraint_boundary(&self, value: f64) -> bool {
 ### Basic Usage
 
 ```rust
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 // Create model with precision handling
 let mut model = Model::new();

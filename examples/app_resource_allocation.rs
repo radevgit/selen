@@ -7,8 +7,8 @@
 //! - Minimizing total project time
 //! - Handling worker efficiency variations
 
-use cspsolver::prelude::*;
-use cspsolver::{post};
+use selen::prelude::*;
+use selen::{post};
 
 fn main() {
     println!("📋 Resource Allocation Optimizer");

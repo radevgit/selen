@@ -88,7 +88,7 @@ The CSP Solver is now **production-ready** with:
 ## 📁 Project Structure
 
 ```
-cspsolver/
+selen/
 ├── README.md                 # Main project documentation
 ├── Cargo.toml               # Rust package configuration
 ├── src/                     # Core source code

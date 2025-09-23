@@ -1,7 +1,7 @@
-# CSP Solver
+# Selen - CSP Solver
 
-[![Crates.io](https://img.shields.io/crates/v/cspsolver.svg?color=blue)](https://crates.io/crates/cspsolver)
-[![Documentation](https://docs.rs/cspsolver/badge.svg)](https://docs.rs/cspsolver)
+[![Crates.io](https://img.shields.io/crates/v/selen.svg?color=blue)](https://crates.io/crates/selen)
+[![Documentation](https://docs.rs/selen/badge.svg)](https://docs.rs/selen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 A Constraint Satisfaction Problem (CSP) solver library written in Rust with zero external dependencies. 
@@ -51,11 +51,11 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cspsolver = "0.7.3"
+selen = "0.8.0"
 ```
 
 ```
-🧩 Solving PLATINUM puzzle:
+🧩 Solving Platinum Blonde puzzle:
 📊 Puzzle stats: 17 clues given, 64 empty cells
 
 Puzzle:                                 Solution:
@@ -114,7 +114,7 @@ cargo run --release --example app_resource_allocation # Resource planning
 ### Basic Usage
 
 ```rust
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     let mut m = Model::default();
@@ -140,8 +140,7 @@ fn main() {
 For developers who prefer a more explicit, programmatic approach, the same constraints can be built using the runtime API:
 
 ```rust
-use cspsolver::prelude::*;
-use cspsolver::runtime_api::{VarIdExt, ModelExt};
+use selen::prelude::*;
 
 fn main() {
     let mut m = Model::default();

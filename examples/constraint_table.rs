@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("🧩 Table Constraint Demonstrations");
@@ -38,6 +38,9 @@ fn configuration_problem_demo() {
         vec![int(2), int(2), int(2)], // AMD CPU + AMD GPU + AMD motherboard
         // Note: No Intel CPU + AMD motherboard or vice versa
     ];
+    
+    // Explicitly use the table variable to avoid warnings
+    let _ = &valid_configs;
     
     // Apply table constraint
     post!(m, table([cpu, gpu, motherboard], valid_configs));
@@ -90,6 +93,8 @@ fn compatibility_matrix_demo() {
         // Note: Some combinations are incompatible (gaps in compatibility)
     ];
     
+    // Explicitly use the table variable to avoid warnings
+    let _ = &compatibility_table;
     post!(m, table([software, hardware], compatibility_table));
     
     // Add additional constraint: prefer newer software
@@ -134,6 +139,8 @@ fn lookup_table_demo() {
         vec![int(5), int(18)], // f(5) = 25 - 10 + 3 = 18
     ];
     
+    // Explicitly use the table variable to avoid warnings
+    let _ = &function_table;
     post!(m, table([input, output], function_table));
     
     // Find input that gives output between 5 and 12
@@ -188,6 +195,9 @@ fn course_scheduling_demo() {
         vec![int(3), int(2), int(1)], // Chemistry, 11AM, Lab
         vec![int(3), int(4), int(1)], // Chemistry, 3PM, Lab
     ];
+    
+    // Explicitly use the table variable to avoid warnings
+    let _ = &schedule_table;
     
     post!(m, table([course, time_slot, room], schedule_table));
     

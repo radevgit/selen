@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("Debugging domain creation for int(10, 5)...");

@@ -97,7 +97,7 @@ Every public API item must include:
 ///
 /// # Example
 /// ```
-/// use cspsolver::prelude::*;
+/// use selen::prelude::*;
 /// let mut m = Model::default();
 /// let result = m.some_method();
 /// ```

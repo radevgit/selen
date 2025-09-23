@@ -3,8 +3,8 @@
 //! This test verifies that the validation system is properly integrated
 //! and catches modeling errors before solving begins.
 
-use cspsolver::prelude::*;
-use cspsolver::{post};
+use selen::prelude::*;
+use selen::{post};
 
 fn main() {
     println!("🔍 Validation System Integration Test");

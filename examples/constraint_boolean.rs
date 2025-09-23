@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("🔗 Boolean Array and Variadic Operations Demo");

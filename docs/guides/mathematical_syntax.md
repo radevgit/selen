@@ -5,9 +5,9 @@ A natural mathematical syntax for the CSP solver using `post!` and `postall!` ma
 ## Basic Usage
 
 ```rust
-use cspsolver::prelude::*;
-use cspsolver::math_syntax::*;
-use cspsolver::constraint_macros::*;
+use selen::prelude::*;
+use selen::math_syntax::*;
+use selen::constraint_macros::*;
 
 // Create model and variables
 let mut m = Model::new();
@@ -86,9 +86,9 @@ postall!(m, [
 ## Complete Example
 
 ```rust
-use cspsolver::prelude::*;
-use cspsolver::math_syntax::*;
-use cspsolver::constraint_macros::*;
+use selen::prelude::*;
+use selen::math_syntax::*;
+use selen::constraint_macros::*;
 
 fn main() {
     let mut m = Model::new();

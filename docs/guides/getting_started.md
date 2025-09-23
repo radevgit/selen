@@ -34,14 +34,15 @@ Let's solve a simple problem: **Find two numbers where one is less than the othe
 
 Add to your `Cargo.toml`:
 ```toml
-[dependencies]
-cspsolver = "0.7.0"
+```toml
+selen = "0.8.0"
+```
 ```
 
 ### Step 2: Write Your First Solver
 
 ```rust
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     // 1. Create a new constraint model
@@ -377,7 +378,7 @@ cargo run --release --example app_resource_allocation
 Let's solve a practical problem: **Schedule 3 tasks (A, B, C) with different durations and constraints.**
 
 ```rust
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     let mut m = Model::default();
@@ -444,7 +445,7 @@ Congratulations! You now know the fundamentals of constraint satisfaction proble
 - **[Precision Handling Guide](precision_handling.md)** - Working with floating-point precision
 
 ### 🔍 API Documentation
-- **[API Documentation](https://docs.rs/cspsolver)** - Complete API reference
+- **[API Documentation](https://docs.rs/selen)** - Complete API reference
 - **[Examples Directory](../../examples/)** - 15+ complete example programs
 
 ### 🧩 Problem Types to Explore
@@ -461,4 +462,5 @@ Congratulations! You now know the fundamentals of constraint satisfaction proble
 
 **Happy constraint solving!** 🎉
 
-If you run into issues, check the [examples](../../examples/) directory for working code, or consult the [API documentation](https://docs.rs/cspsolver) for detailed reference material.
+If you run into issues, check the [examples](../../examples/) directory for working code, 
+or consult the [API documentation](https://docs.rs/selen) for detailed reference material.

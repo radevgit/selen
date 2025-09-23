@@ -1,5 +1,5 @@
-use cspsolver::prelude::*;
-use cspsolver::runtime_api::{VarIdExt, ModelExt};
+use selen::prelude::*;
+use selen::runtime_api::{VarIdExt, ModelExt};
 
 fn main() {
     println!("🔍 Demonstrating Enhanced Statistics Output");

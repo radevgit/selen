@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 use std::time::Instant;
 
 fn main() -> SolverResult<()> {

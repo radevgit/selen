@@ -6,7 +6,7 @@
 //! - core/solution.rs: 35.56% line coverage
 //! - core/validation.rs: 53.90% line coverage
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[cfg(test)]
 mod core_coverage {

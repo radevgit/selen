@@ -40,6 +40,8 @@ pub fn test_small_scale_precision() -> LimitResult {
     // Tight precision constraints at small scale
     for (i, &part) in parts.iter().enumerate() {
         let target = 0.01 + (i as f64 * 0.005); // 1cm to 5.5cm with 0.5cm increments
+        // Explicitly use variables to avoid unused warnings
+        let _ = (part, target);
         post!(m, part > (target - 0.0001)); // ±0.1mm tolerance
         post!(m, part < (target + 0.0001));
     }
@@ -63,6 +65,8 @@ pub fn test_medium_scale_precision() -> LimitResult {
     // Engineering tolerances at medium scale
     for (i, &dim) in dimensions.iter().enumerate() {
         let target = 0.1 + (i as f64 * 0.2); // 10cm to 5m with 20cm increments
+        // Explicitly use variables to avoid unused warnings
+        let _ = (dim, target);
         post!(m, dim > (target - 0.001)); // ±1mm tolerance
         post!(m, dim < (target + 0.001));
     }
@@ -86,6 +90,8 @@ pub fn test_large_scale_precision() -> LimitResult {
     // Large-scale engineering constraints
     for (i, &plate) in plates.iter().enumerate() {
         let target = 1.0 + (i as f64 * 0.18); // 1m to 9.82m with ~18cm increments
+        // Explicitly use variables to avoid unused warnings
+        let _ = (plate, target);
         post!(m, plate > (target - 0.01)); // ±1cm tolerance
         post!(m, plate < (target + 0.01));
     }
@@ -110,6 +116,8 @@ pub fn test_high_quantity_constraints() -> LimitResult {
     // Each part has positioning constraints
     for (i, &part) in parts.iter().enumerate() {
         let base_pos = (i % 10) as f64 * 0.2; // 20cm spacing pattern
+        // Explicitly use variables to avoid unused warnings
+        let _ = (part, base_pos);
         post!(m, part > (base_pos + 0.05));
         post!(m, part < (base_pos + 0.15)); // 10cm slot
     }
@@ -133,6 +141,8 @@ pub fn test_precision_boundary_limits() -> LimitResult {
     // Extremely tight constraints - testing ULP precision limits
     for (i, &part) in precision_parts.iter().enumerate() {
         let target = 1.5 + (i as f64 * 0.000001); // Micrometer-level increments
+        // Explicitly use variables to avoid unused warnings
+        let _ = (part, target);
         post!(m, part > (target - 0.0000005)); // ±0.5μm
         post!(m, part < (target + 0.0000005));
     }

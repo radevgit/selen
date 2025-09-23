@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     let mut model = Model::default();

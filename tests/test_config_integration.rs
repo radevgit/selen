@@ -1,6 +1,6 @@
 //! Integration tests for SolverConfig
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[test]
 fn test_model_with_config_basic() {

@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[test]
 fn test_boolean_post_macro() {

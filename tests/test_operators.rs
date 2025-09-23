@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[test]
 fn test_comparison_trait_usage() {

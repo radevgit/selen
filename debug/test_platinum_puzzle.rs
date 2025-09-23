@@ -1,6 +1,6 @@
 //! Test the Platinum Blonde puzzle that was causing timeout
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 use std::time::Instant;
 
 fn main() {

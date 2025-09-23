@@ -21,7 +21,7 @@ use crate::variables::domain::float_interval::DEFAULT_FLOAT_PRECISION_DIGITS;
 /// # Examples
 ///
 /// ```rust
-/// use cspsolver::prelude::*;
+/// use selen::prelude::*;
 /// 
 /// // Use default configuration (2GB memory, 60s timeout)
 /// let config = SolverConfig::default();
@@ -75,7 +75,7 @@ impl SolverConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use cspsolver::prelude::config::SolverConfig;
+    /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::new();
     /// assert_eq!(config.float_precision_digits, 6);
@@ -91,7 +91,7 @@ impl SolverConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use cspsolver::prelude::config::SolverConfig;
+    /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::new().with_float_precision(4);
     /// assert_eq!(config.float_precision_digits, 4);
@@ -106,7 +106,7 @@ impl SolverConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use cspsolver::prelude::config::SolverConfig;
+    /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::new().with_timeout_seconds(30);
     /// assert_eq!(config.timeout_seconds, Some(30));
@@ -121,7 +121,7 @@ impl SolverConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use cspsolver::prelude::config::SolverConfig;
+    /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::new()
     ///     .with_timeout_seconds(30)
@@ -138,7 +138,7 @@ impl SolverConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use cspsolver::prelude::config::SolverConfig;
+    /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::new().with_max_memory_mb(1024);
     /// assert_eq!(config.max_memory_mb, Some(1024));
@@ -153,7 +153,7 @@ impl SolverConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use cspsolver::prelude::config::SolverConfig;
+    /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::new()
     ///     .with_max_memory_mb(1024)
@@ -170,7 +170,7 @@ impl SolverConfig {
     /// # Examples
     ///
     /// ```rust
-    /// use cspsolver::prelude::config::SolverConfig;
+    /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::unlimited();
     /// assert_eq!(config.timeout_seconds, None);

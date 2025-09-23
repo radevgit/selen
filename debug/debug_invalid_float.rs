@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("Creating invalid float variable with float(3.5, 1.2)...");

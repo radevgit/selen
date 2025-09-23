@@ -3,7 +3,7 @@
 //! This reproduces the exact scenario from test_less_than_with_floats to debug
 //! what our optimization system is producing vs what the test expects.
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("=== Debug Step 2.3.2 Optimization ===");

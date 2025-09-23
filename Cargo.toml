@@ -1,14 +1,15 @@
 [package]
-name = "cspsolver"
-version = "0.7.3"
+name = "selen"
+version = "0.8.0"
 edition = "2024"
 description = "Constraint Satisfaction Problem (CSP) solver"
 rust-version = "1.88"
 categories = ["algorithms", "data-structures", "mathematics", "science"]
 keywords = ["csp", "constraint-solver", "solver", "puzzle", "constraint"]
 license = "MIT"
-repository = "https://github.com/radevgit/cspsolver"
-documentation = "https://docs.rs/cspsolver"
+homepage = "https://github.com/radevgit/selen"
+repository = "https://github.com/radevgit/selen"
+documentation = "https://docs.rs/selen"
 readme = "README.md"
 
 

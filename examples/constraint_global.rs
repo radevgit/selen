@@ -9,7 +9,7 @@
 //! - atmost/atleast: Upper/lower bound constraints
 //! - gcc: Global cardinality constraint
 
-use cspsolver::{
+use selen::{
     model::Model,
     runtime_api::{ModelExt, VarIdExt},
 };

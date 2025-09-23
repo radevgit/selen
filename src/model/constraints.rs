@@ -17,7 +17,7 @@ impl Model {
     /// 
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(5, 15);
@@ -37,7 +37,7 @@ impl Model {
     /// 
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(5, 10);
     /// let y = m.int(2, 4);
@@ -58,7 +58,7 @@ impl Model {
     /// # Example
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(3, 5);
     /// let y = m.int(2, 4);
@@ -96,7 +96,7 @@ impl Model {
     ///
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(10, 20);
     /// let y = m.int(2, 5);
@@ -155,7 +155,7 @@ impl Model {
     ///
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(10, 20);
     /// let y = m.int(3, 7);
@@ -222,7 +222,7 @@ impl Model {
     ///
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(-10, 5);
     /// let abs_x = m.abs(x);
@@ -296,7 +296,7 @@ impl Model {
     ///
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(5, 15);
@@ -356,7 +356,7 @@ impl Model {
     ///
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(5, 15);
@@ -411,7 +411,7 @@ impl Model {
     /// 
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.int_vars(3, 1, 10).collect();
     /// let total = m.sum(&vars);
@@ -425,7 +425,7 @@ impl Model {
     /// 
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.int_vars(3, 1, 10).collect();
     /// let total = m.sum_iter(vars.iter().copied());
@@ -452,7 +452,7 @@ impl Model {
     /// 
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let a = m.bool();
     /// let b = m.bool();
@@ -471,7 +471,7 @@ impl Model {
     /// 
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let a = m.bool();
     /// let b = m.bool();
@@ -489,7 +489,7 @@ impl Model {
     /// 
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let a = m.bool();
     /// let not_a = m.bool_not(a);

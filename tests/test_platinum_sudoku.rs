@@ -1,5 +1,5 @@
-use cspsolver::prelude::*;
-use cspsolver::{post};
+use selen::prelude::*;
+use selen::{post};
 use std::time::Instant;
 
 fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)> {

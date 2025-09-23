@@ -37,7 +37,7 @@ let m = Model::default();
 ### Custom Limits
 
 ```rust
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 // Configure custom limits
 let config = SolverConfig::default()

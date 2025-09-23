@@ -8,7 +8,7 @@
 //! - modulo: 7.91% (14/177 regions)
 //! - sum: 17.91% (12/67 regions)
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[cfg(test)]
 mod constraints_coverage {
@@ -1313,7 +1313,7 @@ mod constraints_coverage {
 
     #[test]
     fn test_varid_from_trait() {
-        use cspsolver::constraints::boolean_operators::BoolExpr;
+        use selen::constraints::boolean_operators::BoolExpr;
         
         let mut model = Model::default();
         let a = model.bool();
@@ -1328,13 +1328,13 @@ mod constraints_coverage {
 
     #[test]
     fn test_boolean_model_post_true() {
-        use cspsolver::constraints::boolean_operators::BooleanModel;
+        use selen::constraints::boolean_operators::BooleanModel;
         
         let mut model = Model::default();
         let a = model.bool();
         
         // Create boolean expression: a itself
-        let expr: cspsolver::constraints::boolean_operators::BoolExpr = a.into();
+        let expr: selen::constraints::boolean_operators::BoolExpr = a.into();
         
         // Test BooleanModel::post_true
         model.post_true(expr);
@@ -1349,13 +1349,13 @@ mod constraints_coverage {
 
     #[test]
     fn test_boolean_model_post_false() {
-        use cspsolver::constraints::boolean_operators::BooleanModel;
+        use selen::constraints::boolean_operators::BooleanModel;
         
         let mut model = Model::default();
         let a = model.bool();
         
         // Create boolean expression: a itself
-        let expr: cspsolver::constraints::boolean_operators::BoolExpr = a.into();
+        let expr: selen::constraints::boolean_operators::BoolExpr = a.into();
         
         // Test BooleanModel::post_false
         model.post_false(expr);
@@ -1370,7 +1370,7 @@ mod constraints_coverage {
 
     #[test]
     fn test_complex_boolean_expression() {
-        use cspsolver::constraints::boolean_operators::BooleanModel;
+        use selen::constraints::boolean_operators::BooleanModel;
         
         let mut model = Model::default();
         let a = model.bool();

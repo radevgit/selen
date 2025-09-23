@@ -6,8 +6,8 @@
 //! - Percentage-based constraints 
 //! - Simple constraint satisfaction with floating-point calculations
 
-use cspsolver::prelude::*;
-use cspsolver::{post};
+use selen::prelude::*;
+use selen::{post};
 
 fn main() {
     println!("💰 Portfolio Balance Calculator");

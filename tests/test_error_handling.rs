@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 #[test]
 fn test_min_empty_list_caught_by_validation() {

@@ -1,5 +1,5 @@
-use cspsolver::Model;
-use cspsolver::optimization::classification::ProblemClassifier;
+use selen::Model;
+use selen::optimization::classification::ProblemClassifier;
 
 fn main() {
     // Test the classification for the failing test case

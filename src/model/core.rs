@@ -32,7 +32,7 @@ impl Model {
     /// Create a new model with custom float precision
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::with_float_precision(4); // 4 decimal places
     /// let var = m.float(0.0, 1.0);
     /// ```
@@ -54,7 +54,7 @@ impl Model {
     /// Create a new model with a configuration
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let config = SolverConfig::default().with_float_precision(4);
     /// let mut m = Model::with_config(config);
     /// let var = m.float(0.0, 1.0);
@@ -83,7 +83,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let m = Model::with_float_precision(4);
     /// assert_eq!(m.float_precision_digits(), 4);
     /// ```
@@ -102,7 +102,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let m = Model::with_float_precision(2);
     /// assert_eq!(m.float_step_size(), 0.01);
     /// ```
@@ -120,7 +120,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let m = Model::default();
     /// let config = m.config();
     /// println!("Float precision: {}", config.float_precision_digits);
@@ -162,7 +162,7 @@ impl Model {
     /// # Examples
     /// 
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// 
     /// assert_eq!(m.variable_count(), 0);
@@ -183,7 +183,7 @@ impl Model {
     /// # Examples
     /// 
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
@@ -291,7 +291,7 @@ impl Model {
     /// **Note**: This is a low-level method. Use `int()`, `float()`, or `bool()` instead.
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let var = m.new_var(Val::int(1), Val::int(10));
     /// ```
@@ -314,7 +314,7 @@ impl Model {
     /// **Note**: This is a low-level method. Use specific variable creation methods instead.
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.new_vars(3, Val::int(0), Val::int(5)).collect();
     /// ```
@@ -332,7 +332,7 @@ impl Model {
     /// 
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.int_vars(5, 0, 9).collect();
     /// ```
@@ -359,7 +359,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// 
     /// // Variable that can only be prime numbers
@@ -386,7 +386,7 @@ impl Model {
     /// 
     /// # Examples
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.float_vars(3, 0.0, 1.0).collect();
     /// ```
@@ -410,7 +410,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let flag = m.bool();          // 0 or 1
     /// let enabled = m.bool();       // 0 or 1
@@ -430,7 +430,7 @@ impl Model {
     /// 
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let var = m.new_var_binary();
     /// ```
@@ -444,7 +444,7 @@ impl Model {
     /// 
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.new_vars_binary(4).collect();
     /// ```
@@ -468,7 +468,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);     // Variable from 1 to 10
     /// let y = m.int(-5, 15);    // Variable from -5 to 15
@@ -493,7 +493,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.float(0.0, 10.0);    // Variable from 0.0 to 10.0
     /// let y = m.float(-1.5, 3.14);   // Variable from -1.5 to 3.14
@@ -511,7 +511,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let flag = m.binary();    // Variable that is 0 or 1
     /// ```
@@ -618,7 +618,7 @@ impl Model {
     /// 
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// post!(m, x > 3);
@@ -703,7 +703,7 @@ impl Model {
     /// 
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 5);
     /// let solutions: Vec<_> = m.minimize_and_iterate(x).collect();
@@ -735,7 +735,7 @@ impl Model {
     /// 
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// post!(m, x < 8);
@@ -773,7 +773,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
@@ -788,7 +788,7 @@ impl Model {
     /// 
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 5);
     /// let solutions: Vec<_> = m.maximize_and_iterate(x).collect();
@@ -852,7 +852,7 @@ impl Model {
     /// 
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.int_vars(4, 1, 4).collect();
     /// post!(m, alldiff(vars));
@@ -871,7 +871,7 @@ impl Model {
     /// cleanup callbacks, custom iteration, and manual search control.
     ///
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
@@ -896,7 +896,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
@@ -1042,7 +1042,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 3);
     /// let y = m.int(1, 3);
@@ -1080,7 +1080,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 3);
     /// let solutions = m.enumerate();
@@ -1099,7 +1099,7 @@ impl Model {
     ///
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 3);
     /// let y = m.int(1, 3);

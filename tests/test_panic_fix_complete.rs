@@ -1,4 +1,4 @@
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("=== Testing Min/Max Functions - No Panics Expected ===\n");

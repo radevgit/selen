@@ -1,4 +1,4 @@
-/// Proposal: Remove dyn-clone dependency from cspsolver
+/// Proposal: Remove dyn-clone dependency from selen
 /// 
 /// ## Current Situation
 /// - dyn-clone is used to make Box<dyn Prune> cloneable

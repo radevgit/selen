@@ -35,6 +35,7 @@ pub fn test_grouped_constraints_approach() -> (Duration, bool) {
     (duration, success)
 }
 
+#[allow(unused_variables)]
 pub fn test_hierarchical_decomposition() -> (Duration, bool) {
     let start = Instant::now();
     
@@ -70,6 +71,7 @@ pub fn test_hierarchical_decomposition() -> (Duration, bool) {
     (duration, success)
 }
 
+#[allow(unused_variables)]
 pub fn test_batch_optimization_approach() -> (Duration, bool) {
     //let start = Instant::now();
     
@@ -134,6 +136,7 @@ pub fn test_batch_optimization_approach() -> (Duration, bool) {
     (total_duration, total_success)
 }
 
+#[allow(unused_variables)]
 pub fn test_constraint_simplification() -> (Duration, bool) {
     let start = Instant::now();
     
@@ -178,6 +181,8 @@ pub fn run_medium_scale_optimization_proposals() {
     let vars: Vec<_> = (0..25).map(|_| m.float(0.01, 5.0)).collect();
     for (i, &var) in vars.iter().enumerate() {
         let target = 0.1 + (i as f64 * 0.2);
+        // Explicitly use variables to avoid unused warnings
+        let _ = (var, target);
         post!(m, var > (target - 0.001));
         post!(m, var < (target + 0.001));
     }

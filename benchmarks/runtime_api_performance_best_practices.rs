@@ -3,7 +3,7 @@
 //! This example demonstrates optimal usage patterns to achieve
 //! the best performance with the runtime constraint API.
 
-use cspsolver::{
+use selen::{
     model::Model,
     prelude::*,
     runtime_api::{ModelExt, VarIdExt},

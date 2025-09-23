@@ -1,5 +1,5 @@
-use cspsolver::prelude::*;
-use cspsolver::error::SolverError;
+use selen::prelude::*;
+use selen::error::SolverError;
 
 fn main() {
     println!("=== Testing empty domain behavior ===");

@@ -44,13 +44,13 @@ cargo run --release --example send_more_money
 ```bash
 # Simple runtime API performance test
 rustc --edition=2024 -O -L target/release/deps \
-  --extern cspsolver=target/release/libcspsolver.rlib \
+  --extern selen=target/release/libselen.rlib \
   benchmarks/runtime_api_performance_simple.rs \
   -o target/release/runtime_perf && ./target/release/runtime_perf
 
 # Comprehensive runtime API benchmarks  
 rustc --edition=2024 -O -L target/release/deps \
-  --extern cspsolver=target/release/libcspsolver.rlib \
+  --extern selen=target/release/libselen.rlib \
   benchmarks/runtime_api_performance_benchmarks.rs \
   -o target/release/runtime_bench && ./target/release/runtime_bench
 ```

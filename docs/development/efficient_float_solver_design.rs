@@ -2,7 +2,7 @@
 // Based on well-known techniques: Bounds Consistency + Direct Optimization
 // EXTENSION: Mixed Integer-Float Problems (MINLP)
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 /// Efficient solver strategy classifier for floating-point and mixed problems
 #[derive(Debug, Clone)]

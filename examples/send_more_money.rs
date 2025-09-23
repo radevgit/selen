@@ -3,7 +3,7 @@
 //! The classic puzzle: SEND + MORE = MONEY
 //! Each letter represents a unique digit (0-9), and the arithmetic must be valid.
 
-use cspsolver::prelude::*;
+use selen::prelude::*;
 
 fn main() {
     println!("🔤 SEND + MORE = MONEY Puzzle");

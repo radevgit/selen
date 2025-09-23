@@ -6,7 +6,7 @@
 //! 3. Memory usage and allocation patterns
 //! 4. Scaling characteristics with problem size
 
-use cspsolver::{
+use selen::{
     model::Model,
     prelude::*,
     runtime_api::{ModelExt, VarIdExt},

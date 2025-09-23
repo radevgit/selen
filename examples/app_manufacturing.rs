@@ -1,4 +1,4 @@
-use cspsolver::benchmarks::manufacturing_constraints::*;
+use selen::benchmarks::manufacturing_constraints::*;
 
 fn main() {
     println!("🏭 Manufacturing Constraints Demo");

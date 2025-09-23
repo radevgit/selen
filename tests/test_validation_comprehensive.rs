@@ -3,9 +3,9 @@
 //! This module tests the validation system to ensure it properly catches
 //! common modeling errors before they cause runtime issues during solving.
 
-use cspsolver::prelude::*;
-use cspsolver::core::error::SolverError;
-use cspsolver::{post};
+use selen::prelude::*;
+use selen::core::error::SolverError;
+use selen::{post};
 
 #[test]
 fn test_validation_empty_domain() {

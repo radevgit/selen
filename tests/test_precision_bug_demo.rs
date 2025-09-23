@@ -1,9 +1,9 @@
 /// This test demonstrates the precision bug that was missing in FloatSubproblemSolver
 /// and shows how proper tests would have caught it.
 
-use cspsolver::prelude::*;
-use cspsolver::optimization::subproblem_solving::FloatSubproblemSolver;
-use cspsolver::optimization::variable_partitioning::VariablePartition;
+use selen::prelude::*;
+use selen::optimization::subproblem_solving::FloatSubproblemSolver;
+use selen::optimization::variable_partitioning::VariablePartition;
 
 #[test]
 fn test_precision_bug_would_be_caught() {
@@ -28,7 +28,7 @@ fn test_precision_bug_would_be_caught() {
     let result = solver.solve_float_subproblem(&model, &partition)
         .expect("Should solve");
     
-    if let Some(cspsolver::optimization::subproblem_solving::SubproblemValue::Float(value)) = 
+    if let Some(selen::optimization::subproblem_solving::SubproblemValue::Float(value)) = 
         result.variable_assignments.get(&var_id) {
         
         println!("Solution value: {}", value);
@@ -85,7 +85,7 @@ fn test_extreme_precision_differences() {
         let result = solver.solve_float_subproblem(&model, &partition)
             .expect("Should solve");
         
-        if let Some(cspsolver::optimization::subproblem_solving::SubproblemValue::Float(value)) = 
+        if let Some(selen::optimization::subproblem_solving::SubproblemValue::Float(value)) = 
             result.variable_assignments.get(&var_id) {
             
             println!("  Solution: {}", value);
@@ -122,7 +122,7 @@ fn test_precision_bug_would_show_non_alignment() {
     let solver = FloatSubproblemSolver::new(2);
     let result = solver.solve_float_subproblem(&model, &partition).expect("Should solve");
     
-    if let Some(cspsolver::optimization::subproblem_solving::SubproblemValue::Float(value)) = 
+    if let Some(selen::optimization::subproblem_solving::SubproblemValue::Float(value)) = 
         result.variable_assignments.get(&var_id) {
         
         println!("Bounds: 0.33 to 0.67");

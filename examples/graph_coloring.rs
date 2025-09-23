@@ -9,8 +9,8 @@
 //! - Multiple graph topologies (planar, complete, bipartite)
 //! - Performance comparison between different graph types
 
-use cspsolver::prelude::*;
-use cspsolver::post;
+use selen::prelude::*;
+use selen::post;
 use std::collections::HashMap;
 
 /// Represents a graph with vertices and edges

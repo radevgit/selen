@@ -6,7 +6,7 @@
 //!
 //! ## Function-Style API (Macro-based)
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //! 
 //! let mut m = Model::default();
 //! let a = m.bool();
@@ -19,7 +19,7 @@
 //!
 //! ## Runtime API (Programmatic)
 //! ```rust
-//! use cspsolver::prelude::*;
+//! use selen::prelude::*;
 //! 
 //! let mut m = Model::default();
 //! let a = m.bool();

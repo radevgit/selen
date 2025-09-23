@@ -513,7 +513,7 @@ impl Vars {
     /// 
     /// # Example
     /// ```
-    /// use cspsolver::prelude::*;
+    /// use selen::prelude::*;
     /// let mut vars = Vars::new();
     /// let var = vars.new_var_with_values(vec![2, 4, 6, 8]); // Even numbers only
     /// ```
