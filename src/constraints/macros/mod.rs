@@ -2,7 +2,7 @@
 //!
 //! This module provides constraint posting macros with a general dispatch system.
 
-// mod comparison;  // Temporarily disabled due to corruption issues
+mod comparison;
 mod arithmetic;
 mod logical;
 mod global;
@@ -32,6 +32,7 @@ impl ConstraintRef {
     }
 }
 
+#[doc(hidden)]
 /// General constraint posting macro that dispatches to specialized macros
 #[macro_export]
 macro_rules! post {
@@ -91,163 +92,31 @@ macro_rules! post {
     };
     
     // ============================================================================
-    // COMPARISON PATTERNS - handle variable == literal directly
+    // COMPARISON PATTERNS - dispatch to post_comparison!
     // ============================================================================
-    // Array element patterns: vars[index] op literal
-    ($model:expr, $array:ident [ $index:expr ] == $right:literal) => {{
-        $model.props.equals($array[$index], $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] != $right:literal) => {{
-        $model.props.not_equals($array[$index], $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] < $right:literal) => {{
-        $model.props.less_than($array[$index], $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] <= $right:literal) => {{
-        $model.props.less_than_or_equals($array[$index], $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] > $right:literal) => {{
-        $model.props.greater_than($array[$index], $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] >= $right:literal) => {{
-        $model.props.greater_than_or_equals($array[$index], $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
     
-    // Array element patterns: vars[index] op vars[index2]
-    ($model:expr, $array1:ident [ $index1:expr ] == $array2:ident [ $index2:expr ]) => {{
-        $model.props.equals($array1[$index1], $array2[$index2]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array1:ident [ $index1:expr ] != $array2:ident [ $index2:expr ]) => {{
-        $model.props.not_equals($array1[$index1], $array2[$index2]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array1:ident [ $index1:expr ] < $array2:ident [ $index2:expr ]) => {{
-        $model.props.less_than($array1[$index1], $array2[$index2]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array1:ident [ $index1:expr ] <= $array2:ident [ $index2:expr ]) => {{
-        $model.props.less_than_or_equals($array1[$index1], $array2[$index2]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array1:ident [ $index1:expr ] > $array2:ident [ $index2:expr ]) => {{
-        $model.props.greater_than($array1[$index1], $array2[$index2]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array1:ident [ $index1:expr ] >= $array2:ident [ $index2:expr ]) => {{
-        $model.props.greater_than_or_equals($array1[$index1], $array2[$index2]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
+    // Array element comparisons: vars[i] op literal/variable/array
+    ($model:expr, $array:ident [ $index:expr ] $op:tt $right:tt) => {
+        $crate::post_comparison!($model, $array [ $index ] $op $right)
+    };
     
-    // Array element op simple variable
-    ($model:expr, $array:ident [ $index:expr ] == $right:ident) => {{
-        $model.props.equals($array[$index], $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] != $right:ident) => {{
-        $model.props.not_equals($array[$index], $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] < $right:ident) => {{
-        $model.props.less_than($array[$index], $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] <= $right:ident) => {{
-        $model.props.less_than_or_equals($array[$index], $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] > $right:ident) => {{
-        $model.props.greater_than($array[$index], $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $array:ident [ $index:expr ] >= $right:ident) => {{
-        $model.props.greater_than_or_equals($array[$index], $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
+    // Array to array comparisons: vars[i] op vars[j] 
+    ($model:expr, $array1:ident [ $index1:expr ] $op:tt $array2:ident [ $index2:expr ]) => {
+        $crate::post_comparison!($model, $array1 [ $index1 ] $op $array2 [ $index2 ])
+    };
     
-    // Simple variable op array element
-    ($model:expr, $left:ident == $array:ident [ $index:expr ]) => {{
-        $model.props.equals($left, $array[$index]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident != $array:ident [ $index:expr ]) => {{
-        $model.props.not_equals($left, $array[$index]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident < $array:ident [ $index:expr ]) => {{
-        $model.props.less_than($left, $array[$index]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident <= $array:ident [ $index:expr ]) => {{
-        $model.props.less_than_or_equals($left, $array[$index]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident > $array:ident [ $index:expr ]) => {{
-        $model.props.greater_than($left, $array[$index]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident >= $array:ident [ $index:expr ]) => {{
-        $model.props.greater_than_or_equals($left, $array[$index]);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
+    // Variable to array element: var op vars[i]
+    ($model:expr, $left:ident $op:tt $array:ident [ $index:expr ]) => {
+        $crate::post_comparison!($model, $left $op $array [ $index ])
+    };
     
-    // Simple identifier patterns
-    ($model:expr, $left:ident == $right:literal) => {{
-        $model.props.equals($left, $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident != $right:literal) => {{
-        $model.props.not_equals($left, $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident < $right:literal) => {{
-        $model.props.less_than($left, $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident <= $right:literal) => {{
-        $model.props.less_than_or_equals($left, $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident > $right:literal) => {{
-        $model.props.greater_than($left, $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident >= $right:literal) => {{
-        $model.props.greater_than_or_equals($left, $crate::variables::Val::from($right));
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    
-    // Variable to variable patterns
-    ($model:expr, $left:ident == $right:ident) => {{
-        $model.props.equals($left, $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident != $right:ident) => {{
-        $model.props.not_equals($left, $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident < $right:ident) => {{
-        $model.props.less_than($left, $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident <= $right:ident) => {{
-        $model.props.less_than_or_equals($left, $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident > $right:ident) => {{
-        $model.props.greater_than($left, $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
-    ($model:expr, $left:ident >= $right:ident) => {{
-        $model.props.greater_than_or_equals($left, $right);
-        $crate::constraints::macros::ConstraintRef::new(0)
-    }};
+    // Variable to literal/variable comparisons
+    ($model:expr, $left:ident $op:tt $right:literal) => {
+        $crate::post_comparison!($model, $left $op $right)
+    };
+    ($model:expr, $left:ident $op:tt $right:ident) => {
+        $crate::post_comparison!($model, $left $op $right)
+    };
     
     // ============================================================================
     // ARITHMETIC PATTERNS - handle result == arithmetic operations
