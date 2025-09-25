@@ -25,9 +25,7 @@
 //!
 //! Source: enjoysudoku.com forum + classic hard puzzle collections
 
-use selen::prelude::*;
-use selen::{post};
-use std::time::Instant;
+use selen::solvers::SudokuSolver;
 
 fn main() {
     println!("🔥 Ultimate Sudoku Challenge - World's Hardest Puzzles");
@@ -343,25 +341,6 @@ fn main() {
         }
     }
     
-    // Final summary
-    println!("\n🏆 FINAL CHALLENGE SUMMARY");
-    println!("══════════════════════════════════════════");
-    println!("✅ Puzzles solved: {}/{}", solved_count, puzzles.len());
-    println!("⏱️  Total time: {:.1}ms ({:.2}s)", total_time, total_time / 1000.0);
-    println!("🔍 Total search nodes: {}", total_nodes);
-    println!("⚡ Total propagations: {}", total_propagations);
-    
-    if solved_count > 0 {
-        println!("📊 Average per puzzle:");
-        println!("   • Time: {:.1}ms", total_time / solved_count as f64);
-        println!("   • Nodes: {:.1}", total_nodes as f64 / solved_count as f64);
-        println!("   • Propagations: {:.1}", total_propagations as f64 / solved_count as f64);
-    }
-    
-    if solved_count == puzzles.len() {
-        println!("\n🎉 LEGENDARY ACHIEVEMENT!");
-        println!("You conquered ALL the world's hardest Sudoku puzzles!");
-    }
 }
 
 fn classify_difficulty(nodes: usize, duration_ms: f64) -> &'static str {
@@ -376,168 +355,34 @@ fn classify_difficulty(nodes: usize, duration_ms: f64) -> &'static str {
 }
 
 fn solve_and_display_detailed(_name: &str, puzzle: &[[i32; 9]; 9]) -> Option<(usize, usize, f64)> {
-    // Count clues
-    let clue_count = puzzle.iter().flatten().filter(|&&x| x != 0).count();
-    println!("Clues: {}/81", clue_count);
+    // Create specialized solver
+    let solver = SudokuSolver::new(*puzzle);
+    println!("Clues: {}/81", solver.clue_count());
     
-    print_grid("Initial:", puzzle);
+    println!("{}", SudokuSolver::format_grid("Initial:", puzzle));
     
-    let start = Instant::now();
-    let result = solve_sudoku_with_stats(puzzle);
-    let duration = start.elapsed();
-    let duration_ms = duration.as_secs_f64() * 1000.0;
+    // Solve using the specialized solver
+    let result = solver.solve();
     
-    match result {
-        Some((grid, propagations, nodes)) => {            
-            print_grid("Solution:", &grid);
+    match result.solution {
+        Some(grid) => {            
+            println!("{}", SudokuSolver::format_grid("Solution:", &grid));
             
             // Verify solution
-            if !verify_solution(&grid) {
+            if !SudokuSolver::verify_solution(&grid) {
                 println!("❌ Solution verification failed!");
             }
             
-            Some((propagations, nodes, duration_ms))
+            Some((result.propagations, result.nodes, result.duration_ms))
         }
         None => {
-            println!("❌ No solution found after {:.1}ms", duration_ms);
+            println!("❌ No solution found after {:.1}ms", result.duration_ms);
             None
         }
     }
 }
 
-fn solve_sudoku_with_stats(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)> {
-    let mut m = Model::default();
-    
-    // Create variables
-    let mut grid = Vec::new();
-    for row in 0..9 {
-        let mut grid_row = Vec::new();
-        for col in 0..9 {
-            if puzzle[row][col] != 0 {
-                // Clue: create singleton variable
-                let clue_val = puzzle[row][col];
-                grid_row.push(m.int(clue_val, clue_val));
-            } else {
-                // Empty cell: domain 1-9
-                grid_row.push(m.int(1, 9));
-            }
-        }
-        grid.push(grid_row);
-    }
-    
-    // Add constraints
-    // Row constraints
-    for row in 0..9 {
-        post!(m, alldiff(grid[row]));
-    }
-    
-    // Column constraints
-    for col in 0..9 {
-        let column: Vec<VarId> = (0..9).map(|row| grid[row][col]).collect();
-        post!(m, alldiff(column));
-    }
-    
-    // Box constraints
-    for box_row in 0..3 {
-        for box_col in 0..3 {
-            let mut box_vars = Vec::with_capacity(9);
-            for r in 0..3 {
-                for c in 0..3 {
-                    box_vars.push(grid[box_row * 3 + r][box_col * 3 + c]);
-                }
-            }
-            post!(m, alldiff(box_vars));
-        }
-    }
-    
-    // Solve with statistics
-    let solution = m.solve();
-    
-    solution.map(|sol| {
-        let propagation_count = sol.stats.propagation_count;
-        let node_count = sol.stats.node_count;
-        
-        let mut result = [[0; 9]; 9];
-        for row in 0..9 {
-            for col in 0..9 {
-                if let Val::ValI(value) = sol[grid[row][col]] {
-                    result[row][col] = value;
-                }
-            }
-        }
-        (result, propagation_count, node_count)
-    }).ok()
-}
 
-fn verify_solution(grid: &[[i32; 9]; 9]) -> bool {
-    // Check rows
-    for row in 0..9 {
-        let mut seen = [false; 10];
-        for col in 0..9 {
-            let val = grid[row][col];
-            if val < 1 || val > 9 || seen[val as usize] {
-                return false;
-            }
-            seen[val as usize] = true;
-        }
-    }
-    
-    // Check columns
-    for col in 0..9 {
-        let mut seen = [false; 10];
-        for row in 0..9 {
-            let val = grid[row][col];
-            if val < 1 || val > 9 || seen[val as usize] {
-                return false;
-            }
-            seen[val as usize] = true;
-        }
-    }
-    
-    // Check 3x3 boxes
-    for box_row in 0..3 {
-        for box_col in 0..3 {
-            let mut seen = [false; 10];
-            for r in 0..3 {
-                for c in 0..3 {
-                    let val = grid[box_row * 3 + r][box_col * 3 + c];
-                    if val < 1 || val > 9 || seen[val as usize] {
-                        return false;
-                    }
-                    seen[val as usize] = true;
-                }
-            }
-        }
-    }
-    
-    true
-}
-
-fn print_grid(title: &str, grid: &[[i32; 9]; 9]) {
-    println!("\n{}", title);
-    println!("┌───────┬───────┬───────┐");
-    
-    for (row_idx, row) in grid.iter().enumerate() {
-        print!("│");
-        for (col_idx, &cell) in row.iter().enumerate() {
-            if cell == 0 {
-                print!(" ·");
-            } else {
-                print!(" {}", cell);
-            }
-            
-            if (col_idx + 1) % 3 == 0 {
-                print!(" │");
-            }
-        }
-        println!();
-        
-        if row_idx == 2 || row_idx == 5 {
-            println!("├───────┼───────┼───────┤");
-        }
-    }
-    println!("└───────┴───────┴───────┘");
-}
 
 
 

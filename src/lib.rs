@@ -193,6 +193,7 @@ pub mod utils;
 
 // Domain-specific modules  
 pub mod model;
+pub mod solvers;
 #[doc(hidden)]
 pub mod variables;
 #[doc(hidden)]

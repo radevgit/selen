@@ -51,7 +51,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-selen = "0.8.0"
+selen = "0.8.1"
 ```
 
 ```
@@ -73,8 +73,9 @@ Puzzle:                                 Solution:
 │ · · · │ · 4 · │ · · 9 │               │ 8 6 3 │ 7 4 5 │ 2 1 9 │
 └───────┴───────┴───────┘               └───────┴───────┴───────┘
 
-📊 Statistics: 638 propagations, 54 nodes explored
-🔍 Efficiency: 11.8 propagations/node
+✅ Solution found in 3020.832ms!
+📊 Statistics: 499 propagations, 22 nodes explored
+🔍 Efficiency: 22.7 propagations/node
 
 ```
 
