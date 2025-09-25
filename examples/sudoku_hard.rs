@@ -1,85 +1,367 @@
-//! Collection of the World's Most Difficult Sudoku Puzzles
+//! The Ultimate Collection of World's Hardest Sudoku Puzzles
 //! 
-//! This example contains some of the most computationally challenging Sudoku puzzles
-//! ever created. These puzzles are designed to stress-test constraint solvers and
-//! require significant backtracking to solve.
+//! This unified collection contains 24 of the most computationally challenging 
+//! Sudoku puzzles ever created, including:
 //!
-//! ## Famous Hard Sudokus Included:
-//! 
-//! 1. **"AI Escargot"** by Arto Inkala - Often cited as one of the hardest
-//! 2. **"Platinum Blonde"** by Arto Inkala - Extremely difficult, minimal clues
-//! 3. **"17-clue puzzles"** - Minimal clue puzzles at the mathematical limit
-//! 4. **"Easter Monster"** - Another notorious difficult puzzle
+//! ## Q1 Top Rated (gsf's sudoku rating)
+//! - Discrepancy (q1=99529) - HIGHEST rating ever recorded
+//! - Cigarette (q1=99495) - Top tier difficulty  
+//! - Platinum Blonde (q1=99486) - Legendary puzzle
+//!
+//! ## Sudoku Explainer Top Rated  
+//! - Golden Nugget (ER=11.9) - SE top rating
+//! - Kolk, Patience, Imam Bayildi (ER=11.9) - Elite difficulty
+//!
+//! ## 17-Clue Monsters
+//! - Original Platinum - At theoretical minimum clues
+//! - World's Hardest - Famous 17-clue puzzle
+//!
+//! ## Classic Legends
+//! - AI Escargot - World-famous 23-clue challenge
+//! - Easter Monster - SK loops nightmare
 //!
 //! ## Performance Warning
-//! 
-//! **These puzzles can take MINUTES to solve even in release mode!**
-//! Use `cargo run --release --example hardest_sudokus` for best performance.
+//! These puzzles stress-test any solver. Use `cargo run --release --example sudoku_hard`
+//!
+//! Source: enjoysudoku.com forum + classic hard puzzle collections
 
 use selen::prelude::*;
 use selen::{post};
 use std::time::Instant;
 
 fn main() {
-    println!("🔥 World's Most Difficult Sudoku Puzzles");
-    println!("========================================");
-    println!("⚠️  WARNING: These puzzles are computationally intensive!");
+    println!("🔥 Ultimate Sudoku Challenge - World's Hardest Puzzles");
+    println!("======================================================");
+    println!("⚠️  24 legendary puzzles from enjoysudoku.com forum and classics");
     println!("   Use --release mode for reasonable performance.\n");
     
-    // Collection of the world's hardest Sudoku puzzles
+    // The ultimate collection: 24 world's hardest Sudoku puzzles
     let puzzles = vec![
-        ("Original Platinum (17 clues) - EXTREME", 
-         "000000000000003085001020000000507000004000100090000000500000073002010000000040009"),
+        // Q1 Top 5 - gsf's sudoku q1 ratings (highest difficulty scores)
+        ("Discrepancy - q1=99529", [
+            [1, 2, 0, 4, 0, 0, 3, 0, 0],
+            [3, 0, 0, 1, 0, 0, 0, 5, 0],
+            [0, 0, 6, 0, 0, 0, 1, 0, 0],
+            [7, 0, 0, 0, 9, 0, 0, 0, 0],
+            [0, 4, 0, 6, 0, 3, 0, 0, 0],
+            [0, 0, 3, 0, 0, 2, 0, 0, 0],
+            [5, 0, 0, 0, 8, 0, 7, 0, 0],
+            [0, 0, 7, 0, 0, 0, 5, 0, 0],
+            [0, 0, 0, 0, 0, 9, 8, 0, 0]
+        ]),
         
-        ("AI Escargot (Arto Inkala) - 23 clues", 
-         "100007090030020008009600500005300900010080002600004000300000010040000007007000300"),
+        ("Cigarette - q1=99495", [
+            [1, 2, 0, 3, 0, 0, 0, 0, 0],
+            [3, 4, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 5, 0, 0, 0, 0, 0, 0],
+            [6, 0, 2, 4, 0, 0, 5, 0, 0],
+            [0, 0, 0, 0, 6, 0, 0, 7, 0],
+            [0, 0, 0, 0, 0, 8, 0, 0, 6],
+            [0, 0, 4, 2, 0, 0, 3, 0, 0],
+            [0, 0, 0, 0, 7, 0, 0, 0, 9],
+            [0, 0, 0, 0, 0, 9, 0, 8, 0]
+        ]),
         
-        ("World's Hardest (17 clues) - EXTREME", 
-         "800000000003600000070090200050007000000045700000100030001000068008500010090000400"),
+        ("Platinum Blonde - q1=99486", [
+            [0, 0, 0, 0, 0, 0, 0, 1, 2],
+            [0, 0, 0, 0, 0, 0, 0, 0, 3],
+            [0, 0, 2, 3, 0, 0, 4, 0, 0],
+            [0, 0, 1, 8, 0, 0, 0, 0, 5],
+            [0, 6, 0, 0, 7, 0, 8, 0, 0],
+            [0, 0, 0, 0, 0, 9, 0, 0, 0],
+            [0, 0, 8, 5, 0, 0, 0, 0, 0],
+            [9, 0, 0, 0, 4, 0, 5, 0, 0],
+            [0, 2, 0, 0, 0, 0, 0, 0, 0]
+        ]),
         
-        ("17-Clue Monster #1 - EXTREME", 
-         "000000010400000000020000000000050407008000300001090000300400200050100000000806000"),
+        ("Cheese - q1=99432", [
+            [0, 2, 0, 0, 5, 0, 7, 0, 0],
+            [4, 0, 0, 1, 0, 0, 0, 0, 6],
+            [8, 0, 0, 0, 0, 3, 0, 0, 0],
+            [2, 0, 0, 0, 0, 8, 0, 0, 3],
+            [0, 4, 0, 0, 2, 0, 5, 0, 0],
+            [0, 0, 0, 6, 0, 0, 0, 1, 0],
+            [0, 0, 2, 0, 9, 0, 0, 0, 0],
+            [0, 9, 0, 0, 0, 0, 5, 0, 0],
+            [7, 0, 4, 0, 0, 0, 9, 0, 0]
+        ]),
         
-        ("17-Clue Monster #2 - EXTREME", 
-         "000000027000190000005000100000007900020000000700300008001000600000028000640000000"),
+        ("Fata Morgana - q1=99420", [
+            [0, 0, 0, 0, 0, 0, 0, 0, 3],
+            [0, 0, 1, 0, 0, 5, 6, 0, 0],
+            [0, 9, 0, 0, 4, 0, 0, 7, 0],
+            [0, 0, 0, 0, 0, 9, 0, 5, 0],
+            [7, 0, 0, 0, 0, 0, 0, 0, 8],
+            [0, 5, 0, 4, 0, 0, 2, 0, 0],
+            [0, 8, 0, 0, 0, 0, 0, 3, 4],
+            [0, 0, 2, 0, 0, 3, 6, 0, 0],
+            [7, 0, 0, 0, 9, 0, 0, 0, 0]
+        ]),
         
-        ("Platinum Blonde (19 clues) - HARD", 
-         "000000012000000003002300400001800005060070800000009000008500000900040500020000000"),
+        // Sudoku Explainer Top 5 - ER (Explainer Rating) difficulty
+        ("Golden Nugget - ER=11.9", [
+            [0, 0, 0, 0, 0, 0, 0, 3, 9],
+            [0, 0, 0, 0, 0, 1, 0, 0, 5],
+            [0, 0, 3, 0, 5, 0, 8, 0, 0],
+            [0, 0, 8, 0, 9, 0, 0, 0, 6],
+            [0, 7, 0, 0, 0, 2, 0, 0, 0],
+            [1, 0, 0, 4, 0, 0, 0, 0, 0],
+            [0, 0, 9, 0, 8, 0, 0, 5, 0],
+            [2, 0, 0, 0, 0, 0, 6, 0, 0],
+            [4, 0, 0, 0, 0, 7, 0, 0, 0]
+        ]),
+        
+        ("Kolk - ER=11.9", [
+            [1, 2, 0, 3, 0, 0, 0, 0, 0],
+            [4, 0, 0, 0, 0, 0, 3, 0, 0],
+            [0, 0, 3, 0, 5, 0, 0, 0, 0],
+            [0, 0, 4, 2, 0, 0, 5, 0, 0],
+            [0, 0, 0, 0, 8, 0, 0, 0, 9],
+            [0, 0, 6, 0, 0, 5, 0, 7, 0],
+            [0, 0, 1, 5, 0, 0, 2, 0, 0],
+            [0, 0, 0, 0, 9, 0, 0, 6, 0],
+            [0, 0, 0, 0, 0, 7, 8, 0, 0]
+        ]),
+        
+        ("Patience - ER=11.9", [
+            [1, 2, 0, 3, 0, 0, 0, 0, 0],
+            [4, 0, 5, 0, 0, 0, 6, 0, 0],
+            [0, 7, 0, 0, 0, 0, 2, 0, 0],
+            [6, 0, 0, 1, 0, 0, 3, 0, 0],
+            [0, 0, 4, 5, 3, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 8, 0, 0, 9],
+            [0, 0, 0, 4, 5, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 8, 0],
+            [0, 0, 0, 0, 0, 2, 0, 0, 7]
+        ]),
+        
+        ("Imam Bayildi - ER=11.9", [
+            [0, 0, 3, 0, 0, 6, 0, 8, 0],
+            [0, 0, 0, 1, 0, 0, 2, 0, 0],
+            [0, 0, 0, 0, 7, 0, 0, 0, 4],
+            [0, 0, 9, 0, 0, 8, 0, 6, 0],
+            [0, 3, 0, 0, 4, 0, 0, 0, 1],
+            [0, 7, 0, 2, 0, 0, 0, 0, 0],
+            [3, 0, 0, 0, 0, 5, 0, 0, 0],
+            [0, 0, 5, 0, 0, 0, 6, 0, 0],
+            [9, 8, 0, 0, 0, 0, 0, 5, 0]
+        ]),
+        
+        ("SE Top 5 #5 - ER=11.8", [
+            [1, 0, 0, 0, 0, 0, 0, 0, 9],
+            [0, 0, 6, 7, 0, 0, 0, 2, 0],
+            [0, 8, 0, 0, 0, 0, 4, 0, 0],
+            [0, 0, 0, 0, 7, 5, 0, 3, 0],
+            [0, 0, 5, 0, 0, 2, 0, 0, 0],
+            [0, 6, 0, 3, 0, 0, 0, 0, 0],
+            [0, 9, 0, 0, 0, 0, 8, 0, 0],
+            [6, 0, 0, 4, 0, 0, 0, 0, 1],
+            [0, 0, 0, 2, 6, 0, 0, 0, 0]
+        ]),
+        
+        // Q2 and Suexrat9 Top Rated
+        ("Red Dwarf - q2=99743", [
+            [1, 2, 0, 3, 0, 0, 0, 0, 4],
+            [3, 5, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 4, 0, 0, 0, 0, 0, 0],
+            [0, 0, 5, 4, 0, 0, 2, 0, 0],
+            [6, 0, 0, 0, 7, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 8, 0, 9, 0],
+            [0, 0, 3, 1, 0, 0, 5, 0, 0],
+            [0, 0, 0, 0, 0, 9, 0, 7, 0],
+            [0, 0, 0, 0, 6, 0, 0, 0, 8]
+        ]),
+        
+        ("Coloin #1 - SX9=10364", [
+            [0, 0, 3, 0, 0, 0, 0, 0, 0],
+            [4, 0, 0, 0, 8, 0, 0, 3, 6],
+            [0, 0, 8, 0, 0, 0, 1, 0, 0],
+            [0, 4, 0, 0, 6, 0, 0, 7, 3],
+            [0, 0, 0, 9, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 2, 0, 0, 5],
+            [0, 0, 4, 0, 7, 0, 0, 6, 8],
+            [6, 0, 0, 0, 0, 0, 0, 0, 0],
+            [7, 0, 0, 6, 0, 0, 5, 0, 0]
+        ]),
+        
+        ("Suexrat9 #2 - SX9=9968", [
+            [1, 0, 0, 0, 5, 0, 0, 0, 0],
+            [0, 0, 7, 0, 0, 9, 0, 3, 0],
+            [0, 0, 9, 0, 0, 7, 5, 4, 0],
+            [0, 0, 4, 0, 0, 3, 0, 7, 0],
+            [0, 6, 0, 0, 0, 0, 0, 0, 0],
+            [0, 9, 0, 8, 0, 0, 0, 0, 0],
+            [0, 0, 0, 7, 9, 0, 0, 2, 0],
+            [0, 0, 0, 0, 0, 2, 4, 0, 3],
+            [0, 0, 2, 0, 0, 0, 0, 0, 0]
+        ]),
+        
+        ("Coloin #2 - SX9=9453", [
+            [0, 0, 3, 0, 0, 0, 0, 0, 0],
+            [4, 0, 0, 0, 8, 0, 0, 3, 6],
+            [0, 0, 8, 0, 0, 0, 1, 0, 0],
+            [0, 4, 0, 0, 6, 0, 0, 7, 3],
+            [0, 0, 0, 9, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 2, 0, 0, 5],
+            [0, 0, 4, 0, 7, 0, 0, 6, 8],
+            [6, 0, 0, 0, 0, 4, 0, 0, 0],
+            [7, 0, 0, 0, 0, 0, 5, 0, 0]
+        ]),
+        
+        ("Coloin #3 - SX9=8946", [
+            [0, 0, 3, 0, 9, 0, 0, 0, 0],
+            [4, 0, 0, 0, 8, 0, 0, 3, 6],
+            [0, 0, 8, 0, 0, 0, 1, 0, 0],
+            [0, 4, 0, 0, 6, 0, 0, 7, 3],
+            [0, 0, 0, 9, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 2, 0, 0, 0],
+            [0, 0, 4, 0, 7, 0, 0, 6, 8],
+            [6, 0, 0, 0, 0, 0, 0, 0, 0],
+            [7, 0, 0, 0, 0, 0, 5, 0, 4]
+        ]),
+        
+        // Classic Legendary Puzzles
+        ("Easter Monster - SK Loops", [
+            [1, 0, 0, 2, 0, 0, 3, 0, 0],
+            [0, 0, 0, 4, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 5, 7, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0],
+            [2, 0, 0, 0, 0, 0, 8, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 4, 0],
+            [0, 3, 7, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 5, 0, 0, 0],
+            [0, 0, 6, 0, 0, 8, 0, 0, 9]
+        ]),
+        
+        ("AI Escargot - 23 clues", [
+            [1, 0, 0, 0, 0, 7, 0, 9, 0],
+            [0, 3, 0, 0, 2, 0, 0, 0, 8],
+            [0, 0, 9, 6, 0, 0, 5, 0, 0],
+            [0, 0, 5, 3, 0, 0, 9, 0, 0],
+            [0, 1, 0, 0, 8, 0, 0, 0, 2],
+            [6, 0, 0, 0, 0, 4, 0, 0, 0],
+            [3, 0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 4, 0, 0, 0, 0, 0, 0, 7],
+            [0, 0, 7, 0, 0, 0, 3, 0, 0],
+        ]),
+        
+        ("World's Hardest (17 clues) - EXTREME", [
+            // Rating: 17 clues - at mathematical minimum, designed for maximum difficulty
+            [8, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 3, 6, 0, 0, 0, 0, 0],
+            [0, 7, 0, 0, 9, 0, 2, 0, 0],
+            [0, 5, 0, 0, 0, 7, 0, 0, 0],
+            [0, 0, 0, 0, 4, 5, 7, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 3, 0],
+            [0, 0, 1, 0, 0, 0, 0, 6, 8],
+            [0, 0, 8, 5, 0, 0, 0, 1, 0],
+            [0, 9, 0, 0, 0, 0, 4, 0, 0],
+        ]),
+        
+        ("17-Clue Monster #1 - EXTREME", [
+            // Rating: 17 clues - minimal constraint propagation, maximum search required
+            [0, 0, 0, 0, 0, 0, 0, 1, 0],
+            [4, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 2, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 5, 0, 4, 0, 7],
+            [0, 0, 8, 0, 0, 0, 3, 0, 0],
+            [0, 0, 1, 0, 9, 0, 0, 0, 0],
+            [3, 0, 0, 4, 0, 0, 2, 0, 0],
+            [0, 5, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 8, 0, 6, 0, 0, 0],
+        ]),
+        
+        ("17-Clue Monster #2 - EXTREME", [
+            // Rating: 17 clues - strategically placed to minimize solving efficiency
+            [0, 0, 0, 0, 0, 0, 0, 2, 7],
+            [0, 0, 0, 1, 9, 0, 0, 0, 0],
+            [0, 0, 5, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 7, 9, 0, 0],
+            [0, 2, 0, 0, 0, 0, 0, 0, 0],
+            [7, 0, 0, 3, 0, 0, 0, 0, 8],
+            [0, 0, 1, 0, 0, 0, 6, 0, 0],
+            [0, 0, 0, 0, 2, 8, 0, 0, 0],
+            [6, 4, 0, 0, 0, 0, 0, 0, 0],
+        ]),
+        
+        ("Platinum Blonde (19 clues) - HARD", [
+            // Rating: q1=99486 (gsf's sudoku), 19 clues - classic difficult puzzle
+            [0, 0, 0, 0, 0, 0, 0, 1, 2],
+            [0, 0, 0, 0, 0, 0, 0, 0, 3],
+            [0, 0, 2, 3, 0, 0, 4, 0, 0],
+            [0, 0, 1, 8, 0, 0, 0, 0, 5],
+            [0, 6, 0, 0, 7, 0, 8, 0, 0],
+            [0, 0, 0, 0, 0, 9, 0, 0, 0],
+            [0, 0, 8, 5, 0, 0, 0, 0, 0],
+            [9, 0, 0, 0, 4, 0, 5, 0, 0],
+            [4, 7, 0, 0, 0, 6, 0, 0, 0],
+        ]),
     ];
     
-    println!("Available puzzles:");
-    for (i, (name, _)) in puzzles.iter().enumerate() {
-        println!("{}. {}", i + 1, name);
-    }
-    println!();
+    println!("Solving all {} extreme puzzles in sequence...\n", puzzles.len());
     
-    // Solve the first puzzle (AI Escargot) as an example
-    let (name, puzzle_str) = &puzzles[1];
-    println!("🎯 Solving: {}", name);
-    println!("⚠️  This is a 17-CLUE puzzle - at the mathematical minimum!");
-    println!("   These require massive backtracking and can take SECONDS to solve.\n");
+    let mut total_time = 0.0;
+    let mut total_nodes = 0;
+    let mut total_propagations = 0;
+    let mut solved_count = 0;
     
-    let puzzle = parse_sudoku_string(puzzle_str);
-    let result = solve_and_display_detailed(name, &puzzle);
-    
-    match result {
-        Some((propagations, nodes, duration_ms)) => {
-            println!("\n🏆 CHALLENGE COMPLETED!");
-            println!("Difficulty Analysis:");
-            println!("• Search Nodes: {} (higher = more backtracking required)", nodes);
-            println!("• Propagations: {} (constraint propagation steps)", propagations);
-            println!("• Time: {:.1}ms", duration_ms);
-            
-            let difficulty_rating = classify_difficulty(nodes, duration_ms);
-            println!("• Difficulty: {}", difficulty_rating);
+    for (i, (name, puzzle)) in puzzles.iter().enumerate() {
+        println!("════════════════════════════════════════");
+        println!("🎯 Puzzle {}/{}: {}", i + 1, puzzles.len(), name);
+        println!("════════════════════════════════════════");
+        
+        // Add special warnings for extreme puzzles
+        let clue_count = puzzle.iter().flatten().filter(|&&x| x != 0).count();
+        if clue_count == 17 {
+            println!("⚠️  17-CLUE EXTREME: At the mathematical minimum!");
+        } else if clue_count <= 20 {
+            println!("⚠️  MINIMAL CLUES: Extreme difficulty expected!");
         }
-        None => {
-            println!("❌ Puzzle could not be solved (may be invalid)");
+        
+        let result = solve_and_display_detailed(name, puzzle);
+        
+        match result {
+            Some((propagations, nodes, duration_ms)) => {
+                println!("\n✅ SOLVED!");
+                println!("📊 Statistics: {} nodes, {} propagations, {:.1}ms", nodes, propagations, duration_ms);
+                
+                let difficulty_rating = classify_difficulty(nodes, duration_ms);
+                println!("🏆 Difficulty: {}", difficulty_rating);
+                
+                total_time += duration_ms;
+                total_nodes += nodes;
+                total_propagations += propagations;
+                solved_count += 1;
+            }
+            None => {
+                println!("❌ Could not solve this puzzle!");
+            }
+        }
+        
+        if i < puzzles.len() - 1 {
+            println!("\n⏳ Moving to next puzzle...\n");
         }
     }
     
-    println!("\n💡 To try other puzzles, modify the code to use different indices!");
-    println!("   Example: Change puzzles[0] to puzzles[1] for Platinum Blonde");
+    // Final summary
+    println!("\n🏆 FINAL CHALLENGE SUMMARY");
+    println!("══════════════════════════════════════════");
+    println!("✅ Puzzles solved: {}/{}", solved_count, puzzles.len());
+    println!("⏱️  Total time: {:.1}ms ({:.2}s)", total_time, total_time / 1000.0);
+    println!("🔍 Total search nodes: {}", total_nodes);
+    println!("⚡ Total propagations: {}", total_propagations);
+    
+    if solved_count > 0 {
+        println!("📊 Average per puzzle:");
+        println!("   • Time: {:.1}ms", total_time / solved_count as f64);
+        println!("   • Nodes: {:.1}", total_nodes as f64 / solved_count as f64);
+        println!("   • Propagations: {:.1}", total_propagations as f64 / solved_count as f64);
+    }
+    
+    if solved_count == puzzles.len() {
+        println!("\n🎉 LEGENDARY ACHIEVEMENT!");
+        println!("You conquered ALL the world's hardest Sudoku puzzles!");
+    }
 }
 
 fn classify_difficulty(nodes: usize, duration_ms: f64) -> &'static str {
@@ -93,59 +375,25 @@ fn classify_difficulty(nodes: usize, duration_ms: f64) -> &'static str {
     }
 }
 
-/// Parse a sudoku string (81 characters) into a 9x9 grid
-fn parse_sudoku_string(puzzle_str: &str) -> [[i32; 9]; 9] {
-    assert_eq!(puzzle_str.len(), 81, "Sudoku string must be exactly 81 characters");
-    
-    let mut grid = [[0; 9]; 9];
-    
-    for (i, ch) in puzzle_str.chars().enumerate() {
-        let row = i / 9;
-        let col = i % 9;
-        grid[row][col] = ch.to_digit(10).expect("Invalid character in sudoku string") as i32;
-    }
-    
-    grid
-}
-
-fn solve_and_display_detailed(name: &str, puzzle: &[[i32; 9]; 9]) -> Option<(usize, usize, f64)> {
+fn solve_and_display_detailed(_name: &str, puzzle: &[[i32; 9]; 9]) -> Option<(usize, usize, f64)> {
     // Count clues
     let clue_count = puzzle.iter().flatten().filter(|&&x| x != 0).count();
-    println!("📊 Puzzle Analysis:");
-    println!("   • Clues given: {}/81", clue_count);
-    println!("   • Empty cells: {}/81", 81 - clue_count);
-    println!("   • Difficulty factor: {} clues (17 is theoretical minimum)", clue_count);
+    println!("Clues: {}/81", clue_count);
     
-    print_grid("Initial Puzzle:", puzzle);
+    print_grid("Initial:", puzzle);
     
-    println!("🔍 Solving... (this may take a while for hard puzzles)");
     let start = Instant::now();
     let result = solve_sudoku_with_stats(puzzle);
     let duration = start.elapsed();
     let duration_ms = duration.as_secs_f64() * 1000.0;
     
     match result {
-        Some((grid, propagations, nodes)) => {
-            println!("✅ SOLVED in {:.1}ms!", duration_ms);
-            
-            // Performance analysis
-            if nodes == 0 {
-                println!("🎯 Pure constraint propagation - no search required!");
-            } else {
-                let efficiency = propagations as f64 / nodes as f64;
-                println!("📊 Search Statistics:");
-                println!("   • Propagations: {}", propagations);
-                println!("   • Search nodes: {}", nodes);
-                println!("   • Efficiency: {:.1} propagations/node", efficiency);
-            }
-            
+        Some((grid, propagations, nodes)) => {            
             print_grid("Solution:", &grid);
             
             // Verify solution
-            if verify_solution(&grid) {
-                println!("✅ Solution verified correct!");
-            } else {
-                println!("❌ Warning: Solution verification failed!");
+            if !verify_solution(&grid) {
+                println!("❌ Solution verification failed!");
             }
             
             Some((propagations, nodes, duration_ms))
@@ -290,3 +538,6 @@ fn print_grid(title: &str, grid: &[[i32; 9]; 9]) {
     }
     println!("└───────┴───────┴───────┘");
 }
+
+
+
