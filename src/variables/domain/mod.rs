@@ -6,9 +6,13 @@
 #[doc(hidden)]
 pub mod sparse_set;
 #[doc(hidden)]
+pub mod bitset_domain;
+#[doc(hidden)]
 pub mod float_interval;
 
 #[doc(hidden)]
 pub use sparse_set::SparseSet;
+#[doc(hidden)]
+pub use bitset_domain::BitSetDomain;
 #[doc(hidden)]
 pub use float_interval::FloatInterval;

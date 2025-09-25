@@ -15,6 +15,8 @@ pub mod math_syntax;
 pub mod builder_legacy;
 pub mod operators;
 pub mod gac;
+pub mod gac_bitset;
+pub mod gac_hybrid;
 
 // Re-export everything from the organized constraint macros
 pub use macros::*;

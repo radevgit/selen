@@ -1,6 +1,7 @@
 use crate::{
     constraints::props::{Propagate, Prune},
-    constraints::gac::{SparseSetGAC, Variable},
+    constraints::gac::Variable,
+    constraints::gac_hybrid::HybridGAC,
     variables::{Val, VarId},
     variables::views::{Context, View},
 };
@@ -94,8 +95,8 @@ impl AllDiff {
         }
     }
     
-    /// GAC-based propagation using SparseSetGAC for maximum efficiency
-    /// Minimal allocations - works directly with SparseSet bounds when possible
+    /// GAC-based propagation using HybridGAC for optimal performance
+    /// Automatically selects BitSetGAC for small domains and SparseSetGAC for large domains
     fn propagate_gac(&self, ctx: &mut Context) -> Option<()> {
         // Check if all variables have integer domains (GAC requirement)
         for &var in &self.vars {
@@ -113,8 +114,8 @@ impl AllDiff {
             }
         }
         
-        // Create SparseSetGAC instance 
-        let mut gac = SparseSetGAC::new();
+        // Create HybridGAC instance - automatically selects best implementation
+        let mut gac = HybridGAC::new();
         
         // Add variables directly with their current domain bounds
         for (var_idx, &var) in self.vars.iter().enumerate() {
@@ -127,12 +128,19 @@ impl AllDiff {
                 }
                 
                 // Add variable to GAC with its current bounds
-                gac.add_variable(Variable(var_idx), min_i, max_i);
+                // HybridGAC automatically chooses BitSet for small domains (≤64) 
+                // and SparseSet for larger domains
+                if let Err(_) = gac.add_variable(Variable(var_idx), min_i, max_i) {
+                    return None; // Invalid domain
+                }
             }
         }
         
-        // Apply GAC propagation
-        if !gac.fast_gac_propagate() {
+        // Collect all variables for propagation
+        let all_vars: Vec<Variable> = (0..self.vars.len()).map(Variable).collect();
+        
+        // Apply GAC propagation using the hybrid approach
+        if let Err(_) = gac.propagate_alldiff(&all_vars) {
             return None; // GAC detected inconsistency
         }
         
@@ -142,13 +150,13 @@ impl AllDiff {
             
             if gac.is_assigned(gac_var) {
                 // Variable became assigned - set bounds to the single value
-                if let Some(assigned_val) = gac.get_assigned_value(gac_var) {
+                if let Some(assigned_val) = gac.assigned_value(gac_var) {
                     var.try_set_min(Val::ValI(assigned_val), ctx)?;
                     var.try_set_max(Val::ValI(assigned_val), ctx)?;
                 }
             } else {
-                // For unassigned variables, use efficient O(1) bounds access
-                if let Some((new_min, new_max)) = gac.get_domain_bounds(gac_var) {
+                // For unassigned variables, use efficient bounds access
+                if let Some((new_min, new_max)) = gac.get_bounds(gac_var) {
                     var.try_set_min(Val::ValI(new_min), ctx)?;
                     var.try_set_max(Val::ValI(new_max), ctx)?;
                 } else {
