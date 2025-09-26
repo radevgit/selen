@@ -11,7 +11,7 @@ use selen::{post};
 fn test_validation_empty_domain() {
     // Create a model with an empty domain
     let mut model = Model::default();
-    let _var = model.ints(vec![]); // Empty domain
+    let _var = model.intset(vec![]); // Empty domain
     
     match model.solve() {
         Ok(_) => {
@@ -109,7 +109,7 @@ fn test_validation_large_domain_handling() {
     // Create a model with a large domain (but not too extreme to avoid memory issues)
     let mut model = Model::default();
     let large_domain: Vec<i32> = (0..50000).collect(); // Large but manageable domain
-    let _x = model.ints(large_domain);
+    let _x = model.intset(large_domain);
     
     // Large domains should work but might be slow or fail validation
     match model.solve() {

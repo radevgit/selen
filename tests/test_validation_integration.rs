@@ -13,7 +13,7 @@ fn main() {
     // Test 1: Empty domain validation
     println!("\nTest 1: Empty domain validation");
     let mut model1 = Model::default();
-    let _empty_var = model1.ints(vec![]); // Empty domain
+    let _empty_var = model1.intset(vec![]); // Empty domain
     
     match model1.solve() {
         Ok(_) => println!("  ❌ FAILED: Expected validation to catch empty domain"),

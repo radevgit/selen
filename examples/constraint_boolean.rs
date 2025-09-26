@@ -8,10 +8,8 @@ fn main() {
     println!("📋 Test 1: Array AND - and([a, b, c, d])");
     {
         let mut m = Model::default();
-        let a = m.bool();
-        let b = m.bool();
-        let c = m.bool();
-        let d = m.bool();
+        let vars = m.bools(4);
+        let (a, b, c, d) = (vars[0], vars[1], vars[2], vars[3]);
         
         // All must be true (1) for result to be true
         post!(m, and([a, b, c, d]));
@@ -33,10 +31,8 @@ fn main() {
     println!("\n📋 Test 2: Array OR - or([a, b, c, d])");
     {
         let mut m = Model::default();
-        let a = m.bool();
-        let b = m.bool();
-        let c = m.bool();
-        let d = m.bool();
+        let vars = m.bools(4);
+        let (a, b, c, d) = (vars[0], vars[1], vars[2], vars[3]);
         
         // At least one must be true
         post!(m, or([a, b, c, d]));
@@ -57,10 +53,8 @@ fn main() {
     println!("\n📋 Test 3: Variadic AND - and(a, b, c, d)");
     {
         let mut m = Model::default();
-        let a = m.bool();
-        let b = m.bool();
-        let c = m.bool();
-        let d = m.bool();
+        let vars = m.bools(4);
+        let (a, b, c, d) = (vars[0], vars[1], vars[2], vars[3]);
         
         post!(m, and(a, b, c, d));
         post!(m, a == 1);
@@ -81,10 +75,8 @@ fn main() {
     println!("\n📋 Test 4: Variadic OR - or(a, b, c, d)");
     {
         let mut m = Model::default();
-        let a = m.bool();
-        let b = m.bool();
-        let c = m.bool();
-        let d = m.bool();
+        let vars = m.bools(4);
+        let (a, b, c, d) = (vars[0], vars[1], vars[2], vars[3]);
         
         post!(m, or(a, b, c, d));
         post!(m, a == 0);
@@ -105,9 +97,8 @@ fn main() {
     println!("\n📋 Test 5: Array NOT - not([a, b, c])");
     {
         let mut m = Model::default();
-        let a = m.bool();
-        let b = m.bool();
-        let c = m.bool();
+        let vars = m.bools(3);
+        let (a, b, c) = (vars[0], vars[1], vars[2]);
         
         // This applies not() to each variable individually
         post!(m, not([a, b, c]));
@@ -124,10 +115,8 @@ fn main() {
     println!("\n📋 Test 6: postall! with simple constraints");
     {
         let mut m = Model::default();
-        let x = m.bool();
-        let y = m.bool();
-        let z = m.bool();
-        let w = m.bool();
+        let vars = m.bools(4);
+        let (x, y, z, w) = (vars[0], vars[1], vars[2], vars[3]);
         
         // Use separate constraints since nested arrays might not work yet
         post!(m, and([x, y]));     // x AND y must be true
