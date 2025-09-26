@@ -98,6 +98,7 @@ impl AllDiff {
     /// GAC-based propagation using HybridGAC for optimal performance
     /// Automatically selects BitSetGAC for small domains and SparseSetGAC for large domains
     fn propagate_gac(&self, ctx: &mut Context) -> Option<()> {
+        
         // Check if all variables have integer domains (GAC requirement)
         for &var in &self.vars {
             let min_val = var.min(ctx);
@@ -128,7 +129,7 @@ impl AllDiff {
                 }
                 
                 // Add variable to GAC with its current bounds
-                // HybridGAC automatically chooses BitSet for small domains (≤64) 
+                // HybridGAC automatically chooses BitSet for small domains (≤128) 
                 // and SparseSet for larger domains
                 if let Err(_) = gac.add_variable(Variable(var_idx), min_i, max_i) {
                     return None; // Invalid domain
@@ -140,7 +141,8 @@ impl AllDiff {
         let all_vars: Vec<Variable> = (0..self.vars.len()).map(Variable).collect();
         
         // Apply GAC propagation using the hybrid approach
-        if let Err(_) = gac.propagate_alldiff(&all_vars) {
+        let (_changed, consistent) = gac.propagate_alldiff(&all_vars);
+        if !consistent {
             return None; // GAC detected inconsistency
         }
         
@@ -239,7 +241,9 @@ impl AllDiff {
         
         // If we have only integer variables, check if enough values available
         if !has_float_vars {
-            return all_int_values.len() >= self.vars.len();
+            let unique_count = all_int_values.len();
+            let var_count = self.vars.len();
+            return unique_count >= var_count;
         }
         
         // With float variables, assume feasible (constraint will be checked during search)

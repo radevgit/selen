@@ -54,7 +54,7 @@ fn benchmark_bitset_gac(num_vars: usize, domain_size: usize, iterations: usize) 
         
         // Add variables
         for &var in &variables {
-            gac.add_variable(var, 1, domain_size as i32)?;
+            gac.add_variable(var, 1, domain_size as i32);
         }
         
         // Simulate constraint propagation work
@@ -89,7 +89,7 @@ fn benchmark_hybrid_gac(num_vars: usize, domain_size: usize, iterations: usize) 
         
         // Add variables
         for &var in &variables {
-            gac.add_variable(var, 1, domain_size as i32)?;
+            let _ = gac.add_variable(var, 1, domain_size as i32);
         }
         
         // Simulate constraint propagation work
@@ -151,7 +151,7 @@ fn benchmark_alldiff_propagation(num_vars: usize, domain_size: usize, iterations
             let variables: Vec<Variable> = (0..num_vars).map(|i| Variable(i)).collect();
             
             for &var in &variables {
-                gac.add_variable(var, 1, domain_size as i32).unwrap();
+                gac.add_variable(var, 1, domain_size as i32);
             }
             
             let start = Instant::now();
@@ -172,7 +172,7 @@ fn benchmark_alldiff_propagation(num_vars: usize, domain_size: usize, iterations
         let variables: Vec<Variable> = (0..num_vars).map(|i| Variable(i)).collect();
         
         for &var in &variables {
-            gac.add_variable(var, 1, domain_size as i32).unwrap();
+            let _ = gac.add_variable(var, 1, domain_size as i32);
         }
         
         let start = Instant::now();

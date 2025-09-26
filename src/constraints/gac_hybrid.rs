@@ -49,10 +49,12 @@ impl HybridGAC {
         
         if domain_size <= MAX_BITSET_DOMAIN_SIZE {
             // Use BitSet implementation for small domains
+
             self.bitset_gac.add_variable(var, min_val, max_val);
             self.bitset_vars.insert(var, ());
         } else {
             // Use SparseSet implementation for large domains
+
             self.sparseset_gac.add_variable(var, min_val, max_val);
             self.sparseset_vars.insert(var, ());
         }
@@ -199,12 +201,17 @@ impl HybridGAC {
     /// Get domain bounds
     pub fn get_bounds(&self, var: Variable) -> Option<(i32, i32)> {
         if self.bitset_vars.contains_key(&var) {
-            self.bitset_gac.get_bounds(var)
+            let bounds = self.bitset_gac.get_bounds(var);
+
+            bounds
         } else if self.sparseset_vars.contains_key(&var) {
             let domain = self.sparseset_gac.domains.get(&var)?;
             if !domain.is_empty() {
-                Some((domain.min(), domain.max()))
+                let bounds = Some((domain.min(), domain.max()));
+
+                bounds
             } else {
+
                 None
             }
         } else {
@@ -213,9 +220,11 @@ impl HybridGAC {
     }
     
     /// Apply alldifferent constraint with hybrid optimization
-    pub fn propagate_alldiff(&mut self, variables: &[Variable]) -> Result<bool, String> {
+    /// Returns (changed, consistent) where changed indicates if domains were modified
+    /// and consistent indicates if the constraint is still satisfiable
+    pub fn propagate_alldiff(&mut self, variables: &[Variable]) -> (bool, bool) {
         if variables.is_empty() {
-            return Ok(false);
+            return (false, true); // No change, still consistent
         }
         
         // Separate variables by implementation
@@ -233,23 +242,36 @@ impl HybridGAC {
         
         // Propagate within each group using their optimized algorithms
         if !bitset_vars.is_empty() {
-            changed |= self.bitset_gac.propagate_alldiff(&bitset_vars)?;
+            let (bitset_changed, bitset_consistent) = self.bitset_gac.propagate_alldiff(&bitset_vars);
+            if !bitset_consistent {
+                return (changed, false); // BitSet propagation detected inconsistency
+            }
+            changed |= bitset_changed;
         }
         
         if !sparseset_vars.is_empty() {
-            changed |= self.propagate_sparseset_alldiff(&sparseset_vars)?;
+            let (sparse_changed, sparse_consistent) = self.propagate_sparseset_alldiff(&sparseset_vars);
+            if !sparse_consistent {
+                return (changed, false); // SparseSet propagation detected inconsistency
+            }
+            changed |= sparse_changed;
         }
         
         // Cross-propagation between groups
         if !bitset_vars.is_empty() && !sparseset_vars.is_empty() {
-            changed |= self.cross_propagate_alldiff(&bitset_vars, &sparseset_vars)?;
+            let (cross_changed, cross_consistent) = self.cross_propagate_alldiff(&bitset_vars, &sparseset_vars);
+            if !cross_consistent {
+                return (changed, false); // Cross-propagation detected inconsistency
+            }
+            changed |= cross_changed;
         }
         
-        Ok(changed)
+        (changed, true)
     }
     
     /// Propagate alldiff for SparseSet variables
-    fn propagate_sparseset_alldiff(&mut self, variables: &[Variable]) -> Result<bool, String> {
+    /// Returns (changed, consistent) tuple
+    fn propagate_sparseset_alldiff(&mut self, variables: &[Variable]) -> (bool, bool) {
         let mut changed = false;
         
         // Basic alldiff: remove assigned values from other variables
@@ -271,18 +293,19 @@ impl HybridGAC {
                     if self.sparseset_gac.remove_value(var, assigned_val) {
                         changed = true;
                         if self.sparseset_gac.domains.get(&var).unwrap().is_empty() {
-                            return Err("Inconsistent domain after alldiff propagation".to_string());
+                            return (changed, false); // Domain became empty - inconsistent
                         }
                     }
                 }
             }
         }
         
-        Ok(changed)
+        (changed, true)
     }
     
     /// Cross-propagate between BitSet and SparseSet variables
-    fn cross_propagate_alldiff(&mut self, bitset_vars: &[Variable], sparseset_vars: &[Variable]) -> Result<bool, String> {
+    /// Returns (changed, consistent) tuple
+    fn cross_propagate_alldiff(&mut self, bitset_vars: &[Variable], sparseset_vars: &[Variable]) -> (bool, bool) {
         let mut changed = false;
         
         // Get assigned values from BitSet variables
@@ -297,7 +320,7 @@ impl HybridGAC {
                 if self.sparseset_gac.remove_value(var, *assigned_val) {
                     changed = true;
                     if self.sparseset_gac.domains.get(&var).unwrap().is_empty() {
-                        return Err("Cross-propagation caused empty domain".to_string());
+                        return (changed, false); // Domain became empty - inconsistent
                     }
                 }
             }
@@ -322,13 +345,13 @@ impl HybridGAC {
                 if self.bitset_gac.remove_value(var, *assigned_val) {
                     changed = true;
                     if self.bitset_gac.is_inconsistent(var) {
-                        return Err("Cross-propagation caused empty domain".to_string());
+                        return (changed, false); // Domain became empty - inconsistent
                     }
                 }
             }
         }
         
-        Ok(changed)
+        (changed, true)
     }
     
     /// Get all variables
@@ -407,8 +430,9 @@ mod tests {
         gac.assign_variable(Variable(0), 3);
         
         // Propagate alldiff
-        let result = gac.propagate_alldiff(&[Variable(0), Variable(1), Variable(2)]);
-        assert!(result.is_ok());
+        let (changed, consistent) = gac.propagate_alldiff(&[Variable(0), Variable(1), Variable(2)]);
+        assert!(consistent);
+        assert!(changed);
         
         // Other variables should not contain value 3
         let domain1 = gac.get_domain_values(Variable(1));

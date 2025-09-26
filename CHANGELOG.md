@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.2] - 2025-09-26
+- BitSet domain for GAC
+- Performance improvement for alldiff()
+
 ## [0.8.1] - 2025-09-25
 - Added specialized Sudoku solver.
 - Organized benchmarks into dedicated directory structure

@@ -14,6 +14,9 @@ use std::collections::HashMap;
 use crate::constraints::gac::Variable;
 use crate::variables::domain::bitset_domain::BitSetDomain;
 
+/// Simple boolean-based consistency checking for GAC operations
+/// Returns true for successful propagation, false for inconsistency detected
+
 /// Generate combinations of k elements from a slice
 fn combinations<T: Clone>(items: &[T], k: usize) -> Vec<Vec<T>> {
     if k == 0 {
@@ -169,9 +172,12 @@ impl BitSetGAC {
     
     /// Get domain bounds efficiently using bit operations
     pub fn get_bounds(&self, var: Variable) -> Option<(i32, i32)> {
-        let domain = self.domains.get(&var)?;
-        if let (Some(min), Some(max)) = (domain.min(), domain.max()) {
-            Some((min, max))
+        if let Some(domain) = self.domains.get(&var) {
+            if let (Some(min), Some(max)) = (domain.min(), domain.max()) {
+                Some((min, max))
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -179,9 +185,11 @@ impl BitSetGAC {
     
     /// Apply alldifferent constraint using ultra-fast bit operations
     /// This is where BitSet really shines compared to SparseSet
-    pub fn propagate_alldiff(&mut self, variables: &[Variable]) -> Result<bool, String> {
+    /// Returns (changed, consistent) where changed indicates if domains were modified
+    /// and consistent indicates if the constraint is still satisfiable
+    pub fn propagate_alldiff(&mut self, variables: &[Variable]) -> (bool, bool) {
         if variables.len() <= 1 {
-            return Ok(false); // Nothing to propagate
+            return (false, true); // Nothing to propagate, still consistent
         }
         
         let mut changed = false;
@@ -205,9 +213,9 @@ impl BitSetGAC {
                     if self.remove_value(var, assigned_val) {
                         changed = true;
                         
-                        // Check for failure
+                        // Check for failure - domain became empty
                         if self.is_inconsistent(var) {
-                            return Err("Inconsistent domain after alldiff propagation".to_string());
+                            return (changed, false); // Changed something but now inconsistent
                         }
                     }
                 }
@@ -217,13 +225,18 @@ impl BitSetGAC {
         // Advanced propagation: Hall sets using bit operations
         // If we have n variables with domains that union to exactly n values,
         // then those variables must take those values (Hall's theorem)
-        changed |= self.propagate_hall_sets(variables)?;
+        let (hall_changed, hall_consistent) = self.propagate_hall_sets(variables);
+        if !hall_consistent {
+            return (changed, false); // Hall set propagation detected inconsistency
+        }
+        changed |= hall_changed;
         
-        Ok(changed)
+        (changed, true)
     }
     
     /// Propagate Hall sets using efficient bit operations (optimized for practical use)
-    fn propagate_hall_sets(&mut self, variables: &[Variable]) -> Result<bool, String> {
+    /// Returns (changed, consistent) tuple
+    fn propagate_hall_sets(&mut self, variables: &[Variable]) -> (bool, bool) {
         let mut changed = false;
         
         // Only do Hall set propagation for very small sets to avoid exponential blowup
@@ -236,30 +249,20 @@ impl BitSetGAC {
                         .map(|&i| variables[i])
                         .collect();
                     
-                    // Calculate union of domains using bit operations
-                    let mut union_mask = 0u128;
-                    let mut compatible = true;
-                    let mut min_val = None;
+                    // Calculate union of domains by collecting actual values (not masks)
+                    let mut union_values = std::collections::HashSet::new();
                     
                     for &var in &subset {
                         if let Some(domain) = self.domains.get(&var) {
-                            if let Some(existing_min) = min_val {
-                                if domain.get_min_val() != existing_min {
-                                    compatible = false;
-                                    break;
-                                }
-                            } else {
-                                min_val = Some(domain.get_min_val());
+                            // Convert domain to actual values using iterator
+                            let var_values: Vec<i32> = domain.into_iter().collect();
+                            for val in &var_values {
+                                union_values.insert(*val);
                             }
-                            union_mask |= domain.get_mask();
                         }
                     }
                     
-                    if !compatible {
-                        continue;
-                    }
-                    
-                    let union_size = union_mask.count_ones() as usize;
+                    let union_size = union_values.len();
                     
                     // Hall's theorem: if |subset| = |union of domains|, 
                     // then values in union can only be assigned to variables in subset
@@ -268,10 +271,16 @@ impl BitSetGAC {
                         for &var in variables {
                             if !subset.contains(&var) {
                                 if let Some(domain) = self.domains.get_mut(&var) {
-                                    if domain.remove_by_mask(union_mask) {
+                                    let mut removed_any = false;
+                                    for &value in &union_values {
+                                        if domain.remove(value) {
+                                            removed_any = true;
+                                        }
+                                    }
+                                    if removed_any {
                                         changed = true;
                                         if domain.is_empty() {
-                                            return Err("Hall set propagation caused empty domain".to_string());
+                                            return (changed, false); // Domain became empty - inconsistent
                                         }
                                     }
                                 }
@@ -282,7 +291,7 @@ impl BitSetGAC {
             }
         }
         
-        Ok(changed)
+        (changed, true)
     }
     
     /// Get all variables
@@ -353,8 +362,9 @@ mod tests {
         
         // Test alldiff propagation
         gac.assign_variable(Variable(0), 1);
-        let result = gac.propagate_alldiff(&[Variable(0), Variable(1), Variable(2)]);
-        assert!(result.is_ok());
+        let (changed, consistent) = gac.propagate_alldiff(&[Variable(0), Variable(1), Variable(2)]);
+        assert!(consistent);
+        assert!(changed);
         
         // Variable 1 and 2 should no longer contain value 1
         assert!(!gac.domains.get(&Variable(1)).unwrap().contains(1));

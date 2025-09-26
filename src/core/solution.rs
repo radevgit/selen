@@ -108,6 +108,30 @@ use std::time::Duration;
 
 use crate::variables::{Val, VarId, VarIdBin};
 
+/// Error type for value access operations on solutions
+#[derive(Debug, Clone, PartialEq)]
+pub enum ValueAccessError {
+    /// Attempted to get integer value from a variable containing a float
+    ExpectedInteger { variable: VarId, actual_value: Val },
+    /// Attempted to get float value from a variable containing an integer
+    ExpectedFloat { variable: VarId, actual_value: Val },
+}
+
+impl std::fmt::Display for ValueAccessError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ValueAccessError::ExpectedInteger { variable, actual_value } => {
+                write!(f, "Expected integer value for variable {:?}, but found {:?}", variable, actual_value)
+            }
+            ValueAccessError::ExpectedFloat { variable, actual_value } => {
+                write!(f, "Expected float value for variable {:?}, but found {:?}", variable, actual_value)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ValueAccessError {}
+
 /// Statistics collected during the solving process.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SolveStats {
@@ -278,85 +302,155 @@ impl Solution {
         vs.into_iter().map(|v| self.get_value_binary(v))
     }
     
-    /// Get the integer value for a variable (convenience method)
-    /// Returns the integer value if the variable contains an integer, panics otherwise
+    /// Get the integer value for a variable (backward compatible panicking version)
+    /// **Warning**: This method panics if the variable doesn't contain an integer.
+    /// Use `try_get_int()` for safe error handling.
     #[must_use]
     pub fn get_int(&self, var: VarId) -> i32 {
         match self[var] {
             Val::ValI(i) => i,
-            Val::ValF(_) => panic!("Variable {:?} contains a float value, not an integer", var),
+            actual_value => panic!("Expected integer for variable {:?}, found {:?}", var, actual_value), 
         }
     }
     
-    /// Get the float value for a variable (convenience method)
-    /// Returns the float value if the variable contains a float, panics otherwise
+    /// Get the float value for a variable (backward compatible panicking version)
+    /// **Warning**: This method panics if the variable doesn't contain a float.
+    /// Use `try_get_float()` for safe error handling.
     #[must_use] 
     pub fn get_float(&self, var: VarId) -> f64 {
         match self[var] {
             Val::ValF(f) => f,
-            Val::ValI(_) => panic!("Variable {:?} contains an integer value, not a float", var),
+            actual_value => panic!("Expected float for variable {:?}, found {:?}", var, actual_value),
         }
     }
     
-    /// Get the value for a variable as an integer if possible
+    /// Get the integer value for a variable (safe version)
+    /// Returns the integer value if the variable contains an integer, returns an error otherwise
+    #[must_use]
+    pub fn try_get_int(&self, var: VarId) -> Result<i32, ValueAccessError> {
+        match self[var] {
+            Val::ValI(i) => Ok(i),
+            actual_value => Err(ValueAccessError::ExpectedInteger { 
+                variable: var, 
+                actual_value 
+            }),
+        }
+    }
+    
+    /// Get the float value for a variable (safe version)
+    /// Returns the float value if the variable contains a float, returns an error otherwise
+    #[must_use] 
+    pub fn try_get_float(&self, var: VarId) -> Result<f64, ValueAccessError> {
+        match self[var] {
+            Val::ValF(f) => Ok(f),
+            actual_value => Err(ValueAccessError::ExpectedFloat { 
+                variable: var, 
+                actual_value 
+            }),
+        }
+    }
+    
+    /// Get the integer value for a variable (explicit unchecked version)  
+    /// **Warning**: This method panics if the variable doesn't contain an integer.
+    /// Same as `get_int()` but more explicit about the risk.
+    #[must_use]
+    pub fn get_int_unchecked(&self, var: VarId) -> i32 {
+        self.get_int(var)
+    }
+    
+    /// Get the float value for a variable (explicit unchecked version)
+    /// **Warning**: This method panics if the variable doesn't contain a float.
+    /// Same as `get_float()` but more explicit about the risk.
+    #[must_use] 
+    pub fn get_float_unchecked(&self, var: VarId) -> f64 {
+        self.get_float(var)
+    }
+    
+    /// Get the value for a variable as an integer if possible (Option-based)
     /// Returns Some(i32) if the value is an integer, None otherwise
     #[must_use]
-    pub fn try_get_int(&self, var: VarId) -> Option<i32> {
+    pub fn as_int(&self, var: VarId) -> Option<i32> {
         match self[var] {
             Val::ValI(i) => Some(i),
             Val::ValF(_) => None,
         }
     }
     
-    /// Get the value for a variable as a float if possible
+    /// Get the value for a variable as a float if possible (Option-based)
     /// Returns Some(f64) if the value is a float, None otherwise
     #[must_use]
-    pub fn try_get_float(&self, var: VarId) -> Option<f64> {
+    pub fn as_float(&self, var: VarId) -> Option<f64> {
         match self[var] {
             Val::ValF(f) => Some(f),
             Val::ValI(_) => None,
         }
     }
     
-    /// Generic get method using type inference
+    /// Generic get method using type inference (panicking version)
     /// This allows `let x: i32 = solution.get(var);` syntax
+    /// **Warning**: This method may panic. Consider using `try_get()` instead.
     pub fn get<T>(&self, var: VarId) -> T 
     where 
         Self: GetValue<T>
     {
         self.get_value(var)
     }
+    
+    /// Generic safe get method using type inference
+    /// This allows `let x: Result<i32, _> = solution.try_get(var);` syntax
+    pub fn try_get<T>(&self, var: VarId) -> Result<T, ValueAccessError>
+    where 
+        Self: TryGetValue<T>
+    {
+        self.try_get_value(var)
+    }
 }
 
-/// Trait for type-safe value extraction
+/// Trait for type-safe value extraction (panicking version)
 pub trait GetValue<T> {
     fn get_value(&self, var: VarId) -> T;
 }
 
+/// Trait for type-safe value extraction (safe version)
+pub trait TryGetValue<T> {
+    fn try_get_value(&self, var: VarId) -> Result<T, ValueAccessError>;
+}
+
 impl GetValue<i32> for Solution {
     fn get_value(&self, var: VarId) -> i32 {
-        self.get_int(var)
+        self.get_int_unchecked(var)
     }
 }
 
 impl GetValue<f64> for Solution {
     fn get_value(&self, var: VarId) -> f64 {
-        self.get_float(var)
+        self.get_float_unchecked(var)
     }
 }
 
 impl GetValue<Option<i32>> for Solution {
     fn get_value(&self, var: VarId) -> Option<i32> {
-        self.try_get_int(var)
+        self.as_int(var)
     }
 }
 
 impl GetValue<Option<f64>> for Solution {
     fn get_value(&self, var: VarId) -> Option<f64> {
-        self.try_get_float(var)
+        self.as_float(var)
     }
 }
 
+impl TryGetValue<i32> for Solution {
+    fn try_get_value(&self, var: VarId) -> Result<i32, ValueAccessError> {
+        self.try_get_int(var)
+    }
+}
+
+impl TryGetValue<f64> for Solution {
+    fn try_get_value(&self, var: VarId) -> Result<f64, ValueAccessError> {
+        self.try_get_float(var)
+    }
+}
 
 impl From<Vec<Val>> for Solution {
     fn from(values: Vec<Val>) -> Self {

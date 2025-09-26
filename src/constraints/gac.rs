@@ -6,6 +6,8 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use crate::variables::domain::sparse_set::SparseSet;
 
+/// Simple boolean-based consistency checking for GAC operations
+
 /// Represents a variable in the bipartite graph
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[doc(hidden)]
@@ -1023,6 +1025,55 @@ impl SparseSetGAC {
         
         // Use full GAC algorithm for partial assignments
         self.propagate_gac()
+    }
+    
+    /// Apply alldiff constraint to match BitSetGAC interface
+    /// Uses the traditional GAC algorithm with bipartite graph and SCC analysis
+    /// Returns (changed, consistent) where changed indicates if domains were modified
+    /// and consistent indicates if the constraint is still satisfiable
+    pub fn propagate_alldiff(&mut self, variables: &[Variable]) -> (bool, bool) {
+        if variables.len() <= 1 {
+            return (false, true); // Nothing to propagate, still consistent
+        }
+        
+        // Filter to only the requested variables
+        let filtered_domains: HashMap<Variable, SparseSet> = variables.iter()
+            .filter_map(|&var| {
+                self.domains.get(&var).map(|domain| (var, domain.clone()))
+            })
+            .collect();
+        
+        if filtered_domains.is_empty() {
+            return (false, true);
+        }
+        
+        // Create temporary GAC instance with only the requested variables
+        let mut temp_gac = SparseSetGAC::new();
+        temp_gac.domains = filtered_domains;
+        
+        // Apply GAC propagation
+        let result = temp_gac.propagate_gac();
+        if !result {
+            // GAC propagation failed - inconsistent
+            return (false, false);
+        }
+        
+        // Update original domains and check for changes
+        let mut changed = false;
+        for &var in variables {
+            if let (Some(original), Some(updated)) = (self.domains.get_mut(&var), temp_gac.domains.get(&var)) {
+                if original.size() != updated.size() {
+                    *original = updated.clone();
+                    changed = true;
+                }
+            }
+        }
+        
+        if changed {
+            self.cached_matching = None;
+        }
+        
+        (changed, true)
     }
     
     /// Get statistics about the current state

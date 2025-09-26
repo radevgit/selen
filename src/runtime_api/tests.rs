@@ -18,7 +18,7 @@ fn test_clean_solution_api_demo() {
     if let Ok(solution) = result {
         // Clean approaches to get values:
         
-        // Option 1: Direct get_int() method (cleanest, no unwrap needed)
+        // Option 1: Direct get_int() method (returns Result now)
         let x_val = solution.get_int(x);
         let y_val = solution.get_int(y);
         
@@ -118,7 +118,7 @@ fn test_phase3_boolean_logic_with_clean_api() {
     assert!(result.is_ok());
     
     if let Ok(solution) = result {
-        // Clean value extraction - no .unwrap() needed!
+        // Clean value extraction - use unchecked for tests
         let x_val = solution.get_int(x);
         let y_val = solution.get_int(y);
         
@@ -348,6 +348,9 @@ fn test_all_different_constraint() {
     m.alldiff(&vars);
     
     let result = m.solve();
+    if result.is_err() {
+        eprintln!("Solve failed with error: {:?}", result.as_ref().unwrap_err());
+    }
     assert!(result.is_ok());
     
     if let Ok(solution) = result {

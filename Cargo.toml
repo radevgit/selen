@@ -18,47 +18,47 @@ readme = "README.md"
 [lib]
 crate-type = ["lib"]
 
-# Sudoku solver benchmarks
-[[bin]]
-name = "sudoku_benchmark"
-path = "benchmarks/sudoku/sudoku_benchmark.rs"
+# Sudoku solver benchmarks (temporarily disabled during API change)
+# [[bin]]
+# name = "sudoku_benchmark"
+# path = "benchmarks/sudoku/sudoku_benchmark.rs"
 
-[[bin]]
-name = "sudoku_baseline_comparison"
-path = "benchmarks/sudoku/sudoku_baseline_comparison.rs"
+# [[bin]]
+# name = "sudoku_baseline_comparison"
+# path = "benchmarks/sudoku/sudoku_baseline_comparison.rs"
 
-# GAC implementation comparison
-[[bin]]
-name = "gac_comparison"
-path = "benchmarks/gac_comparison.rs"
+# GAC implementation comparison (temporarily disabled during API change)
+# [[bin]]
+# name = "gac_comparison"
+# path = "benchmarks/gac_comparison.rs"
 
-[[bin]]
-name = "bitset_focused_benchmark"
-path = "benchmarks/bitset_focused_benchmark.rs"
+# [[bin]]
+# name = "bitset_focused_benchmark"
+# path = "benchmarks/bitset_focused_benchmark.rs"
 
-[[bin]]
-name = "sudoku_hybrid_gac"
-path = "benchmarks/sudoku_hybrid_gac.rs"
+# [[bin]]
+# name = "sudoku_hybrid_gac"
+# path = "benchmarks/sudoku_hybrid_gac.rs"
 
-[[bin]]
-name = "solver_vs_gac_comparison"
-path = "benchmarks/solver_vs_gac_comparison.rs"
+# [[bin]]
+# name = "solver_vs_gac_comparison"
+# path = "benchmarks/solver_vs_gac_comparison.rs"
 
-[[bin]]
-name = "platinum_gac_benchmark"
-path = "benchmarks/platinum_gac_benchmark.rs"
+# [[bin]]
+# name = "platinum_gac_benchmark"
+# path = "benchmarks/platinum_gac_benchmark.rs"
 
-[[bin]]
-name = "extreme_17_clue_benchmark"
-path = "benchmarks/extreme_17_clue_benchmark.rs"
+# [[bin]]
+# name = "extreme_17_clue_benchmark"
+# path = "benchmarks/extreme_17_clue_benchmark.rs"
 
-[[bin]]
-name = "platinum_blonde_benchmark"
-path = "benchmarks/platinum_blonde_benchmark.rs"
+# [[bin]]
+# name = "platinum_blonde_benchmark"
+# path = "benchmarks/platinum_blonde_benchmark.rs"
 
-[[bin]]
-name = "bitset_gac_analysis"
-path = "benchmarks/bitset_gac_analysis.rs"
+# [[bin]]
+# name = "bitset_gac_analysis"
+# path = "benchmarks/bitset_gac_analysis.rs"
 
 [dependencies]
 

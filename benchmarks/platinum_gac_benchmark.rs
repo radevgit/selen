@@ -37,9 +37,9 @@ fn test_sparseset_propagation(grid: [[i32; 9]; 9]) -> Result<u128, String> {
             cell_vars[row][col] = Variable(var_id);
             
             if grid[row][col] != 0 {
-                gac.add_variable(var_id, grid[row][col], grid[row][col]);
+                gac.add_variable(Variable(var_id), grid[row][col], grid[row][col]);
             } else {
-                gac.add_variable(var_id, 1, 9);
+                gac.add_variable(Variable(var_id), 1, 9);
             }
         }
     }
@@ -117,9 +117,9 @@ fn test_bitset_propagation(grid: [[i32; 9]; 9]) -> Result<u128, String> {
             cell_vars[row][col] = Variable(var_id);
             
             if grid[row][col] != 0 {
-                gac.add_variable(var_id, grid[row][col], grid[row][col])?;
+                gac.add_variable(Variable(var_id), grid[row][col], grid[row][col]);
             } else {
-                gac.add_variable(var_id, 1, 9)?;
+                gac.add_variable(Variable(var_id), 1, 9);
             }
         }
     }
