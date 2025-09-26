@@ -154,6 +154,26 @@ impl Model {
         self.memory_limit_exceeded
     }
     
+    /// Set the memory limit exceeded flag (used internally by factory methods)
+    pub(crate) fn set_memory_limit_exceeded(&mut self) {
+        self.memory_limit_exceeded = true;
+    }
+    
+    /// Add to estimated memory usage (used internally by factory methods)
+    pub(crate) fn add_estimated_memory(&mut self, bytes: u64) {
+        self.estimated_memory_bytes += bytes;
+    }
+    
+    /// Get mutable access to vars (used internally by factory methods)
+    pub(crate) fn vars_mut(&mut self) -> &mut crate::variables::Vars {
+        &mut self.vars
+    }
+    
+    /// Get mutable access to props (used internally by factory methods)
+    pub(crate) fn props_mut(&mut self) -> &mut crate::constraints::props::Propagators {
+        &mut self.props
+    }
+    
     /// Get the current number of variables in the model
     /// 
     /// This can be called at any time during model construction to check
@@ -198,24 +218,6 @@ impl Model {
         self.props.count()
     }
     
-    /// Add to estimated memory usage and check limits
-    fn add_memory_usage(&mut self, bytes: u64) -> Result<(), SolverError> {
-        self.estimated_memory_bytes += bytes;
-        
-        if let Some(limit_mb) = self.config.max_memory_mb {
-            let limit_bytes = limit_mb * 1024 * 1024;
-            if self.estimated_memory_bytes > limit_bytes {
-                self.memory_limit_exceeded = true;
-                return Err(SolverError::MemoryLimit {
-                    usage_mb: Some(self.estimated_memory_mb() as usize),
-                    limit_mb: Some(limit_mb as usize),
-                });
-            }
-        }
-        
-        Ok(())
-    }
-    
     /// Get detailed memory breakdown for analysis  
     pub fn memory_breakdown(&self) -> String {
         format!(
@@ -229,51 +231,6 @@ impl Model {
             self.config.max_memory_mb
         )
     }
-    
-    /// Estimate memory usage for a variable with improved accuracy
-    fn estimate_variable_memory(&self, min: Val, max: Val) -> u64 {
-        match (min, max) {
-            (Val::ValI(min_i), Val::ValI(max_i)) => {
-                // Integer variable: SparseSet structure overhead + domain representation
-                if min_i > max_i {
-                    // Invalid range - return minimal memory estimate
-                    return 96; // Just base overhead
-                }
-                
-                let domain_size = (max_i - min_i + 1) as u64;
-                
-                // Base SparseSet structure overhead (dense/sparse arrays, metadata)
-                let base_cost = 96; // More realistic estimate including Vec overhead
-                
-                let domain_cost = if domain_size > 1000 {
-                    // Large domains use sparse representation
-                    // Two Vec<u32> with capacity approximately equal to domain size
-                    let vec_overhead = 24 * 2; // Vec metadata for dense/sparse arrays
-                    let data_cost = domain_size.saturating_mul(4).saturating_mul(2); // Prevent overflow
-                    vec_overhead + data_cost / 8 // Amortized for typical sparsity
-                } else {
-                    // Small domains use dense representation
-                    let vec_overhead = 24 * 2;
-                    let data_cost = domain_size.saturating_mul(4).saturating_mul(2); // Prevent overflow
-                    vec_overhead + data_cost
-                };
-                
-                base_cost + domain_cost
-            }
-            (Val::ValF(_), Val::ValF(_)) => {
-                // Float variable: FloatInterval structure
-                // Contains: min (f64), max (f64), step (f64) = 24 bytes
-                // Plus wrapper overhead and alignment
-                let base_cost = 32; // FloatInterval struct
-                let wrapper_cost = 32; // Var enum wrapper + alignment
-                base_cost + wrapper_cost
-            }
-            _ => {
-                // Mixed types: treated as float variable
-                64
-            }
-        }
-    }
 
     #[doc(hidden)]
     /// Get access to constraint registry for debugging/analysis
@@ -281,289 +238,23 @@ impl Model {
         self.props.get_constraint_registry()
     }
 
-    #[doc(hidden)]
-    /// Create a new decision variable, with the provided domain bounds.
-    ///
-    /// Both lower and upper bounds are included in the domain.
-    /// In case `max < min` the bounds will be swapped.
-    /// We don't want to deal with "unwrap" every time
-    /// 
-    /// **Note**: This is a low-level method. Use `int()`, `float()`, or `bool()` instead.
-    ///
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let var = m.new_var(Val::int(1), Val::int(10));
-    /// ```
-    #[doc(hidden)]
-    pub fn new_var(&mut self, min: Val, max: Val) -> VarId {
-        if min < max {
-            self.new_var_unchecked(min, max)
-        } else {
-            self.new_var_unchecked(max, min)
-        }
-    }
 
-    #[doc(hidden)]
-    /// Create new decision variables, with the provided domain bounds.
-    ///
-    /// All created variables will have the same starting domain bounds.
-    /// Both lower and upper bounds are included in the domain.
-    /// In case `max < min` the bounds will be swapped.
-    /// 
-    /// **Note**: This is a low-level method. Use specific variable creation methods instead.
-    ///
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let vars: Vec<_> = m.new_vars(3, Val::int(0), Val::int(5)).collect();
-    /// ```
-    #[doc(hidden)]
-    pub fn new_vars(&mut self, n: usize, min: Val, max: Val) -> impl Iterator<Item = VarId> + '_ {
-        let (actual_min, actual_max) = if min < max { (min, max) } else { (max, min) };
-        std::iter::repeat_with(move || self.new_var_unchecked(actual_min, actual_max)).take(n)
-    }
 
-    #[doc(hidden)]
-    /// Create new integer decision variables, with the provided domain bounds.
-    ///
-    /// Both lower and upper bounds are included in the domain.
-    /// In case `max < min` the bounds will be swapped.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let vars: Vec<_> = m.int_vars(5, 0, 9).collect();
-    /// ```
-    pub fn int_vars(
-        &mut self,
-        n: usize,
-        min: i32,
-        max: i32,
-    ) -> impl Iterator<Item = VarId> + '_ {
-        self.new_vars(n, Val::ValI(min), Val::ValI(max))
-    }
 
-    /// Create an integer variable with a custom domain from specific values.
-    /// 
-    /// Creates a variable that can only take values from the provided list.
-    /// This is useful for non-contiguous domains, categorical values, or
-    /// when you need precise control over allowed values.
-    ///
-    /// # Arguments
-    /// * `values` - Vector of integer values that the variable can take
-    ///
-    /// # Returns
-    /// A `VarId` that can only take values from the provided vector
-    ///
-    /// # Example
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// 
-    /// // Variable that can only be prime numbers
-    /// let prime = m.ints(vec![2, 3, 5, 7, 11, 13]);
-    /// 
-    /// // Variable for days of week (1=Monday, 7=Sunday)  
-    /// let weekday = m.ints(vec![1, 2, 3, 4, 5, 6, 7]);
-    /// 
-    /// // Non-contiguous range
-    /// let sparse = m.ints(vec![1, 5, 10, 50, 100]);
-    /// 
-    /// post!(m, prime != weekday);
-    /// ```
-    pub fn ints(&mut self, values: Vec<i32>) -> VarId {
-        self.props.on_new_var();
-        self.vars.new_var_with_values(values)
-    }
 
-    #[doc(hidden)]
-    /// Create new float decision variables, with the provided domain bounds.
-    ///
-    /// Both lower and upper bounds are included in the domain.
-    /// In case `max < min` the bounds will be swapped.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let vars: Vec<_> = m.float_vars(3, 0.0, 1.0).collect();
-    /// ```
-    pub fn float_vars(
-        &mut self,
-        n: usize,
-        min: f64,
-        max: f64,
-    ) -> impl Iterator<Item = VarId> + '_ {
-        self.new_vars(n, Val::ValF(min), Val::ValF(max))
-    }
 
-    /// Create a boolean variable (0 or 1).
-    ///
-    /// Creates a variable that can only take values 0 or 1, useful for representing
-    /// boolean logic, flags, or binary decisions. Equivalent to `m.int(0, 1)` but
-    /// more semantically clear for boolean use cases.
-    /// 
-    /// # Returns
-    /// A `VarId` that can take values 0 (false) or 1 (true)
-    ///
-    /// # Example
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let flag = m.bool();          // 0 or 1
-    /// let enabled = m.bool();       // 0 or 1
-    /// 
-    /// // Use in constraints
-    /// post!(m, flag != enabled);    // Flags must be different
-    /// 
-    /// // Boolean logic (using model methods)
-    /// let result = m.bool_and(&[flag, enabled]);  // result = flag AND enabled
-    /// ```
-    pub fn bool(&mut self) -> VarId {
-        self.int(0, 1)
-    }
 
-    #[doc(hidden)]
-    /// Create a new binary decision variable.
-    /// 
-    ///
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let var = m.new_var_binary();
-    /// ```
-    #[doc(hidden)]
-    pub fn new_var_binary(&mut self) -> VarIdBin {
-        VarIdBin(self.new_var_unchecked(Val::ValI(0), Val::ValI(1)))
-    }
 
-    #[doc(hidden)]
-    /// Create new binary decision variables.
-    /// 
-    ///
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let vars: Vec<_> = m.new_vars_binary(4).collect();
-    /// ```
-    #[doc(hidden)]
-    pub fn new_vars_binary(&mut self, n: usize) -> impl Iterator<Item = VarIdBin> + '_ {
-        std::iter::repeat_with(|| self.new_var_binary()).take(n)
-    }
 
-    // === SHORT VARIABLE CREATION METHODS ===
-    
-    /// Create an integer variable with specified bounds.
-    /// 
-    /// Creates a variable that can take any integer value between `min` and `max` (inclusive).
-    ///
-    /// # Arguments
-    /// * `min` - Minimum value for the variable (inclusive)
-    /// * `max` - Maximum value for the variable (inclusive)
-    ///
-    /// # Note
-    /// If `min > max`, an invalid variable will be created that will be caught during validation.
-    ///
-    /// # Example
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.int(1, 10);     // Variable from 1 to 10
-    /// let y = m.int(-5, 15);    // Variable from -5 to 15
-    /// ```
-    pub fn int(&mut self, min: i32, max: i32) -> VarId {
-        // Create the variable with the bounds as given (don't auto-swap)
-        // If min > max, this will create an invalid variable that validation will catch
-        self.new_var_unchecked(Val::ValI(min), Val::ValI(max))
-    }
 
-    /// Create a floating-point variable with specified bounds.
-    /// 
-    /// Creates a variable that can take any floating-point value between `min` and `max` (inclusive).
-    /// The precision is controlled by the model's `float_precision_digits` setting.
-    ///
-    /// # Arguments
-    /// * `min` - Minimum value for the variable (inclusive)
-    /// * `max` - Maximum value for the variable (inclusive)
-    ///
-    /// # Note
-    /// If `min > max`, an invalid variable will be created that will be caught during validation.
-    ///
-    /// # Example
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(0.0, 10.0);    // Variable from 0.0 to 10.0
-    /// let y = m.float(-1.5, 3.14);   // Variable from -1.5 to 3.14
-    /// ```
-    pub fn float(&mut self, min: f64, max: f64) -> VarId {
-        // Create the variable with the bounds as given (don't auto-swap)
-        // If min > max, this will create an invalid variable that validation will catch
-        self.new_var_unchecked(Val::ValF(min), Val::ValF(max))
-    }
 
-    /// Create a binary variable (0 or 1).
-    /// 
-    /// Creates a boolean variable that can only take values 0 or 1.
-    /// Equivalent to `m.int(0, 1)` but optimized for binary constraints.
-    ///
-    /// # Example
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let flag = m.binary();    // Variable that is 0 or 1
-    /// ```
-    pub fn binary(&mut self) -> VarIdBin {
-        self.new_var_binary()
-    }
 
-    #[doc(hidden)]
-    /// Create a new integer decision variable, with the provided domain bounds.
-    ///
-    /// Both lower and upper bounds are included in the domain.
-    ///
-    /// This function assumes that `min < max`.
-    #[doc(hidden)]
-    pub fn new_var_unchecked(&mut self, min: Val, max: Val) -> VarId {
-        match self.new_var_checked(min, max) {
-            Ok(var_id) => var_id,
-            Err(_error) => {
-                // Memory limit exceeded during variable creation
-                // Mark the model as invalid so solve() will return the error gracefully
-                self.memory_limit_exceeded = true;
-                
-                // Return a dummy VarId to keep the API consistent
-                // The solve() method will detect memory_limit_exceeded and return proper error
-                VarId::from_index(0)
-            }
-        }
-    }
-    
-    /// Create a new variable with memory limit checking
-    fn new_var_checked(&mut self, min: Val, max: Val) -> Result<VarId, SolverError> {
-        // Check if memory limit was already exceeded
-        if self.memory_limit_exceeded {
-            return Err(SolverError::MemoryLimit {
-                usage_mb: Some(self.estimated_memory_mb() as usize),
-                limit_mb: self.config.max_memory_mb.map(|x| x as usize),
-            });
-        }
-        
-        // Estimate memory needed for this variable
-        let estimated_memory = self.estimate_variable_memory(min, max);
-        
-        // Check if adding this variable would exceed the limit
-        self.add_memory_usage(estimated_memory)?;
-        
-        // Create the variable
-        self.props.on_new_var();
-        let step_size = self.float_step_size();
-        let var_id = self.vars.new_var_with_bounds_and_step(min, max, step_size);
-        
-        Ok(var_id)
-    }
+
+
+
+
+
+
 
     // ========================================================================
     // CONSTRAINT POSTING METHODS

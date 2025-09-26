@@ -406,8 +406,8 @@ mod core_coverage {
         let mut model = Model::default();
         
         // Test variables with non-contiguous domains
-        let sparse_var = model.ints(vec![2, 5, 7, 11, 13]); // Prime numbers
-        let weekday = model.ints(vec![1, 2, 3, 4, 5, 6, 7]); // Days of week
+        let sparse_var = model.intset(vec![2, 5, 7, 11, 13]); // Prime numbers
+        let weekday = model.intset(vec![1, 2, 3, 4, 5, 6, 7]); // Days of week
         
         post!(model, sparse_var != weekday);
         
@@ -429,7 +429,7 @@ mod core_coverage {
         let mut model = Model::default();
         
         // Create variable with empty domain
-        let empty_var = model.ints(vec![]);
+        let empty_var = model.intset(vec![]);
         
         // Add constraint on empty variable
         post!(model, empty_var >= int(1));

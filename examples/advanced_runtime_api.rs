@@ -221,7 +221,7 @@ fn example_7_global_constraints() {
     println!("📝 Example 7: Global Constraint Shortcuts (Phase 2)");
     
     let mut m = Model::default();
-    let digits = (0..4).map(|_| m.int(1, 4)).collect::<Vec<_>>();
+    let digits = m.ints(4, 1, 4);
     
     // Ultra-short global constraints
     m.alldiff(&digits);              // All digits must be different

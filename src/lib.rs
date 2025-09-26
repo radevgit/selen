@@ -27,8 +27,14 @@
 //!
 //! - **Integer variables**: `m.int(min, max)` - continuous range
 //! - **Float variables**: `m.float(min, max)` - continuous range with precision control
-//! - **Custom domains**: `m.ints(vec![values])` - specific integer values only
+//! - **Custom domains**: `m.intset(vec![values])` - specific integer values only
 //! - **Boolean variables**: `m.bool()` - equivalent to `m.int(0, 1)`
+//!
+//! ## Bulk Variable Creation
+//!
+//! - **Multiple integers**: `m.ints(n, min, max)` - create n integer variables with same bounds
+//! - **Multiple floats**: `m.floats(n, min, max)` - create n float variables with same bounds  
+//! - **Multiple booleans**: `m.bools(n)` - create n boolean variables
 //!
 //! ## Constraint Types
 //!
@@ -100,9 +106,9 @@
 //! let mut m = Model::default();
 //! 
 //! // Variables with custom domains
-//! let red = m.ints(vec![1, 3, 5, 7]);      // Odd numbers
-//! let blue = m.ints(vec![2, 4, 6, 8]);     // Even numbers  
-//! let green = m.ints(vec![2, 3, 5, 7]);    // Prime numbers
+//! let red = m.intset(vec![1, 3, 5, 7]);      // Odd numbers
+//! let blue = m.intset(vec![2, 4, 6, 8]);     // Even numbers  
+//! let green = m.intset(vec![2, 3, 5, 7]);    // Prime numbers
 //!
 //! // All must be different
 //! post!(m, alldiff([red, blue, green]));
@@ -113,7 +119,37 @@
 //! }
 //! ```
 //!
-//! ## Example 4: Programmatic API - Basic Constraints
+//! ## Example 4: Bulk Variable Creation
+//!
+//! Create multiple variables efficiently with the same domain:
+//!
+//! ```rust
+//! use selen::prelude::*;
+//!
+//! let mut m = Model::default();
+//! 
+//! // Create 5 integer variables, each with domain [1, 10]
+//! let vars = m.ints(5, 1, 10);
+//! 
+//! // Create 3 boolean variables  
+//! let flags = m.bools(3);
+//! 
+//! // Create 4 float variables with same bounds
+//! let weights = m.floats(4, 0.0, 1.0);
+//!
+//! // All variables in vars must be different
+//! post!(m, alldiff(&vars));
+//! 
+//! // At least one flag must be true (using slice syntax)
+//! post!(m, or([flags[0], flags[1], flags[2]]));
+//!
+//! if let Ok(solution) = m.solve() {
+//!     println!("Solution found with {} variables!", 
+//!              vars.len() + flags.len() + weights.len());
+//! }
+//! ```
+//!
+//! ## Example 5: Programmatic API - Basic Constraints
 //!
 //! For developers who prefer explicit, method-based constraint building:
 //!
@@ -134,7 +170,7 @@
 //! }
 //! ```
 //!
-//! ## Example 5: Programmatic API - Global Constraints
+//! ## Example 6: Programmatic API - Global Constraints
 //!
 //! ```rust
 //! use selen::prelude::*;
@@ -157,7 +193,7 @@
 //! }
 //! ```
 //!
-//! ## Example 6: Programmatic API - Complex Operations
+//! ## Example 7: Programmatic API - Complex Operations
 //!
 //! ```rust
 //! use selen::prelude::*;

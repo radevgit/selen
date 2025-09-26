@@ -38,7 +38,7 @@ fn main() {
     // Assignment variables: worker_assignments[task][worker] = 1 if assigned
     let mut worker_assignments = Vec::new();
     for _ in 0..tasks.len() {
-        let task_assignments: Vec<_> = m.new_vars_binary(workers.len()).collect();
+        let task_assignments = m.bools(workers.len());
         worker_assignments.push(task_assignments);
     }
     
@@ -82,9 +82,9 @@ fn main() {
     
     let mut total_time = 0;
     for (task_idx, task_assignments) in worker_assignments.iter().enumerate() {
-        let assignments = solution.get_values_binary(task_assignments);
-        for (worker_idx, &assigned) in assignments.iter().enumerate() {
-            if assigned {
+        let assignments = solution.get_values(task_assignments);
+        for (worker_idx, assigned) in assignments.iter().enumerate() {
+            if *assigned == Val::ValI(1) {
                 let task_time = match solution[task_completion_times[task_idx]] {
                     Val::ValI(t) => t,
                     _ => 0

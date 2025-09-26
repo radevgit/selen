@@ -22,7 +22,7 @@ fn main() {
     println!("📝 Example 1: All Different Constraint");
     {
         let mut model = Model::default();
-        let vars: Vec<_> = (0..4).map(|_| model.int(1, 4)).collect();
+        let vars = model.ints(4, 1, 4);
         
         // All variables must have different values
         model.alldiff(&vars);
@@ -44,7 +44,7 @@ fn main() {
     println!("📝 Example 2: All Equal Constraint");
     {
         let mut model = Model::default();
-        let vars: Vec<_> = (0..3).map(|_| model.int(1, 10)).collect();
+        let vars = model.ints(3, 1, 10);
         
         // All variables must have the same value
         model.alleq(&vars);
@@ -100,7 +100,7 @@ fn main() {
     println!("📝 Example 4: Count Constraint");
     {
         let mut model = Model::default();
-        let vars: Vec<_> = (0..6).map(|_| model.int(1, 3)).collect();
+        let vars = model.ints(6, 1, 3);
         let count_result = model.int(0, 6);
         
         // Count how many variables have value 2
@@ -167,11 +167,11 @@ fn main() {
     println!("📝 Example 6: Global Cardinality Constraint");
     {
         let mut model = Model::default();
-        let vars: Vec<_> = (0..8).map(|_| model.int(1, 4)).collect();
+        let vars = model.ints(8, 1, 4);
         
         // We want to count 1s, 2s, 3s, and 4s
         let values = [1, 2, 3, 4];
-        let counts: Vec<_> = (0..4).map(|_| model.int(0, 8)).collect();
+        let counts = model.ints(4, 0, 8);
         
         // Global cardinality constraint
         model.gcc(&vars, &values, &counts);
@@ -223,14 +223,14 @@ fn main() {
         let mut model = Model::default();
         
         // Create a small scheduling problem with global constraints
-        let tasks: Vec<_> = (0..4).map(|_| model.int(1, 10)).collect(); // Start times
-        let resources: Vec<_> = (0..4).map(|_| model.int(1, 3)).collect(); // Resource assignments
+        let tasks = model.ints(4, 1, 10); // Start times
+        let resources = model.ints(4, 1, 3); // Resource assignments
         
         // All tasks must start at different times (no overlap)
         model.alldiff(&tasks);
         
         // Count resource usage - we have 3 resources, want balanced usage
-        let resource_counts: Vec<_> = (0..3).map(|_| model.int(0, 4)).collect();
+        let resource_counts = model.ints(3, 0, 4);
         model.gcc(&resources, &[1, 2, 3], &resource_counts);
         
         // Each resource should be used at least once

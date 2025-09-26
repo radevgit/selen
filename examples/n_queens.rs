@@ -87,9 +87,7 @@ fn solve_n_queens(n: usize) -> Option<(Vec<i32>, SolverStats)> {
     let mut model = Model::default();
     
     // Variables: queen_row[i] = row position of queen in column i
-    let queen_rows: Vec<_> = (0..n)
-        .map(|_| model.int(1, n as i32))
-        .collect();
+    let queen_rows = model.ints(n, 1, n as i32);
     
     // Constraint 1: All queens must be in different rows
     // This is the most direct AllDifferent constraint
