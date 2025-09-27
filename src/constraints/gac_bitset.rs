@@ -11,7 +11,7 @@
 /// - Vectorizable operations on modern CPUs
 
 use std::collections::HashMap;
-use crate::constraints::gac::Variable;
+use crate::constraints::gac_hybrid::Variable;
 use crate::variables::domain::bitset_domain::BitSetDomain;
 
 /// Simple boolean-based consistency checking for GAC operations

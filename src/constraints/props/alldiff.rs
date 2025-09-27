@@ -1,6 +1,6 @@
 use crate::{
     constraints::props::{Propagate, Prune},
-    constraints::gac::Variable,
+    constraints::gac_hybrid::Variable,
     constraints::gac_hybrid::HybridGAC,
     variables::{Val, VarId},
     variables::views::{Context, View},

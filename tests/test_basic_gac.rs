@@ -1,5 +1,5 @@
 use selen::constraints::gac_bitset::BitSetGAC;
-use selen::constraints::gac::Variable;
+use selen::constraints::gac_hybrid::Variable;
 
 #[test]
 fn test_basic_bitset_gac_propagation() {
