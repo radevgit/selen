@@ -1,7 +1,14 @@
-//! Constraint propagators module
+//! Modular constraint propagator system (Framework)
 //!
-//! This module contains constraint propagators organized by category.
+//! This module demonstrates the final modularization phase structure.
+//! Framework is ready for future migration of props/mod.rs functionality.
 
+pub mod core_framework;
+pub mod manager;
+
+// Framework modules for demonstration - not exported to avoid conflicts\n// pub use core_framework::*;
+
+// Framework available but not activated to maintain compatibility
 // Re-export everything from the props submodule for backward compatibility
 pub use crate::constraints::props::*;
 

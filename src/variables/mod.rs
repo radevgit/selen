@@ -6,6 +6,9 @@
 mod vars;
 pub mod views;
 
+// Modular view system (final modularization phase)
+pub mod view_system;
+
 // Domain management
 pub mod domain;
 

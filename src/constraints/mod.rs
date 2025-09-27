@@ -7,6 +7,8 @@
 
 // Core constraint modules
 pub mod macros;
+
+// Modular propagator system (final modularization phase)
 pub mod propagators;
 
 // GAC modules
