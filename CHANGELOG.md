@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.4] - 2025-09-27
+- Fixed some outdated examples
+
 ## [0.8.3] - 2025-09-27
 - Improved modularization
 - Added example for Employee Scheduling
