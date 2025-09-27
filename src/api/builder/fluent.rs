@@ -4,4 +4,4 @@
 //! Currently re-exports from existing modules for compatibility.
 
 // Re-export constraint builder functionality
-pub use crate::constraints::builder_legacy::*;
+// Note: Legacy builder removed - use runtime API or post! macros instead
