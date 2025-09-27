@@ -7,9 +7,4 @@ pub use crate::constraints::boolean_operators::*;
 pub use crate::constraints::math_syntax::*;
 
 // Modular organization
-pub mod fluent;
 pub mod mathematical;
-
-// Re-export modular components (commented out to fix unused warnings)
-// pub use fluent::*;
-// pub use mathematical::*;
