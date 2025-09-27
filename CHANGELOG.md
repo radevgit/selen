@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.3] - 2025-09-27
+- Improved modularization
+- Added example for Employee Scheduling
+
 ## [0.8.2] - 2025-09-26
 - BitSet domain for GAC
 - Performance improvement for alldiff()
