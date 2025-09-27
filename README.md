@@ -25,13 +25,13 @@ This library provides efficient algorithms and data structures for solving const
 
 **Programmatic version of constraints**
 ```
-m.post(x.lt(y));                        // x < y
-m.post(y.le(z));                        // y <= z
-m.post(z.gt(5));                        // z > 5
-m.post(x.add(y).le(z));                 // x + y <= z
-m.post(y.sub(x).ge(0));                 // y - x >= 0
-m.post(x.mul(y).eq(12));                // x * y == 12
-m.post(z.div(y).ne(0));                 // z / y != 0
+m.new(x.lt(y));                        // x < y
+m.new(y.le(z));                        // y <= z
+m.new(z.gt(5));                        // z > 5
+m.new(x.add(y).le(z));                 // x + y <= z
+m.new(y.sub(x).ge(0));                 // y - x >= 0
+m.new(x.mul(y).eq(12));                // x * y == 12
+m.new(z.div(y).ne(0));                 // z / y != 0
 ```
 
 **Mathematical syntax with post! macro**
@@ -151,16 +151,16 @@ fn main() {
     let y = m.int(5, 15);
 
     // Add constraints using programmatic API
-    m.post(x.lt(y));                    // x < y
-    m.post(x.add(y).eq(12));            // x + y == 12
+    m.new(x.lt(y));                    // x < y
+    m.new(x.add(y).eq(12));            // x + y == 12
 
     // Global constraints
     let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
-    m.alldiff(&vars);                   // All different
+    m.new(alldiff(vars.clone()));       // All different
     
     // Mathematical functions
     let abs_result = m.abs(x);
-    m.post(abs_result.ge(1));           // abs(x) >= 1
+    m.new(abs_result.ge(1));           // abs(x) >= 1
     
     // Solve the problem
     if let Ok(solution) = m.solve() {
