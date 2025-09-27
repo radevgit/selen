@@ -1276,8 +1276,7 @@ mod constraints_coverage {
         
         // Test must_be_true method
         let expr = a & b;
-        let constraint = expr.must_be_true(&mut model);
-        constraint.apply_to(&mut model);
+        expr.must_be_true(&mut model);
         
         let solution = model.solve();
         assert!(solution.is_ok(), "must_be_true should create valid constraint");
@@ -1297,8 +1296,7 @@ mod constraints_coverage {
         
         // Test must_be_false method with AND expression
         let expr = a & b;
-        let constraint = expr.must_be_false(&mut model);
-        constraint.apply_to(&mut model);
+        expr.must_be_false(&mut model);
         
         let solution = model.solve();
         assert!(solution.is_ok(), "must_be_false should create valid constraint");

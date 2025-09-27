@@ -9,24 +9,27 @@
 pub mod macros;
 pub mod propagators;
 
+// GAC modules
+pub mod gac_hybrid;
+pub mod gac_sparseset;
+pub mod gac_bitset;
+
 // Moved files
 pub mod boolean_operators;
 pub mod math_syntax;
-pub mod builder_legacy;
 pub mod operators;
-pub mod gac;
-pub mod gac_bitset;
-pub mod gac_hybrid;
 
 // Re-export everything from the organized constraint macros
 pub use macros::*;
 
+// Re-export GAC modules (gac_hybrid contains all common types)
+pub use gac_hybrid::*;
+pub use gac_sparseset::*;
+
 // Re-export moved files
 pub use boolean_operators::*;
 pub use math_syntax::*;
-pub use builder_legacy::*;
 pub use operators::*;
-pub use gac::*;
 
 // Props module  
 pub mod props;

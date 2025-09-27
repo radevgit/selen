@@ -31,9 +31,8 @@
 //! m.new(a.eq(1).not());            // !(a == 1)
 //! ```
 
-use crate::variables::VarId;
+use crate::variables::{VarId, Val};
 use crate::model::Model;
-use crate::constraints::builder_legacy::Constraint;
 use std::ops::{BitAnd, BitOr, Not};
 
 #[doc(hidden)]
@@ -88,16 +87,16 @@ impl BoolExpr {
         }
     }
     
-    /// Create a constraint that this boolean expression must be true (== 1)
-    pub fn must_be_true(self, model: &mut Model) -> Constraint {
+    /// Post a constraint that this boolean expression must be true (== 1)
+    pub fn must_be_true(self, model: &mut Model) {
         let result_var = self.apply_to(model);
-        Constraint::EqVal(result_var, crate::variables::Val::ValI(1))
+        let _ = model.props.equals(result_var, Val::ValI(1));
     }
     
-    /// Create a constraint that this boolean expression must be false (== 0)
-    pub fn must_be_false(self, model: &mut Model) -> Constraint {
+    /// Post a constraint that this boolean expression must be false (== 0)
+    pub fn must_be_false(self, model: &mut Model) {
         let result_var = self.apply_to(model);
-        Constraint::EqVal(result_var, crate::variables::Val::ValI(0))
+        let _ = model.props.equals(result_var, Val::ValI(0));
     }
 }
 
@@ -252,13 +251,11 @@ pub trait BooleanModel {
 
 impl BooleanModel for Model {
     fn post_true(&mut self, expr: BoolExpr) {
-        let constraint = expr.must_be_true(self);
-        constraint.apply_to(self);
+        expr.must_be_true(self);
     }
     
     fn post_false(&mut self, expr: BoolExpr) {
-        let constraint = expr.must_be_false(self);
-        constraint.apply_to(self);
+        expr.must_be_false(self);
     }
 }
 
