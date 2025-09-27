@@ -33,11 +33,11 @@ Let's solve a simple problem: **Find two numbers where one is less than the othe
 ### Step 1: Set Up Your Project
 
 Add to your `Cargo.toml`:
+
 ```toml
-```toml
-selen = "0.8.0"
+selen = "0.8.3"
 ```
-```
+
 
 ### Step 2: Write Your First Solver
 
@@ -103,8 +103,8 @@ let weight = m.float(1.5, 25.0);    // weight ∈ [1.5, 25.0]
 
 ### Custom Domains (Specific Values)
 ```rust
-let day = m.ints(vec![1, 3, 5, 7]);     // Only odd numbers
-let color = m.ints(vec![10, 20, 30]);   // Only these values
+let day = m.intset(vec![1, 3, 5, 7]);     // Only odd numbers
+let color = m.intset(vec![10, 20, 30]);   // Only these values
 ```
 
 ### Boolean Variables
@@ -141,20 +141,18 @@ post!(m, abs(x - y) <= int(3));
 Use method calls for runtime constraint building:
 
 ```rust
-// Basic comparisons
-m.post(x.lt(y));
-m.post(x.ge(5));
-m.post(y.ne(0));
+// Expression builder with m.new()
+m.new(x.lt(y));                    // x < y
+m.new(x.ge(int(5)));               // x >= 5
+m.new(y.ne(int(0)));               // y != 0
 
-// Arithmetic expressions  
-m.post(x.add(y).eq(12));
-m.post(x.mul(y).le(50));
-m.post(x.sub(y).ge(2));
+// Arithmetic expressions
+m.new(x.add(y).eq(int(12)));       // x + y == 12
+m.new(x.mul(y).le(int(50)));       // x * y <= 50
+m.new(x.sub(y).ge(int(2)));        // x - y >= 2
 
-// Complex expressions
-m.post(x.add(y.mul(2)).eq(z));
-let abs_diff = m.abs(x.sub(y));
-m.post(abs_diff.le(3));
+// Complex chaining
+m.new(x.mul(int(2)).add(y).le(int(10)));  // x * 2 + y <= 10
 ```
 
 **When to use each:**
@@ -215,7 +213,7 @@ post!(m, condition2 == (y < int(10)));
 post!(m, and([condition1, condition2]));  // Both conditions must be true
 
 // Alternative: Use runtime API for constraint combinations
-// m.post(x.gt(5).and(y.lt(10)));  // (x > 5) AND (y < 10)
+// post!(m, x > 5 & y < 10);  // (x > 5) AND (y < 10)
 
 // OR logic with boolean variables
 let options = vec![m.bool(), m.bool(), m.bool()];
@@ -395,17 +393,17 @@ fn main() {
     
     // Constraints:
     // 1. Task A must finish before Task B starts
-    post!(m, task_a + int(duration_a) <= task_b);
+    post!(m, task_a + duration_a <= task_b);
     
     // 2. Task B must finish before Task C starts  
-    post!(m, task_b + int(duration_b) <= task_c);
+    post!(m, task_b + duration_b <= task_c);
     
     // 3. All tasks must complete by time 10
-    post!(m, task_c + int(duration_c) <= int(10));
+    post!(m, task_c + duration_c <= 10);
     
     // Solve: minimize the total schedule length
     let makespan = m.int(0, 15);
-    post!(m, makespan == task_c + int(duration_c));
+    post!(m, makespan == task_c + duration_c);
     
     match m.minimize(makespan) {
         Ok(solution) => {

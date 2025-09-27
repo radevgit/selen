@@ -10,14 +10,14 @@ use selen::math_syntax::*;
 use selen::constraint_macros::*;
 
 // Create model and variables
-let mut m = Model::new();
-let x = m.var_int(1, 10);
-let y = m.var_int(1, 20);
+let mut m = Model::default();
+let x = m.int(1, 10);
+let y = m.int(1, 20);
 
 // Post constraints using mathematical syntax
 post!(m, x < y);
 post!(m, x >= int(3));
-post!(m, y % 3 == 1);
+post!(m, y % int(3) == int(1));
 ```
 
 ## Supported Features
@@ -32,17 +32,17 @@ post!(m, x == y);   // Equal
 post!(m, x != y);   // Not equal
 ```
 
-### Typed Constants
-Use helper functions for explicit type specification:
+### Constants
+Use int() for integer constants and float() for float constants:
 ```rust
-post!(m, x >= int(5));     // Integer constant
-post!(m, y <= float(3.14)); // Float constant
+post!(m, x >= int(5));          // Integer constant
+post!(m, y <= float(3.14));     // Float constant
 ```
 
 ### Modulo Constraints
 ```rust
-post!(m, x % 3 == 1);      // x mod 3 equals 1
-post!(m, y % 7 != int(0)); // y is not divisible by 7
+post!(m, x % int(3) == int(1));      // x mod 3 equals 1
+post!(m, y % int(7) != int(0));      // y is not divisible by 7
 ```
 
 ### Logical Operations
@@ -79,7 +79,7 @@ postall!(m, [
     x < y,
     y <= int(15),
     x >= int(1),
-    y % 3 == 1
+    y % int(3) == int(1)
 ]);
 ```
 
@@ -91,17 +91,17 @@ use selen::math_syntax::*;
 use selen::constraint_macros::*;
 
 fn main() {
-    let mut m = Model::new();
+    let mut m = Model::default();
     
     // Variables
-    let x = m.var_int(1, 10);
-    let y = m.var_int(1, 20);
-    let z = m.var_int(1, 15);
+    let x = m.int(1, 10);
+    let y = m.int(1, 20);
+    let z = m.int(1, 15);
     
     // Mathematical constraints
     post!(m, x < y);
     post!(m, and(y <= int(15), z >= int(5)));
-    post!(m, x % 3 == 1);
+    post!(m, x % int(3) == int(1));
     post!(m, or(x == int(1), x == int(7)));
     
     // Solve
@@ -113,14 +113,6 @@ fn main() {
 }
 ```
 
-## Future Enhancements
-
-Planned syntax extensions include:
-- Arithmetic expressions: `post!(m, x + 3 < y)`
-- Multiplication: `post!(m, x * 2 <= 10)`
-- Function integration: `post!(m, abs(x) >= int(1))`
-- Complex expressions: `post!(m, max(x, y) <= int(15))`
-- Nested logical operations: `post!(m, and(or(c1, c2), not(c3)))`
 
 ## Implementation Details
 

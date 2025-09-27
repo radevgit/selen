@@ -64,7 +64,7 @@ ctx.try_set_min(var_id, bounds.lower_bound);
 ### Enable Precision Handling
 
 ```rust
-let mut model = Model::new();
+let mut model = Model::default();
 
 // Add variables and constraints normally
 let x = model.new_var_float(0.0, 10.0);
