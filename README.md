@@ -156,7 +156,7 @@ fn main() {
 
     // Global constraints
     let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
-    m.new(alldiff(vars.clone()));       // All different
+    m.alldiff(&vars.clone());       // All different
     
     // Mathematical functions
     let abs_result = m.abs(x);
