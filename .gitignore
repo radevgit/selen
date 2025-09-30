@@ -5,6 +5,7 @@
 **/*.rs.bk
 clippy.txt
 /coverage/results
+/src/zinc/flatzinc
 
 # Binary executables and object files
 *.exe
