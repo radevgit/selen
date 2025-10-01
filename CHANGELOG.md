@@ -2,24 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-### Added
-- Reified comparison constraints for FlatZinc Phase 2 integration:
-  - `int_lt_reif(x, y, b)` - Reified less-than: b ⇔ (x < y)
-  - `int_le_reif(x, y, b)` - Reified less-or-equal: b ⇔ (x ≤ y)
-  - `int_gt_reif(x, y, b)` - Reified greater-than: b ⇔ (x > y)
-  - `int_ge_reif(x, y, b)` - Reified greater-or-equal: b ⇔ (x ≥ y)
-- Comprehensive integration tests for Phase 2 constraints (12 tests, all passing)
-- Example demonstrating reification comparison constraints with 5 use cases
-- Documentation: `docs/development/PHASE2_REIFICATION_COMPARISON.md`
-
-### Fixed
-- Critical bug: Reification constraints were being removed during constraint optimization
-  - Added all reification constraint types to `constraint_types_to_optimize` list
-  - Ensures reification propagators are preserved during `prepare_for_search()`
 
 ## [0.8.6] - 2025-10-01
 - Linear Constraint Helpers
+- Constrain propagation bug fixed
+- Reified b ⇔ (x < y), b ⇔ (x ≤ y), b ⇔ (x > y), b ⇔ (x ≥ y)
 
 ## [0.8.5] - 2025-10-01
 - Implemented reified constraint.
