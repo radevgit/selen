@@ -541,4 +541,116 @@ impl Model {
     pub fn int_ne_reif(&mut self, x: VarId, y: VarId, b: VarId) {
         self.props.int_ne_reif(x, y, b);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 📊 Linear Constraints (FlatZinc Integration)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Post a linear equality constraint: `sum(coeffs[i] * vars[i]) = constant`.
+    /// 
+    /// This implements the FlatZinc `int_lin_eq` constraint, which represents
+    /// a weighted sum of variables equal to a constant value.
+    /// 
+    /// # Arguments
+    /// * `coefficients` - Array of integer coefficients
+    /// * `variables` - Array of variables (must have same length as coefficients)
+    /// * `constant` - The constant value the weighted sum must equal
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(0, 10);
+    /// let y = m.int(0, 10);
+    /// let z = m.int(0, 10);
+    /// 
+    /// // 2x + 3y - z = 10
+    /// m.int_lin_eq(&[2, 3, -1], &[x, y, z], 10);
+    /// ```
+    /// 
+    pub fn int_lin_eq(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
+        // Handle mismatched lengths - will be detected as unsatisfiable during solving
+        if coefficients.len() != variables.len() {
+            // Create an unsatisfiable constraint: 0 = 1
+            self.props.equals(Val::ValI(0), Val::ValI(1));
+            return;
+        }
+
+        if variables.is_empty() {
+            // Empty sum = constant
+            // This is satisfiable only if constant == 0, otherwise unsatisfiable
+            self.props.equals(Val::ValI(0), Val::ValI(constant));
+            return;
+        }
+
+        // Create scaled variables: coeffs[i] * vars[i]
+        // We use actual multiplication to create new variables, not views
+        let scaled_vars: Vec<VarId> = coefficients
+            .iter()
+            .zip(variables.iter())
+            .map(|(&coeff, &var)| {
+                self.mul(var, Val::ValI(coeff))
+            })
+            .collect();
+
+        // Create sum of all scaled variables
+        let sum_var = self.sum(&scaled_vars);
+
+        // Post equality constraint: sum = constant
+        self.props.equals(sum_var, Val::ValI(constant));
+    }
+
+    /// Post a linear less-than-or-equal constraint: `sum(coeffs[i] * vars[i]) ≤ constant`.
+    /// 
+    /// This implements the FlatZinc `int_lin_le` constraint, which represents
+    /// a weighted sum of variables less than or equal to a constant value.
+    /// 
+    /// # Arguments
+    /// * `coefficients` - Array of integer coefficients
+    /// * `variables` - Array of variables (must have same length as coefficients)
+    /// * `constant` - The upper bound for the weighted sum
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(0, 10);
+    /// let y = m.int(0, 10);
+    /// let z = m.int(0, 10);
+    /// 
+    /// // x + y + z ≤ 20
+    /// m.int_lin_le(&[1, 1, 1], &[x, y, z], 20);
+    /// ```
+    /// 
+    pub fn int_lin_le(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
+        // Handle mismatched lengths - will be detected as unsatisfiable during solving
+        if coefficients.len() != variables.len() {
+            // Create an unsatisfiable constraint: 0 = 1
+            self.props.equals(Val::ValI(0), Val::ValI(1));
+            return;
+        }
+
+        if variables.is_empty() {
+            // Empty sum ≤ constant
+            // This is satisfiable only if 0 ≤ constant, otherwise unsatisfiable
+            self.props.less_than_or_equals(Val::ValI(0), Val::ValI(constant));
+            return;
+        }
+
+        // Create scaled variables: coeffs[i] * vars[i]
+        // We use actual multiplication to create new variables, not views
+        let scaled_vars: Vec<VarId> = coefficients
+            .iter()
+            .zip(variables.iter())
+            .map(|(&coeff, &var)| {
+                self.mul(var, Val::ValI(coeff))
+            })
+            .collect();
+
+        // Create sum of all scaled variables
+        let sum_var = self.sum(&scaled_vars);
+
+        // Post less-than-or-equal constraint: sum ≤ constant
+        self.props.less_than_or_equals(sum_var, Val::ValI(constant));
+    }
 }
