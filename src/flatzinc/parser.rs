@@ -291,7 +291,13 @@ impl Parser {
         let mut index_sets = Vec::new();
         
         loop {
-            if let TokenType::IntLiteral(min) = self.peek() {
+            // Handle 'int' as index set type (for predicate declarations)
+            if let TokenType::Int = self.peek() {
+                self.advance();
+                index_sets.push(IndexSet::Range(1, 1000000)); // Arbitrary large range for 'int'
+            }
+            // Handle numeric range like 1..8
+            else if let TokenType::IntLiteral(min) = self.peek() {
                 let min_val = *min;
                 self.advance();
                 self.expect(TokenType::DoubleDot)?;
