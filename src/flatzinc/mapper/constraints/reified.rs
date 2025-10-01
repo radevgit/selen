@@ -19,7 +19,7 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let b = self.get_var(&constraint.args[2])?;
+        let b = self.get_var_or_const(&constraint.args[2])?;
         
         match (&constraint.args[0], &constraint.args[1]) {
             (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
@@ -57,7 +57,7 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let b = self.get_var(&constraint.args[2])?;
+        let b = self.get_var_or_const(&constraint.args[2])?;
         
         match (&constraint.args[0], &constraint.args[1]) {
             (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
@@ -95,7 +95,7 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let b = self.get_var(&constraint.args[2])?;
+        let b = self.get_var_or_const(&constraint.args[2])?;
         
         match (&constraint.args[0], &constraint.args[1]) {
             (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
@@ -133,7 +133,7 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let b = self.get_var(&constraint.args[2])?;
+        let b = self.get_var_or_const(&constraint.args[2])?;
         
         match (&constraint.args[0], &constraint.args[1]) {
             (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
@@ -171,7 +171,7 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let b = self.get_var(&constraint.args[2])?;
+        let b = self.get_var_or_const(&constraint.args[2])?;
         
         match (&constraint.args[0], &constraint.args[1]) {
             (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
@@ -209,7 +209,7 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let b = self.get_var(&constraint.args[2])?;
+        let b = self.get_var_or_const(&constraint.args[2])?;
         
         match (&constraint.args[0], &constraint.args[1]) {
             (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {

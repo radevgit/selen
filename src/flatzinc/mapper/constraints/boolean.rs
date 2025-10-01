@@ -52,7 +52,7 @@ impl<'a> MappingContext<'a> {
         }
         
         let arr_vars = self.extract_var_array(&constraint.args[0])?;
-        let result_var = self.get_var(&constraint.args[1])?;
+        let result_var = self.get_var_or_const(&constraint.args[1])?;
         
         // result = AND of all elements: result ⇔ (x[0] ∧ x[1] ∧ ... ∧ x[n])
         if arr_vars.is_empty() {
@@ -79,7 +79,7 @@ impl<'a> MappingContext<'a> {
         }
         
         let arr_vars = self.extract_var_array(&constraint.args[0])?;
-        let result_var = self.get_var(&constraint.args[1])?;
+        let result_var = self.get_var_or_const(&constraint.args[1])?;
         
         // result = OR of all elements: result ⇔ (x[0] ∨ x[1] ∨ ... ∨ x[n])
         if arr_vars.is_empty() {
@@ -129,6 +129,27 @@ impl<'a> MappingContext<'a> {
         // For boolean variables: x <= y is equivalent to (not x) or y
         // Which is the same as x => y (implication)
         self.model.new(x.le(y));
+        Ok(())
+    }
+    
+    /// Map bool_eq_reif: r ⇔ (x = y) for boolean variables
+    /// FlatZinc signature: bool_eq_reif(x, y, r)
+    pub(in crate::flatzinc::mapper) fn map_bool_eq_reif(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "bool_eq_reif requires 3 arguments".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let r = self.get_var_or_const(&constraint.args[2])?;
+        
+        // For booleans (0/1): r ⇔ (x = y)
+        // Since booleans are represented as 0/1 integers in Selen, we can use int_eq_reif
+        self.model.int_eq_reif(x, y, r);
         Ok(())
     }
 }

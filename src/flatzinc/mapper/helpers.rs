@@ -100,6 +100,40 @@ impl<'a> MappingContext<'a> {
         }
     }
     
+    /// Get a variable or convert a constant to a fixed variable
+    /// Handles: variables, array access, integer literals, boolean literals
+    pub(super) fn get_var_or_const(&mut self, expr: &Expr) -> FlatZincResult<VarId> {
+        match expr {
+            Expr::Ident(name) => {
+                self.var_map.get(name).copied().ok_or_else(|| {
+                    FlatZincError::MapError {
+                        message: format!("Unknown variable: {}", name),
+                        line: None,
+                        column: None,
+                    }
+                })
+            }
+            Expr::ArrayAccess { array, index } => {
+                // Handle array access like x[1]
+                self.evaluate_array_access(array, index)
+            }
+            Expr::IntLit(val) => {
+                // Convert constant to fixed variable
+                Ok(self.model.int(*val as i32, *val as i32))
+            }
+            Expr::BoolLit(b) => {
+                // Convert boolean to 0/1 fixed variable
+                let val = if *b { 1 } else { 0 };
+                Ok(self.model.int(val, val))
+            }
+            _ => Err(FlatZincError::MapError {
+                message: format!("Unsupported expression type: {:?}", expr),
+                line: None,
+                column: None,
+            }),
+        }
+    }
+    
     /// Extract an integer value from an expression
     pub(super) fn extract_int(&self, expr: &Expr) -> FlatZincResult<i32> {
         match expr {
@@ -161,6 +195,12 @@ impl<'a> MappingContext<'a> {
                         Expr::IntLit(val) => {
                             // Constant integer - create a fixed variable
                             let const_var = self.model.int(*val as i32, *val as i32);
+                            var_ids.push(const_var);
+                        }
+                        Expr::BoolLit(b) => {
+                            // Constant boolean - create a fixed variable (0 or 1)
+                            let val = if *b { 1 } else { 0 };
+                            let const_var = self.model.int(val, val);
                             var_ids.push(const_var);
                         }
                         Expr::ArrayAccess { array, index } => {

@@ -72,6 +72,17 @@ impl<'a> MappingContext<'a> {
                 let y = self.get_var(&constraint.args[1])?;
                 self.model.new(y.ne(*val as i32));
             }
+            (Expr::IntLit(v1), Expr::IntLit(v2)) => {
+                // Const != Const: verify at compile time
+                if v1 == v2 {
+                    return Err(FlatZincError::MapError {
+                        message: format!("Contradiction: {} != {} is always false", v1, v2),
+                        line: Some(constraint.location.line),
+                        column: Some(constraint.location.column),
+                    });
+                }
+                // else: constraint is always true, nothing to add
+            }
             _ => {
                 return Err(FlatZincError::MapError {
                     message: "Unsupported argument types for int_ne".to_string(),

@@ -268,6 +268,8 @@ impl<'a> MappingContext<'a> {
             "int_lin_eq" => self.map_int_lin_eq(constraint),
             "int_lin_le" => self.map_int_lin_le(constraint),
             "int_lin_ne" => self.map_int_lin_ne(constraint),
+            "int_lin_eq_reif" => self.map_int_lin_eq_reif(constraint),
+            "int_lin_le_reif" => self.map_int_lin_le_reif(constraint),
             "fzn_all_different_int" | "all_different_int" | "all_different" => self.map_all_different(constraint),
             "int_eq_reif" => self.map_int_eq_reif(constraint),
             "int_ne_reif" => self.map_int_ne_reif(constraint),
@@ -283,8 +285,9 @@ impl<'a> MappingContext<'a> {
             "array_bool_or" => self.map_array_bool_or(constraint),
             // Bool-int conversion
             "bool2int" => self.map_bool2int(constraint),
+            "bool_eq_reif" => self.map_bool_eq_reif(constraint),
             // Count constraints
-            "count_eq" => self.map_count_eq(constraint),
+            "count_eq" | "count" => self.map_count_eq(constraint),
             // Element constraints (array indexing)
             "array_var_int_element" => self.map_array_var_int_element(constraint),
             "array_int_element" => self.map_array_int_element(constraint),
@@ -301,6 +304,11 @@ impl<'a> MappingContext<'a> {
             "int_min" => self.map_int_min(constraint),
             // Boolean constraints
             "bool_le" => self.map_bool_le(constraint),
+            // Set constraints
+            "set_in_reif" => self.map_set_in_reif(constraint),
+            "set_in" => self.map_set_in(constraint),
+            // Global cardinality
+            "global_cardinality" => self.map_global_cardinality(constraint),
             _ => {
                 Err(FlatZincError::UnsupportedFeature {
                     feature: format!("Constraint: {}", constraint.predicate),

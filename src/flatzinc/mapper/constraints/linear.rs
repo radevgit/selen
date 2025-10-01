@@ -87,4 +87,66 @@ impl<'a> MappingContext<'a> {
         self.model.c(sum_var).ne(constant);
         Ok(())
     }
+    
+    /// Map int_lin_eq_reif: b ⇔ (Σ(coeffs[i] * vars[i]) = constant)
+    pub(in crate::flatzinc::mapper) fn map_int_lin_eq_reif(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 4 {
+            return Err(FlatZincError::MapError {
+                message: "int_lin_eq_reif requires 4 arguments".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let coeffs = self.extract_int_array(&constraint.args[0])?;
+        let var_ids = self.extract_var_array(&constraint.args[1])?;
+        let constant = self.extract_int(&constraint.args[2])?;
+        let b = self.get_var_or_const(&constraint.args[3])?;
+        
+        // Create sum: Σ(coeffs[i] * vars[i])
+        let scaled_vars: Vec<VarId> = coeffs
+            .iter()
+            .zip(var_ids.iter())
+            .map(|(&coeff, &var)| self.model.mul(var, crate::variables::Val::ValI(coeff)))
+            .collect();
+        
+        let sum_var = self.model.sum(&scaled_vars);
+        
+        // Create reified constraint: b ⇔ (sum = constant)
+        // Use Selen's int_eq_reif: b ⇔ (sum = constant_var)
+        let const_var = self.model.int(constant, constant);
+        self.model.int_eq_reif(sum_var, const_var, b);
+        Ok(())
+    }
+    
+    /// Map int_lin_le_reif: b ⇔ (Σ(coeffs[i] * vars[i]) ≤ constant)
+    pub(in crate::flatzinc::mapper) fn map_int_lin_le_reif(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 4 {
+            return Err(FlatZincError::MapError {
+                message: "int_lin_le_reif requires 4 arguments".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let coeffs = self.extract_int_array(&constraint.args[0])?;
+        let var_ids = self.extract_var_array(&constraint.args[1])?;
+        let constant = self.extract_int(&constraint.args[2])?;
+        let b = self.get_var_or_const(&constraint.args[3])?;
+        
+        // Create sum: Σ(coeffs[i] * vars[i])
+        let scaled_vars: Vec<VarId> = coeffs
+            .iter()
+            .zip(var_ids.iter())
+            .map(|(&coeff, &var)| self.model.mul(var, crate::variables::Val::ValI(coeff)))
+            .collect();
+        
+        let sum_var = self.model.sum(&scaled_vars);
+        
+        // Create reified constraint: b ⇔ (sum ≤ constant)
+        // Use Selen's int_le_reif: b ⇔ (sum ≤ constant_var)
+        let const_var = self.model.int(constant, constant);
+        self.model.int_le_reif(sum_var, const_var, b);
+        Ok(())
+    }
 }

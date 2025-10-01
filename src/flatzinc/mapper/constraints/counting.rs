@@ -9,6 +9,7 @@ use crate::runtime_api::ModelExt;
 
 impl<'a> MappingContext<'a> {
     /// Map count_eq: count = |{i : array[i] = value}|
+    /// Also used for count/3 which has the same signature
     pub(in crate::flatzinc::mapper) fn map_count_eq(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
             return Err(FlatZincError::MapError {
@@ -20,7 +21,7 @@ impl<'a> MappingContext<'a> {
         
         let arr_vars = self.extract_var_array(&constraint.args[0])?;
         let value = self.extract_int(&constraint.args[1])?;
-        let count_var = self.get_var(&constraint.args[2])?;
+        let count_var = self.get_var_or_const(&constraint.args[2])?;
         
         // Use Selen's count constraint
         self.model.count(&arr_vars, value, count_var);
