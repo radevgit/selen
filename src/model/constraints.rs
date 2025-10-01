@@ -499,4 +499,46 @@ impl Model {
         self.props.bool_not(operand, result);
         result
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 🔄 Reification Support
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Post a reified equality constraint: `b ⇔ (x = y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x = y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_eq_reif(x, y, b);
+    /// // Now b is 1 iff x = y
+    /// ```
+    pub fn int_eq_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_eq_reif(x, y, b);
+    }
+
+    /// Post a reified inequality constraint: `b ⇔ (x ≠ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≠ y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_ne_reif(x, y, b);
+    /// // Now b is 1 iff x ≠ y
+    /// ```
+    pub fn int_ne_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_ne_reif(x, y, b);
+    }
 }

@@ -66,6 +66,10 @@ pub enum ConstraintType {
     BooleanOr,
     /// Boolean NOT constraint (result = NOT operand)
     BooleanNot,
+    /// Reified equality constraint (b ⇔ (x = y))
+    EqualityReified,
+    /// Reified inequality constraint (b ⇔ (x ≠ y))
+    InequalityReified,
     /// Count constraint (count(vars, value) = count_var)
     Count,
     /// Table constraint (table(vars, tuples))
@@ -220,17 +224,26 @@ impl ConstraintRegistry {
     }
 
     /// Get all constraints of a specific type
+    /// Returns constraints in deterministic order (sorted by ConstraintId)
     pub fn get_constraints_by_type(&self, constraint_type: &ConstraintType) -> Vec<ConstraintId> {
-        self.constraints
+        let mut result: Vec<ConstraintId> = self.constraints
             .iter()
             .filter(|(_, metadata)| &metadata.constraint_type == constraint_type)
             .map(|(id, _)| *id)
-            .collect()
+            .collect();
+        
+        // Sort by ConstraintId to ensure deterministic order
+        result.sort_by_key(|id| id.0);
+        result
     }
 
     /// Get all constraint IDs registered in the system
+    /// Returns constraint IDs in deterministic order (sorted by ConstraintId)
     pub fn get_all_constraint_ids(&self) -> Vec<ConstraintId> {
-        self.constraints.keys().cloned().collect()
+        let mut result: Vec<ConstraintId> = self.constraints.keys().cloned().collect();
+        // Sort by ConstraintId to ensure deterministic order
+        result.sort_by_key(|id| id.0);
+        result
     }
 
     /// Analyze constraints for a variable to extract simple patterns
@@ -373,6 +386,12 @@ impl ConstraintRegistry {
                 ConstraintType::NotEquals => {
                     // Not equals constraints don't directly provide bounds,
                     // but they do make the problem more complex
+                    analysis.has_complex_constraints = true;
+                }
+                ConstraintType::EqualityReified | 
+                ConstraintType::InequalityReified => {
+                    // Reified constraints don't directly provide bounds for the variables involved,
+                    // but they make the problem more complex
                     analysis.has_complex_constraints = true;
                 }
                 ConstraintType::Complex { .. } | 
