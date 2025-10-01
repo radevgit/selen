@@ -359,22 +359,22 @@ impl Parser {
     fn parse_solve(&mut self) -> FlatZincResult<SolveGoal> {
         self.expect(TokenType::Solve)?;
         
+        // Parse annotations that come before the goal (e.g., solve :: int_search(...) satisfy)
+        let annotations = self.parse_annotations()?;
+        
         let goal = match self.peek() {
             TokenType::Satisfy => {
                 self.advance();
-                let annotations = self.parse_annotations()?;
                 SolveGoal::Satisfy { annotations }
             }
             TokenType::Minimize => {
                 self.advance();
                 let objective = self.parse_expr()?;
-                let annotations = self.parse_annotations()?;
                 SolveGoal::Minimize { objective, annotations }
             }
             TokenType::Maximize => {
                 self.advance();
                 let objective = self.parse_expr()?;
-                let annotations = self.parse_annotations()?;
                 SolveGoal::Maximize { objective, annotations }
             }
             _ => {

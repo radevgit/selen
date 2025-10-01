@@ -39,6 +39,27 @@ impl<'a> MappingContext<'a> {
                 Type::Bool => self.model.bool(),
                 Type::Int => self.model.int(i32::MIN, i32::MAX),
                 Type::IntRange(min, max) => {
+                    // Validate domain size against Selen's SparseSet limit
+                    // Use checked arithmetic to handle potential overflow
+                    let domain_size = match max.checked_sub(min) {
+                        Some(diff) => match diff.checked_add(1) {
+                            Some(size) => size as u64,
+                            None => u64::MAX, // Overflow means it's too large
+                        },
+                        None => u64::MAX, // Overflow means it's too large
+                    };
+                    
+                    const MAX_DOMAIN: u64 = crate::variables::domain::MAX_SPARSE_SET_DOMAIN_SIZE;
+                    if domain_size > MAX_DOMAIN {
+                        return Err(FlatZincError::MapError {
+                            message: format!(
+                                "Variable '{}' has domain [{}, {}] with size {} which exceeds maximum of {}",
+                                decl.name, min, max, domain_size, MAX_DOMAIN
+                            ),
+                            line: Some(decl.location.line),
+                            column: Some(decl.location.column),
+                        });
+                    }
                     self.model.int(min as i32, max as i32)
                 }
                 Type::IntSet(ref values) => {
@@ -242,6 +263,13 @@ impl<'a> MappingContext<'a> {
             "bool2int" => self.map_bool2int(constraint),
             // Count constraints
             "count_eq" => self.map_count_eq(constraint),
+            // Element constraints (array indexing)
+            "array_var_int_element" => self.map_array_var_int_element(constraint),
+            "array_int_element" => self.map_array_int_element(constraint),
+            "array_var_bool_element" => self.map_array_var_bool_element(constraint),
+            "array_bool_element" => self.map_array_bool_element(constraint),
+            // Math operations
+            "int_abs" => self.map_int_abs(constraint),
             _ => {
                 Err(FlatZincError::UnsupportedFeature {
                     feature: format!("Constraint: {}", constraint.predicate),

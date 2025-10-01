@@ -167,11 +167,11 @@ impl<'a> ModelValidator<'a> {
                     
                     // Check for extremely large domains that might cause performance issues
                     let domain_size = sparse_set.universe_size();
-                    if domain_size > 10_000_000 {
+                    if domain_size > crate::variables::domain::MAX_SPARSE_SET_DOMAIN_SIZE as usize {
                         return Err(SolverError::InvalidDomain {
                             message: "Variable domain is too large and may cause performance issues".to_string(),
                             variable_name: Some(format!("var_{:?}", var_id)),
-                            domain_info: Some(format!("domain size: {} (max recommended: 10,000,000)", domain_size)),
+                            domain_info: Some(format!("domain size: {} (max: {})", domain_size, crate::variables::domain::MAX_SPARSE_SET_DOMAIN_SIZE)),
                         });
                     }
                 },

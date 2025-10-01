@@ -124,7 +124,14 @@ impl Model {
                     return 96; // Just base overhead
                 }
                 
-                let domain_size = (max_i - min_i + 1) as u64;
+                // Use checked arithmetic to prevent overflow with large domains
+                let domain_size = match max_i.checked_sub(min_i) {
+                    Some(diff) => match diff.checked_add(1) {
+                        Some(size) => size as u64,
+                        None => u64::MAX, // Overflow: treat as unbounded domain
+                    },
+                    None => u64::MAX, // Overflow: treat as unbounded domain
+                };
                 
                 // Base SparseSet structure overhead (dense/sparse arrays, metadata)
                 let base_cost = 96; // More realistic estimate including Vec overhead

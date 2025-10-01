@@ -11,8 +11,8 @@ pub mod bitset_domain;
 pub mod float_interval;
 
 #[doc(hidden)]
-pub use sparse_set::SparseSet;
+pub use sparse_set::{SparseSet, MAX_SPARSE_SET_DOMAIN_SIZE};
 #[doc(hidden)]
-pub use bitset_domain::BitSetDomain;
+pub use bitset_domain::{BitSetDomain, MAX_BITSET_DOMAIN_SIZE};
 #[doc(hidden)]
 pub use float_interval::FloatInterval;
