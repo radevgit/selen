@@ -93,7 +93,7 @@ impl<'a> MappingContext<'a> {
                 self.evaluate_array_access(array, index)
             }
             _ => Err(FlatZincError::MapError {
-                message: "Expected variable identifier or array access".to_string(),
+                message: format!("Expected variable identifier or array access, got: {:?}", expr),
                 line: None,
                 column: None,
             }),
@@ -155,13 +155,27 @@ impl<'a> MappingContext<'a> {
     }
     
     /// Extract an array of integers from an expression
+    /// 
+    /// Handles:
+    /// - Inline array literals: [1, 2, 3]
+    /// - Parameter array identifiers: col_left (references previously declared parameter array)
     pub(super) fn extract_int_array(&self, expr: &Expr) -> FlatZincResult<Vec<i32>> {
         match expr {
             Expr::ArrayLit(elements) => {
                 elements.iter().map(|e| self.extract_int(e)).collect()
             }
+            Expr::Ident(name) => {
+                // Look up parameter array by name
+                self.param_int_arrays.get(name)
+                    .cloned()
+                    .ok_or_else(|| FlatZincError::MapError {
+                        message: format!("Parameter array '{}' not found (expected array of integers)", name),
+                        line: None,
+                        column: None,
+                    })
+            }
             _ => Err(FlatZincError::MapError {
-                message: "Expected array of integers".to_string(),
+                message: "Expected array of integers or array identifier".to_string(),
                 line: None,
                 column: None,
             }),
@@ -224,6 +238,26 @@ impl<'a> MappingContext<'a> {
                 if let Some(arr) = self.array_map.get(name) {
                     return Ok(arr.clone());
                 }
+                
+                // Check if it's a parameter int array - create constant VarIds
+                if let Some(int_values) = self.param_int_arrays.get(name) {
+                    let var_ids: Vec<VarId> = int_values.iter()
+                        .map(|&val| self.model.int(val, val))
+                        .collect();
+                    return Ok(var_ids);
+                }
+                
+                // Check if it's a parameter bool array - create constant VarIds
+                if let Some(bool_values) = self.param_bool_arrays.get(name) {
+                    let var_ids: Vec<VarId> = bool_values.iter()
+                        .map(|&b| {
+                            let val = if b { 1 } else { 0 };
+                            self.model.int(val, val)
+                        })
+                        .collect();
+                    return Ok(var_ids);
+                }
+                
                 // Otherwise treat as single variable
                 Ok(vec![self.var_map.get(name).copied().ok_or_else(|| {
                     FlatZincError::MapError {

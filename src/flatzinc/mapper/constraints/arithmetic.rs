@@ -33,6 +33,7 @@ impl<'a> MappingContext<'a> {
 
     /// Map int_plus: z = x + y
     /// FlatZinc signature: int_plus(x, y, z)
+    /// Accepts variables, literals, or array access for all arguments
     pub(in crate::flatzinc::mapper) fn map_int_plus(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
             return Err(FlatZincError::MapError {
@@ -42,9 +43,9 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        let z = self.get_var(&constraint.args[2])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let z = self.get_var_or_const(&constraint.args[2])?;
         
         // Use Selen's add constraint: z = x + y
         let sum = self.model.add(x, y);
@@ -54,6 +55,7 @@ impl<'a> MappingContext<'a> {
 
     /// Map int_minus: z = x - y
     /// FlatZinc signature: int_minus(x, y, z)
+    /// Accepts variables, literals, or array access for all arguments
     pub(in crate::flatzinc::mapper) fn map_int_minus(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
             return Err(FlatZincError::MapError {
@@ -63,9 +65,9 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        let z = self.get_var(&constraint.args[2])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let z = self.get_var_or_const(&constraint.args[2])?;
         
         // Use Selen's sub constraint: z = x - y
         let diff = self.model.sub(x, y);
@@ -75,6 +77,7 @@ impl<'a> MappingContext<'a> {
 
     /// Map int_times: z = x * y
     /// FlatZinc signature: int_times(x, y, z)
+    /// Accepts variables, literals, or array access for all arguments
     pub(in crate::flatzinc::mapper) fn map_int_times(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
             return Err(FlatZincError::MapError {
@@ -84,9 +87,9 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        let z = self.get_var(&constraint.args[2])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let z = self.get_var_or_const(&constraint.args[2])?;
         
         // Use Selen's mul constraint: z = x * y
         let product = self.model.mul(x, y);
@@ -96,6 +99,7 @@ impl<'a> MappingContext<'a> {
 
     /// Map int_div: z = x / y
     /// FlatZinc signature: int_div(x, y, z)
+    /// Accepts variables, literals, or array access for all arguments
     pub(in crate::flatzinc::mapper) fn map_int_div(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
             return Err(FlatZincError::MapError {
@@ -105,9 +109,9 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        let z = self.get_var(&constraint.args[2])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let z = self.get_var_or_const(&constraint.args[2])?;
         
         // Use Selen's div constraint: z = x / y
         let quotient = self.model.div(x, y);
@@ -117,6 +121,7 @@ impl<'a> MappingContext<'a> {
 
     /// Map int_mod: z = x mod y
     /// FlatZinc signature: int_mod(x, y, z)
+    /// Accepts variables, literals, or array access for all arguments
     pub(in crate::flatzinc::mapper) fn map_int_mod(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
             return Err(FlatZincError::MapError {
@@ -126,9 +131,9 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        let z = self.get_var(&constraint.args[2])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let z = self.get_var_or_const(&constraint.args[2])?;
         
         // Use Selen's mod constraint: z = x mod y
         let remainder = self.model.modulo(x, y);
@@ -138,6 +143,7 @@ impl<'a> MappingContext<'a> {
 
     /// Map int_max: z = max(x, y)
     /// FlatZinc signature: int_max(x, y, z)
+    /// Accepts variables, literals, or array access for all arguments
     pub(in crate::flatzinc::mapper) fn map_int_max(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
             return Err(FlatZincError::MapError {
@@ -147,9 +153,9 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        let z = self.get_var(&constraint.args[2])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let z = self.get_var_or_const(&constraint.args[2])?;
         
         // Use Selen's max constraint: z = max([x, y])
         let max_xy = self.model.max(&[x, y])
@@ -164,6 +170,7 @@ impl<'a> MappingContext<'a> {
 
     /// Map int_min: z = min(x, y)
     /// FlatZinc signature: int_min(x, y, z)
+    /// Accepts variables, literals, or array access for all arguments
     pub(in crate::flatzinc::mapper) fn map_int_min(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
             return Err(FlatZincError::MapError {
@@ -173,9 +180,9 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        let z = self.get_var(&constraint.args[2])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let z = self.get_var_or_const(&constraint.args[2])?;
         
         // Use Selen's min constraint: z = min([x, y])
         let min_xy = self.model.min(&[x, y])

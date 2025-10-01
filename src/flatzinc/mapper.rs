@@ -21,6 +21,10 @@ pub struct MappingContext<'a> {
     pub(super) var_map: HashMap<String, VarId>,
     /// Maps array names to their variable lists
     pub(super) array_map: HashMap<String, Vec<VarId>>,
+    /// Maps parameter array names to their constant integer values
+    pub(super) param_int_arrays: HashMap<String, Vec<i32>>,
+    /// Maps parameter array names to their constant boolean values
+    pub(super) param_bool_arrays: HashMap<String, Vec<bool>>,
     /// Inferred bounds for unbounded integer variables
     pub(super) unbounded_int_bounds: (i32, i32),
 }
@@ -31,6 +35,8 @@ impl<'a> MappingContext<'a> {
             model,
             var_map: HashMap::new(),
             array_map: HashMap::new(),
+            param_int_arrays: HashMap::new(),
+            param_bool_arrays: HashMap::new(),
             unbounded_int_bounds: unbounded_bounds,
         }
     }
@@ -94,12 +100,55 @@ impl<'a> MappingContext<'a> {
                 }
             },
             Type::Array { index_sets, element_type } => {
-                // Two cases for array variables:
-                // 1. Collecting existing variables: array [...] = [var1, var2, ...]
-                // 2. Creating new array of variables: array [1..n] of var int: arr
+                // Three cases for array declarations:
+                // 1. Parameter arrays: array [1..n] of int: coeffs = [1, 2, 3];
+                // 2. Variable arrays (collect): array [...] = [var1, var2, ...]
+                // 3. Variable arrays (create): array [1..n] of var int: arr
                 
+                // Check if this is a parameter array (non-var type with initialization)
                 if let Some(ref init) = decl.init_value {
-                    // Case 1: Array collects existing variables/constants
+                    // Detect parameter integer arrays
+                    match **element_type {
+                        Type::Int | Type::IntRange(..) | Type::IntSet(..) => {
+                            // This is a parameter int array: array [1..n] of int: name = [values];
+                            if let Expr::ArrayLit(elements) = init {
+                                let values: Result<Vec<i32>, _> = elements.iter()
+                                    .map(|e| self.extract_int(e))
+                                    .collect();
+                                
+                                if let Ok(int_values) = values {
+                                    self.param_int_arrays.insert(decl.name.clone(), int_values);
+                                    return Ok(()); // Parameter arrays don't create variables
+                                }
+                            }
+                        }
+                        Type::Bool => {
+                            // This is a parameter bool array: array [1..n] of bool: name = [values];
+                            if let Expr::ArrayLit(elements) = init {
+                                let values: Result<Vec<bool>, _> = elements.iter()
+                                    .map(|e| match e {
+                                        Expr::BoolLit(b) => Ok(*b),
+                                        _ => Err(FlatZincError::MapError {
+                                            message: "Expected boolean literal in bool array".to_string(),
+                                            line: Some(decl.location.line),
+                                            column: Some(decl.location.column),
+                                        }),
+                                    })
+                                    .collect();
+                                
+                                if let Ok(bool_values) = values {
+                                    self.param_bool_arrays.insert(decl.name.clone(), bool_values);
+                                    return Ok(()); // Parameter arrays don't create variables
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                
+                // If not a parameter array, handle as variable array
+                if let Some(ref init) = decl.init_value {
+                    // Case 2: Array collects existing variables/constants
                     match init {
                         Expr::ArrayLit(elements) => {
                             let mut var_ids = Vec::new();
@@ -242,9 +291,15 @@ impl<'a> MappingContext<'a> {
                     })?;
                     self.model.new(var_id.eq(*source_var));
                 }
+                Expr::ArrayAccess { array, index } => {
+                    // Array element initialization: var int: x = arr[3];
+                    // Evaluate the array access and post an equality constraint
+                    let source_var = self.evaluate_array_access(array, index)?;
+                    self.model.new(var_id.eq(source_var));
+                }
                 _ => {
                     return Err(FlatZincError::MapError {
-                        message: "Complex initialization not yet supported".to_string(),
+                        message: format!("Complex initialization not yet supported: {:?}", init),
                         line: Some(decl.location.line),
                         column: Some(decl.location.column),
                     });
@@ -271,6 +326,7 @@ impl<'a> MappingContext<'a> {
             "int_lin_eq_reif" => self.map_int_lin_eq_reif(constraint),
             "int_lin_le_reif" => self.map_int_lin_le_reif(constraint),
             "fzn_all_different_int" | "all_different_int" | "all_different" => self.map_all_different(constraint),
+            "sort" => self.map_sort(constraint),
             "int_eq_reif" => self.map_int_eq_reif(constraint),
             "int_ne_reif" => self.map_int_ne_reif(constraint),
             "int_lt_reif" => self.map_int_lt_reif(constraint),
