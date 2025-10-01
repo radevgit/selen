@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.5] - 2025-10-01
+- Implemented reified constraint.
+
 ## [0.8.4] - 2025-09-27
 - Fixed some outdated examples
 
