@@ -276,7 +276,14 @@ impl Propagators {
             ConstraintType::BooleanAnd,
             ConstraintType::BooleanOr,
             ConstraintType::BooleanNot,
-            ConstraintType::Count, // CRITICAL FIX: Include Count constraints in optimization
+            ConstraintType::Count,
+            // Reification constraints
+            ConstraintType::EqualityReified,
+            ConstraintType::InequalityReified,
+            ConstraintType::LessThanReified,
+            ConstraintType::LessEqualReified,
+            ConstraintType::GreaterThanReified,
+            ConstraintType::GreaterEqualReified,
         ];
         
         // Pre-calculate variable connectivity map for all constraint types
@@ -1404,6 +1411,102 @@ impl Propagators {
         self.push_new_prop_with_metadata(
             self::reification::IntNeReif::new(x, y, b),
             ConstraintType::InequalityReified,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a reified less-than constraint: `b ⇔ (x < y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x < y`.
+    pub fn int_lt_reif(&mut self, x: VarId, y: VarId, b: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = ViewInfo::Variable { var_id: x };
+        let y_info = ViewInfo::Variable { var_id: y };
+        
+        let variables = vec![x, y, b];
+        
+        let metadata = ConstraintData::Binary {
+            left: x_info,
+            right: y_info,
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::reification::IntLtReif::new(x, y, b),
+            ConstraintType::LessThanReified,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a reified less-than-or-equal constraint: `b ⇔ (x ≤ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≤ y`.
+    pub fn int_le_reif(&mut self, x: VarId, y: VarId, b: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = ViewInfo::Variable { var_id: x };
+        let y_info = ViewInfo::Variable { var_id: y };
+        
+        let variables = vec![x, y, b];
+        
+        let metadata = ConstraintData::Binary {
+            left: x_info,
+            right: y_info,
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::reification::IntLeReif::new(x, y, b),
+            ConstraintType::LessEqualReified,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a reified greater-than constraint: `b ⇔ (x > y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x > y`.
+    pub fn int_gt_reif(&mut self, x: VarId, y: VarId, b: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = ViewInfo::Variable { var_id: x };
+        let y_info = ViewInfo::Variable { var_id: y };
+        
+        let variables = vec![x, y, b];
+        
+        let metadata = ConstraintData::Binary {
+            left: x_info,
+            right: y_info,
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::reification::IntGtReif::new(x, y, b),
+            ConstraintType::GreaterThanReified,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a reified greater-than-or-equal constraint: `b ⇔ (x ≥ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≥ y`.
+    pub fn int_ge_reif(&mut self, x: VarId, y: VarId, b: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = ViewInfo::Variable { var_id: x };
+        let y_info = ViewInfo::Variable { var_id: y };
+        
+        let variables = vec![x, y, b];
+        
+        let metadata = ConstraintData::Binary {
+            left: x_info,
+            right: y_info,
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::reification::IntGeReif::new(x, y, b),
+            ConstraintType::GreaterEqualReified,
             variables,
             metadata,
         )

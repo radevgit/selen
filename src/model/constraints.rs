@@ -542,6 +542,82 @@ impl Model {
         self.props.int_ne_reif(x, y, b);
     }
 
+    /// Post a reified less-than constraint: `b ⇔ (x < y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x < y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_lt_reif(x, y, b);
+    /// // Now b is 1 iff x < y
+    /// ```
+    pub fn int_lt_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_lt_reif(x, y, b);
+    }
+
+    /// Post a reified less-than-or-equal constraint: `b ⇔ (x ≤ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≤ y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_le_reif(x, y, b);
+    /// // Now b is 1 iff x ≤ y
+    /// ```
+    pub fn int_le_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_le_reif(x, y, b);
+    }
+
+    /// Post a reified greater-than constraint: `b ⇔ (x > y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x > y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_gt_reif(x, y, b);
+    /// // Now b is 1 iff x > y
+    /// ```
+    pub fn int_gt_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_gt_reif(x, y, b);
+    }
+
+    /// Post a reified greater-than-or-equal constraint: `b ⇔ (x ≥ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≥ y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_ge_reif(x, y, b);
+    /// // Now b is 1 iff x ≥ y
+    /// ```
+    pub fn int_ge_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_ge_reif(x, y, b);
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // 📊 Linear Constraints (FlatZinc Integration)
     // ═══════════════════════════════════════════════════════════════════════
