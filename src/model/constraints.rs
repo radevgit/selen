@@ -653,4 +653,80 @@ impl Model {
         // Post less-than-or-equal constraint: sum ≤ constant
         self.props.less_than_or_equals(sum_var, Val::ValI(constant));
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 🔀 Boolean Clause (CNF/SAT Support)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Post a boolean clause constraint: `(∨ pos[i]) ∨ (∨ ¬neg[i])`.
+    /// 
+    /// This implements the FlatZinc `bool_clause` constraint, which represents
+    /// a clause in CNF (Conjunctive Normal Form). The clause is satisfied if:
+    /// - At least one positive literal is true, OR
+    /// - At least one negative literal is false
+    /// 
+    /// In other words: `pos[0] ∨ pos[1] ∨ ... ∨ ¬neg[0] ∨ ¬neg[1] ∨ ...`
+    /// 
+    /// # Arguments
+    /// * `pos` - Array of positive boolean literals (variables that should be true)
+    /// * `neg` - Array of negative boolean literals (variables that should be false)
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let a = m.bool();
+    /// let b = m.bool();
+    /// let c = m.bool();
+    /// 
+    /// // At least one of: a is true, b is true, or c is false
+    /// // Equivalent to: a ∨ b ∨ ¬c
+    /// m.bool_clause(&[a, b], &[c]);
+    /// ```
+    /// 
+    /// # Implementation
+    /// 
+    /// The clause is decomposed as:
+    /// 1. If both arrays are empty, the clause is unsatisfiable (posts false)
+    /// 2. Otherwise, we create: `(∨ pos[i]) ∨ (∨ ¬neg[i]) = true`
+    ///    - This ensures at least one positive literal is 1, or one negative literal is 0
+    pub fn bool_clause(&mut self, pos: &[VarId], neg: &[VarId]) {
+        // Empty clause is unsatisfiable
+        if pos.is_empty() && neg.is_empty() {
+            // Post an unsatisfiable constraint: 0 = 1
+            self.props.equals(Val::ValI(0), Val::ValI(1));
+            return;
+        }
+
+        // Special case: only positive literals
+        if neg.is_empty() {
+            // At least one positive literal must be true: bool_or(pos) = 1
+            let clause_result = self.bool_or(pos);
+            self.props.equals(clause_result, Val::ValI(1));
+            return;
+        }
+
+        // Special case: only negative literals
+        if pos.is_empty() {
+            // At least one negative literal must be false
+            // ¬neg[0] ∨ ¬neg[1] ∨ ... = ¬(neg[0] ∧ neg[1] ∧ ...)
+            let all_neg = self.bool_and(neg);
+            let not_all_neg = self.bool_not(all_neg);
+            self.props.equals(not_all_neg, Val::ValI(1));
+            return;
+        }
+
+        // General case: both positive and negative literals
+        // pos[0] ∨ ... ∨ ¬neg[0] ∨ ...
+        // = (pos[0] ∨ ... ∨ pos[n]) ∨ (¬neg[0] ∨ ... ∨ ¬neg[m])
+        // = (∨ pos[i]) ∨ ¬(∧ neg[i])
+        
+        let pos_clause = self.bool_or(pos);
+        let all_neg = self.bool_and(neg);
+        let not_all_neg = self.bool_not(all_neg);
+        
+        // At least one side must be true
+        let final_clause = self.bool_or(&[pos_clause, not_all_neg]);
+        self.props.equals(final_clause, Val::ValI(1));
+    }
 }
