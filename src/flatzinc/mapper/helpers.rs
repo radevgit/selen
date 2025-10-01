@@ -6,7 +6,77 @@ use crate::flatzinc::mapper::MappingContext;
 use crate::variables::VarId;
 
 impl<'a> MappingContext<'a> {
-    /// Get a variable by identifier
+    /// Evaluate array access expression: array[index]
+    /// 
+    /// Resolves expressions like `x[1]` by:
+    /// 1. Looking up the array variable `x` in array_map
+    /// 2. Converting the FlatZinc 1-based index to 0-based
+    /// 3. Returning the VarId at that position
+    pub(super) fn evaluate_array_access(
+        &self,
+        array_expr: &Expr,
+        index_expr: &Expr,
+    ) -> FlatZincResult<VarId> {
+        // Get the array name
+        let array_name = match array_expr {
+            Expr::Ident(name) => name,
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: format!("Array access requires identifier, got: {:?}", array_expr),
+                    line: None,
+                    column: None,
+                });
+            }
+        };
+
+        // Get the array
+        let array = self.array_map.get(array_name).ok_or_else(|| {
+            FlatZincError::MapError {
+                message: format!("Unknown array: {}", array_name),
+                line: None,
+                column: None,
+            }
+        })?;
+
+        // Get the index (1-based in FlatZinc)
+        let index_1based = match index_expr {
+            Expr::IntLit(val) => *val as usize,
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: format!("Array index must be integer literal, got: {:?}", index_expr),
+                    line: None,
+                    column: None,
+                });
+            }
+        };
+
+        // Convert to 0-based and bounds check
+        if index_1based < 1 {
+            return Err(FlatZincError::MapError {
+                message: format!("Array index must be >= 1, got: {}", index_1based),
+                line: None,
+                column: None,
+            });
+        }
+        let index_0based = index_1based - 1;
+
+        if index_0based >= array.len() {
+            return Err(FlatZincError::MapError {
+                message: format!(
+                    "Array index {} out of bounds for array '{}' of length {}",
+                    index_1based,
+                    array_name,
+                    array.len()
+                ),
+                line: None,
+                column: None,
+            });
+        }
+
+        Ok(array[index_0based])
+    }
+
+    /// Get a variable by identifier or array access
     pub(super) fn get_var(&self, expr: &Expr) -> FlatZincResult<VarId> {
         match expr {
             Expr::Ident(name) => {
@@ -18,8 +88,12 @@ impl<'a> MappingContext<'a> {
                     }
                 })
             }
+            Expr::ArrayAccess { array, index } => {
+                // Handle array access like x[1]
+                self.evaluate_array_access(array, index)
+            }
             _ => Err(FlatZincError::MapError {
-                message: "Expected variable identifier".to_string(),
+                message: "Expected variable identifier or array access".to_string(),
                 line: None,
                 column: None,
             }),
@@ -63,13 +137,13 @@ impl<'a> MappingContext<'a> {
     /// Extract an array of variables from an expression
     /// 
     /// Handles:
-    /// - Array literals like `[x, y, z]` (may contain variables or integer constants)
+    /// - Array literals like `[x, y, z]` (may contain variables, array access, or integer constants)
     /// - Array identifiers that reference previously declared arrays
     /// - Single variable identifiers (treated as single-element array)
     pub(super) fn extract_var_array(&mut self, expr: &Expr) -> FlatZincResult<Vec<VarId>> {
         match expr {
             Expr::ArrayLit(elements) => {
-                // Handle array literals that may contain variables or integer constants
+                // Handle array literals that may contain variables, array access, or integer constants
                 let mut var_ids = Vec::new();
                 for elem in elements {
                     match elem {
@@ -88,6 +162,11 @@ impl<'a> MappingContext<'a> {
                             // Constant integer - create a fixed variable
                             let const_var = self.model.int(*val as i32, *val as i32);
                             var_ids.push(const_var);
+                        }
+                        Expr::ArrayAccess { array, index } => {
+                            // Array element access like x[1]
+                            let var_id = self.evaluate_array_access(array, index)?;
+                            var_ids.push(var_id);
                         }
                         _ => {
                             return Err(FlatZincError::MapError {

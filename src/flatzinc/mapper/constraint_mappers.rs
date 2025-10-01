@@ -22,7 +22,7 @@ impl<'a> MappingContext<'a> {
         let x = self.get_var(&constraint.args[0])?;
         
         match &constraint.args[1] {
-            Expr::Ident(_) => {
+            Expr::Ident(_) | Expr::ArrayAccess { .. } => {
                 let y = self.get_var(&constraint.args[1])?;
                 self.model.new(x.eq(y));
             }

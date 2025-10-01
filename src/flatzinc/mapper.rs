@@ -21,14 +21,17 @@ pub struct MappingContext<'a> {
     pub(super) var_map: HashMap<String, VarId>,
     /// Maps array names to their variable lists
     pub(super) array_map: HashMap<String, Vec<VarId>>,
+    /// Inferred bounds for unbounded integer variables
+    pub(super) unbounded_int_bounds: (i32, i32),
 }
 
 impl<'a> MappingContext<'a> {
-    pub fn new(model: &'a mut Model) -> Self {
+    pub fn new(model: &'a mut Model, unbounded_bounds: (i32, i32)) -> Self {
         MappingContext {
             model,
             var_map: HashMap::new(),
             array_map: HashMap::new(),
+            unbounded_int_bounds: unbounded_bounds,
         }
     }
     
@@ -37,7 +40,12 @@ impl<'a> MappingContext<'a> {
         let var_id = match &decl.var_type {
             Type::Var(inner_type) => match **inner_type {
                 Type::Bool => self.model.bool(),
-                Type::Int => self.model.int(i32::MIN, i32::MAX),
+                Type::Int => {
+                    // Unbounded integer variables are approximated using inferred bounds
+                    // from other bounded variables in the model
+                    let (min_bound, max_bound) = self.unbounded_int_bounds;
+                    self.model.int(min_bound, max_bound)
+                }
                 Type::IntRange(min, max) => {
                     // Validate domain size against Selen's SparseSet limit
                     // Use checked arithmetic to handle potential overflow
@@ -162,7 +170,9 @@ impl<'a> MappingContext<'a> {
                                     return Ok(());
                                 }
                                 Type::Int => {
-                                    // Full integer domain
+                                    // Unbounded integer arrays are approximated using inferred bounds
+                                    let (min_bound, max_bound) = self.unbounded_int_bounds;
+                                    
                                     let size = if let Some(IndexSet::Range(start, end)) = index_sets.first() {
                                         (end - start + 1) as usize
                                     } else {
@@ -174,7 +184,7 @@ impl<'a> MappingContext<'a> {
                                     };
                                     
                                     let var_ids: Vec<VarId> = (0..size)
-                                        .map(|_| self.model.int(i32::MIN, i32::MAX))
+                                        .map(|_| self.model.int(min_bound, max_bound))
                                         .collect();
                                     
                                     self.array_map.insert(decl.name.clone(), var_ids);
@@ -219,6 +229,18 @@ impl<'a> MappingContext<'a> {
                 }
                 Expr::FloatLit(val) => {
                     self.model.new(var_id.eq(*val));
+                }
+                Expr::Ident(var_name) => {
+                    // Variable-to-variable initialization: var int: c4 = M;
+                    // Post an equality constraint: c4 = M
+                    let source_var = self.var_map.get(var_name).ok_or_else(|| {
+                        FlatZincError::MapError {
+                            message: format!("Variable '{}' not found for initialization", var_name),
+                            line: Some(decl.location.line),
+                            column: Some(decl.location.column),
+                        }
+                    })?;
+                    self.model.new(var_id.eq(*source_var));
                 }
                 _ => {
                     return Err(FlatZincError::MapError {
@@ -281,9 +303,57 @@ impl<'a> MappingContext<'a> {
     }
 }
 
+/// Infer reasonable bounds for unbounded integer variables by scanning the model
+fn infer_unbounded_int_bounds(ast: &FlatZincModel) -> (i32, i32) {
+    let mut min_bound = 0i32;
+    let mut max_bound = 0i32;
+    let mut found_any = false;
+    
+    // Scan all variable declarations to find bounded integer ranges
+    for var_decl in &ast.var_decls {
+        match &var_decl.var_type {
+            Type::Var(inner_type) => {
+                if let Type::IntRange(min, max) = **inner_type {
+                    min_bound = min_bound.min(min as i32);
+                    max_bound = max_bound.max(max as i32);
+                    found_any = true;
+                }
+            }
+            Type::Array { element_type, .. } => {
+                if let Type::Var(inner) = &**element_type {
+                    if let Type::IntRange(min, max) = **inner {
+                        min_bound = min_bound.min(min as i32);
+                        max_bound = max_bound.max(max as i32);
+                        found_any = true;
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    
+    // If we found bounded variables, expand their range slightly for safety
+    if found_any {
+        // Expand by 10x or at least to ±100
+        let range = max_bound - min_bound;
+        let expansion = range.max(100);
+        const MAX_BOUND: i32 = (crate::variables::domain::MAX_SPARSE_SET_DOMAIN_SIZE / 2) as i32;
+        min_bound = (min_bound - expansion).max(-MAX_BOUND);
+        max_bound = (max_bound + expansion).min(MAX_BOUND);
+        (min_bound, max_bound)
+    } else {
+        // No bounded variables found, use default reasonable range
+        const DEFAULT_BOUND: i32 = (crate::variables::domain::MAX_SPARSE_SET_DOMAIN_SIZE / 2) as i32;
+        (-DEFAULT_BOUND, DEFAULT_BOUND)
+    }
+}
+
 /// Map FlatZinc AST to an existing Selen Model
 pub fn map_to_model_mut(ast: FlatZincModel, model: &mut Model) -> FlatZincResult<()> {
-    let mut ctx = MappingContext::new(model);
+    // First pass: infer reasonable bounds for unbounded variables
+    let unbounded_bounds = infer_unbounded_int_bounds(&ast);
+    
+    let mut ctx = MappingContext::new(model, unbounded_bounds);
     
     // Map variable declarations
     for var_decl in &ast.var_decls {
