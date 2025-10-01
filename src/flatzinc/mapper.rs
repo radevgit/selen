@@ -10,7 +10,7 @@ use crate::runtime_api::{VarIdExt, ModelExt};
 use std::collections::HashMap;
 
 // Sub-modules for organization
-mod constraint_mappers;
+mod constraints;
 mod helpers;
 
 // Re-export is not needed as methods are already on MappingContext
@@ -290,8 +290,17 @@ impl<'a> MappingContext<'a> {
             "array_int_element" => self.map_array_int_element(constraint),
             "array_var_bool_element" => self.map_array_var_bool_element(constraint),
             "array_bool_element" => self.map_array_bool_element(constraint),
-            // Math operations
+            // Arithmetic operations
             "int_abs" => self.map_int_abs(constraint),
+            "int_plus" => self.map_int_plus(constraint),
+            "int_minus" => self.map_int_minus(constraint),
+            "int_times" => self.map_int_times(constraint),
+            "int_div" => self.map_int_div(constraint),
+            "int_mod" => self.map_int_mod(constraint),
+            "int_max" => self.map_int_max(constraint),
+            "int_min" => self.map_int_min(constraint),
+            // Boolean constraints
+            "bool_le" => self.map_bool_le(constraint),
             _ => {
                 Err(FlatZincError::UnsupportedFeature {
                     feature: format!("Constraint: {}", constraint.predicate),

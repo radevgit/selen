@@ -1,6 +1,39 @@
 //! Constraint mapping functions
 //!
 //! Maps individual FlatZinc constraint predicates to Selen constraints.
+//!
+//! ## Organization
+//! 
+//! This file contains constraint mappers organized by category:
+//! 
+//! 1. **Comparison Constraints** (lines ~15-220)
+//!    - int_eq, int_ne, int_lt, int_le, int_gt, int_ge
+//! 
+//! 2. **Linear Constraints** (lines ~220-300)
+//!    - int_lin_eq, int_lin_le, int_lin_ne
+//! 
+//! 3. **Global Constraints** (lines ~300-315)
+//!    - all_different
+//! 
+//! 4. **Reified Constraints** (lines ~315-545)
+//!    - int_eq_reif, int_ne_reif, int_lt_reif, int_le_reif, int_gt_reif, int_ge_reif
+//! 
+//! 5. **Boolean Constraints** (lines ~545-690)
+//!    - bool_clause, array_bool_and, array_bool_or, bool2int, bool_le
+//! 
+//! 6. **Array Constraints** (lines ~575-645)
+//!    - array_int_minimum, array_int_maximum
+//! 
+//! 7. **Counting Constraints** (lines ~690-720)
+//!    - count_eq
+//! 
+//! 8. **Element Constraints** (lines ~720-900)
+//!    - array_var_int_element, array_int_element, array_var_bool_element, array_bool_element
+//! 
+//! 9. **Arithmetic Constraints** (lines ~900-1100)
+//!    - int_abs, int_plus, int_minus, int_times, int_div, int_mod, int_max, int_min
+//!
+//! TODO: Consider splitting into separate modules when file exceeds ~1500 lines
 
 use crate::flatzinc::ast::*;
 use crate::flatzinc::error::{FlatZincError, FlatZincResult};
@@ -9,6 +42,10 @@ use crate::runtime_api::{VarIdExt, ModelExt};
 use crate::variables::VarId;
 
 impl<'a> MappingContext<'a> {
+    // ═════════════════════════════════════════════════════════════════════════
+    // 📊 COMPARISON CONSTRAINTS
+    // ═════════════════════════════════════════════════════════════════════════
+    
     /// Map int_eq constraint: x = y or x = constant
     pub(super) fn map_int_eq(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 2 {
@@ -19,19 +56,27 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        
-        match &constraint.args[1] {
-            Expr::Ident(_) | Expr::ArrayAccess { .. } => {
+        // Handle both: int_eq(var, const) and int_eq(const, var)
+        match (&constraint.args[0], &constraint.args[1]) {
+            // var = var
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
                 let y = self.get_var(&constraint.args[1])?;
                 self.model.new(x.eq(y));
             }
-            Expr::IntLit(val) => {
+            // var = const
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
                 self.model.new(x.eq(*val as i32));
+            }
+            // const = var (swap to var = const)
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(y.eq(*val as i32));
             }
             _ => {
                 return Err(FlatZincError::MapError {
-                    message: "Unsupported argument type for int_eq".to_string(),
+                    message: "Unsupported argument types for int_eq".to_string(),
                     line: Some(constraint.location.line),
                     column: Some(constraint.location.column),
                 });
@@ -50,9 +95,28 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        self.model.new(x.ne(y));
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(x.ne(y));
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                self.model.new(x.ne(*val as i32));
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(y.ne(*val as i32));
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_ne".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -65,9 +129,28 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        self.model.new(x.lt(y));
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(x.lt(y));
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                self.model.new(x.lt(*val as i32));
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(y.gt(*val as i32)); // const < var => var > const
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_lt".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -80,9 +163,28 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        self.model.new(x.le(y));
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(x.le(y));
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                self.model.new(x.le(*val as i32));
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(y.ge(*val as i32)); // const <= var => var >= const
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_le".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -95,9 +197,28 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        self.model.new(x.gt(y));
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(x.gt(y));
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                self.model.new(x.gt(*val as i32));
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(y.lt(*val as i32)); // const > var => var < const
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_gt".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -110,9 +231,28 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
-        self.model.new(x.ge(y));
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(x.ge(y));
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                self.model.new(x.ge(*val as i32));
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.new(y.le(*val as i32)); // const >= var => var <= const
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_ge".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -194,6 +334,10 @@ impl<'a> MappingContext<'a> {
         Ok(())
     }
     
+    // ═════════════════════════════════════════════════════════════════════════
+    // 🌐 GLOBAL CONSTRAINTS
+    // ═════════════════════════════════════════════════════════════════════════
+    
     /// Map all_different constraint
     pub(super) fn map_all_different(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 1 {
@@ -209,6 +353,10 @@ impl<'a> MappingContext<'a> {
         Ok(())
     }
     
+    // ═════════════════════════════════════════════════════════════════════════
+    // 🔄 REIFIED CONSTRAINTS
+    // ═════════════════════════════════════════════════════════════════════════
+    
     /// Map int_eq_reif: b ⇔ (x = y)
     pub(super) fn map_int_eq_reif(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
         if constraint.args.len() != 3 {
@@ -219,10 +367,32 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
         let b = self.get_var(&constraint.args[2])?;
-        self.model.int_eq_reif(x, y, b);
+        
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.int_eq_reif(x, y, b);
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_eq_reif(x, const_var, b);
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_eq_reif(const_var, y, b);
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_eq_reif".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -235,10 +405,32 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
         let b = self.get_var(&constraint.args[2])?;
-        self.model.int_ne_reif(x, y, b);
+        
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.int_ne_reif(x, y, b);
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_ne_reif(x, const_var, b);
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_ne_reif(const_var, y, b);
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_ne_reif".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -251,10 +443,32 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
         let b = self.get_var(&constraint.args[2])?;
-        self.model.int_lt_reif(x, y, b);
+        
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.int_lt_reif(x, y, b);
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_lt_reif(x, const_var, b);
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_lt_reif(const_var, y, b);
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_lt_reif".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -267,10 +481,32 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
         let b = self.get_var(&constraint.args[2])?;
-        self.model.int_le_reif(x, y, b);
+        
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.int_le_reif(x, y, b);
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_le_reif(x, const_var, b);
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_le_reif(const_var, y, b);
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_le_reif".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -283,10 +519,32 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
         let b = self.get_var(&constraint.args[2])?;
-        self.model.int_gt_reif(x, y, b);
+        
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.int_gt_reif(x, y, b);
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_gt_reif(x, const_var, b);
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_gt_reif(const_var, y, b);
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_gt_reif".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -299,10 +557,32 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
         let b = self.get_var(&constraint.args[2])?;
-        self.model.int_ge_reif(x, y, b);
+        
+        match (&constraint.args[0], &constraint.args[1]) {
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let y = self.get_var(&constraint.args[1])?;
+                self.model.int_ge_reif(x, y, b);
+            }
+            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
+                let x = self.get_var(&constraint.args[0])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_ge_reif(x, const_var, b);
+            }
+            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
+                let y = self.get_var(&constraint.args[1])?;
+                let const_var = self.model.int(*val as i32, *val as i32);
+                self.model.int_ge_reif(const_var, y, b);
+            }
+            _ => {
+                return Err(FlatZincError::MapError {
+                    message: "Unsupported argument types for int_ge_reif".to_string(),
+                    line: Some(constraint.location.line),
+                    column: Some(constraint.location.column),
+                });
+            }
+        }
         Ok(())
     }
     
@@ -662,6 +942,10 @@ impl<'a> MappingContext<'a> {
         Ok(())
     }
     
+    // ═════════════════════════════════════════════════════════════════════════
+    // ➕ ARITHMETIC CONSTRAINTS
+    // ═════════════════════════════════════════════════════════════════════════
+    
     /// Map int_abs: result = |x|
     /// FlatZinc signature: int_abs(x, result)
     pub(super) fn map_int_abs(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
@@ -681,6 +965,183 @@ impl<'a> MappingContext<'a> {
         
         // Constrain result to equal abs(x)
         self.model.new(abs_x.eq(result));
+        Ok(())
+    }
+
+    /// Map int_plus: z = x + y
+    /// FlatZinc signature: int_plus(x, y, z)
+    pub(super) fn map_int_plus(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "int_plus requires 3 arguments (x, y, z)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var(&constraint.args[0])?;
+        let y = self.get_var(&constraint.args[1])?;
+        let z = self.get_var(&constraint.args[2])?;
+        
+        // Use Selen's add constraint: z = x + y
+        let sum = self.model.add(x, y);
+        self.model.new(sum.eq(z));
+        Ok(())
+    }
+
+    /// Map int_minus: z = x - y
+    /// FlatZinc signature: int_minus(x, y, z)
+    pub(super) fn map_int_minus(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "int_minus requires 3 arguments (x, y, z)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var(&constraint.args[0])?;
+        let y = self.get_var(&constraint.args[1])?;
+        let z = self.get_var(&constraint.args[2])?;
+        
+        // Use Selen's sub constraint: z = x - y
+        let diff = self.model.sub(x, y);
+        self.model.new(diff.eq(z));
+        Ok(())
+    }
+
+    /// Map int_times: z = x * y
+    /// FlatZinc signature: int_times(x, y, z)
+    pub(super) fn map_int_times(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "int_times requires 3 arguments (x, y, z)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var(&constraint.args[0])?;
+        let y = self.get_var(&constraint.args[1])?;
+        let z = self.get_var(&constraint.args[2])?;
+        
+        // Use Selen's mul constraint: z = x * y
+        let product = self.model.mul(x, y);
+        self.model.new(product.eq(z));
+        Ok(())
+    }
+
+    /// Map int_div: z = x / y
+    /// FlatZinc signature: int_div(x, y, z)
+    pub(super) fn map_int_div(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "int_div requires 3 arguments (x, y, z)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var(&constraint.args[0])?;
+        let y = self.get_var(&constraint.args[1])?;
+        let z = self.get_var(&constraint.args[2])?;
+        
+        // Use Selen's div constraint: z = x / y
+        let quotient = self.model.div(x, y);
+        self.model.new(quotient.eq(z));
+        Ok(())
+    }
+
+    /// Map int_mod: z = x mod y
+    /// FlatZinc signature: int_mod(x, y, z)
+    pub(super) fn map_int_mod(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "int_mod requires 3 arguments (x, y, z)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var(&constraint.args[0])?;
+        let y = self.get_var(&constraint.args[1])?;
+        let z = self.get_var(&constraint.args[2])?;
+        
+        // Use Selen's mod constraint: z = x mod y
+        let remainder = self.model.modulo(x, y);
+        self.model.new(remainder.eq(z));
+        Ok(())
+    }
+
+    /// Map int_max: z = max(x, y)
+    /// FlatZinc signature: int_max(x, y, z)
+    pub(super) fn map_int_max(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "int_max requires 3 arguments (x, y, z)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var(&constraint.args[0])?;
+        let y = self.get_var(&constraint.args[1])?;
+        let z = self.get_var(&constraint.args[2])?;
+        
+        // Use Selen's max constraint: z = max([x, y])
+        let max_xy = self.model.max(&[x, y])
+            .map_err(|e| FlatZincError::MapError {
+                message: format!("Error creating max constraint: {}", e),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            })?;
+        self.model.new(max_xy.eq(z));
+        Ok(())
+    }
+
+    /// Map int_min: z = min(x, y)
+    /// FlatZinc signature: int_min(x, y, z)
+    pub(super) fn map_int_min(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "int_min requires 3 arguments (x, y, z)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var(&constraint.args[0])?;
+        let y = self.get_var(&constraint.args[1])?;
+        let z = self.get_var(&constraint.args[2])?;
+        
+        // Use Selen's min constraint: z = min([x, y])
+        let min_xy = self.model.min(&[x, y])
+            .map_err(|e| FlatZincError::MapError {
+                message: format!("Error creating min constraint: {}", e),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            })?;
+        self.model.new(min_xy.eq(z));
+        Ok(())
+    }
+
+    /// Map bool_le: x <= y for boolean variables
+    /// FlatZinc signature: bool_le(x, y)
+    pub(super) fn map_bool_le(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 2 {
+            return Err(FlatZincError::MapError {
+                message: "bool_le requires 2 arguments".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var(&constraint.args[0])?;
+        let y = self.get_var(&constraint.args[1])?;
+        
+        // For boolean variables: x <= y is equivalent to (not x) or y
+        // Which is the same as x => y (implication)
+        self.model.new(x.le(y));
         Ok(())
     }
 }
