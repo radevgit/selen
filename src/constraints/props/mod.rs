@@ -17,6 +17,7 @@ mod modulo;
 mod mul;
 mod neq;
 mod noop;
+mod reification;
 mod sum;
 mod table;
 
@@ -1343,6 +1344,66 @@ impl Propagators {
         self.push_new_prop_with_metadata(
             self::bool_logic::BoolNot::new(operand, result),
             ConstraintType::BooleanNot,
+            variables,
+            metadata,
+        )
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 🔄 Reification Constraints
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Declare a reified equality constraint: `b ⇔ (x = y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x = y`.
+    /// - If b = 1, then x must equal y
+    /// - If b = 0, then x must not equal y
+    /// - If x = y, then b must be 1
+    /// - If x ≠ y, then b must be 0
+    pub fn int_eq_reif(&mut self, x: VarId, y: VarId, b: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = ViewInfo::Variable { var_id: x };
+        let y_info = ViewInfo::Variable { var_id: y };
+        
+        let variables = vec![x, y, b];
+        
+        let metadata = ConstraintData::Binary {
+            left: x_info,
+            right: y_info,
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::reification::IntEqReif::new(x, y, b),
+            ConstraintType::EqualityReified,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a reified inequality constraint: `b ⇔ (x ≠ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≠ y`.
+    /// - If b = 1, then x must not equal y
+    /// - If b = 0, then x must equal y
+    /// - If x ≠ y, then b must be 1
+    /// - If x = y, then b must be 0
+    pub fn int_ne_reif(&mut self, x: VarId, y: VarId, b: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let x_info = ViewInfo::Variable { var_id: x };
+        let y_info = ViewInfo::Variable { var_id: y };
+        
+        let variables = vec![x, y, b];
+        
+        let metadata = ConstraintData::Binary {
+            left: x_info,
+            right: y_info,
+        };
+        
+        self.push_new_prop_with_metadata(
+            self::reification::IntNeReif::new(x, y, b),
+            ConstraintType::InequalityReified,
             variables,
             metadata,
         )
