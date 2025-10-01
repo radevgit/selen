@@ -2,10 +2,7 @@
 
 use selen::prelude::*;
 
-// TODO: This test has test ordering issues - passes when run alone but may
-// fail when run with other tests. Related to propagation ordering.
 #[test]
-#[ignore]
 fn test_int_eq_reif_true() {
     let mut m = Model::default();
     
@@ -57,10 +54,7 @@ fn test_int_eq_reif_false() {
     assert_eq!(solution[b], Val::ValI(0));
 }
 
-// TODO: This test has test ordering issues - passes when run alone but may
-// fail when run with other tests. Related to propagation ordering.
 #[test]
-#[ignore]
 fn test_int_eq_reif_inference_to_true() {
     let mut m = Model::default();
     
@@ -134,11 +128,7 @@ fn test_int_ne_reif_true() {
     assert_eq!(solution[b], Val::ValI(1));
 }
 
-// TODO: This test has a propagation ordering issue - works when variables are pre-fixed
-// but fails ~80% of the time when using constraints to fix values
-// Need to investigate propagation order or strengthen the propagator
 #[test]
-#[ignore]
 fn test_int_ne_reif_false() {
     let mut m = Model::default();
     

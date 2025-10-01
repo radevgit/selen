@@ -43,28 +43,30 @@ impl Prune for IntEqReif {
         let b_min = self.b.min(ctx);
         let b_max = self.b.max(ctx);
 
+        // CRITICAL: Check all inference directions to ensure proper propagation
+        // This ensures we make progress regardless of constraint posting order
+        
+        // Direction 1: From x, y domains → infer b
         // If domains don't overlap at all, x ≠ y is certain
         if x_max < y_min || y_max < x_min {
             // x and y cannot be equal, so b must be 0
             self.b.try_set_max(Val::ValI(0), ctx)?;
-            return Some(());
         }
-
         // If both x and y are fixed to the same value
-        if x_min == x_max && y_min == y_max && x_min == y_min {
+        else if x_min == x_max && y_min == y_max && x_min == y_min {
             // x = y is certain, so b must be 1
             self.b.try_set_min(Val::ValI(1), ctx)?;
-            return Some(());
         }
 
-        // If b is fixed to 1 (true)
+        // Direction 2: From b → enforce constraint on x, y
+        // If b is fixed to 1 (true): enforce x = y
         if b_min >= Val::ValI(1) {
             // Enforce x = y by intersecting domains
             let new_min = if x_min > y_min { x_min } else { y_min };
             let new_max = if x_max < y_max { x_max } else { y_max };
             
             if new_min > new_max {
-                // No intersection possible
+                // No intersection possible - constraint is violated
                 return None;
             }
             
@@ -74,9 +76,8 @@ impl Prune for IntEqReif {
             self.y.try_set_max(new_max, ctx)?;
         }
 
-        // If b is fixed to 0 (false)
+        // If b is fixed to 0 (false): enforce x ≠ y
         if b_max <= Val::ValI(0) {
-            // Enforce x ≠ y
             // If one variable is fixed, remove that value from the other
             if x_min == x_max {
                 // x is fixed, y cannot equal x
@@ -139,23 +140,24 @@ impl Prune for IntNeReif {
         let b_min = self.b.min(ctx);
         let b_max = self.b.max(ctx);
 
+        // CRITICAL: Check all inference directions to ensure proper propagation
+        // This ensures we make progress regardless of constraint posting order
+        
+        // Direction 1: From x, y domains → infer b
         // If domains don't overlap at all, x ≠ y is certain
         if x_max < y_min || y_max < x_min {
-            // x and y cannot be equal, so b must be 1
+            // x and y cannot be equal, so b must be 1 (they ARE not equal)
             self.b.try_set_min(Val::ValI(1), ctx)?;
-            return Some(());
         }
-
         // If both x and y are fixed to the same value
-        if x_min == x_max && y_min == y_max && x_min == y_min {
-            // x = y is certain, so b must be 0
+        else if x_min == x_max && y_min == y_max && x_min == y_min {
+            // x = y is certain, so b must be 0 (they are NOT not-equal)
             self.b.try_set_max(Val::ValI(0), ctx)?;
-            return Some(());
         }
 
-        // If b is fixed to 1 (true)
+        // Direction 2: From b → enforce constraint on x, y
+        // If b is fixed to 1 (true): enforce x ≠ y
         if b_min >= Val::ValI(1) {
-            // Enforce x ≠ y
             // If one variable is fixed, remove that value from the other
             if x_min == x_max {
                 // x is fixed, y cannot equal x
@@ -178,14 +180,14 @@ impl Prune for IntNeReif {
             }
         }
 
-        // If b is fixed to 0 (false)
+        // If b is fixed to 0 (false): enforce x = y
         if b_max <= Val::ValI(0) {
             // Enforce x = y by intersecting domains
             let new_min = if x_min > y_min { x_min } else { y_min };
             let new_max = if x_max < y_max { x_max } else { y_max };
             
             if new_min > new_max {
-                // No intersection possible
+                // No intersection possible - constraint is violated
                 return None;
             }
             
