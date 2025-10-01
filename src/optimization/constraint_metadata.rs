@@ -70,6 +70,14 @@ pub enum ConstraintType {
     EqualityReified,
     /// Reified inequality constraint (b ⇔ (x ≠ y))
     InequalityReified,
+    /// Reified less-than constraint (b ⇔ (x < y))
+    LessThanReified,
+    /// Reified less-than-or-equal constraint (b ⇔ (x ≤ y))
+    LessEqualReified,
+    /// Reified greater-than constraint (b ⇔ (x > y))
+    GreaterThanReified,
+    /// Reified greater-than-or-equal constraint (b ⇔ (x ≥ y))
+    GreaterEqualReified,
     /// Count constraint (count(vars, value) = count_var)
     Count,
     /// Table constraint (table(vars, tuples))
@@ -389,7 +397,11 @@ impl ConstraintRegistry {
                     analysis.has_complex_constraints = true;
                 }
                 ConstraintType::EqualityReified | 
-                ConstraintType::InequalityReified => {
+                ConstraintType::InequalityReified |
+                ConstraintType::LessThanReified |
+                ConstraintType::LessEqualReified |
+                ConstraintType::GreaterThanReified |
+                ConstraintType::GreaterEqualReified => {
                     // Reified constraints don't directly provide bounds for the variables involved,
                     // but they make the problem more complex
                     analysis.has_complex_constraints = true;

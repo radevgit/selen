@@ -541,4 +541,268 @@ impl Model {
     pub fn int_ne_reif(&mut self, x: VarId, y: VarId, b: VarId) {
         self.props.int_ne_reif(x, y, b);
     }
+
+    /// Post a reified less-than constraint: `b ⇔ (x < y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x < y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_lt_reif(x, y, b);
+    /// // Now b is 1 iff x < y
+    /// ```
+    pub fn int_lt_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_lt_reif(x, y, b);
+    }
+
+    /// Post a reified less-than-or-equal constraint: `b ⇔ (x ≤ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≤ y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_le_reif(x, y, b);
+    /// // Now b is 1 iff x ≤ y
+    /// ```
+    pub fn int_le_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_le_reif(x, y, b);
+    }
+
+    /// Post a reified greater-than constraint: `b ⇔ (x > y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x > y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_gt_reif(x, y, b);
+    /// // Now b is 1 iff x > y
+    /// ```
+    pub fn int_gt_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_gt_reif(x, y, b);
+    }
+
+    /// Post a reified greater-than-or-equal constraint: `b ⇔ (x ≥ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≥ y`.
+    /// This is useful for FlatZinc integration and conditional constraints.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(1, 10);
+    /// let y = m.int(1, 10);
+    /// let b = m.bool();
+    /// m.int_ge_reif(x, y, b);
+    /// // Now b is 1 iff x ≥ y
+    /// ```
+    pub fn int_ge_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_ge_reif(x, y, b);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 📊 Linear Constraints (FlatZinc Integration)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Post a linear equality constraint: `sum(coeffs[i] * vars[i]) = constant`.
+    /// 
+    /// This implements the FlatZinc `int_lin_eq` constraint, which represents
+    /// a weighted sum of variables equal to a constant value.
+    /// 
+    /// # Arguments
+    /// * `coefficients` - Array of integer coefficients
+    /// * `variables` - Array of variables (must have same length as coefficients)
+    /// * `constant` - The constant value the weighted sum must equal
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(0, 10);
+    /// let y = m.int(0, 10);
+    /// let z = m.int(0, 10);
+    /// 
+    /// // 2x + 3y - z = 10
+    /// m.int_lin_eq(&[2, 3, -1], &[x, y, z], 10);
+    /// ```
+    /// 
+    pub fn int_lin_eq(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
+        // Handle mismatched lengths - will be detected as unsatisfiable during solving
+        if coefficients.len() != variables.len() {
+            // Create an unsatisfiable constraint: 0 = 1
+            self.props.equals(Val::ValI(0), Val::ValI(1));
+            return;
+        }
+
+        if variables.is_empty() {
+            // Empty sum = constant
+            // This is satisfiable only if constant == 0, otherwise unsatisfiable
+            self.props.equals(Val::ValI(0), Val::ValI(constant));
+            return;
+        }
+
+        // Create scaled variables: coeffs[i] * vars[i]
+        // We use actual multiplication to create new variables, not views
+        let scaled_vars: Vec<VarId> = coefficients
+            .iter()
+            .zip(variables.iter())
+            .map(|(&coeff, &var)| {
+                self.mul(var, Val::ValI(coeff))
+            })
+            .collect();
+
+        // Create sum of all scaled variables
+        let sum_var = self.sum(&scaled_vars);
+
+        // Post equality constraint: sum = constant
+        self.props.equals(sum_var, Val::ValI(constant));
+    }
+
+    /// Post a linear less-than-or-equal constraint: `sum(coeffs[i] * vars[i]) ≤ constant`.
+    /// 
+    /// This implements the FlatZinc `int_lin_le` constraint, which represents
+    /// a weighted sum of variables less than or equal to a constant value.
+    /// 
+    /// # Arguments
+    /// * `coefficients` - Array of integer coefficients
+    /// * `variables` - Array of variables (must have same length as coefficients)
+    /// * `constant` - The upper bound for the weighted sum
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(0, 10);
+    /// let y = m.int(0, 10);
+    /// let z = m.int(0, 10);
+    /// 
+    /// // x + y + z ≤ 20
+    /// m.int_lin_le(&[1, 1, 1], &[x, y, z], 20);
+    /// ```
+    /// 
+    pub fn int_lin_le(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
+        // Handle mismatched lengths - will be detected as unsatisfiable during solving
+        if coefficients.len() != variables.len() {
+            // Create an unsatisfiable constraint: 0 = 1
+            self.props.equals(Val::ValI(0), Val::ValI(1));
+            return;
+        }
+
+        if variables.is_empty() {
+            // Empty sum ≤ constant
+            // This is satisfiable only if 0 ≤ constant, otherwise unsatisfiable
+            self.props.less_than_or_equals(Val::ValI(0), Val::ValI(constant));
+            return;
+        }
+
+        // Create scaled variables: coeffs[i] * vars[i]
+        // We use actual multiplication to create new variables, not views
+        let scaled_vars: Vec<VarId> = coefficients
+            .iter()
+            .zip(variables.iter())
+            .map(|(&coeff, &var)| {
+                self.mul(var, Val::ValI(coeff))
+            })
+            .collect();
+
+        // Create sum of all scaled variables
+        let sum_var = self.sum(&scaled_vars);
+
+        // Post less-than-or-equal constraint: sum ≤ constant
+        self.props.less_than_or_equals(sum_var, Val::ValI(constant));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 🔀 Boolean Clause (CNF/SAT Support)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Post a boolean clause constraint: `(∨ pos[i]) ∨ (∨ ¬neg[i])`.
+    /// 
+    /// This implements the FlatZinc `bool_clause` constraint, which represents
+    /// a clause in CNF (Conjunctive Normal Form). The clause is satisfied if:
+    /// - At least one positive literal is true, OR
+    /// - At least one negative literal is false
+    /// 
+    /// In other words: `pos[0] ∨ pos[1] ∨ ... ∨ ¬neg[0] ∨ ¬neg[1] ∨ ...`
+    /// 
+    /// # Arguments
+    /// * `pos` - Array of positive boolean literals (variables that should be true)
+    /// * `neg` - Array of negative boolean literals (variables that should be false)
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let a = m.bool();
+    /// let b = m.bool();
+    /// let c = m.bool();
+    /// 
+    /// // At least one of: a is true, b is true, or c is false
+    /// // Equivalent to: a ∨ b ∨ ¬c
+    /// m.bool_clause(&[a, b], &[c]);
+    /// ```
+    /// 
+    /// # Implementation
+    /// 
+    /// The clause is decomposed as:
+    /// 1. If both arrays are empty, the clause is unsatisfiable (posts false)
+    /// 2. Otherwise, we create: `(∨ pos[i]) ∨ (∨ ¬neg[i]) = true`
+    ///    - This ensures at least one positive literal is 1, or one negative literal is 0
+    pub fn bool_clause(&mut self, pos: &[VarId], neg: &[VarId]) {
+        // Empty clause is unsatisfiable
+        if pos.is_empty() && neg.is_empty() {
+            // Post an unsatisfiable constraint: 0 = 1
+            self.props.equals(Val::ValI(0), Val::ValI(1));
+            return;
+        }
+
+        // Special case: only positive literals
+        if neg.is_empty() {
+            // At least one positive literal must be true: bool_or(pos) = 1
+            let clause_result = self.bool_or(pos);
+            self.props.equals(clause_result, Val::ValI(1));
+            return;
+        }
+
+        // Special case: only negative literals
+        if pos.is_empty() {
+            // At least one negative literal must be false
+            // ¬neg[0] ∨ ¬neg[1] ∨ ... = ¬(neg[0] ∧ neg[1] ∧ ...)
+            let all_neg = self.bool_and(neg);
+            let not_all_neg = self.bool_not(all_neg);
+            self.props.equals(not_all_neg, Val::ValI(1));
+            return;
+        }
+
+        // General case: both positive and negative literals
+        // pos[0] ∨ ... ∨ ¬neg[0] ∨ ...
+        // = (pos[0] ∨ ... ∨ pos[n]) ∨ (¬neg[0] ∨ ... ∨ ¬neg[m])
+        // = (∨ pos[i]) ∨ ¬(∧ neg[i])
+        
+        let pos_clause = self.bool_or(pos);
+        let all_neg = self.bool_and(neg);
+        let not_all_neg = self.bool_not(all_neg);
+        
+        // At least one side must be true
+        let final_clause = self.bool_or(&[pos_clause, not_all_neg]);
+        self.props.equals(final_clause, Val::ValI(1));
+    }
 }

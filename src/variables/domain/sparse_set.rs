@@ -318,6 +318,21 @@ impl SparseSet {
     }
 
     /// Set intersection - modify this set to contain only elements in both sets
+    /// 
+    /// **Note**: This operates on the **domain** of integer variables, not on set-valued variables.
+    /// In Selen, `SparseSet` is used as the domain representation for integer variables (including
+    /// those created with `intset()`). These operations are useful for constraint propagation and
+    /// domain manipulation, but they do not implement FlatZinc set constraints like `set_union(x,y,z)`
+    /// which require true set-valued variables where the variable's value is itself a set.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::variables::domain::sparse_set::SparseSet;
+    /// let mut domain1 = SparseSet::new(1, 5);  // Domain {1,2,3,4,5}
+    /// let mut domain2 = SparseSet::new(3, 7);  // Domain {3,4,5,6,7}
+    /// domain2.remove(6);                        // Domain {3,4,5,7}
+    /// domain1.intersect_with(&domain2);         // domain1 becomes {3,4,5}
+    /// ```
     pub fn intersect_with(&mut self, other: &SparseSet) {
         // Create a list of values to remove to avoid modifying while iterating
         let mut to_remove = Vec::with_capacity(self.size as usize);
@@ -334,6 +349,10 @@ impl SparseSet {
     }
 
     /// Set union - add all elements from other set to this set
+    /// 
+    /// **Note**: This operates on the **domain** of integer variables, not on set-valued variables.
+    /// See `intersect_with()` for more details on the distinction.
+    /// 
     /// Note: This requires that both sets have compatible universes
     pub fn union_with(&mut self, other: &SparseSet) {
         for val in other.iter() {
@@ -368,6 +387,35 @@ impl SparseSet {
                     }
                 }
             }
+        }
+    }
+
+    /// Set difference - remove all elements from this set that are in other set
+    /// 
+    /// This computes `self = self \ other` (set difference).
+    /// 
+    /// **Note**: This operates on the **domain** of integer variables, not on set-valued variables.
+    /// See `intersect_with()` for more details on the distinction.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::variables::domain::sparse_set::SparseSet;
+    /// let mut a = SparseSet::new(1, 5);      // Domain {1, 2, 3, 4, 5}
+    /// let b = SparseSet::new(3, 7);          // Domain {3, 4, 5, 6, 7}
+    /// a.diff_with(&b);                        // a becomes {1, 2}
+    /// ```
+    pub fn diff_with(&mut self, other: &SparseSet) {
+        // Create a list of values to remove to avoid modifying while iterating
+        let mut to_remove = Vec::with_capacity(self.size as usize);
+        
+        for val in self.iter() {
+            if other.contains(val) {
+                to_remove.push(val);
+            }
+        }
+        
+        for val in to_remove {
+            self.remove(val);
         }
     }
 
@@ -985,6 +1033,125 @@ mod test {
         assert!(!v1.contains(1));
         assert!(!v1.contains(3));
         assert!(!v1.contains(5));
+    }
+
+    #[test]
+    fn test_diff_with_basic() {
+        let mut a = SparseSet::new(1, 5);  // {1, 2, 3, 4, 5}
+        let b = SparseSet::new(3, 7);      // {3, 4, 5, 6, 7}
+        
+        a.diff_with(&b);
+        
+        // a should now be {1, 2} (elements in a but not in b)
+        assert_eq!(a.size(), 2);
+        assert!(a.contains(1));
+        assert!(a.contains(2));
+        assert!(!a.contains(3));
+        assert!(!a.contains(4));
+        assert!(!a.contains(5));
+    }
+
+    #[test]
+    fn test_diff_with_disjoint() {
+        let mut a = SparseSet::new(1, 3);  // {1, 2, 3}
+        let b = SparseSet::new(4, 6);      // {4, 5, 6}
+        
+        a.diff_with(&b);
+        
+        // a should be unchanged (disjoint sets)
+        assert_eq!(a.size(), 3);
+        assert!(a.contains(1));
+        assert!(a.contains(2));
+        assert!(a.contains(3));
+    }
+
+    #[test]
+    fn test_diff_with_subset() {
+        let mut a = SparseSet::new(1, 5);  // {1, 2, 3, 4, 5}
+        let mut b = SparseSet::new(1, 5);  // {1, 2, 3, 4, 5}
+        
+        // Make b a subset: {2, 4}
+        b.remove(1);
+        b.remove(3);
+        b.remove(5);
+        
+        a.diff_with(&b);
+        
+        // a should now be {1, 3, 5}
+        assert_eq!(a.size(), 3);
+        assert!(a.contains(1));
+        assert!(a.contains(3));
+        assert!(a.contains(5));
+        assert!(!a.contains(2));
+        assert!(!a.contains(4));
+    }
+
+    #[test]
+    fn test_diff_with_empty() {
+        let mut a = SparseSet::new(1, 3);  // {1, 2, 3}
+        let mut b = SparseSet::new(1, 3);  // {1, 2, 3}
+        b.remove_all(); // Make it empty
+        
+        a.diff_with(&b);
+        
+        // a should be unchanged
+        assert_eq!(a.size(), 3);
+        assert!(a.contains(1));
+        assert!(a.contains(2));
+        assert!(a.contains(3));
+    }
+
+    #[test]
+    fn test_diff_with_becomes_empty() {
+        let mut a = SparseSet::new(1, 3);  // {1, 2, 3}
+        let b = SparseSet::new(1, 5);      // {1, 2, 3, 4, 5} (superset)
+        
+        a.diff_with(&b);
+        
+        // a should now be empty
+        assert_eq!(a.size(), 0);
+        assert!(a.is_empty());
+    }
+
+    #[test]
+    fn test_diff_with_sparse_domains() {
+        let a_values = vec![1, 3, 5, 7, 9];
+        let b_values = vec![2, 3, 5, 8];
+        
+        let mut a = SparseSet::new_from_values(a_values);
+        let b = SparseSet::new_from_values(b_values);
+        
+        a.diff_with(&b);
+        
+        // a should now be {1, 7, 9} (removed 3 and 5)
+        assert_eq!(a.size(), 3);
+        assert!(a.contains(1));
+        assert!(a.contains(7));
+        assert!(a.contains(9));
+        assert!(!a.contains(3));
+        assert!(!a.contains(5));
+    }
+
+    #[test]
+    fn test_set_operations_combination() {
+        // Test combining union, intersect, and diff
+        let mut a = SparseSet::new(1, 5);   // {1, 2, 3, 4, 5}
+        let b = SparseSet::new(3, 7);       // {3, 4, 5, 6, 7}
+        let c = SparseSet::new(4, 8);       // {4, 5, 6, 7, 8}
+        
+        // a ∩ b = {3, 4, 5}
+        a.intersect_with(&b);
+        assert_eq!(a.size(), 3);
+        assert!(a.contains(3));
+        assert!(a.contains(4));
+        assert!(a.contains(5));
+        
+        // (a ∩ b) \ c = {3} (remove 4 and 5)
+        a.diff_with(&c);
+        assert_eq!(a.size(), 1);
+        assert!(a.contains(3));
+        assert!(!a.contains(4));
+        assert!(!a.contains(5));
     }
 
     #[test]
