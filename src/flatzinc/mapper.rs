@@ -327,6 +327,11 @@ impl<'a> MappingContext<'a> {
             "int_lin_le_reif" => self.map_int_lin_le_reif(constraint),
             "fzn_all_different_int" | "all_different_int" | "all_different" => self.map_all_different(constraint),
             "sort" => self.map_sort(constraint),
+            "table_int" => self.map_table_int(constraint),
+            "table_bool" => self.map_table_bool(constraint),
+            "lex_less" | "lex_less_int" => self.map_lex_less(constraint),
+            "lex_lesseq" | "lex_lesseq_int" => self.map_lex_lesseq(constraint),
+            "nvalue" => self.map_nvalue(constraint),
             "int_eq_reif" => self.map_int_eq_reif(constraint),
             "int_ne_reif" => self.map_int_ne_reif(constraint),
             "int_lt_reif" => self.map_int_lt_reif(constraint),
@@ -335,8 +340,8 @@ impl<'a> MappingContext<'a> {
             "int_ge_reif" => self.map_int_ge_reif(constraint),
             "bool_clause" => self.map_bool_clause(constraint),
             // Array aggregations
-            "array_int_minimum" => self.map_array_int_minimum(constraint),
-            "array_int_maximum" => self.map_array_int_maximum(constraint),
+            "array_int_minimum" | "minimum_int" => self.map_array_int_minimum(constraint),
+            "array_int_maximum" | "maximum_int" => self.map_array_int_maximum(constraint),
             "array_bool_and" => self.map_array_bool_and(constraint),
             "array_bool_or" => self.map_array_bool_or(constraint),
             // Bool-int conversion
@@ -360,6 +365,10 @@ impl<'a> MappingContext<'a> {
             "int_min" => self.map_int_min(constraint),
             // Boolean constraints
             "bool_le" => self.map_bool_le(constraint),
+            "bool_le_reif" => self.map_bool_le_reif(constraint),
+            "bool_eq" => self.map_bool_eq(constraint),
+            "bool_not" => self.map_bool_not(constraint),
+            "bool_xor" => self.map_bool_xor(constraint),
             // Set constraints
             "set_in_reif" => self.map_set_in_reif(constraint),
             "set_in" => self.map_set_in(constraint),

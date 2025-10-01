@@ -152,4 +152,85 @@ impl<'a> MappingContext<'a> {
         self.model.int_eq_reif(x, y, r);
         Ok(())
     }
+    
+    /// Map bool_eq: x = y for boolean variables
+    /// FlatZinc signature: bool_eq(x, y)
+    pub(in crate::flatzinc::mapper) fn map_bool_eq(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 2 {
+            return Err(FlatZincError::MapError {
+                message: "bool_eq requires 2 arguments".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        
+        // x = y for booleans
+        self.model.new(x.eq(y));
+        Ok(())
+    }
+    
+    /// Map bool_le_reif: r ⇔ (x ≤ y) for boolean variables
+    /// FlatZinc signature: bool_le_reif(x, y, r)
+    pub(in crate::flatzinc::mapper) fn map_bool_le_reif(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "bool_le_reif requires 3 arguments".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let r = self.get_var_or_const(&constraint.args[2])?;
+        
+        // For booleans (0/1): r ⇔ (x ≤ y)
+        self.model.int_le_reif(x, y, r);
+        Ok(())
+    }
+    
+    /// Map bool_not: y = ¬x for boolean variables
+    /// FlatZinc signature: bool_not(x, y)
+    pub(in crate::flatzinc::mapper) fn map_bool_not(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 2 {
+            return Err(FlatZincError::MapError {
+                message: "bool_not requires 2 arguments".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        
+        // y = NOT x  →  y = 1 - x (for boolean 0/1)
+        let not_x = self.model.sub(crate::variables::Val::ValI(1), x);
+        self.model.new(y.eq(not_x));
+        Ok(())
+    }
+    
+    /// Map bool_xor: z = x XOR y for boolean variables
+    /// FlatZinc signature: bool_xor(x, y, z)
+    pub(in crate::flatzinc::mapper) fn map_bool_xor(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 3 {
+            return Err(FlatZincError::MapError {
+                message: "bool_xor requires 3 arguments".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
+        let z = self.get_var_or_const(&constraint.args[2])?;
+        
+        // z = x XOR y
+        // For booleans: x XOR y = (x + y) mod 2 = x + y - 2*(x*y)
+        // Or equivalently: z ⇔ (x ≠ y)
+        self.model.int_ne_reif(x, y, z);
+        Ok(())
+    }
 }

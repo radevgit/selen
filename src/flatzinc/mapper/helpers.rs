@@ -182,6 +182,55 @@ impl<'a> MappingContext<'a> {
         }
     }
     
+    /// Extract a boolean value from an expression
+    pub(super) fn extract_bool(&self, expr: &Expr) -> FlatZincResult<bool> {
+        match expr {
+            Expr::BoolLit(val) => Ok(*val),
+            Expr::IntLit(val) => Ok(*val != 0), // Treat 0 as false, non-zero as true
+            Expr::Ident(name) => {
+                // Could be a parameter - for now, just error
+                Err(FlatZincError::MapError {
+                    message: format!("Expected boolean literal, got identifier: {}", name),
+                    line: None,
+                    column: None,
+                })
+            }
+            _ => Err(FlatZincError::MapError {
+                message: "Expected boolean literal".to_string(),
+                line: None,
+                column: None,
+            }),
+        }
+    }
+    
+    /// Extract an array of booleans from an expression
+    /// 
+    /// Handles:
+    /// - Inline array literals: [true, false, true]
+    /// - Parameter array identifiers: flags (references previously declared parameter array)
+    pub(super) fn extract_bool_array(&self, expr: &Expr) -> FlatZincResult<Vec<bool>> {
+        match expr {
+            Expr::ArrayLit(elements) => {
+                elements.iter().map(|e| self.extract_bool(e)).collect()
+            }
+            Expr::Ident(name) => {
+                // Look up parameter array by name
+                self.param_bool_arrays.get(name)
+                    .cloned()
+                    .ok_or_else(|| FlatZincError::MapError {
+                        message: format!("Parameter array '{}' not found (expected array of booleans)", name),
+                        line: None,
+                        column: None,
+                    })
+            }
+            _ => Err(FlatZincError::MapError {
+                message: "Expected array of booleans or array identifier".to_string(),
+                line: None,
+                column: None,
+            }),
+        }
+    }
+    
     /// Extract an array of variables from an expression
     /// 
     /// Handles:
