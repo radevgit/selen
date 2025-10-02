@@ -20,8 +20,8 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let result = self.get_var(&constraint.args[1])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let result = self.get_var_or_const(&constraint.args[1])?;
         
         // Use Selen's abs constraint
         let abs_x = self.model.abs(x);

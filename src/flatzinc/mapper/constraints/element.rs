@@ -23,7 +23,8 @@ impl<'a> MappingContext<'a> {
         }
         
         // Get index variable (1-based in FlatZinc)
-        let index_1based = self.get_var(&constraint.args[0])?;
+        // Supports: variables, array access (x[i]), integer literals
+        let index_1based = self.get_var_or_const(&constraint.args[0])?;
         
         // Convert to 0-based index for Selen
         // Create: index_0based = index_1based - 1
@@ -32,21 +33,9 @@ impl<'a> MappingContext<'a> {
         // Get array
         let array = self.extract_var_array(&constraint.args[1])?;
         
-        // Get value (can be variable or constant)
-        let value = match &constraint.args[2] {
-            Expr::Ident(_) => self.get_var(&constraint.args[2])?,
-            Expr::IntLit(val) => {
-                // Convert constant to fixed variable
-                self.model.int(*val as i32, *val as i32)
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported value type in array_var_int_element".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        };
+        // Get value (can be variable, array access, or constant)
+        // Supports: variables, array access (y[j]), integer literals
+        let value = self.get_var_or_const(&constraint.args[2])?;
         
         // Apply element constraint: array[index_0based] = value
         self.model.elem(&array, index_0based, value);
@@ -66,7 +55,8 @@ impl<'a> MappingContext<'a> {
         }
         
         // Get index variable (1-based in FlatZinc)
-        let index_1based = self.get_var(&constraint.args[0])?;
+        // Supports: variables, array access (x[i]), integer literals
+        let index_1based = self.get_var_or_const(&constraint.args[0])?;
         
         // Convert to 0-based index for Selen
         let index_0based = self.model.sub(index_1based, crate::variables::Val::ValI(1));
@@ -77,20 +67,9 @@ impl<'a> MappingContext<'a> {
             .map(|&val| self.model.int(val, val))
             .collect();
         
-        // Get value (can be variable or constant)
-        let value = match &constraint.args[2] {
-            Expr::Ident(_) => self.get_var(&constraint.args[2])?,
-            Expr::IntLit(val) => {
-                self.model.int(*val as i32, *val as i32)
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported value type in array_int_element".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        };
+        // Get value (can be variable, array access, or constant)
+        // Supports: variables, array access (y[j]), integer literals
+        let value = self.get_var_or_const(&constraint.args[2])?;
         
         // Apply element constraint: array[index_0based] = value
         self.model.elem(&array, index_0based, value);
@@ -110,7 +89,8 @@ impl<'a> MappingContext<'a> {
         }
         
         // Get index variable (1-based in FlatZinc)
-        let index_1based = self.get_var(&constraint.args[0])?;
+        // Supports: variables, array access (x[i]), integer literals
+        let index_1based = self.get_var_or_const(&constraint.args[0])?;
         
         // Convert to 0-based index for Selen
         let index_0based = self.model.sub(index_1based, crate::variables::Val::ValI(1));
@@ -118,21 +98,9 @@ impl<'a> MappingContext<'a> {
         // Get array (booleans are represented as 0/1 variables)
         let array = self.extract_var_array(&constraint.args[1])?;
         
-        // Get value (can be variable or constant)
-        let value = match &constraint.args[2] {
-            Expr::Ident(_) => self.get_var(&constraint.args[2])?,
-            Expr::BoolLit(b) => {
-                let val = if *b { 1 } else { 0 };
-                self.model.int(val, val)
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported value type in array_var_bool_element".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        };
+        // Get value (can be variable, array access, or constant)
+        // Supports: variables, array access (y[j]), boolean literals
+        let value = self.get_var_or_const(&constraint.args[2])?;
         
         // Apply element constraint: array[index_0based] = value
         self.model.elem(&array, index_0based, value);
@@ -152,7 +120,8 @@ impl<'a> MappingContext<'a> {
         }
         
         // Get index variable (1-based in FlatZinc)
-        let index_1based = self.get_var(&constraint.args[0])?;
+        // Supports: variables, array access (x[i]), integer literals
+        let index_1based = self.get_var_or_const(&constraint.args[0])?;
         
         // Convert to 0-based index for Selen
         let index_0based = self.model.sub(index_1based, crate::variables::Val::ValI(1));
@@ -181,21 +150,9 @@ impl<'a> MappingContext<'a> {
             });
         };
         
-        // Get value (can be variable or constant)
-        let value = match &constraint.args[2] {
-            Expr::Ident(_) => self.get_var(&constraint.args[2])?,
-            Expr::BoolLit(b) => {
-                let val = if *b { 1 } else { 0 };
-                self.model.int(val, val)
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported value type in array_bool_element".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        };
+        // Get value (can be variable, array access, or constant)
+        // Supports: variables, array access (y[j]), boolean literals
+        let value = self.get_var_or_const(&constraint.args[2])?;
         
         // Apply element constraint: array[index_0based] = value
         self.model.elem(&array, index_0based, value);

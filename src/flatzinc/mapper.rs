@@ -200,6 +200,23 @@ impl<'a> MappingContext<'a> {
                                             var_ids.push(const_var);
                                         }
                                     }
+                                    Expr::SetLit(values) => {
+                                        // Set literal in array: {1, 2, 3} - currently not supported
+                                        // FlatZinc uses sets, but Selen doesn't have set variables yet
+                                        // For now, we'll skip/ignore set elements or create a placeholder
+                                        // This allows parsing to continue for files with set literals
+                                        return Err(FlatZincError::UnsupportedFeature {
+                                            feature: format!("Set literals in arrays not yet supported. Found set with {} elements", values.len()),
+                                            line: Some(decl.location.line),
+                                            column: Some(decl.location.column),
+                                        });
+                                    }
+                                    Expr::ArrayAccess { array, index } => {
+                                        // Array access in array literal: x[1]
+                                        // Evaluate the array access to get the variable
+                                        let var = self.evaluate_array_access(array, index)?;
+                                        var_ids.push(var);
+                                    }
                                     _ => {
                                         return Err(FlatZincError::UnsupportedFeature {
                                             feature: format!("Array element expression: {:?}", elem),
