@@ -471,4 +471,234 @@ impl<'a> MappingContext<'a> {
         
         Ok(())
     }
+    
+    /// Map fixed_fzn_cumulative constraint: cumulative scheduling with fixed capacity
+    /// FlatZinc signature: fixed_fzn_cumulative(array[int] of var int: s, array[int] of int: d, 
+    ///                                          array[int] of int: r, int: b)
+    /// 
+    /// Parameters:
+    /// - s[i]: start time of task i (variable)
+    /// - d[i]: duration of task i (constant)
+    /// - r[i]: resource requirement of task i (constant)
+    /// - b: resource capacity bound (constant)
+    /// 
+    /// Constraint: At any time t, sum of resources used by overlapping tasks ≤ b
+    /// Task i is active at time t if: s[i] ≤ t < s[i] + d[i]
+    /// 
+    /// Decomposition: For each relevant time point t, ensure resource usage ≤ b
+    pub(in crate::flatzinc::mapper) fn map_fixed_fzn_cumulative(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 4 {
+            return Err(FlatZincError::MapError {
+                message: "fixed_fzn_cumulative requires 4 arguments (starts, durations, resources, bound)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let starts = self.extract_var_array(&constraint.args[0])?;
+        let durations = self.extract_int_array(&constraint.args[1])?;
+        let resources = self.extract_int_array(&constraint.args[2])?;
+        let capacity = self.extract_int(&constraint.args[3])?;
+        
+        let n_tasks = starts.len();
+        
+        if durations.len() != n_tasks || resources.len() != n_tasks {
+            return Err(FlatZincError::MapError {
+                message: format!(
+                    "fixed_fzn_cumulative: array lengths must match (starts: {}, durations: {}, resources: {})",
+                    n_tasks, durations.len(), resources.len()
+                ),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        // Skip tasks with zero duration or zero resource requirement
+        let mut active_tasks = Vec::new();
+        for i in 0..n_tasks {
+            if durations[i] > 0 && resources[i] > 0 {
+                active_tasks.push(i);
+            }
+        }
+        
+        if active_tasks.is_empty() {
+            return Ok(()); // No active tasks, constraint trivially satisfied
+        }
+        
+        // Determine time horizon: compute reasonable bounds
+        // Time points to check: from min possible start to max possible end
+        let (min_time, max_time) = self.unbounded_int_bounds;
+        
+        // Limit time points to avoid excessive constraints (max 200 time points)
+        const MAX_TIME_POINTS: i32 = 200;
+        let time_range = max_time - min_time + 1;
+        
+        if time_range > MAX_TIME_POINTS {
+            // For large time horizons, use a simplified check on a subset of time points
+            // Sample time points evenly across the range
+            let step = time_range / MAX_TIME_POINTS;
+            for t_idx in 0..MAX_TIME_POINTS {
+                let t = min_time + t_idx * step;
+                self.add_cumulative_constraint_at_time(&starts, &durations, &resources, capacity, t, &active_tasks)?;
+            }
+        } else {
+            // For small time horizons, check every time point
+            for t in min_time..=max_time {
+                self.add_cumulative_constraint_at_time(&starts, &durations, &resources, capacity, t, &active_tasks)?;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Map var_fzn_cumulative constraint: cumulative scheduling with variable capacity
+    /// FlatZinc signature: var_fzn_cumulative(array[int] of var int: s, array[int] of int: d, 
+    ///                                        array[int] of int: r, var int: b)
+    /// 
+    /// Same as fixed_fzn_cumulative but with variable capacity b
+    pub(in crate::flatzinc::mapper) fn map_var_fzn_cumulative(&mut self, constraint: &Constraint) -> FlatZincResult<()> {
+        if constraint.args.len() != 4 {
+            return Err(FlatZincError::MapError {
+                message: "var_fzn_cumulative requires 4 arguments (starts, durations, resources, bound)".to_string(),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        let starts = self.extract_var_array(&constraint.args[0])?;
+        let durations = self.extract_int_array(&constraint.args[1])?;
+        let resources = self.extract_int_array(&constraint.args[2])?;
+        let capacity_var = self.get_var_or_const(&constraint.args[3])?;
+        
+        let n_tasks = starts.len();
+        
+        if durations.len() != n_tasks || resources.len() != n_tasks {
+            return Err(FlatZincError::MapError {
+                message: format!(
+                    "var_fzn_cumulative: array lengths must match (starts: {}, durations: {}, resources: {})",
+                    n_tasks, durations.len(), resources.len()
+                ),
+                line: Some(constraint.location.line),
+                column: Some(constraint.location.column),
+            });
+        }
+        
+        // Skip tasks with zero duration or zero resource requirement
+        let mut active_tasks = Vec::new();
+        for i in 0..n_tasks {
+            if durations[i] > 0 && resources[i] > 0 {
+                active_tasks.push(i);
+            }
+        }
+        
+        if active_tasks.is_empty() {
+            return Ok(()); // No active tasks, constraint trivially satisfied
+        }
+        
+        // Determine time horizon
+        let (min_time, max_time) = self.unbounded_int_bounds;
+        
+        // Limit time points to avoid excessive constraints
+        const MAX_TIME_POINTS: i32 = 200;
+        let time_range = max_time - min_time + 1;
+        
+        if time_range > MAX_TIME_POINTS {
+            let step = time_range / MAX_TIME_POINTS;
+            for t_idx in 0..MAX_TIME_POINTS {
+                let t = min_time + t_idx * step;
+                self.add_var_cumulative_constraint_at_time(&starts, &durations, &resources, capacity_var, t, &active_tasks)?;
+            }
+        } else {
+            for t in min_time..=max_time {
+                self.add_var_cumulative_constraint_at_time(&starts, &durations, &resources, capacity_var, t, &active_tasks)?;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Helper: Add cumulative constraint at specific time point t (fixed capacity)
+    fn add_cumulative_constraint_at_time(
+        &mut self,
+        starts: &[crate::variables::VarId],
+        durations: &[i32],
+        resources: &[i32],
+        capacity: i32,
+        t: i32,
+        active_tasks: &[usize],
+    ) -> FlatZincResult<()> {
+        // For each task i, create boolean: active_i ↔ (s[i] ≤ t < s[i] + d[i])
+        let mut resource_usage_terms = Vec::new();
+        
+        for &i in active_tasks {
+            // Task i is active at time t if: s[i] ≤ t AND t < s[i] + d[i]
+            // Which is: s[i] ≤ t AND s[i] + d[i] > t
+            
+            let t_const = self.model.int(t, t);
+            let end_time_i = durations[i]; // s[i] + d[i]
+            
+            // b1 ↔ (s[i] ≤ t)
+            let b1 = self.model.bool();
+            self.model.int_le_reif(starts[i], t_const, b1);
+            
+            // b2 ↔ (s[i] + d[i] > t)  which is  (s[i] > t - d[i])
+            let b2 = self.model.bool();
+            let t_minus_d = self.model.int(t - end_time_i + 1, t - end_time_i + 1);
+            self.model.int_ge_reif(starts[i], t_minus_d, b2);
+            
+            // active_i = b1 AND b2
+            let active_i = self.model.bool_and(&[b1, b2]);
+            
+            // If task i is active, it uses resources[i]
+            // resource_usage += active_i * resources[i]
+            let usage_i = self.model.mul(active_i, crate::variables::Val::ValI(resources[i]));
+            resource_usage_terms.push(usage_i);
+        }
+        
+        if !resource_usage_terms.is_empty() {
+            // Sum of resource usage at time t must be ≤ capacity
+            let total_usage = self.model.sum(&resource_usage_terms);
+            let capacity_var = self.model.int(capacity, capacity);
+            self.model.new(total_usage.le(capacity_var));
+        }
+        
+        Ok(())
+    }
+    
+    /// Helper: Add cumulative constraint at specific time point t (variable capacity)
+    fn add_var_cumulative_constraint_at_time(
+        &mut self,
+        starts: &[crate::variables::VarId],
+        durations: &[i32],
+        resources: &[i32],
+        capacity_var: crate::variables::VarId,
+        t: i32,
+        active_tasks: &[usize],
+    ) -> FlatZincResult<()> {
+        // Same as fixed version but use capacity_var instead of creating constant
+        let mut resource_usage_terms = Vec::new();
+        
+        for &i in active_tasks {
+            let t_const = self.model.int(t, t);
+            let end_time_i = durations[i];
+            
+            let b1 = self.model.bool();
+            self.model.int_le_reif(starts[i], t_const, b1);
+            
+            let b2 = self.model.bool();
+            let t_minus_d = self.model.int(t - end_time_i + 1, t - end_time_i + 1);
+            self.model.int_ge_reif(starts[i], t_minus_d, b2);
+            
+            let active_i = self.model.bool_and(&[b1, b2]);
+            let usage_i = self.model.mul(active_i, crate::variables::Val::ValI(resources[i]));
+            resource_usage_terms.push(usage_i);
+        }
+        
+        if !resource_usage_terms.is_empty() {
+            let total_usage = self.model.sum(&resource_usage_terms);
+            self.model.new(total_usage.le(capacity_var));
+        }
+        
+        Ok(())
+    }
 }

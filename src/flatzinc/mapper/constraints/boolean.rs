@@ -105,8 +105,8 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let bool_var = self.get_var(&constraint.args[0])?;
-        let int_var = self.get_var(&constraint.args[1])?;
+        let bool_var = self.get_var_or_const(&constraint.args[0])?;
+        let int_var = self.get_var_or_const(&constraint.args[1])?;
         // bool2int: int_var = bool_var (bool is 0/1 in Selen)
         self.model.new(int_var.eq(bool_var));
         Ok(())
@@ -123,8 +123,8 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let x = self.get_var(&constraint.args[0])?;
-        let y = self.get_var(&constraint.args[1])?;
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
         
         // For boolean variables: x <= y is equivalent to (not x) or y
         // Which is the same as x => y (implication)

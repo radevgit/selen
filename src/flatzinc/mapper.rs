@@ -170,6 +170,36 @@ impl<'a> MappingContext<'a> {
                                         let const_var = self.model.int(*val as i32, *val as i32);
                                         var_ids.push(const_var);
                                     }
+                                    Expr::BoolLit(b) => {
+                                        // Constant boolean - create a fixed variable (0 or 1)
+                                        let val = if *b { 1 } else { 0 };
+                                        let const_var = self.model.int(val, val);
+                                        var_ids.push(const_var);
+                                    }
+                                    Expr::Range(start, end) => {
+                                        // Range expression: expand [1..10] to [1,2,3,...,10]
+                                        let start_val = match **start {
+                                            Expr::IntLit(v) => v,
+                                            _ => return Err(FlatZincError::MapError {
+                                                message: "Range start must be integer literal".to_string(),
+                                                line: Some(decl.location.line),
+                                                column: Some(decl.location.column),
+                                            }),
+                                        };
+                                        let end_val = match **end {
+                                            Expr::IntLit(v) => v,
+                                            _ => return Err(FlatZincError::MapError {
+                                                message: "Range end must be integer literal".to_string(),
+                                                line: Some(decl.location.line),
+                                                column: Some(decl.location.column),
+                                            }),
+                                        };
+                                        // Expand range into individual constants
+                                        for val in start_val..=end_val {
+                                            let const_var = self.model.int(val as i32, val as i32);
+                                            var_ids.push(const_var);
+                                        }
+                                    }
                                     _ => {
                                         return Err(FlatZincError::UnsupportedFeature {
                                             feature: format!("Array element expression: {:?}", elem),
@@ -239,6 +269,25 @@ impl<'a> MappingContext<'a> {
                                     self.array_map.insert(decl.name.clone(), var_ids);
                                     return Ok(());
                                 }
+                                Type::Bool => {
+                                    // Boolean array: array [1..n] of var bool: flags
+                                    let size = if let Some(IndexSet::Range(start, end)) = index_sets.first() {
+                                        (end - start + 1) as usize
+                                    } else {
+                                        return Err(FlatZincError::UnsupportedFeature {
+                                            feature: "Array with complex index sets".to_string(),
+                                            line: Some(decl.location.line),
+                                            column: Some(decl.location.column),
+                                        });
+                                    };
+                                    
+                                    let var_ids: Vec<VarId> = (0..size)
+                                        .map(|_| self.model.bool())
+                                        .collect();
+                                    
+                                    self.array_map.insert(decl.name.clone(), var_ids);
+                                    return Ok(());
+                                }
                                 _ => {
                                     return Err(FlatZincError::UnsupportedFeature {
                                         feature: format!("Array element type: {:?}", inner),
@@ -247,6 +296,15 @@ impl<'a> MappingContext<'a> {
                                     });
                                 }
                             }
+                        }
+                        Type::Bool => {
+                            // Non-var boolean arrays: array [1..n] of bool (should be parameter arrays)
+                            // These should have been caught earlier as parameter arrays if initialized
+                            return Err(FlatZincError::UnsupportedFeature {
+                                feature: "Non-variable boolean arrays without initialization".to_string(),
+                                line: Some(decl.location.line),
+                                column: Some(decl.location.column),
+                            });
                         }
                         _ => {
                             return Err(FlatZincError::UnsupportedFeature {
@@ -332,6 +390,8 @@ impl<'a> MappingContext<'a> {
             "lex_less" | "lex_less_int" => self.map_lex_less(constraint),
             "lex_lesseq" | "lex_lesseq_int" => self.map_lex_lesseq(constraint),
             "nvalue" => self.map_nvalue(constraint),
+            "fixed_fzn_cumulative" | "cumulative" => self.map_fixed_fzn_cumulative(constraint),
+            "var_fzn_cumulative" => self.map_var_fzn_cumulative(constraint),
             "int_eq_reif" => self.map_int_eq_reif(constraint),
             "int_ne_reif" => self.map_int_ne_reif(constraint),
             "int_lt_reif" => self.map_int_lt_reif(constraint),

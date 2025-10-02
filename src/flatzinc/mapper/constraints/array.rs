@@ -19,7 +19,7 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let min_var = self.get_var(&constraint.args[0])?;
+        let min_var = self.get_var_or_const(&constraint.args[0])?;
         let arr_vars = self.extract_var_array(&constraint.args[1])?;
         let min_result = self.model.min(&arr_vars).map_err(|e| FlatZincError::MapError {
             message: format!("Failed to create min: {}", e),
@@ -40,7 +40,7 @@ impl<'a> MappingContext<'a> {
             });
         }
         
-        let max_var = self.get_var(&constraint.args[0])?;
+        let max_var = self.get_var_or_const(&constraint.args[0])?;
         let arr_vars = self.extract_var_array(&constraint.args[1])?;
         let max_result = self.model.max(&arr_vars).map_err(|e| FlatZincError::MapError {
             message: format!("Failed to create max: {}", e),
