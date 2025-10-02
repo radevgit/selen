@@ -6,7 +6,7 @@ use std::path::Path;
 
 #[test]
 fn test_batch_06_scheduling() {
-    let examples_dir = Path::new("src/zinc/flatzinc");
+    let examples_dir = Path::new("zinc/ortools");
     
     if !examples_dir.exists() {
         println!("Skipping test - examples directory not found");

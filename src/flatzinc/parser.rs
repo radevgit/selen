@@ -296,22 +296,30 @@ impl Parser {
                 self.advance();
                 index_sets.push(IndexSet::Range(1, 1000000)); // Arbitrary large range for 'int'
             }
-            // Handle numeric range like 1..8
+            // Handle numeric range like 1..8 OR single integer like [1] (meaning 1..1)
             else if let TokenType::IntLiteral(min) = self.peek() {
                 let min_val = *min;
                 self.advance();
-                self.expect(TokenType::DoubleDot)?;
-                if let TokenType::IntLiteral(max) = self.peek() {
-                    let max_val = *max;
-                    self.advance();
-                    index_sets.push(IndexSet::Range(min_val, max_val));
+                
+                // Check if there's a range operator (..)
+                if self.match_token(&TokenType::DoubleDot) {
+                    // It's a range: min..max
+                    if let TokenType::IntLiteral(max) = self.peek() {
+                        let max_val = *max;
+                        self.advance();
+                        index_sets.push(IndexSet::Range(min_val, max_val));
+                    } else {
+                        let loc = self.location();
+                        return Err(FlatZincError::ParseError {
+                            message: "Expected integer for index range upper bound".to_string(),
+                            line: loc.line,
+                            column: loc.column,
+                        });
+                    }
                 } else {
-                    let loc = self.location();
-                    return Err(FlatZincError::ParseError {
-                        message: "Expected integer for index range".to_string(),
-                        line: loc.line,
-                        column: loc.column,
-                    });
+                    // It's a single integer: treat as range 1..min_val
+                    // This handles array[1] or array[N] syntax
+                    index_sets.push(IndexSet::Range(1, min_val));
                 }
             } else {
                 break;

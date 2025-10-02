@@ -24,7 +24,7 @@ MiniZinc can export constraint satisfaction problems to FlatZinc format (*.fzn):
 - **Google OR-Tools Examples**: https://github.com/google/or-tools/tree/stable/examples/flatzinc
 - **Håkan Kjellerstrand's Examples**: https://www.hakank.org/minizinc/
 - **GitHub Repository**: https://github.com/hakank/hakank/tree/master/minizinc
-- **Local Examples**: `/src/zinc/flatzinc` (hidden from git, ~900 examples from small to large)
+- **Local Examples**: `/zinc/ortools` (hidden from git, ~900 examples from small to large)
 
 ## Architecture
 
@@ -211,7 +211,7 @@ Many problems have MiniZinc/FlatZinc versions available
 5. Academic Solver Repositories
 Chuffed: https://github.com/chuffed/chuffed (includes test cases)
 Gecode: https://github.com/Gecode/gecode (MiniZinc integration tests)
-OR-Tools: Google's optimization toolkit with FlatZinc support
+OR-Tools: Google's optimization toolkit with FlatZinc support: https://github.com/google/or-tools/tree/stable/examples/flatzinc
 6. MiniZinc Challenge Archives
 URL: https://www.minizinc.org/challenge.html
 Annual competition instances (more complex, larger scale)

@@ -10,7 +10,7 @@ use std::path::Path;
 /// This helps ensure the parser handles real-world FlatZinc correctly
 #[test]
 fn test_parse_flatzinc_examples() {
-    let examples_dir = Path::new("src/zinc/flatzinc");
+    let examples_dir = Path::new("zinc/ortools");
     
     // Skip test if examples directory doesn't exist (e.g., in packaged builds)
     if !examples_dir.exists() {
@@ -138,7 +138,7 @@ fn test_parse_flatzinc_examples() {
 /// Test that we can parse and solve a simple example
 #[test]
 fn test_solve_simple_example() {
-    let examples_dir = Path::new("src/zinc/flatzinc");
+    let examples_dir = Path::new("zinc/ortools");
     
     // Skip test if examples directory doesn't exist
     if !examples_dir.exists() {

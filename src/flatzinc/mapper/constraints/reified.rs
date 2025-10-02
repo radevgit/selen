@@ -19,32 +19,10 @@ impl<'a> MappingContext<'a> {
             });
         }
         
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
         let b = self.get_var_or_const(&constraint.args[2])?;
-        
-        match (&constraint.args[0], &constraint.args[1]) {
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let y = self.get_var(&constraint.args[1])?;
-                self.model.int_eq_reif(x, y, b);
-            }
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_eq_reif(x, const_var, b);
-            }
-            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let y = self.get_var(&constraint.args[1])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_eq_reif(const_var, y, b);
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported argument types for int_eq_reif".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        }
+        self.model.int_eq_reif(x, y, b);
         Ok(())
     }
     
@@ -57,32 +35,10 @@ impl<'a> MappingContext<'a> {
             });
         }
         
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
         let b = self.get_var_or_const(&constraint.args[2])?;
-        
-        match (&constraint.args[0], &constraint.args[1]) {
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let y = self.get_var(&constraint.args[1])?;
-                self.model.int_ne_reif(x, y, b);
-            }
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_ne_reif(x, const_var, b);
-            }
-            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let y = self.get_var(&constraint.args[1])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_ne_reif(const_var, y, b);
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported argument types for int_ne_reif".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        }
+        self.model.int_ne_reif(x, y, b);
         Ok(())
     }
     
@@ -95,32 +51,10 @@ impl<'a> MappingContext<'a> {
             });
         }
         
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
         let b = self.get_var_or_const(&constraint.args[2])?;
-        
-        match (&constraint.args[0], &constraint.args[1]) {
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let y = self.get_var(&constraint.args[1])?;
-                self.model.int_lt_reif(x, y, b);
-            }
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_lt_reif(x, const_var, b);
-            }
-            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let y = self.get_var(&constraint.args[1])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_lt_reif(const_var, y, b);
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported argument types for int_lt_reif".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        }
+        self.model.int_lt_reif(x, y, b);
         Ok(())
     }
     
@@ -133,32 +67,10 @@ impl<'a> MappingContext<'a> {
             });
         }
         
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
         let b = self.get_var_or_const(&constraint.args[2])?;
-        
-        match (&constraint.args[0], &constraint.args[1]) {
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let y = self.get_var(&constraint.args[1])?;
-                self.model.int_le_reif(x, y, b);
-            }
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_le_reif(x, const_var, b);
-            }
-            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let y = self.get_var(&constraint.args[1])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_le_reif(const_var, y, b);
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported argument types for int_le_reif".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        }
+        self.model.int_le_reif(x, y, b);
         Ok(())
     }
     
@@ -171,32 +83,10 @@ impl<'a> MappingContext<'a> {
             });
         }
         
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
         let b = self.get_var_or_const(&constraint.args[2])?;
-        
-        match (&constraint.args[0], &constraint.args[1]) {
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let y = self.get_var(&constraint.args[1])?;
-                self.model.int_gt_reif(x, y, b);
-            }
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_gt_reif(x, const_var, b);
-            }
-            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let y = self.get_var(&constraint.args[1])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_gt_reif(const_var, y, b);
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported argument types for int_gt_reif".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        }
+        self.model.int_gt_reif(x, y, b);
         Ok(())
     }
     
@@ -209,32 +99,10 @@ impl<'a> MappingContext<'a> {
             });
         }
         
+        let x = self.get_var_or_const(&constraint.args[0])?;
+        let y = self.get_var_or_const(&constraint.args[1])?;
         let b = self.get_var_or_const(&constraint.args[2])?;
-        
-        match (&constraint.args[0], &constraint.args[1]) {
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let y = self.get_var(&constraint.args[1])?;
-                self.model.int_ge_reif(x, y, b);
-            }
-            (Expr::Ident(_) | Expr::ArrayAccess { .. }, Expr::IntLit(val)) => {
-                let x = self.get_var(&constraint.args[0])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_ge_reif(x, const_var, b);
-            }
-            (Expr::IntLit(val), Expr::Ident(_) | Expr::ArrayAccess { .. }) => {
-                let y = self.get_var(&constraint.args[1])?;
-                let const_var = self.model.int(*val as i32, *val as i32);
-                self.model.int_ge_reif(const_var, y, b);
-            }
-            _ => {
-                return Err(FlatZincError::MapError {
-                    message: "Unsupported argument types for int_ge_reif".to_string(),
-                    line: Some(constraint.location.line),
-                    column: Some(constraint.location.column),
-                });
-            }
-        }
+        self.model.int_ge_reif(x, y, b);
         Ok(())
     }
 }

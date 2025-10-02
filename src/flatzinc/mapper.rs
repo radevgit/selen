@@ -65,16 +65,20 @@ impl<'a> MappingContext<'a> {
                     
                     const MAX_DOMAIN: u64 = crate::variables::domain::MAX_SPARSE_SET_DOMAIN_SIZE;
                     if domain_size > MAX_DOMAIN {
-                        return Err(FlatZincError::MapError {
-                            message: format!(
-                                "Variable '{}' has domain [{}, {}] with size {} which exceeds maximum of {}",
-                                decl.name, min, max, domain_size, MAX_DOMAIN
-                            ),
-                            line: Some(decl.location.line),
-                            column: Some(decl.location.column),
-                        });
+                        // For very large domains, use domain inference instead of failing
+                        // This handles cases like [0, 999999999] by using inferred bounds
+                        // from other variables in the model
+                        eprintln!(
+                            "Warning: Variable '{}' has very large domain [{}, {}] with size {}. \
+                             Using inferred bounds [{}, {}] instead.",
+                            decl.name, min, max, domain_size,
+                            self.unbounded_int_bounds.0, self.unbounded_int_bounds.1
+                        );
+                        let (min_bound, max_bound) = self.unbounded_int_bounds;
+                        self.model.int(min_bound, max_bound)
+                    } else {
+                        self.model.int(min as i32, max as i32)
                     }
-                    self.model.int(min as i32, max as i32)
                 }
                 Type::IntSet(ref values) => {
                     if values.is_empty() {
@@ -451,6 +455,7 @@ impl<'a> MappingContext<'a> {
             "set_in" => self.map_set_in(constraint),
             // Global cardinality
             "global_cardinality" => self.map_global_cardinality(constraint),
+            "global_cardinality_low_up_closed" => self.map_global_cardinality_low_up_closed(constraint),
             _ => {
                 Err(FlatZincError::UnsupportedFeature {
                     feature: format!("Constraint: {}", constraint.predicate),
