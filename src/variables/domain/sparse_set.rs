@@ -1,6 +1,12 @@
-// https://github.com/minicp/minicp/blob/mooc/src/main/java/minicp/state/StateSparseSet.java
+
 
 use std::fmt::Display;
+
+/// Maximum domain size supported by SparseSet
+/// 
+/// This limit is enforced to prevent performance issues and excessive memory usage.
+/// Domains larger than this should be rejected during model construction.
+pub const MAX_SPARSE_SET_DOMAIN_SIZE: u64 = 1_000_000;
 
 /// State snapshot for backtracking in SparseSet
 #[doc(hidden)]

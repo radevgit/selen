@@ -5,3 +5,6 @@
 // Re-export everything from the new API prelude
 pub use crate::api::prelude::*;
 
+// Re-export FlatZinc types and utilities
+pub use crate::flatzinc::{FlatZincError, FlatZincResult, format_solution};
+

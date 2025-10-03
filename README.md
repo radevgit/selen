@@ -24,7 +24,7 @@ This library provides efficient algorithms and data structures for solving const
 - **Conditional**: `if_then(condition, constraint)`, `if_then_else(condition, then_constraint, else_constraint)`
 
 **Programmatic version of constraints**
-```
+```rust
 m.new(x.lt(y));                        // x < y
 m.new(y.le(z));                        // y <= z
 m.new(z.gt(5));                        // z > 5
@@ -35,7 +35,7 @@ m.new(z.div(y).ne(0));                 // z / y != 0
 ```
 
 **Mathematical syntax with post! macro**
-```
+```rust
 post!(m, x < y);                        // x < y
 post!(m, y <= z);                       // y <= z
 post!(m, z > int(5));                   // z > 5
@@ -45,6 +45,16 @@ post!(m, x * y == int(12));             // x * y == 12
 post!(m, z / y != int(0));              // z / y != 0
 ```
 
+**Import FlatZinc `.fzn` file**
+```rust
+use selen::prelude::*;
+let mut model = Model::default();
+model.from_flatzinc_file("puzzle.fzn")?;
+let solution = model.solve()?;
+println!("Solution: {:?}", solution);
+```
+
+
 ## Installation
 
 Add this to your `Cargo.toml`:
@@ -53,6 +63,8 @@ Add this to your `Cargo.toml`:
 [dependencies]
 selen = "0.8.6"
 ```
+
+## Examples
 
 ```
 🧩 Solving Platinum Blonde puzzle:
@@ -78,8 +90,6 @@ Puzzle:                                 Solution:
 🔍 Efficiency: 21.5 propagations/node
 
 ```
-
-## Examples
 
 ### Core Problems
 ```bash

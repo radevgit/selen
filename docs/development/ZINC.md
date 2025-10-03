@@ -24,7 +24,7 @@ MiniZinc can export constraint satisfaction problems to FlatZinc format (*.fzn):
 - **Google OR-Tools Examples**: https://github.com/google/or-tools/tree/stable/examples/flatzinc
 - **Håkan Kjellerstrand's Examples**: https://www.hakank.org/minizinc/
 - **GitHub Repository**: https://github.com/hakank/hakank/tree/master/minizinc
-- **Local Examples**: `/src/zinc/flatzinc` (hidden from git, ~900 examples from small to large)
+- **Local Examples**: `/zinc/ortools` (hidden from git, ~900 examples from small to large)
 
 ## Architecture
 
@@ -184,6 +184,38 @@ A: Tokenizer + recursive-descent for statements. Expression parser TBD. See [ZIN
 - [FlatZinc 2.8.4 Specification](https://docs.minizinc.dev/en/latest/fzn-spec.html)
 - [MiniZinc Documentation](https://docs.minizinc.dev/)
 - [MiniZinc Global Constraints](https://docs.minizinc.dev/en/stable/lib-globals.html)
+
+
+FlatZinc examples:
+
+
+Top FlatZinc Test Collections:
+1. MiniZinc Benchmarks (Official - Best Source!)
+URL: https://github.com/MiniZinc/minizinc-benchmarks
+Size: ~100+ benchmark categories
+Quality: Official MiniZinc Challenge benchmarks (2008-2012)
+Content: Contains .mzn files + data that can be compiled to .fzn
+Categories: Scheduling, routing, packing, graph coloring, puzzles, etc.
+Examples: N-Queens, Sudoku, Job Shop, Vehicle Routing, Bin Packing, and many more
+2. MiniZinc Examples Repository
+URL: https://github.com/MiniZinc/minizinc-examples
+Contains tutorial examples and small test cases
+3. Hakank's MiniZinc Collection
+URL: http://hakank.org/minizinc/
+Size: 600+ MiniZinc models
+Coverage: Huge variety - puzzles, optimization, scheduling, etc.
+You saw references in your docs to open_global_cardinality_low_up.mzn
+4. CSPLib (Constraint Satisfaction Problem Library)
+URL: https://www.csplib.org/
+Many problems have MiniZinc/FlatZinc versions available
+5. Academic Solver Repositories
+Chuffed: https://github.com/chuffed/chuffed (includes test cases)
+Gecode: https://github.com/Gecode/gecode (MiniZinc integration tests)
+OR-Tools: Google's optimization toolkit with FlatZinc support: https://github.com/google/or-tools/tree/stable/examples/flatzinc
+6. MiniZinc Challenge Archives
+URL: https://www.minizinc.org/challenge.html
+Annual competition instances (more complex, larger scale)
+
 
 
 
