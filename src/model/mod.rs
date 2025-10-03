@@ -11,7 +11,6 @@ mod factory_internal;   // Internal variable creation methods
 pub mod constraints;
 pub mod solving;
 pub mod precision;
-mod flatzinc_integration; // FlatZinc import methods
 
 // Re-export everything for backward compatibility
 pub use core::*;
