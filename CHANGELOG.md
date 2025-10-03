@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.7] - 2025-10-03
+- FlatZinc Parser
 
 ## [0.8.6] - 2025-10-01
 - Linear Constraint Helpers

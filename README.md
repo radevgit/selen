@@ -61,7 +61,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-selen = "0.8.6"
+selen = "0.8.7"
 ```
 
 ## Examples
