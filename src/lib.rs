@@ -244,9 +244,6 @@ pub mod api;
 pub mod prelude;
 pub mod runtime_api;
 
-// FlatZinc integration
-pub mod flatzinc;
-
 // Development and testing modules
 #[doc(hidden)]
 pub mod benchmarks;

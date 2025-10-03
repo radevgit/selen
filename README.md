@@ -45,15 +45,15 @@ post!(m, x * y == int(12));             // x * y == 12
 post!(m, z / y != int(0));              // z / y != 0
 ```
 
-**Import FlatZinc `.fzn` file**
+**FlatZinc/MiniZinc Support**
+
+For FlatZinc `.fzn` file support, use the separate [Zelen](https://github.com/radevgit/zelen) crate:
 ```rust
-use selen::prelude::*;
+use zelen::prelude::*;
 let mut model = Model::default();
 model.from_flatzinc_file("puzzle.fzn")?;
 let solution = model.solve()?;
-println!("Solution: {:?}", solution);
 ```
-
 
 ## Installation
 
@@ -61,7 +61,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-selen = "0.8.7"
+selen = "0.9"
 ```
 
 ## Examples

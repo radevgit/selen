@@ -2,8 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2025-10-03
+- **Removed**: FlatZinc parser and integration (moved to [Zelen](https://github.com/radevgit/zelen)
+
 ## [0.8.7] - 2025-10-03
-- FlatZinc Parser
+- FlatZinc Parser (deprecated - moved to Zelen in v0.9.0)
 
 ## [0.8.6] - 2025-10-01
 - Linear Constraint Helpers
