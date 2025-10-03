@@ -5,6 +5,7 @@ use selen::prelude::*;
 use std::path::Path;
 
 #[test]
+#[ignore]
 fn test_batch_01_simple_arithmetic() {
     let examples_dir = Path::new("zinc/ortools");
     

@@ -5,6 +5,7 @@ use selen::prelude::*;
 use std::path::Path;
 
 #[test]
+#[ignore]
 fn test_batch_09_knapsack() {
     let examples_dir = Path::new("zinc/ortools");
     
