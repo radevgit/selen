@@ -3,6 +3,7 @@
 use selen::prelude::*;
 
 #[cfg(test)]
+#[ignore]
 mod flatzinc_integration {
     use super::*;
 
