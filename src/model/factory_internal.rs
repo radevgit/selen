@@ -74,8 +74,11 @@ impl Model {
             });
         }
         
+        // Infer bounds if variable is unbounded
+        let (inferred_min, inferred_max) = self.infer_bounds(min, max);
+        
         // Estimate memory needed for this variable
-        let estimated_memory = self.estimate_variable_memory(min, max);
+        let estimated_memory = self.estimate_variable_memory(inferred_min, inferred_max);
         
         // Check if adding this variable would exceed the limit
         self.add_memory_usage(estimated_memory)?;
@@ -83,9 +86,152 @@ impl Model {
         // Create the variable
         self.props_mut().on_new_var();
         let step_size = self.float_step_size();
-        let var_id = self.vars_mut().new_var_with_bounds_and_step(min, max, step_size);
+        let var_id = self.vars_mut().new_var_with_bounds_and_step(inferred_min, inferred_max, step_size);
         
         Ok(var_id)
+    }
+
+    // ========================================================================
+    // INTERNAL BOUND INFERENCE
+    // ========================================================================
+
+    /// Infer reasonable bounds for unbounded variables
+    /// 
+    /// This method detects unbounded variables (i32::MIN/MAX or f64::INFINITY) and infers
+    /// reasonable finite bounds based on existing bounded variables in the model.
+    /// 
+    /// **Algorithm**:
+    /// 1. Check if variable is unbounded
+    /// 2. If bounded variables of same type exist: expand their range by 1000x
+    /// 3. Otherwise: use fallback bounds (±10000)
+    /// 4. Apply type-specific constraints (i32 range, domain size limits)
+    /// 
+    /// **Note**: This is an internal helper method.
+    fn infer_bounds(&self, min: Val, max: Val) -> (Val, Val) {
+        match (min, max) {
+            (Val::ValI(min_i), Val::ValI(max_i)) => {
+                // Check if integer variable is unbounded
+                let is_unbounded = min_i == i32::MIN || max_i == i32::MAX;
+                
+                if !is_unbounded {
+                    return (min, max); // Already bounded
+                }
+                
+                // Scan existing integer variables for context
+                let mut global_min: Option<i32> = None;
+                let mut global_max: Option<i32> = None;
+                
+                for var_idx in 0..self.vars.count() {
+                    let var_id = crate::variables::VarId::from_index(var_idx);
+                    match &self.vars[var_id] {
+                        crate::variables::Var::VarI(sparse_set) => {
+                            if !sparse_set.is_empty() {
+                                let v_min = sparse_set.min();
+                                let v_max = sparse_set.max();
+                                
+                                // Skip if this variable itself looks unbounded
+                                if v_min != i32::MIN && v_max != i32::MAX {
+                                    global_min = Some(global_min.map_or(v_min, |gmin| gmin.min(v_min)));
+                                    global_max = Some(global_max.map_or(v_max, |gmax| gmax.max(v_max)));
+                                }
+                            }
+                        }
+                        _ => {} // Skip float variables
+                    }
+                }
+                
+                let (inferred_min, inferred_max) = if let (Some(gmin), Some(gmax)) = (global_min, global_max) {
+                    // We have context - expand by configured factor (default 1000x)
+                    let factor = self.config().unbounded_inference_factor as i64;
+                    let span = (gmax as i64) - (gmin as i64);
+                    let expansion = span.saturating_mul(factor);
+                    
+                    let new_min = ((gmin as i64).saturating_sub(expansion)).max(i32::MIN as i64 + 1) as i32;
+                    let new_max = ((gmax as i64).saturating_add(expansion)).min(i32::MAX as i64 - 1) as i32;
+                    
+                    // Check domain size - but allow tight inferred bounds
+                    // Rationale: If inference is based on existing variables, trust it
+                    // Only enforce limit for fallback case
+                    let domain_size = (new_max as i64) - (new_min as i64) + 1;
+                    if domain_size > crate::variables::domain::MAX_SPARSE_SET_DOMAIN_SIZE as i64 {
+                        // Domain too large, but this is context-based inference
+                        // Clamp to a reasonable range around the context
+                        // Use ±500K from the context center (adjusted for inclusive bounds)
+                        let center = ((gmin as i64 + gmax as i64) / 2) as i32;
+                        let half_limit = (crate::variables::domain::MAX_SPARSE_SET_DOMAIN_SIZE / 2) as i32;
+                        // Subtract 1 from one side to ensure exactly 1M elements
+                        // Domain size = (max - min + 1), so if we want size = 1M:
+                        // max - min = 999,999, so use [center - 500K, center + 499,999]
+                        (center.saturating_sub(half_limit), center.saturating_add(half_limit - 1))
+                    } else {
+                        (new_min, new_max)
+                    }
+                } else {
+                    // No context - use fallback
+                    // Fallback must respect domain size limit strictly
+                    (-10000, 10000)
+                };
+                
+                (Val::ValI(inferred_min), Val::ValI(inferred_max))
+            }
+            (Val::ValF(min_f), Val::ValF(max_f)) => {
+                // Check if float variable is unbounded
+                let is_unbounded = min_f.is_infinite() || max_f.is_infinite() || 
+                                   min_f.is_nan() || max_f.is_nan();
+                
+                if !is_unbounded {
+                    return (min, max); // Already bounded
+                }
+                
+                // Scan existing float variables for context
+                let mut global_min: Option<f64> = None;
+                let mut global_max: Option<f64> = None;
+                
+                for var_idx in 0..self.vars.count() {
+                    let var_id = crate::variables::VarId::from_index(var_idx);
+                    match &self.vars[var_id] {
+                        crate::variables::Var::VarF(interval) => {
+                            let v_min = interval.min;
+                            let v_max = interval.max;
+                            
+                            // Skip if this variable itself looks unbounded
+                            if v_min.is_finite() && v_max.is_finite() {
+                                global_min = Some(global_min.map_or(v_min, |gmin| gmin.min(v_min)));
+                                global_max = Some(global_max.map_or(v_max, |gmax| gmax.max(v_max)));
+                            }
+                        }
+                        _ => {} // Skip integer variables
+                    }
+                }
+                
+                let (inferred_min, inferred_max) = if let (Some(gmin), Some(gmax)) = (global_min, global_max) {
+                    // We have context - expand by configured factor (default 1000x)
+                    let factor = self.config().unbounded_inference_factor as f64;
+                    let span = gmax - gmin;
+                    let expansion = span * factor;
+                    
+                    let new_min = (gmin - expansion).max(-1e308);
+                    let new_max = (gmax + expansion).min(1e308);
+                    
+                    (new_min, new_max)
+                } else {
+                    // No context - use fallback
+                    (-10000.0, 10000.0)
+                };
+                
+                (Val::ValF(inferred_min), Val::ValF(inferred_max))
+            }
+            (Val::ValI(min_i), Val::ValF(max_f)) => {
+                // Mixed type - treat as float
+                let min_as_float = min_i as f64;
+                self.infer_bounds(Val::ValF(min_as_float), Val::ValF(max_f))
+            }
+            (Val::ValF(min_f), Val::ValI(max_i)) => {
+                // Mixed type - treat as float
+                let max_as_float = max_i as f64;
+                self.infer_bounds(Val::ValF(min_f), Val::ValF(max_as_float))
+            }
+        }
     }
 
     // ========================================================================

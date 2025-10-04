@@ -53,6 +53,24 @@ pub struct SolverConfig {
     /// Default: Some(2048) - 2GB memory limit
     /// None means no memory limit (⚠️ use with caution)
     pub max_memory_mb: Option<u64>,
+    
+    /// Expansion factor for unbounded variable inference
+    /// When a variable is declared with unbounded/infinite bounds, this factor
+    /// determines how much to expand beyond existing bounded variables.
+    /// 
+    /// Default: 1000 (expands context by 1000x)
+    /// 
+    /// **Examples**:
+    /// - Factor 1000, context [0, 100] → infer [-100,000, 100,100]
+    /// - Factor 300, context [0, 100] → infer [-30,000, 30,100]
+    /// - Factor 10,000, context [0, 100] → may hit 1M domain limit for integers
+    /// 
+    /// **Rationale**:
+    /// - Too small (< 100): May not provide enough exploration space
+    /// - Too large (> 10,000): Often exceeds 1M domain limit for integers
+    /// - 1000 is empirically good for most CSP/optimization problems
+    /// - Advanced users can tune based on problem domain
+    pub unbounded_inference_factor: u32,
 }
 
 impl Default for SolverConfig {
@@ -61,6 +79,7 @@ impl Default for SolverConfig {
             float_precision_digits: DEFAULT_FLOAT_PRECISION_DIGITS,
             timeout_ms: Some(60000),     // Default 60000ms = 1 minute timeout
             max_memory_mb: Some(2048),   // Default 2GB memory limit
+            unbounded_inference_factor: 1000, // Default 1000x expansion
         }
     }
 }
@@ -165,6 +184,39 @@ impl SolverConfig {
         self
     }
     
+    /// Set the expansion factor for unbounded variable inference
+    ///
+    /// When variables are declared with unbounded/infinite bounds (i32::MIN/MAX,
+    /// f64::INFINITY), Selen infers reasonable bounds by expanding existing
+    /// bounded variables by this factor.
+    ///
+    /// **Default**: 1000 (expand context by 1000x)
+    ///
+    /// **Guidelines**:
+    /// - **100-500**: Conservative, for tightly constrained problems
+    /// - **1000**: Good default for most problems (logarithmic middle ground)
+    /// - **5000-10000**: Aggressive, for problems needing wide exploration
+    ///
+    /// **Note**: Larger factors may cause integer domains to exceed the 1M limit.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use selen::prelude::config::SolverConfig;
+    /// 
+    /// // Conservative inference (300x expansion)
+    /// let config = SolverConfig::new().with_unbounded_inference_factor(300);
+    /// assert_eq!(config.unbounded_inference_factor, 300);
+    /// 
+    /// // Aggressive inference (5000x expansion)
+    /// let config = SolverConfig::new().with_unbounded_inference_factor(5000);
+    /// assert_eq!(config.unbounded_inference_factor, 5000);
+    /// ```
+    pub fn with_unbounded_inference_factor(mut self, factor: u32) -> Self {
+        self.unbounded_inference_factor = factor;
+        self
+    }
+    
     /// Create a configuration with no limits (unlimited time and memory)
     ///
     /// # Examples
@@ -181,6 +233,7 @@ impl SolverConfig {
             float_precision_digits: DEFAULT_FLOAT_PRECISION_DIGITS,
             timeout_ms: None,
             max_memory_mb: None,
+            unbounded_inference_factor: 1000, // Default 1000x expansion
         }
     }
 }
