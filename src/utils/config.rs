@@ -15,7 +15,7 @@ use crate::variables::domain::float_interval::DEFAULT_FLOAT_PRECISION_DIGITS;
 ///
 /// All models now have automatic safety limits to prevent system memory exhaustion:
 /// - **Memory limit**: 2GB (prevents crashes during variable creation)
-/// - **Timeout**: 60 seconds (prevents infinite solver runs)
+/// - **Timeout**: 60000 milliseconds (60 seconds, prevents infinite solver runs)
 /// - **Memory tracking**: Real-time during model building
 ///
 /// # Examples
@@ -30,7 +30,7 @@ use crate::variables::domain::float_interval::DEFAULT_FLOAT_PRECISION_DIGITS;
 /// // Custom limits for production environments
 /// let config = SolverConfig::default()
 ///     .with_float_precision(8)
-///     .with_timeout_seconds(120)      // 2 minute timeout
+///     .with_timeout_ms(120000)        // 120000ms = 2 minute timeout
 ///     .with_max_memory_mb(1024);      // 1GB memory limit
 /// let mut m = Model::with_config(config);
 /// 
@@ -44,10 +44,10 @@ pub struct SolverConfig {
     /// Default: 6 decimal places
     pub float_precision_digits: i32,
     
-    /// Maximum time to spend solving (in seconds)
-    /// Default: Some(60) - 1 minute timeout
+    /// Maximum time to spend solving (in milliseconds)
+    /// Default: Some(60000) - 60 second (1 minute) timeout
     /// None means no timeout (⚠️ use with caution)
-    pub timeout_seconds: Option<u64>,
+    pub timeout_ms: Option<u64>,
     
     /// Maximum memory usage (in MB) during model building and solving
     /// Default: Some(2048) - 2GB memory limit
@@ -59,7 +59,7 @@ impl Default for SolverConfig {
     fn default() -> Self {
         Self {
             float_precision_digits: DEFAULT_FLOAT_PRECISION_DIGITS,
-            timeout_seconds: Some(60),   // Default 1 minute timeout
+            timeout_ms: Some(60000),     // Default 60000ms = 1 minute timeout
             max_memory_mb: Some(2048),   // Default 2GB memory limit
         }
     }
@@ -70,7 +70,7 @@ impl SolverConfig {
     ///
     /// Equivalent to `SolverConfig::default()` with automatic resource limits:
     /// - Memory limit: 2GB
-    /// - Timeout: 60 seconds
+    /// - Timeout: 60000 milliseconds (60 seconds)
     ///
     /// # Examples
     ///
@@ -80,7 +80,7 @@ impl SolverConfig {
     /// let config = SolverConfig::new();
     /// assert_eq!(config.float_precision_digits, 6);
     /// assert_eq!(config.max_memory_mb, Some(2048));
-    /// assert_eq!(config.timeout_seconds, Some(60));
+    /// assert_eq!(config.timeout_ms, Some(60000));
     /// ```
     pub fn new() -> Self {
         Self::default()
@@ -101,18 +101,18 @@ impl SolverConfig {
         self
     }
     
-    /// Set the timeout in seconds
+    /// Set the timeout in milliseconds
     ///
     /// # Examples
     ///
     /// ```rust
     /// use selen::prelude::config::SolverConfig;
     /// 
-    /// let config = SolverConfig::new().with_timeout_seconds(30);
-    /// assert_eq!(config.timeout_seconds, Some(30));
+    /// let config = SolverConfig::new().with_timeout_ms(30000);  // 30 seconds
+    /// assert_eq!(config.timeout_ms, Some(30000));
     /// ```
-    pub fn with_timeout_seconds(mut self, seconds: u64) -> Self {
-        self.timeout_seconds = Some(seconds);
+    pub fn with_timeout_ms(mut self, milliseconds: u64) -> Self {
+        self.timeout_ms = Some(milliseconds);
         self
     }
     
@@ -124,12 +124,12 @@ impl SolverConfig {
     /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::new()
-    ///     .with_timeout_seconds(30)
+    ///     .with_timeout_ms(30000)
     ///     .without_timeout();
-    /// assert_eq!(config.timeout_seconds, None);
+    /// assert_eq!(config.timeout_ms, None);
     /// ```
     pub fn without_timeout(mut self) -> Self {
-        self.timeout_seconds = None;
+        self.timeout_ms = None;
         self
     }
     
@@ -173,13 +173,13 @@ impl SolverConfig {
     /// use selen::prelude::config::SolverConfig;
     /// 
     /// let config = SolverConfig::unlimited();
-    /// assert_eq!(config.timeout_seconds, None);
+    /// assert_eq!(config.timeout_ms, None);
     /// assert_eq!(config.max_memory_mb, None);
     /// ```
     pub fn unlimited() -> Self {
         Self {
             float_precision_digits: DEFAULT_FLOAT_PRECISION_DIGITS,
-            timeout_seconds: None,
+            timeout_ms: None,
             max_memory_mb: None,
         }
     }
@@ -193,7 +193,7 @@ mod tests {
     fn test_default_config() {
         let config = SolverConfig::default();
         assert_eq!(config.float_precision_digits, DEFAULT_FLOAT_PRECISION_DIGITS);
-        assert_eq!(config.timeout_seconds, Some(60));      // Default 1 minute
+        assert_eq!(config.timeout_ms, Some(60000));        // Default 60000ms = 1 minute
         assert_eq!(config.max_memory_mb, Some(2048));      // Default 2GB
     }
     
@@ -201,7 +201,7 @@ mod tests {
     fn test_unlimited_config() {
         let config = SolverConfig::unlimited();
         assert_eq!(config.float_precision_digits, DEFAULT_FLOAT_PRECISION_DIGITS);
-        assert_eq!(config.timeout_seconds, None);
+        assert_eq!(config.timeout_ms, None);
         assert_eq!(config.max_memory_mb, None);
     }
     
@@ -209,23 +209,23 @@ mod tests {
     fn test_builder_pattern() {
         let config = SolverConfig::new()
             .with_float_precision(4)
-            .with_timeout_seconds(60)
+            .with_timeout_ms(60000)  // 60 seconds
             .with_max_memory_mb(512);
             
         assert_eq!(config.float_precision_digits, 4);
-        assert_eq!(config.timeout_seconds, Some(60));
+        assert_eq!(config.timeout_ms, Some(60000));
         assert_eq!(config.max_memory_mb, Some(512));
     }
     
     #[test]
     fn test_without_methods() {
         let config = SolverConfig::new()
-            .with_timeout_seconds(30)
+            .with_timeout_ms(30000)  // 30 seconds
             .with_max_memory_mb(256)
             .without_timeout()
             .without_memory_limit();
             
-        assert_eq!(config.timeout_seconds, None);
+        assert_eq!(config.timeout_ms, None);
         assert_eq!(config.max_memory_mb, None);
     }
 }

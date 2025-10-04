@@ -131,7 +131,7 @@ impl Model {
 
     /// Get timeout as Duration for search operations
     fn timeout_duration(&self) -> Option<std::time::Duration> {
-        self.config.timeout_seconds.map(std::time::Duration::from_secs)
+        self.config.timeout_ms.map(std::time::Duration::from_millis)
     }
 
     /// Get memory limit in MB for search operations

@@ -6,7 +6,7 @@
 //!
 //! All models have **automatic memory and timeout limits** to prevent system exhaustion:
 //! - **Default memory limit**: 2GB
-//! - **Default timeout**: 60 seconds
+//! - **Default timeout**: 60000 milliseconds (60 seconds)
 //! - **Memory tracking**: During variable creation (prevents crashes)
 //! - **Early failure**: Clear error messages when limits exceeded
 //!
@@ -14,12 +14,12 @@
 //! use selen::prelude::*;
 //!
 //! // Automatic safety limits
-//! let mut m = Model::default(); // 2GB memory, 60s timeout
+//! let mut m = Model::default(); // 2GB memory, 60000ms (60s) timeout
 //!
 //! // Custom limits
 //! let config = SolverConfig::default()
 //!     .with_max_memory_mb(512)      // 512MB limit
-//!     .with_timeout_seconds(30);    // 30 second timeout
+//!     .with_timeout_ms(30000);      // 30000ms = 30 second timeout
 //! let mut m = Model::with_config(config);
 //! ```
 //!

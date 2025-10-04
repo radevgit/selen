@@ -310,7 +310,7 @@ The CSP Solver includes automatic safety features to prevent system crashes:
 ```rust
 let m = Model::default();
 // ↳ Memory limit: 2GB
-// ↳ Timeout: 60 seconds
+// ↳ Timeout: 60000 milliseconds (60 seconds)
 ```
 
 ### Custom Configuration
@@ -318,14 +318,14 @@ let m = Model::default();
 // Conservative limits for shared systems
 let config = SolverConfig::default()
     .with_max_memory_mb(512)      // 512MB memory limit
-    .with_timeout_seconds(30);    // 30 second timeout
+    .with_timeout_ms(30000);      // 30000ms = 30 second timeout
 
 let mut m = Model::with_config(config);
 
 // For dedicated systems
 let config = SolverConfig::default()
     .with_max_memory_mb(4096)     // 4GB memory limit  
-    .with_timeout_seconds(300);   // 5 minute timeout
+    .with_timeout_ms(300000);     // 300000ms = 5 minute timeout
 
 let mut m = Model::with_config(config);
 ```

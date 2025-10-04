@@ -22,7 +22,7 @@ Starting with version 0.6.0, all models have sensible default limits:
 // Default limits applied automatically
 let m = Model::default();
 // ↳ Memory limit: 2GB
-// ↳ Timeout: 60 seconds
+// ↳ Timeout: 60000 milliseconds (60 seconds)
 ```
 
 ### Default Values
@@ -30,7 +30,7 @@ let m = Model::default();
 | Resource | Default Limit | Purpose |
 |----------|---------------|---------|
 | **Memory** | **2GB** | Prevents system memory exhaustion |
-| **Timeout** | **60 seconds** | Prevents infinite solver runs |
+| **Timeout** | **60000 ms (60 sec)** | Prevents infinite solver runs |
 
 ## 🔧 Configuration
 
@@ -42,7 +42,7 @@ use selen::prelude::*;
 // Configure custom limits
 let config = SolverConfig::default()
     .with_max_memory_mb(512)      // 512MB memory limit
-    .with_timeout_seconds(30);    // 30 second timeout
+    .with_timeout_ms(30000);      // 30000ms = 30 second timeout
 
 let mut m = Model::with_config(config);
 ```
@@ -61,12 +61,12 @@ let mut m = Model::with_config(config);
 // Conservative for shared environments
 let config = SolverConfig::default()
     .with_max_memory_mb(1024)     // 1GB limit
-    .with_timeout_seconds(120);   // 2 minute timeout
+    .with_timeout_ms(120000);     // 120000ms = 2 minute timeout
 
 // Generous for dedicated systems
 let config = SolverConfig::default()
     .with_max_memory_mb(4096)     // 4GB limit  
-    .with_timeout_seconds(300);   // 5 minute timeout
+    .with_timeout_ms(300000);     // 300000ms = 5 minute timeout
 ```
 
 ## 📊 Memory Estimation
@@ -140,12 +140,12 @@ let config = SolverConfig::default().with_max_memory_mb(100);
 // For production batch processing
 let config = SolverConfig::default()
     .with_max_memory_mb(4096)
-    .with_timeout_seconds(600);
+    .with_timeout_ms(600000);       // 600000ms = 10 minutes
 
 // For real-time applications
 let config = SolverConfig::default()
     .with_max_memory_mb(256)
-    .with_timeout_seconds(5);
+    .with_timeout_ms(5000);         // 5000ms = 5 seconds
 ```
 
 ### 2. Monitor Memory Usage
@@ -218,12 +218,12 @@ fn create_solver_config() -> SolverConfig {
         Ok(env) if env == "production" => {
             SolverConfig::default()
                 .with_max_memory_mb(2048)
-                .with_timeout_seconds(300)
+                .with_timeout_ms(300000)    // 300000ms = 5 minutes
         }
         Ok(env) if env == "testing" => {
             SolverConfig::default()
                 .with_max_memory_mb(256)
-                .with_timeout_seconds(10)
+                .with_timeout_ms(10000)     // 10000ms = 10 seconds
         }
         _ => SolverConfig::default() // Development defaults
     }

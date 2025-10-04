@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2025-10-04
+- SolverConfig aligned with MiniZinc
+
 ## [0.9.0] - 2025-10-03
 - **Removed**: FlatZinc parser and integration (moved to [Zelen](https://github.com/radevgit/zelen)
 

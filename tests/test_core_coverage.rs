@@ -481,7 +481,7 @@ mod core_coverage {
         // Test memory limit configuration in SolverConfig
         let config = SolverConfig::default()
             .with_max_memory_mb(1)  // Very small memory limit
-            .with_timeout_seconds(1); // Short timeout
+            .with_timeout_ms(1000);  // 1000ms = 1 second timeout
         
         let mut model = Model::with_config(config);
         let x = model.int(1, 100);
@@ -505,7 +505,7 @@ mod core_coverage {
     #[test] 
     fn test_timeout_edge_case() {
         // Test very short timeout
-        let config = SolverConfig::default().with_timeout_seconds(0); // Immediate timeout
+        let config = SolverConfig::default().with_timeout_ms(0);  // 0ms = Immediate timeout
         let mut model = Model::with_config(config);
         
         let x = model.int(1, 1000);

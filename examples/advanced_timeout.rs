@@ -8,7 +8,7 @@ fn main() {
 
     // Example 1: Simple problem that should solve quickly (no timeout needed)
     println!("1. Simple problem (should solve instantly):");
-    let config = SolverConfig::default().with_timeout_seconds(5);
+    let config = SolverConfig::default().with_timeout_ms(5000);  // 5000ms = 5 seconds
     let mut model = Model::with_config(config);
     let x = model.int(1, 3);
     let y = model.int(1, 3);
@@ -36,7 +36,7 @@ fn main() {
 
     // Example 2: Problem with very short timeout (should timeout)
     println!("2. Simple problem with very short timeout (should timeout):");
-    let config = SolverConfig::default().with_timeout_seconds(0); // Immediate timeout
+    let config = SolverConfig::default().with_timeout_ms(0);  // 0ms = Immediate timeout
     let mut model = Model::with_config(config);
     let a = model.int(1, 1000);
     let b = model.int(1, 1000);

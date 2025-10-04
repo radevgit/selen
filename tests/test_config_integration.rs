@@ -25,11 +25,11 @@ fn test_model_with_config_basic() {
 fn test_config_builder_pattern() {
     let config = SolverConfig::new()
         .with_float_precision(8)
-        .with_timeout_seconds(120)
+        .with_timeout_ms(120000)  // 120000ms = 2 minutes
         .with_max_memory_mb(2048);
         
     assert_eq!(config.float_precision_digits, 8);
-    assert_eq!(config.timeout_seconds, Some(120));
+    assert_eq!(config.timeout_ms, Some(120000));
     assert_eq!(config.max_memory_mb, Some(2048));
 }
 

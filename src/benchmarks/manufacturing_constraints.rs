@@ -63,7 +63,7 @@ pub fn benchmark_tool_clearance_constraints() -> ManufacturingResult {
     
     // Create model with timeout and memory limits to prevent PC freezing
     let config = SolverConfig::default()
-        .with_timeout_seconds(15)       // 15 second timeout for realistic problems
+        .with_timeout_ms(15000)         // 15000ms = 15 second timeout for realistic problems
         .with_max_memory_mb(128);       // SAFE: 128MB limit to prevent crashes
     let mut m = Model::with_config(config);
     
@@ -187,7 +187,7 @@ pub fn benchmark_grain_direction_alignment() -> ManufacturingResult {
     
     // Create model with timeout and memory limits  
     let config = SolverConfig::default()
-        .with_timeout_seconds(10)       // 10 second timeout 
+        .with_timeout_ms(10000)         // 10000ms = 10 second timeout 
         .with_max_memory_mb(128);       // SAFE: 128MB memory limit
     let mut m = Model::with_config(config);
     
@@ -292,7 +292,7 @@ pub fn benchmark_heat_treatment_zones() -> ManufacturingResult {
     
     // Create model with limits to prevent PC freezing
     let config = SolverConfig::default()
-        .with_timeout_seconds(10)       // 10 second timeout
+        .with_timeout_ms(10000)         // 10000ms = 10 second timeout
         .with_max_memory_mb(512);       // 512MB memory limit
     let mut m = Model::with_config(config);
     
@@ -405,7 +405,7 @@ pub fn benchmark_quality_control_sampling() -> ManufacturingResult {
     
     // Create model with limits to prevent PC freezing
     let config = SolverConfig::default()
-        .with_timeout_seconds(10)       // 10 second timeout
+        .with_timeout_ms(10000)         // 10000ms = 10 second timeout
         .with_max_memory_mb(512);       // 512MB memory limit
     let mut m = Model::with_config(config);
     

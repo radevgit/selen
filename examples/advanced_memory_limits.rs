@@ -23,8 +23,8 @@ fn main() {
     // Test: Monitor memory during variable creation
     println!("\nTest: Creating variables and monitoring memory...");
     let config = SolverConfig::default()
-        .with_timeout_seconds(10)
-        .with_max_memory_mb(512);  // 512MB limit
+        .with_max_memory_mb(10)     // Very low memory limit
+        .with_timeout_ms(10000);    // 10000ms = 10 seconds
     
     let mut m = Model::with_config(config);
     
