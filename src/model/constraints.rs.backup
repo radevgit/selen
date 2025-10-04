@@ -982,10 +982,10 @@ impl Model {
         self.props.greater_than_or_equals(float_var, float_min);
         self.props.less_than_or_equals(float_var, float_max);
         
-        // Ensure float_var = int_var exactly by creating a float view of int_var
-        // Convert int_var to a float variable by adding 0.0
-        let int_as_float = self.mul(int_var, Val::ValF(1.0));
-        self.props.equals(float_var, int_as_float);
+        // Create bidirectional constraint: int_var and float_var must represent same value
+        // For each possible integer value, if int_var = i, then float_var = float(i)
+        // This is handled by the equality constraint with appropriate type coercion
+        self.props.equals(int_var, float_var);
     }
 
     /// Convert a float variable to integer using floor operation.
@@ -1023,10 +1023,8 @@ impl Model {
         // Post constraint: int_var ≤ float_var < int_var + 1
         // This ensures int_var = floor(float_var)
         self.props.less_than_or_equals(int_var, float_var);
-        // Create float version: float_var < int_var + 1.0
-        let int_as_float = self.add(int_var, Val::ValF(0.0)); // Convert to float
-        let int_plus_one_float = self.add(int_as_float, Val::ValF(1.0));
-        self.props.less_than(float_var, int_plus_one_float);
+        let int_plus_one = self.add(int_var, Val::ValI(1));
+        self.props.less_than(float_var, int_plus_one);
     }
 
     /// Convert a float variable to integer using ceiling operation.
@@ -1064,10 +1062,8 @@ impl Model {
         // Post constraint: int_var - 1 < float_var ≤ int_var
         // This ensures int_var = ceil(float_var)
         self.props.less_than_or_equals(float_var, int_var);
-        // Create float version: int_var - 1.0 < float_var
-        let int_as_float = self.add(int_var, Val::ValF(0.0)); // Convert to float
-        let int_minus_one_float = self.sub(int_as_float, Val::ValF(1.0));
-        self.props.less_than(int_minus_one_float, float_var);
+        let int_minus_one = self.sub(int_var, Val::ValI(1));
+        self.props.less_than(int_minus_one, float_var);
     }
 
     /// Convert a float variable to integer using rounding operation.
@@ -1186,103 +1182,5 @@ impl Model {
         // At least one side must be true
         let final_clause = self.bool_or(&[pos_clause, not_all_neg]);
         self.props.equals(final_clause, Val::ValI(1));
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // 📊 Array Float Constraints (FlatZinc Integration)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    /// Find the minimum value in a float array.
-    /// 
-    /// This implements the FlatZinc `array_float_minimum` constraint.
-    /// Constrains `result` to equal the minimum value in `array`.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(1.5, 10.5);
-    /// let y = m.float(2.3, 8.7);
-    /// let z = m.float(3.1, 6.2);
-    /// 
-    /// let min_result = m.array_float_minimum(&[x, y, z]).expect("non-empty array");
-    /// ```
-    /// 
-    /// # Errors
-    /// Returns `SolverError::InvalidInput` if the array is empty.
-    /// 
-    /// # Note
-    /// This is a convenience wrapper around the generic `min()` method,
-    /// provided for FlatZinc compatibility. The underlying implementation
-    /// works for both integer and float variables.
-    pub fn array_float_minimum(&mut self, array: &[VarId]) -> SolverResult<VarId> {
-        // Delegate to the generic min() implementation which works for floats
-        self.min(array)
-    }
-
-    /// Find the maximum value in a float array.
-    /// 
-    /// This implements the FlatZinc `array_float_maximum` constraint.
-    /// Constrains `result` to equal the maximum value in `array`.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(1.5, 10.5);
-    /// let y = m.float(2.3, 8.7);
-    /// let z = m.float(3.1, 6.2);
-    /// 
-    /// let max_result = m.array_float_maximum(&[x, y, z]).expect("non-empty array");
-    /// ```
-    /// 
-    /// # Errors
-    /// Returns `SolverError::InvalidInput` if the array is empty.
-    /// 
-    /// # Note
-    /// This is a convenience wrapper around the generic `max()` method,
-    /// provided for FlatZinc compatibility. The underlying implementation
-    /// works for both integer and float variables.
-    pub fn array_float_maximum(&mut self, array: &[VarId]) -> SolverResult<VarId> {
-        // Delegate to the generic max() implementation which works for floats
-        self.max(array)
-    }
-
-    /// Access an element from a float array using a variable index.
-    /// 
-    /// This implements the FlatZinc `array_float_element` constraint.
-    /// Constrains `result = array[index]` where `index` is a variable.
-    /// 
-    /// # Arguments
-    /// * `index` - Integer variable representing the array index (0-based)
-    /// * `array` - Array of float variables to index into
-    /// * `result` - Float variable that will equal `array[index]`
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// 
-    /// // Array of prices
-    /// let prices = vec![
-    ///     m.float(10.5, 10.5),
-    ///     m.float(12.3, 12.3),
-    ///     m.float(15.0, 15.0),
-    /// ];
-    /// 
-    /// let index = m.int(0, 2);
-    /// let selected_price = m.float(0.0, 20.0);
-    /// 
-    /// // selected_price = prices[index]
-    /// m.array_float_element(index, &prices, selected_price);
-    /// ```
-    /// 
-    /// # Note
-    /// This is a convenience wrapper around the generic element constraint,
-    /// provided for FlatZinc compatibility. The underlying `props.element()`
-    /// implementation works for both integer and float variables.
-    pub fn array_float_element(&mut self, index: VarId, array: &[VarId], result: VarId) {
-        // Delegate to the generic element constraint which works for floats
-        self.props.element(array.to_vec(), index, result);
     }
 }
