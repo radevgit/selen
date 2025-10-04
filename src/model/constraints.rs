@@ -619,7 +619,127 @@ impl Model {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 📊 Linear Constraints (FlatZinc Integration)
+    // � Float Comparison Reified Constraints (FlatZinc Integration)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Post a reified float equality constraint: `b ⇔ (x = y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x = y` (for float variables).
+    /// This is useful for FlatZinc integration and conditional constraints with floats.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// let b = m.bool();
+    /// m.float_eq_reif(x, y, b);
+    /// // Now b is 1 iff x = y
+    /// ```
+    pub fn float_eq_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        // Float equality reification uses the same propagator as integers
+        // since the comparison logic is type-agnostic at the VarId level
+        self.props.int_eq_reif(x, y, b);
+    }
+
+    /// Post a reified float not-equal constraint: `b ⇔ (x ≠ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≠ y` (for float variables).
+    /// This is useful for FlatZinc integration and conditional constraints with floats.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// let b = m.bool();
+    /// m.float_ne_reif(x, y, b);
+    /// // Now b is 1 iff x ≠ y
+    /// ```
+    pub fn float_ne_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_ne_reif(x, y, b);
+    }
+
+    /// Post a reified float less-than constraint: `b ⇔ (x < y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x < y` (for float variables).
+    /// This is useful for FlatZinc integration and conditional constraints with floats.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// let b = m.bool();
+    /// m.float_lt_reif(x, y, b);
+    /// // Now b is 1 iff x < y
+    /// ```
+    pub fn float_lt_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_lt_reif(x, y, b);
+    }
+
+    /// Post a reified float less-than-or-equal constraint: `b ⇔ (x ≤ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≤ y` (for float variables).
+    /// This is useful for FlatZinc integration and conditional constraints with floats.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// let b = m.bool();
+    /// m.float_le_reif(x, y, b);
+    /// // Now b is 1 iff x ≤ y
+    /// ```
+    pub fn float_le_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_le_reif(x, y, b);
+    }
+
+    /// Post a reified float greater-than constraint: `b ⇔ (x > y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x > y` (for float variables).
+    /// This is useful for FlatZinc integration and conditional constraints with floats.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// let b = m.bool();
+    /// m.float_gt_reif(x, y, b);
+    /// // Now b is 1 iff x > y
+    /// ```
+    pub fn float_gt_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_gt_reif(x, y, b);
+    }
+
+    /// Post a reified float greater-than-or-equal constraint: `b ⇔ (x ≥ y)`.
+    /// 
+    /// The boolean variable `b` is 1 if and only if `x ≥ y` (for float variables).
+    /// This is useful for FlatZinc integration and conditional constraints with floats.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// let b = m.bool();
+    /// m.float_ge_reif(x, y, b);
+    /// // Now b is 1 iff x ≥ y
+    /// ```
+    pub fn float_ge_reif(&mut self, x: VarId, y: VarId, b: VarId) {
+        self.props.int_ge_reif(x, y, b);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // �📊 Linear Constraints (FlatZinc Integration)
     // ═══════════════════════════════════════════════════════════════════════
 
     /// Post a linear equality constraint: `sum(coeffs[i] * vars[i]) = constant`.
@@ -728,6 +848,60 @@ impl Model {
 
         // Post less-than-or-equal constraint: sum ≤ constant
         self.props.less_than_or_equals(sum_var, Val::ValI(constant));
+    }
+
+    /// Post a linear not-equal constraint: `sum(coeffs[i] * vars[i]) ≠ constant`.
+    /// 
+    /// This implements the FlatZinc `int_lin_ne` constraint, which represents
+    /// a weighted sum of variables not equal to a constant value.
+    /// 
+    /// # Arguments
+    /// * `coefficients` - Array of integer coefficients
+    /// * `variables` - Array of variables (must have same length as coefficients)
+    /// * `constant` - The value that the weighted sum must not equal
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let x = m.int(0, 10);
+    /// let y = m.int(0, 10);
+    /// let z = m.int(0, 10);
+    /// 
+    /// // x + y + z ≠ 15
+    /// m.int_lin_ne(&[1, 1, 1], &[x, y, z], 15);
+    /// ```
+    /// 
+    pub fn int_lin_ne(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
+        // Handle mismatched lengths - will be detected as unsatisfiable during solving
+        if coefficients.len() != variables.len() {
+            // Create an unsatisfiable constraint: 0 = 1
+            self.props.equals(Val::ValI(0), Val::ValI(1));
+            return;
+        }
+
+        if variables.is_empty() {
+            // Empty sum ≠ constant
+            // This is satisfiable only if 0 ≠ constant, otherwise unsatisfiable
+            self.props.not_equals(Val::ValI(0), Val::ValI(constant));
+            return;
+        }
+
+        // Create scaled variables: coeffs[i] * vars[i]
+        // We use actual multiplication to create new variables, not views
+        let scaled_vars: Vec<VarId> = coefficients
+            .iter()
+            .zip(variables.iter())
+            .map(|(&coeff, &var)| {
+                self.mul(var, Val::ValI(coeff))
+            })
+            .collect();
+
+        // Create sum of all scaled variables
+        let sum_var = self.sum(&scaled_vars);
+
+        // Post not-equal constraint: sum ≠ constant
+        self.props.not_equals(sum_var, Val::ValI(constant));
     }
 
     // ═══════════════════════════════════════════════════════════════════════

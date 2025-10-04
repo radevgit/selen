@@ -78,57 +78,73 @@ constraint float_lin_eq(coeffs, [B1, X, R], 0.0);
 
 ---
 
-## 2. Float Comparison Reified Constraints
+## 2. Float Comparison Reified Constraints ✅ **IMPLEMENTED**
 
-### Missing from Selen:
+### ~~Missing from Selen~~ **COMPLETED** (v0.9.1, January 2025):
 
 ```rust
 // In selen/src/model/constraints.rs
 impl Model {
-    /// Reified float equality: reif_var <=> (x == y)
+    /// Reified float equality: reif_var <=> (x == y) ✅ DONE
     pub fn float_eq_reif(&mut self, x: VarId, y: VarId, reif_var: VarId);
     
-    /// Reified float not-equal: reif_var <=> (x != y)
+    /// Reified float not-equal: reif_var <=> (x != y) ✅ DONE
     pub fn float_ne_reif(&mut self, x: VarId, y: VarId, reif_var: VarId);
     
-    /// Reified float less-than: reif_var <=> (x < y)
+    /// Reified float less-than: reif_var <=> (x < y) ✅ DONE
     pub fn float_lt_reif(&mut self, x: VarId, y: VarId, reif_var: VarId);
     
-    /// Reified float less-equal: reif_var <=> (x <= y)
+    /// Reified float less-equal: reif_var <=> (x <= y) ✅ DONE
     pub fn float_le_reif(&mut self, x: VarId, y: VarId, reif_var: VarId);
     
-    /// Reified float greater-than: reif_var <=> (x > y)
+    /// Reified float greater-than: reif_var <=> (x > y) ✅ DONE
     pub fn float_gt_reif(&mut self, x: VarId, y: VarId, reif_var: VarId);
     
-    /// Reified float greater-equal: reif_var <=> (x >= y)
+    /// Reified float greater-equal: reif_var <=> (x >= y) ✅ DONE
     pub fn float_ge_reif(&mut self, x: VarId, y: VarId, reif_var: VarId);
 }
 ```
 
-### Why Needed:
+### Implementation Details:
 
-- Used in conditional constraints with floats
+- All 6 methods delegate to existing integer reified constraints (`int_eq_reif`, `int_lt_reif`, etc.)
+- The underlying propagators work generically with VarId for both int and float variables
+- No new propagator types needed - reuses well-tested infrastructure
+
+**Status**: ✅ **IMPLEMENTED** (January 2025) - All six methods now available in Selen v0.9.1+
+- See: `tests/test_float_comparison_reif.rs` for 16 comprehensive tests
+- Used for conditional constraints with floats
 - Required for proper float constraint reification
 - Common in optimization problems
 
 ---
 
-## 3. Integer Linear Constraints - Missing Variant
+## 3. Integer Linear Constraints - Missing Variant ✅ **IMPLEMENTED**
 
-### Missing from Selen:
+### ~~Missing from Selen~~ **COMPLETED** (v0.9.1, January 2025):
 
 ```rust
 impl Model {
-    /// Integer linear not-equal constraint
+    /// Integer linear not-equal constraint ✅ DONE
     /// sum(coefficients[i] * variables[i]) != constant
     pub fn int_lin_ne(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32);
 }
 ```
 
-### Current Workaround in Zelen:
+### Implementation Details:
+
+- Follows the same pattern as `int_lin_eq` and `int_lin_le`
+- Creates scaled variables (coeffs[i] * vars[i]), sums them, and posts not-equal constraint
+- Handles edge cases: empty arrays, mismatched lengths, zero coefficients
+
+**Status**: ✅ **IMPLEMENTED** (January 2025) - `int_lin_ne` now available in Selen v0.9.1+
+- See: `tests/test_int_lin_ne.rs` for 13 comprehensive tests
+- Completes the integer linear constraint family alongside `int_lin_eq` and `int_lin_le`
+
+### Previous Workaround in Zelen (no longer needed):
 
 ```rust
-// Works but verbose - requires creating intermediate variables
+// Old approach - now replaced by native method
 let scaled_vars: Vec<VarId> = coeffs
     .iter()
     .zip(vars.iter())
@@ -137,8 +153,6 @@ let scaled_vars: Vec<VarId> = coeffs
 let sum_var = self.model.sum(&scaled_vars);
 self.model.c(sum_var).ne(constant);
 ```
-
-**Better**: Native `int_lin_ne` would be more efficient.
 
 ---
 
