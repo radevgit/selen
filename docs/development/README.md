@@ -17,6 +17,10 @@ This directory contains all planning documents, implementation notes, and detail
 
 ## 🔧 Technical Implementation Details
 
+### Variable Handling & Inference
+- **[BOUND_INFERENCE_DESIGN.md](BOUND_INFERENCE_DESIGN.md)** - Automatic bound inference for unbounded variables
+- **[UNBOUNDED_INFERENCE_IMPLEMENTATION.md](UNBOUNDED_INFERENCE_IMPLEMENTATION.md)** - Implementation guide and usage examples
+
 ### Precision & Performance
 - **[../guides/precision_handling.md](../guides/precision_handling.md)** - Detailed precision handling implementation
 - **[../guides/precision_quick_reference.md](../guides/precision_quick_reference.md)** - Quick reference for precision features

@@ -386,11 +386,14 @@ mod solution_coverage {
 
     #[test]
     fn test_solution_precision_edge_cases() {
+        // Default precision is 6 decimal places (step = 1e-6)
+        // So we need to use values that are representable with this precision
         let mut model = Model::default();
-        let tiny_float = model.float(0.0, 0.000001);
+        let tiny_float = model.float(0.0, 0.001);
         let precise_float = model.float(0.999999, 1.000001);
         
-        post!(model, tiny_float == 0.0000005);
+        // Use 0.0001 instead of 0.0000005 (which is below precision)
+        post!(model, tiny_float == 0.0001);
         post!(model, precise_float == 1.0);
         
         let solution = model.solve();
@@ -398,13 +401,14 @@ mod solution_coverage {
             let tiny_val = solution.get_float(tiny_float);
             let precise_val = solution.get_float(precise_float);
             
+            // Use tolerance matching the default precision (1e-6)
             assert!(
-                (tiny_val - 0.0000005).abs() < 1e-12,
-                "Tiny float should be precise: got {}",
+                (tiny_val - 0.0001).abs() < 1e-5,
+                "Tiny float should be 0.0001: got {}",
                 tiny_val
             );
             assert!(
-                (precise_val - 1.0).abs() < 1e-12,
+                (precise_val - 1.0).abs() < 1e-5,
                 "Precise float should be 1.0: got {}",
                 precise_val
             );

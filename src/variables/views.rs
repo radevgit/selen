@@ -216,12 +216,13 @@ impl<'s> Context<'s> {
                 Var::VarF(interval),
                 Val::ValF(min_f),
             ) => {
-                // Infeasible, fail space
-                if min_f > interval.max {
+                // Infeasible, fail space - use tolerance to handle precision
+                let tolerance = interval.step / 2.0;
+                if min_f > interval.max + tolerance {
                     return None;
                 }
 
-                if min_f > interval.min {
+                if min_f > interval.min + tolerance {
                     // Set new minimum
                     interval.min = min_f;
 
@@ -266,12 +267,13 @@ impl<'s> Context<'s> {
                 // Convert integer to float
                 let min_converted = min_i as f64;
                 
-                // Infeasible, fail space
-                if min_converted > interval.max {
+                // Infeasible, fail space - use tolerance to handle precision
+                let tolerance = interval.step / 2.0;
+                if min_converted > interval.max + tolerance {
                     return None;
                 }
 
-                if min_converted > interval.min {
+                if min_converted > interval.min + tolerance {
                     // Set new minimum
                     interval.min = min_converted;
 
@@ -320,12 +322,13 @@ impl<'s> Context<'s> {
                 Var::VarF(interval),
                 Val::ValF(max_f),
             ) => {
-                // Infeasible, fail space
-                if max_f < interval.min {
+                // Infeasible, fail space - use tolerance to handle precision
+                let tolerance = interval.step / 2.0;
+                if max_f < interval.min - tolerance {
                     return None;
                 }
 
-                if max_f < interval.max {
+                if max_f < interval.max - tolerance {
                     // Set new maximum
                     interval.max = max_f;
 
@@ -370,12 +373,13 @@ impl<'s> Context<'s> {
                 // Convert integer to float
                 let max_converted = max_i as f64;
                 
-                // Infeasible, fail space
-                if max_converted < interval.min {
+                // Infeasible, fail space - use tolerance to handle precision
+                let tolerance = interval.step / 2.0;
+                if max_converted < interval.min - tolerance {
                     return None;
                 }
 
-                if max_converted < interval.max {
+                if max_converted < interval.max - tolerance {
                     // Set new maximum
                     interval.max = max_converted;
 

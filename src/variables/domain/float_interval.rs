@@ -93,7 +93,8 @@ impl FloatInterval {
     
     /// Check if the interval contains a value
     pub fn contains(&self, value: f64) -> bool {
-        value >= self.min && value <= self.max
+        let tolerance = self.step / 2.0;
+        value >= self.min - tolerance && value <= self.max + tolerance
     }
     
     /// Check if the interval is empty (min > max)
@@ -169,14 +170,15 @@ impl FloatInterval {
     
     /// Remove values below the given threshold
     pub fn remove_below(&mut self, threshold: f64) {
-        if threshold > self.max {
+        let tolerance = self.step / 2.0;
+        if threshold > self.max + tolerance {
             // If threshold is above the maximum, remove everything (make empty)
             self.max = self.min - 1.0;
-        } else if threshold > self.min {
+        } else if threshold > self.min + tolerance {
             // If threshold is within the interval, update min
             // For remove_below, we want to round UP to ensure we don't include values below threshold
             self.min = self.ceil_to_step(threshold);
-            if self.min > self.max {
+            if self.min > self.max + tolerance {
                 self.max = self.min - 1.0; // Make empty
             }
         }
@@ -185,14 +187,15 @@ impl FloatInterval {
     
     /// Remove values above the given threshold
     pub fn remove_above(&mut self, threshold: f64) {
-        if threshold < self.min {
+        let tolerance = self.step / 2.0;
+        if threshold < self.min - tolerance {
             // If threshold is below the minimum, remove everything (make empty)
             self.max = self.min - 1.0;
-        } else if threshold < self.max {
+        } else if threshold < self.max - tolerance {
             // If threshold is within the interval, update max
             // For remove_above, we want to round DOWN to ensure we don't include values above threshold
             self.max = self.floor_to_step(threshold);
-            if self.max < self.min {
+            if self.max < self.min - tolerance {
                 self.max = self.min - 1.0; // Make empty
             }
         }

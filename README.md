@@ -14,6 +14,8 @@ This library provides efficient algorithms and data structures for solving const
 
 **Variable Types**: `int`, `float`, mixed constraints
 
+**Unbounded Variables**: Automatic bound inference for `int(i32::MIN, i32::MAX)` and `float(f64::NEG_INFINITY, f64::INFINITY)` - bounds inferred from context or sensible defaults
+
 **Constraint Categories**:
 - **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
@@ -47,13 +49,7 @@ post!(m, z / y != int(0));              // z / y != 0
 
 **FlatZinc/MiniZinc Support**
 
-For FlatZinc `.fzn` file support, use the separate [Zelen](https://github.com/radevgit/zelen) crate:
-```rust
-use zelen::prelude::*;
-let mut model = Model::default();
-model.from_flatzinc_file("puzzle.fzn")?;
-let solution = model.solve()?;
-```
+For FlatZinc `.fzn` file support, use the separate [Zelen](https://github.com/radevgit/zelen) crate.
 
 ## Installation
 
