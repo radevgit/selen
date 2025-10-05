@@ -2,16 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.9.1] - 2025-10-04
+## [0.9.3] - 2025-10-05
+- additional int_lin_*, bool_lin_*, float_lin_* constraints and test coverage.
+
+## [0.9.2] - 2025-10-04
 - SolverConfig aligned with MiniZinc
 - **New Feature**: Automatic bound inference for unbounded variables (integers and floats)
   - `Model::int(i32::MIN, i32::MAX)` now automatically infers reasonable bounds from context
   - `Model::float(f64::NEG_INFINITY, f64::INFINITY)` now automatically infers reasonable bounds
   - Configurable expansion factor via `SolverConfig::unbounded_inference_factor` (default: 1000x)
-  - Smart domain size management for integers (respects 1M element limit)
-  - Type-isolated inference (int/float contexts separate)
-  - Comprehensive test coverage (14 tests)
-  - See `docs/development/BOUND_INFERENCE_DESIGN.md` for details
 
 ## [0.9.0] - 2025-10-03
 - **Removed**: FlatZinc parser and integration (moved to [Zelen](https://github.com/radevgit/zelen)
