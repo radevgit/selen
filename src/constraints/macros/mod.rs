@@ -1,4 +1,12 @@
-//! Constraint Macros Module
+//! Constraint Macros Module (DEPRECATED)
+//!
+//! **⚠️ DEPRECATED**: This module is deprecated and will be removed in a future release.
+//! The constraint macros are difficult to maintain and have limited capabilities.
+//!
+//! **Migration Guide**: Use the constraint API methods directly instead:
+//! - Instead of `post!(model, x + y)`, use `model.add(x, y)`
+//! - Instead of `post!(model, x == y)`, use `model.props.equals(x, y)`
+//! - Instead of `post!(model, sum([x, y, z]) == 10)`, use `let s = model.sum(&[x, y, z]); model.props.equals(s, Val::ValI(10))`
 //!
 //! This module provides constraint posting macros with a general dispatch system.
 
@@ -13,6 +21,7 @@ mod global;
 // pub use global::*;      // Now inline in dispatch system
 
 #[doc(hidden)]
+#[deprecated(since = "0.9.3", note = "Part of deprecated constraint macros. Will be removed in a future release.")]
 /// Represents a constraint reference that can be used later
 #[derive(Debug, Clone, Copy)]
 pub struct ConstraintRef {
@@ -33,6 +42,7 @@ impl ConstraintRef {
 }
 
 #[doc(hidden)]
+#[deprecated(since = "0.9.3", note = "The `post!` macro is deprecated. Use constraint API methods directly: `model.add(x, y)`, `model.props.equals(x, y)`, etc. Will be removed in a future release.")]
 /// General constraint posting macro that dispatches to specialized macros
 #[macro_export]
 macro_rules! post {

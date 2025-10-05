@@ -11,6 +11,7 @@ mod div;
 mod element;
 mod eq;
 mod leq;
+mod linear;
 mod max;
 mod min;
 mod modulo;
@@ -1508,6 +1509,250 @@ impl Propagators {
             self::reification::IntGeReif::new(x, y, b),
             ConstraintType::GreaterEqualReified,
             variables,
+            metadata,
+        )
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Linear Constraint Propagators
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// Declare an integer linear equality constraint: `sum(coeffs[i] * vars[i]) = constant`.
+    pub fn int_lin_eq(&mut self, coefficients: Vec<i32>, variables: Vec<VarId>, constant: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::linear::IntLinEq::new(coefficients, variables.clone(), constant),
+            ConstraintType::Equals,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare an integer linear less-or-equal constraint: `sum(coeffs[i] * vars[i]) ≤ constant`.
+    pub fn int_lin_le(&mut self, coefficients: Vec<i32>, variables: Vec<VarId>, constant: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::linear::IntLinLe::new(coefficients, variables.clone(), constant),
+            ConstraintType::LessThanOrEquals,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare an integer linear not-equal constraint: `sum(coeffs[i] * vars[i]) ≠ constant`.
+    pub fn int_lin_ne(&mut self, coefficients: Vec<i32>, variables: Vec<VarId>, constant: i32) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::linear::IntLinNe::new(coefficients, variables.clone(), constant),
+            ConstraintType::NotEquals,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a reified integer linear equality constraint: `b ⟺ sum(coeffs[i] * vars[i]) = constant`.
+    pub fn int_lin_eq_reif(&mut self, coefficients: Vec<i32>, variables: Vec<VarId>, constant: i32, reif_var: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let mut operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: reif_var });
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        let mut all_vars = variables.clone();
+        all_vars.push(reif_var);
+        
+        self.push_new_prop_with_metadata(
+            self::linear::IntLinEqReif::new(coefficients, variables, constant, reif_var),
+            ConstraintType::EqualityReified,
+            all_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a reified integer linear less-or-equal constraint: `b ⟺ sum(coeffs[i] * vars[i]) ≤ constant`.
+    pub fn int_lin_le_reif(&mut self, coefficients: Vec<i32>, variables: Vec<VarId>, constant: i32, reif_var: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let mut operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: reif_var });
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        let mut all_vars = variables.clone();
+        all_vars.push(reif_var);
+        
+        self.push_new_prop_with_metadata(
+            self::linear::IntLinLeReif::new(coefficients, variables, constant, reif_var),
+            ConstraintType::InequalityReified,
+            all_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a reified integer linear not-equal constraint: `b ⟺ sum(coeffs[i] * vars[i]) ≠ constant`.
+    pub fn int_lin_ne_reif(&mut self, coefficients: Vec<i32>, variables: Vec<VarId>, constant: i32, reif_var: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let mut operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: reif_var });
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        let mut all_vars = variables.clone();
+        all_vars.push(reif_var);
+        
+        self.push_new_prop_with_metadata(
+            self::linear::IntLinNeReif::new(coefficients, variables, constant, reif_var),
+            ConstraintType::InequalityReified,
+            all_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a float linear equality constraint: `sum(coeffs[i] * vars[i]) = constant`.
+    pub fn float_lin_eq(&mut self, coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::linear::FloatLinEq::new(coefficients, variables.clone(), constant),
+            ConstraintType::Equals,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a float linear less-or-equal constraint: `sum(coeffs[i] * vars[i]) ≤ constant`.
+    pub fn float_lin_le(&mut self, coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::linear::FloatLinLe::new(coefficients, variables.clone(), constant),
+            ConstraintType::LessThanOrEquals,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a float linear not-equal constraint: `sum(coeffs[i] * vars[i]) ≠ constant`.
+    pub fn float_lin_ne(&mut self, coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        self.push_new_prop_with_metadata(
+            self::linear::FloatLinNe::new(coefficients, variables.clone(), constant),
+            ConstraintType::NotEquals,
+            variables,
+            metadata,
+        )
+    }
+
+    /// Declare a reified float linear equality constraint: `b ⟺ sum(coeffs[i] * vars[i]) = constant`.
+    pub fn float_lin_eq_reif(&mut self, coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64, reif_var: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let mut operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: reif_var });
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        let mut all_vars = variables.clone();
+        all_vars.push(reif_var);
+        
+        self.push_new_prop_with_metadata(
+            self::linear::FloatLinEqReif::new(coefficients, variables, constant, reif_var),
+            ConstraintType::EqualityReified,
+            all_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a reified float linear less-or-equal constraint: `b ⟺ sum(coeffs[i] * vars[i]) ≤ constant`.
+    pub fn float_lin_le_reif(&mut self, coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64, reif_var: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let mut operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: reif_var });
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        let mut all_vars = variables.clone();
+        all_vars.push(reif_var);
+        
+        self.push_new_prop_with_metadata(
+            self::linear::FloatLinLeReif::new(coefficients, variables, constant, reif_var),
+            ConstraintType::InequalityReified,
+            all_vars,
+            metadata,
+        )
+    }
+
+    /// Declare a reified float linear not-equal constraint: `b ⟺ sum(coeffs[i] * vars[i]) ≠ constant`.
+    pub fn float_lin_ne_reif(&mut self, coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64, reif_var: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo};
+        
+        let mut operands: Vec<ViewInfo> = variables.iter()
+            .map(|&v| ViewInfo::Variable { var_id: v })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: reif_var });
+        
+        let metadata = ConstraintData::NAry { operands };
+        
+        let mut all_vars = variables.clone();
+        all_vars.push(reif_var);
+        
+        self.push_new_prop_with_metadata(
+            self::linear::FloatLinNeReif::new(coefficients, variables, constant, reif_var),
+            ConstraintType::InequalityReified,
+            all_vars,
             metadata,
         )
     }

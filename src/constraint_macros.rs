@@ -1,16 +1,26 @@
-//! Constraint macros compatibility layer
+//! Constraint macros compatibility layer (DEPRECATED)
+//!
+//! **⚠️ DEPRECATED**: Constraint macros are deprecated and will be removed in a future release.
+//!
+//! **Please migrate to the constraint API methods**:
+//! - `model.add(x, y)` instead of macro syntax
+//! - `model.props.equals(x, y)` for constraints
+//! - See the `constraints::api` module for all available methods
 //!
 //! This module provides backward compatibility by re-exporting the organized
 //! constraint macros from the constraints/macros module.
 
 // Re-export the ConstraintRef type
+#[deprecated(since = "0.9.3", note = "Part of deprecated constraint macros.")]
 pub use crate::constraints::macros::ConstraintRef;
 
 // Re-export all categorized macros to maintain compatibility
+#[deprecated(since = "0.9.3", note = "Constraint macros are deprecated. Use constraint API methods directly.")]
 pub use crate::constraints::macros::*;
 
 // Batch posting macros
 #[doc(hidden)]
+#[deprecated(since = "0.9.3", note = "The `postall!` macro is deprecated. Post constraints individually using constraint API methods. Will be removed in a future release.")]
 #[macro_export]
 macro_rules! postall {
     // Use simple comma-separated arguments
