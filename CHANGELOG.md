@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.4] - 2025-10-06
+- two fixes on unbounded variables and adaptive float step
+
 ## [0.9.3] - 2025-10-05
 - additional int_lin_*, bool_lin_*, float_lin_* constraints and test coverage.
 
