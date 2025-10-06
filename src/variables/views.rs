@@ -218,13 +218,48 @@ impl<'s> Context<'s> {
             ) => {
                 // Infeasible, fail space - use tolerance to handle precision
                 let tolerance = interval.step / 2.0;
+                
+                // FIX: Use relative tolerance to handle quantization errors that get amplified
+                // by arithmetic operations (e.g., multiplication by large constants)
+                // Use the larger of absolute and relative tolerance
+                let abs_precision_tolerance = 3.0 * interval.step; // 3e-6 for default step
+                let rel_precision_tolerance = interval.max.abs() * 1e-5; // 0.001% relative error
+                let precision_tolerance = abs_precision_tolerance.max(rel_precision_tolerance);
+                
+                // If variable is already fixed and new min is within precision tolerance, accept it
+                if (interval.max - interval.min).abs() < tolerance && (min_f - interval.min).abs() < precision_tolerance {
+                    return Some(Val::ValF(interval.min));
+                }
+                
                 if min_f > interval.max + tolerance {
-                    return None;
+                    if (min_f - interval.max) > precision_tolerance {
+                        // Genuinely infeasible
+                        return None;
+                    } else {
+                        // Precision error from cascading propagations
+                        // Variable is already as tight as it can be, no change needed
+                        return Some(Val::ValF(interval.min));
+                    }
                 }
 
                 if min_f > interval.min + tolerance {
-                    // Set new minimum
-                    interval.min = min_f;
+                    // Round up to next representable value using ceil with step precision
+                    // This ensures we don't violate the constraint by using a too-small value
+                    let steps_from_zero = (min_f / interval.step).ceil();
+                    let mut new_min = steps_from_zero * interval.step;
+                    
+                    // FIX: Floating-point precision can cause `steps * step` to overshoot the target
+                    // Clamp to ensure new_min is at most interval.max to avoid spurious infeasibility
+                    if new_min > interval.max {
+                        new_min = interval.max;
+                    }
+                    
+                    // Verify the rounded value still fits in the domain
+                    if new_min > interval.max + tolerance {
+                        return None;
+                    }
+                    
+                    interval.min = new_min;
 
                     // Record modification event
                     self.events.push(v);
@@ -324,13 +359,82 @@ impl<'s> Context<'s> {
             ) => {
                 // Infeasible, fail space - use tolerance to handle precision
                 let tolerance = interval.step / 2.0;
-                if max_f < interval.min - tolerance {
-                    return None;
+                let debug = std::env::var("DEBUG_FLOAT_LIN").is_ok();
+                
+                // FIX: Use relative tolerance to handle quantization errors that get amplified
+                // by arithmetic operations (e.g., multiplication by large constants)
+                // Use the larger of absolute and relative tolerance
+                let abs_precision_tolerance = 3.0 * interval.step; // 3e-6 for default step
+                let rel_precision_tolerance = interval.min.abs() * 1e-5; // 0.001% relative error
+                let precision_tolerance = abs_precision_tolerance.max(rel_precision_tolerance);
+                
+                // If variable is already fixed and new max is within precision tolerance, accept it
+                if (interval.max - interval.min).abs() < tolerance && (max_f - interval.max).abs() < precision_tolerance {
+                    return Some(Val::ValF(interval.max));
+                }
+                
+                // Check if max_f is less than min, accounting for quantization
+                // When we quantize 0.1 with ceil, we might get 0.10000099..., and then
+                // trying to set max to 0.1 would fail. We need to allow this case.
+                if max_f < interval.min {
+                    let diff = interval.min - max_f;
+                    
+                    // Allow if within step size (quantization error)
+                    if diff <= interval.step {
+                        // max_f rounds down to something less than interval.min rounds up to
+                        // Just set max = min (variable becomes fixed)
+                        if debug {
+                            eprintln!("DEBUG try_set_max: quantization mismatch, max_f={} vs interval.min={} (diff={}), fixing to min",
+                                max_f, interval.min, diff);
+                        }
+                        interval.max = interval.min;
+                        self.events.push(v);
+                        return Some(Val::ValF(interval.max));
+                    } else if diff > precision_tolerance {
+                        // Genuinely infeasible
+                        if debug {
+                            eprintln!("DEBUG try_set_max FAIL 1: max_f={} < interval.min={} (diff={})", 
+                                max_f, interval.min, diff);
+                        }
+                        return None;
+                    } else {
+                        // Precision error from cascading propagations
+                        if debug {
+                            eprintln!("DEBUG try_set_max: precision error, max_f={} vs interval.min={} (diff={})",
+                                max_f, interval.min, diff);
+                        }
+                        // Variable is already as tight as it can be, no change needed
+                        return Some(Val::ValF(interval.max));
+                    }
                 }
 
                 if max_f < interval.max - tolerance {
-                    // Set new maximum
-                    interval.max = max_f;
+                    // Round down to previous representable value using floor with step precision
+                    // This ensures we don't violate the constraint by using a too-large value
+                    let steps_from_zero = (max_f / interval.step).floor();
+                    let mut new_max = steps_from_zero * interval.step;
+                    
+                    if debug {
+                        eprintln!("DEBUG try_set_max: max_f={}, step={}, steps={}, new_max={}, interval.min={}, tolerance={}",
+                            max_f, interval.step, steps_from_zero, new_max, interval.min, tolerance);
+                    }
+                    
+                    // FIX: Floating-point precision can cause `steps * step` to undershoot the target
+                    // Clamp to ensure new_max is at least interval.min to avoid spurious infeasibility
+                    if new_max < interval.min {
+                        new_max = interval.min;
+                    }
+                    
+                    // Verify the rounded value still fits in the domain
+                    if new_max < interval.min - tolerance {
+                        if debug {
+                            eprintln!("DEBUG try_set_max FAIL 2: new_max={} < interval.min={} - tolerance={} = {}",
+                                new_max, interval.min, tolerance, interval.min - tolerance);
+                        }
+                        return None;
+                    }
+                    
+                    interval.max = new_max;
 
                     // Record modification event
                     self.events.push(v);

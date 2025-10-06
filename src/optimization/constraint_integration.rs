@@ -227,10 +227,10 @@ impl ConstraintAwareOptimizer {
 
     /// Analyze constraints to determine the effective bounds for a variable
     ///
-    /// This is where the magic happens - instead of binary search + propagation,
-    /// we analyze the constraint structure to compute bounds directly.
+    /// This method uses FULL constraint propagation to discover the actual
+    /// constrained bounds, including indirect effects through composite variables.
     ///
-    /// Step 2.3.3: Implement constraint analysis for simple constraint types
+    /// Strategy: Run propagation with all constraints to see how they tighten the target variable
     fn analyze_constraints(
         &self,
         vars: &Vars,
@@ -250,24 +250,42 @@ impl ConstraintAwareOptimizer {
             }
         };
 
-        // Start with the original variable bounds
-        let mut effective_min = original_interval.min;
-        let mut effective_max = original_interval.max;
-        let mut constraint_count = 0;
-        let mut found_constraints = false;
-
-        // Step 2.3.3: Analyze propagators for simple constraint types
-        for prop_id in props.get_prop_ids_iter() {
-            let prop = props.get_state(prop_id);
-            
-            // Try to analyze this constraint for bounds impact
-            if let Some((new_min, new_max)) = self.analyze_single_constraint(vars, prop, var_id) {
-                found_constraints = true;
-                constraint_count += 1;
-                
-                // Update effective bounds (intersection of all constraints)
-                effective_min = effective_min.max(new_min);
-                effective_max = effective_max.min(new_max);
+        // IMPROVED: Run full constraint propagation using proper agenda-based fixpoint iteration
+        use crate::search::{Space, propagate};
+        use crate::search::agenda::Agenda;
+        
+        let mut space = Space {
+            vars: vars.clone(),
+            props: props.clone(),
+        };
+        
+        // Create agenda with all propagators initially scheduled
+        let mut agenda = Agenda::with_props(props.get_prop_ids_iter());
+        
+        // Run propagation to fixpoint
+        match propagate(space, agenda) {
+            Some((_has_unassigned, result_space)) => {
+                space = result_space;
+            }
+            None => {
+                // Propagation detected infeasibility
+                return ConstrainedBounds::infeasible(ConflictType::ConflictingInequalities {
+                    upper_bound: original_interval.max,
+                    lower_bound: original_interval.min,
+                });
+            }
+        }
+        
+        // Extract the propagated bounds for the target variable
+        let effective_min;
+        let effective_max;
+        let constraint_count = props.count();
+        let found_constraints = constraint_count > 0;
+        
+        match &space.vars[var_id] {
+            crate::variables::Var::VarF(new_interval) => {
+                effective_min = new_interval.min;
+                effective_max = new_interval.max;
                 
                 // Check for infeasibility
                 if effective_min > effective_max {
@@ -276,6 +294,10 @@ impl ConstraintAwareOptimizer {
                         lower_bound: effective_min,
                     });
                 }
+            }
+            crate::variables::Var::VarI(_) => {
+                // Variable is integer, not float - can't optimize
+                return ConstrainedBounds::infeasible(ConflictType::NonFloatVariable);
             }
         }
 
@@ -299,72 +321,6 @@ impl ConstraintAwareOptimizer {
         };
 
         ConstrainedBounds::new(effective_min, effective_max, derivation)
-    }
-
-    /// Analyze a single constraint to determine its impact on variable bounds
-    ///
-    /// This method attempts to extract bounds information from specific constraint types.
-    /// For Step 2.3.3, we implement a conservative bounds-tightening approach.
-    ///
-    /// Returns Some((min, max)) if the constraint affects the target variable's bounds,
-    /// None if the constraint doesn't involve the target variable or can't be analyzed.
-    fn analyze_single_constraint(
-        &self,
-        vars: &Vars,
-        constraint: &Box<dyn crate::constraints::props::Prune>,
-        target_var: VarId,
-    ) -> Option<(f64, f64)> {
-        // Step 2.3.3: Implement conservative bounds analysis
-        // 
-        // Since directly analyzing constraint trait objects is complex, we use a different
-        // approach: conservative bounds tightening based on variable dependencies.
-        //
-        // If this constraint might affect our target variable, we'll apply conservative
-        // bounds that are tighter than the original domain but safe.
-
-        // For Step 2.3.3, we'll implement a heuristic based on the observation that
-        // most constraints in our test case involve inequality bounds.
-        // We'll apply a conservative tightening factor.
-
-        // Get the current variable bounds
-        let original_interval = match &vars[target_var] {
-            crate::variables::Var::VarF(interval) => interval,
-            crate::variables::Var::VarI(_) => return None, // Only handle float variables
-        };
-
-        // Step 2.3.3: Conservative constraint analysis heuristic
-        // 
-        // If any constraints exist that might affect the target variable,
-        // we apply a conservative bound tightening approach. 
-        // For typical inequality constraints, we bias toward safer bounds.
-        
-        // Conservative approach for Step 2.3.3
-        // Many constraints in CSP problems involve upper bound restrictions
-        // So we apply conservative tightening that biases toward constraint satisfaction
-        
-        // Use the interval's mid() method to get step-aligned midpoint
-        let middle_point = original_interval.mid();
-        
-        // For Step 2.3.3: Assume most constraints are upper bound constraints
-        // Be conservative and bias heavily toward the lower portion of the domain
-        // This handles inequality constraints better by providing safer bounds
-        
-        // Calculate a point between min and middle (biased toward constraint satisfaction)
-        let rough_upper = original_interval.min + (middle_point - original_interval.min) * 0.8;
-        
-        // Use round_to_step to ensure the conservative bounds are step-aligned
-        let conservative_upper = original_interval.round_to_step(rough_upper);
-        let conservative_lower = original_interval.min;
-        
-        // Ensure bounds are valid
-        let tightened_min = conservative_lower;
-        let tightened_max = conservative_upper.min(original_interval.max);
-        
-        // For now, assume any constraint affects the bounds (conservative)
-        // In real implementation, we'd check if the constraint actually involves target_var
-        let _ = constraint; // Suppress unused warning
-        
-        Some((tightened_min, tightened_max))
     }
 
     /// Apply constrained bounds to a variable by updating its domain

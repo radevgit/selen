@@ -583,6 +583,22 @@ impl Vars {
     /// This function will panic if any decision variables are not assigned.
     #[doc(hidden)]
     pub fn into_solution(self) -> Solution {
+        // DEBUG: Print variable states before extraction
+        println!("=== SOLUTION EXTRACTION DEBUG ===");
+        for (i, v) in self.0.iter().enumerate() {
+            match v {
+                Var::VarF(interval) => {
+                    println!("Float var {}: min={}, max={}, step={}, is_fixed={}, step_count={}", 
+                        i, interval.min, interval.max, interval.step, 
+                        interval.is_fixed(), interval.step_count());
+                }
+                Var::VarI(sparse_set) => {
+                    println!("Int var {}: min={}, max={}, is_fixed={}", 
+                        i, sparse_set.min(), sparse_set.max(), sparse_set.is_fixed());
+                }
+            }
+        }
+        
         // Extract values for each decision variable - convert to old Val type for now
         let values: Vec<crate::variables::Val> = self.0.into_iter().map(|v| {
             let val = v.get_assignment();
@@ -592,6 +608,7 @@ impl Vars {
             }
         }).collect();
 
+        println!("=== END SOLUTION EXTRACTION DEBUG ===");
         Solution::from(values)
     }
 
@@ -602,6 +619,22 @@ impl Vars {
     /// This function will panic if any decision variables are not assigned.
     #[doc(hidden)]
     pub fn into_solution_with_stats(self, stats: crate::core::solution::SolveStats) -> Solution {
+        // DEBUG: Print variable states before extraction
+        println!("=== SOLUTION EXTRACTION DEBUG (with stats) ===");
+        for (i, v) in self.0.iter().enumerate() {
+            match v {
+                Var::VarF(interval) => {
+                    println!("Float var {}: min={}, max={}, step={}, is_fixed={}, step_count={}", 
+                        i, interval.min, interval.max, interval.step, 
+                        interval.is_fixed(), interval.step_count());
+                }
+                Var::VarI(sparse_set) => {
+                    println!("Int var {}: min={}, max={}, is_fixed={}", 
+                        i, sparse_set.min(), sparse_set.max(), sparse_set.is_fixed());
+                }
+            }
+        }
+        
         // Extract values for each decision variable - convert to old Val type for now
         let values: Vec<crate::variables::Val> = self.0.into_iter().map(|v| {
             let val = v.get_assignment();
@@ -611,6 +644,7 @@ impl Vars {
             }
         }).collect();
 
+        println!("=== END SOLUTION EXTRACTION DEBUG (with stats) ===");
         Solution::new(values, stats)
     }
 

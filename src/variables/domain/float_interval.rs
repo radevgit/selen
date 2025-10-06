@@ -73,7 +73,21 @@ impl FloatInterval {
     
     /// Get the next representable value
     pub fn next(&self, value: f64) -> f64 {
-        let next_val = value + self.step;
+        // Check if step size is smaller than ULP at this magnitude
+        // If so, use ULP-based stepping to ensure we actually move to next value
+        let ulp = crate::optimization::ulp_utils::UlpUtils::ulp(value);
+        let effective_step = if self.step < ulp {
+            // Step is too small - use actual next float
+            let next = crate::optimization::ulp_utils::UlpUtils::next_float(value);
+            if next > self.max {
+                return self.max;
+            }
+            return next;
+        } else {
+            self.step
+        };
+        
+        let next_val = value + effective_step;
         if next_val > self.max {
             self.max
         } else {
@@ -83,7 +97,21 @@ impl FloatInterval {
     
     /// Get the previous representable value
     pub fn prev(&self, value: f64) -> f64 {
-        let prev_val = value - self.step;
+        // Check if step size is smaller than ULP at this magnitude
+        // If so, use ULP-based stepping to ensure we actually move to previous value
+        let ulp = crate::optimization::ulp_utils::UlpUtils::ulp(value);
+        let effective_step = if self.step < ulp {
+            // Step is too small - use actual previous float
+            let prev = crate::optimization::ulp_utils::UlpUtils::prev_float(value);
+            if prev < self.min {
+                return self.min;
+            }
+            return prev;
+        } else {
+            self.step
+        };
+        
+        let prev_val = value - effective_step;
         if prev_val < self.min {
             self.min
         } else {

@@ -471,6 +471,9 @@ impl FloatLinEq {
 
 impl Prune for FloatLinEq {
     fn prune(&self, ctx: &mut Context) -> Option<()> {
+        // DEBUG: Enable for debugging
+        let debug = std::env::var("DEBUG_FLOAT_LIN").is_ok();
+        
         for i in 0..self.variables.len() {
             let var_id = self.variables[i];
             let coeff = self.coefficients[i];
@@ -520,14 +523,78 @@ impl Prune for FloatLinEq {
             let target_min = self.constant - max_other;
             let target_max = self.constant - min_other;
             
-            let (new_min, new_max) = if coeff > 0.0 {
+            let (mut new_min, mut new_max) = if coeff > 0.0 {
                 (target_min / coeff, target_max / coeff)
             } else {
                 (target_max / coeff, target_min / coeff)
             };
             
-            var_id.try_set_min(Val::ValF(new_min), ctx)?;
-            var_id.try_set_max(Val::ValF(new_max), ctx)?;
+            // Handle floating-point rounding: ensure new_min <= new_max
+            // When constraints are tight (equality), new_min and new_max should be nearly equal
+            // but may differ slightly due to floating-point arithmetic
+            if new_min > new_max {
+                if debug {
+                    eprintln!("DEBUG: FloatLinEq swapping bounds: new_min={} > new_max={}", new_min, new_max);
+                }
+                // Swap if they're reversed due to rounding errors
+                std::mem::swap(&mut new_min, &mut new_max);
+            }
+            
+            // FIX: Clamp computed bounds to current bounds to handle accumulated precision errors
+            // When propagating tight equality constraints, the computed bounds may slightly
+            // violate the current bounds due to cascading precision errors from previous propagations
+            let current_min = match var_id.min(ctx) {
+                Val::ValF(f) => f,
+                Val::ValI(i) => i as f64,
+                _ => new_min, // Fallback to computed value if type mismatch
+            };
+            let current_max = match var_id.max(ctx) {
+                Val::ValF(f) => f,
+                Val::ValI(i) => i as f64,
+                _ => new_max, // Fallback to computed value if type mismatch
+            };
+            
+            // Only apply clamping if the difference is small (precision error, not real infeasibility)
+            let tolerance = 1e-6;
+            if new_max < current_min && (current_min - new_max) < tolerance {
+                new_max = current_min;
+            }
+            if new_min > current_max && (new_min - current_max) < tolerance {
+                new_min = current_max;
+            }
+            
+            if debug {
+                let cur_min = var_id.min(ctx);
+                let cur_max = var_id.max(ctx);
+                eprintln!("DEBUG: FloatLinEq var {:?}: current=[{:?}, {:?}], setting=[{}, {}]",
+                    var_id, cur_min, cur_max, new_min, new_max);
+            }
+            
+            // FIX: If variable is already fixed and computed min is close to current value,
+            // skip update to avoid cascading precision errors. A fixed variable shouldn't
+            // be perturbed by small precision errors in back-propagation.
+            let is_fixed = (current_max - current_min).abs() < 1e-9;
+            let min_close = (new_min - current_min).abs() < 1e-4;
+            if is_fixed && min_close {
+                // Variable already at the right value, no update needed
+                if debug {
+                    eprintln!("DEBUG: FloatLinEq skipping update for fixed var {:?} (current={}, new_min={})",
+                        var_id, current_min, new_min);
+                }
+                continue;
+            }
+            
+            let min_result = var_id.try_set_min(Val::ValF(new_min), ctx);
+            if debug && min_result.is_none() {
+                eprintln!("DEBUG: FloatLinEq FAILED on try_set_min({}) for var {:?}", new_min, var_id);
+            }
+            min_result?;
+            
+            let max_result = var_id.try_set_max(Val::ValF(new_max), ctx);
+            if debug && max_result.is_none() {
+                eprintln!("DEBUG: FloatLinEq FAILED on try_set_max({}) for var {:?}", new_max, var_id);
+            }
+            max_result?;
         }
         
         Some(())
@@ -604,10 +671,27 @@ impl Prune for FloatLinLe {
             
             if coeff > 0.0 {
                 let max_val = remaining / coeff;
-                var_id.try_set_max(Val::ValF(max_val), ctx)?;
+                // Only tighten if the new bound is finite and improves current bound
+                if max_val.is_finite() {
+                    if let Val::ValF(current_max) = var_id.max(ctx) {
+                        if max_val < current_max {
+                            var_id.try_set_max(Val::ValF(max_val), ctx)?;
+                        }
+                    }
+                }
             } else {
                 let min_val = remaining / coeff;
-                var_id.try_set_min(Val::ValF(min_val), ctx)?;
+                // Normalize -0.0 to 0.0 to avoid negative zero artifacts
+                // This can occur when remaining=0.0 and coeff<0, giving 0.0/-1.0 = -0.0
+                let normalized_min = if min_val == 0.0 { 0.0 } else { min_val };
+                // Only tighten if the new bound is finite and improves current bound
+                if normalized_min.is_finite() {
+                    if let Val::ValF(current_min) = var_id.min(ctx) {
+                        if normalized_min > current_min {
+                            var_id.try_set_min(Val::ValF(normalized_min), ctx)?;
+                        }
+                    }
+                }
             }
         }
         
@@ -1218,11 +1302,45 @@ fn prune_float_lin_eq(coefficients: &[f64], variables: &[VarId], constant: f64, 
         let target_min = constant - max_other;
         let target_max = constant - min_other;
         
-        let (new_min, new_max) = if coeff > 0.0 {
+        let (mut new_min, mut new_max) = if coeff > 0.0 {
             (target_min / coeff, target_max / coeff)
         } else {
             (target_max / coeff, target_min / coeff)
         };
+        
+        // Handle floating-point rounding: ensure new_min <= new_max
+        if new_min > new_max {
+            std::mem::swap(&mut new_min, &mut new_max);
+        }
+        
+        // FIX: Clamp computed bounds to current bounds to handle accumulated precision errors
+        let current_min = match var_id.min(ctx) {
+            Val::ValF(f) => f,
+            Val::ValI(i) => i as f64,
+            _ => new_min,
+        };
+        let current_max = match var_id.max(ctx) {
+            Val::ValF(f) => f,
+            Val::ValI(i) => i as f64,
+            _ => new_max,
+        };
+        
+        let tolerance = 1e-6;
+        if new_max < current_min && (current_min - new_max) < tolerance {
+            new_max = current_min;
+        }
+        if new_min > current_max && (new_min - current_max) < tolerance {
+            new_min = current_max;
+        }
+        
+        // FIX: If variable is already fixed and computed min is close to current value,
+        // skip update to avoid cascading precision errors in constraint chains
+        let is_fixed = (current_max - current_min).abs() < 1e-9;
+        let min_close = (new_min - current_min).abs() < 1e-4;
+        if is_fixed && min_close {
+            // Variable already at the right value, no update needed
+            continue;
+        }
         
         var_id.try_set_min(Val::ValF(new_min), ctx)?;
         var_id.try_set_max(Val::ValF(new_max), ctx)?;

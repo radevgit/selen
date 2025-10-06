@@ -11,7 +11,7 @@ use selen::prelude::*;
 
 #[test]
 fn test_unbounded_integer_fallback() {
-    // Test: First variable is unbounded, should use fallback [-10000, 10000]
+    // Test: First variable is unbounded, should use fallback [-100000, 100000]
     let mut m = Model::default();
     let x = m.int(i32::MIN, i32::MAX);
     
@@ -19,12 +19,12 @@ fn test_unbounded_integer_fallback() {
         selen::variables::Var::VarI(sparse_set) => {
             let min = sparse_set.min();
             let max = sparse_set.max();
-            assert_eq!(min, -10000, "Unbounded integer should use fallback min");
-            assert_eq!(max, 10000, "Unbounded integer should use fallback max");
+            assert_eq!(min, -100000, "Unbounded integer should use fallback min");
+            assert_eq!(max, 100000, "Unbounded integer should use fallback max");
             
-            // Domain size: 20,001 elements
+            // Domain size: 200,001 elements
             let domain_size = (max - min + 1) as u64;
-            assert!(domain_size < 100_000, "Fallback should have small domain");
+            assert!(domain_size < 1_000_000, "Fallback should be within sparse set limit");
         }
         _ => panic!("Expected integer variable"),
     }
@@ -177,14 +177,14 @@ fn test_partially_unbounded_integer_only_max() {
 
 #[test]
 fn test_unbounded_float_fallback() {
-    // Test: First variable is unbounded, should use fallback [-10000.0, 10000.0]
+    // Test: First variable is unbounded, should use fallback [-1e9, 1e9]
     let mut m = Model::default();
     let x = m.float(f64::NEG_INFINITY, f64::INFINITY);
     
     match &m.vars[x] {
         selen::variables::Var::VarF(interval) => {
-            assert_eq!(interval.min, -10000.0, "Unbounded float should use fallback min");
-            assert_eq!(interval.max, 10000.0, "Unbounded float should use fallback max");
+            assert_eq!(interval.min, -1e9, "Unbounded float should use fallback min");
+            assert_eq!(interval.max, 1e9, "Unbounded float should use fallback max");
         }
         _ => panic!("Expected float variable"),
     }
@@ -322,8 +322,8 @@ fn test_integer_inference_ignores_float_context() {
             let max = sparse_set.max();
             
             // Should use fallback, not float context
-            assert_eq!(min, -10000, "Should ignore float context, use fallback");
-            assert_eq!(max, 10000, "Should ignore float context, use fallback");
+            assert_eq!(min, -100000, "Should ignore float context, use fallback");
+            assert_eq!(max, 100000, "Should ignore float context, use fallback");
         }
         _ => panic!("Expected integer variable"),
     }
@@ -344,8 +344,8 @@ fn test_float_inference_ignores_integer_context() {
     match &m.vars[x] {
         selen::variables::Var::VarF(interval) => {
             // Should use fallback, not integer context
-            assert_eq!(interval.min, -10000.0, "Should ignore integer context, use fallback");
-            assert_eq!(interval.max, 10000.0, "Should ignore integer context, use fallback");
+            assert_eq!(interval.min, -1e9, "Should ignore integer context, use fallback");
+            assert_eq!(interval.max, 1e9, "Should ignore integer context, use fallback");
         }
         _ => panic!("Expected float variable"),
     }

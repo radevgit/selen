@@ -80,6 +80,8 @@ impl Model {
         let min = products.iter().fold(products[0], |acc, &x| if x < acc { x } else { acc });
         let max = products.iter().fold(products[0], |acc, &x| if x > acc { x } else { acc });
         
+        // Create intermediate variable for the multiplication result
+        // Use standard step size to ensure accurate value representation
         let s = self.new_var_unchecked(min, max);
 
         let _p = self.props.mul(x, y, s);

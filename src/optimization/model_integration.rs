@@ -359,24 +359,18 @@ impl OptimizationRouter {
             crate::variables::Var::VarF(interval) => {
                 let var_id = index_to_var_id(var_idx);
                 
-                // Step 2.4: Use precision-aware optimization when constraints exist
+                // FIXED: Use constraint-aware optimization with proper agenda-based propagation
                 let optimal_value = if props.get_prop_ids_iter().next().is_some() {
-                    // Constraints detected - try precision-aware optimization first
-                    let precision_result = self.precision_optimizer.minimize_with_precision(vars, props, var_id);
+                    // Constraints detected - use full propagation-based optimization
+                    let constraint_result = self.constraint_optimizer.minimize_with_constraints(vars, props, var_id);
                     
-                    if precision_result.success {
-                        // Step 2.4 precision optimization succeeded
-                        precision_result.optimal_value
+                    if constraint_result.success {
+                        constraint_result.optimal_value
                     } else {
-                        // Fall back to Step 2.3.3 constraint-aware optimization
-                        let constraint_result = self.constraint_optimizer.minimize_with_constraints(vars, props, var_id);
-                        
-                        if constraint_result.success {
-                            constraint_result.optimal_value
-                        } else {
-                            // Both optimizers failed - use conservative fallback
-                            interval.min
-                        }
+                        // Constraint analysis failed - fall back to search
+                        return OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
+                            OptimizerFailure::ConstraintAnalysisFailed
+                        ));
                     }
                 } else {
                     // No constraints - minimize to lower bound
@@ -384,7 +378,7 @@ impl OptimizationRouter {
                 };
                 
                 // Create a solution with this value
-                match self.create_unconstrained_solution(vars, var_idx, optimal_value) {
+                match self.create_constrained_solution(vars, props, var_idx, optimal_value) {
                     Ok(solution) => OptimizationAttempt::Success(solution),
                     Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
                 }
@@ -412,50 +406,28 @@ impl OptimizationRouter {
             crate::variables::Var::VarF(interval) => {
                 let var_id = index_to_var_id(var_idx);
                 
-                // Step 2.4: Use precision-aware optimization when constraints exist
-                if props.get_prop_ids_iter().next().is_some() {
-                    // Constraints detected - try precision-aware optimization first
-                    let precision_result = self.precision_optimizer.maximize_with_precision(vars, props, var_id);
+                // FIXED: Use constraint-aware optimization with proper agenda-based propagation
+                let optimal_value = if props.get_prop_ids_iter().next().is_some() {
+                    // Constraints detected - use full propagation-based optimization
+                    let constraint_result = self.constraint_optimizer.maximize_with_constraints(vars, props, var_id);
                     
-                    if precision_result.success {
-                        // Step 2.4 precision optimization succeeded
-                        match self.create_unconstrained_solution(vars, var_idx, precision_result.optimal_value) {
-                            Ok(solution) => OptimizationAttempt::Success(solution),
-                            Err(_) => OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
-                                SolutionCreationError::SolutionInitializationFailed
-                            )),
-                        }
+                    if constraint_result.success {
+                        constraint_result.optimal_value
                     } else {
-                        // Fall back to Step 2.3.3 constraint-aware optimization
-                        let constraint_result = self.constraint_optimizer.maximize_with_constraints(vars, props, var_id);
-                        
-                        match constraint_result.success {
-                            true => {
-                                // Constraint-aware optimization succeeded
-                                match self.create_unconstrained_solution(vars, var_idx, constraint_result.optimal_value) {
-                                    Ok(solution) => OptimizationAttempt::Success(solution),
-                                    Err(_) => OptimizationAttempt::Fallback(FallbackReason::SolutionCreationError(
-                                        SolutionCreationError::SolutionInitializationFailed
-                                    )),
-                                }
-                            },
-                            false => {
-                                // Constraint-aware optimization failed - fall back to search
-                                OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
-                                    OptimizerFailure::ConstraintAnalysisFailed
-                                ))
-                            }
-                        }
+                        // Constraint analysis failed - fall back to search
+                        return OptimizationAttempt::Fallback(FallbackReason::OptimizerFailure(
+                            OptimizerFailure::ConstraintAnalysisFailed
+                        ));
                     }
                 } else {
                     // No constraints - maximize to upper bound
-                    let optimal_value = interval.max;
-                    
-                    // Create a solution with this value
-                    match self.create_unconstrained_solution(vars, var_idx, optimal_value) {
-                        Ok(solution) => OptimizationAttempt::Success(solution),
-                        Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
-                    }
+                    interval.max
+                };
+                
+                // Create a solution with this value
+                match self.create_constrained_solution(vars, props, var_idx, optimal_value) {
+                    Ok(solution) => OptimizationAttempt::Success(solution),
+                    Err(_) => OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression),
                 }
             },
             crate::variables::Var::VarI(_) => {
@@ -464,37 +436,82 @@ impl OptimizationRouter {
         }
     }
     
-    /// Create a solution for unconstrained optimization
-    fn create_unconstrained_solution(
+    /// Create a solution for optimization by setting optimal value and propagating constraints
+    /// 
+    /// This method:
+    /// 1. Sets the optimized variable to its optimal value
+    /// 2. Runs constraint propagation to compute consistent values for all other variables
+    /// 3. Extracts the final values to create a valid solution
+    ///
+    /// BUGFIX: Previously this function assigned arbitrary values (midpoints) to non-optimized
+    /// variables, causing constraint violations. Now it properly propagates constraints after
+    /// fixing the optimal variable to ensure all composite variables are consistent.
+    fn create_constrained_solution(
         &self,
         vars: &Vars,
+        props: &Propagators,
         optimized_var_idx: usize,
         optimal_value: f64,
     ) -> Result<Solution, String> {
-        let mut values = Vec::new();
+        // Create a mutable copy of the variables
+        let mut working_vars = vars.clone();
         
-        // Add all variables to the solution
-        for (var_idx, var) in vars.iter_with_indices() {
-            if var_idx == optimized_var_idx {
-                // Set the optimized variable to its optimal value
-                values.push(crate::variables::Val::ValF(optimal_value));
-            } else {
-                // For other variables, use their current domain values
-                match var {
-                    crate::variables::Var::VarF(interval) => {
-                        // Use the midpoint of the interval as a reasonable assignment
-                        let value = if interval.is_fixed() {
-                            interval.min
-                        } else {
-                            interval.mid()
-                        };
-                        values.push(crate::variables::Val::ValF(value));
-                    },
-                    crate::variables::Var::VarI(sparse_set) => {
-                        // Use the minimum value for integer variables
-                        values.push(crate::variables::Val::ValI(sparse_set.min()));
-                    },
-                }
+        // Set the optimized variable to its optimal value by narrowing its domain
+        let var_id = index_to_var_id(optimized_var_idx);
+        match &mut working_vars[var_id] {
+            crate::variables::Var::VarF(interval) => {
+                // Fix the variable to the optimal value
+                let step = interval.step;
+                *interval = crate::variables::FloatInterval::with_step(optimal_value, optimal_value, step);
+            },
+            _ => {
+                return Err("Optimized variable is not a float variable".to_string());
+            }
+        }
+        
+        // Run constraint propagation to compute consistent values for all variables
+        // This ensures composite variables match their constituent variables
+        use crate::search::{Space, propagate};
+        use crate::search::agenda::Agenda;
+        
+        let mut space = Space {
+            vars: working_vars,
+            props: props.clone(),
+        };
+        
+        // Create agenda with all propagators initially scheduled
+        let mut agenda = Agenda::with_props(props.get_prop_ids_iter());
+        
+        // Run propagation to fixpoint
+        match propagate(space, agenda) {
+            Some((_has_unassigned, result_space)) => {
+                space = result_space;
+            }
+            None => {
+                // Propagation detected infeasibility - this shouldn't happen if
+                // maximize_with_constraints computed the optimal value correctly
+                return Err("Constraint propagation after optimization failed (infeasible)".to_string());
+            }
+        }
+        
+        // Extract the final values from the propagated state
+        let mut values = Vec::new();
+        for (_var_idx, var) in space.vars.iter_with_indices() {
+            match var {
+                crate::variables::Var::VarF(interval) => {
+                    // For fixed variables, use the exact value
+                    // For non-fixed, use midpoint of the propagated domain
+                    let value = if interval.is_fixed() {
+                        interval.min
+                    } else {
+                        interval.mid()
+                    };
+                    values.push(crate::variables::Val::ValF(value));
+                },
+                crate::variables::Var::VarI(sparse_set) => {
+                    // Use the minimum value for integer variables
+                    values.push(crate::variables::Val::ValI(sparse_set.min()));
+                },
             }
         }
         

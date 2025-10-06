@@ -962,10 +962,7 @@ impl Propagators {
         use crate::optimization::constraint_metadata::{ConstraintType, ConstraintData, ViewInfo, ConstraintValue};
         use crate::variables::Val;
         
-        eprintln!("count_constraint called for target_value={:?}", target_value);
-        
         let count_instance = count::Count::new(vars.clone(), target_value, count_var);
-        eprintln!("Created Count instance: {:?}", count_instance);
         
         let mut operands: Vec<ViewInfo> = vars.iter()
             .map(|&var_id| ViewInfo::Variable { var_id })
@@ -983,15 +980,12 @@ impl Propagators {
         let mut all_vars = vars.clone();
         all_vars.push(count_var);
         
-        let prop_id = self.push_new_prop_with_metadata(
+        self.push_new_prop_with_metadata(
             count_instance,
             ConstraintType::Count,
             all_vars,
             metadata,
-        );
-        
-        eprintln!("count_constraint returning PropId({:?})", prop_id);
-        prop_id
+        )
     }
 
     /// Declare a new propagator to enforce that array[index] == value.

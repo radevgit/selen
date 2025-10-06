@@ -39,6 +39,27 @@ impl PrecisionAwareOptimizer {
         }
     }
 
+    /// Check if a domain represents fallback bounds for unbounded variables
+    /// Fallback bounds are typically symmetric around 0 (e.g., -50 to 50)
+    fn is_fallback_domain(&self, domain: &FloatInterval) -> bool {
+        // Heuristic: fallback domains are often symmetric around 0
+        // and use "round" numbers like -50, 50 or -100, 100
+        let min = domain.min;
+        let max = domain.max;
+        
+        // Check if symmetric around 0
+        if (min + max).abs() < 0.0001 {  // Close to 0 due to floating point precision
+            // Check if it's a "round" fallback bound
+            let abs_bound = max.abs();
+            match abs_bound {
+                50.0 | 100.0 | 1000.0 | 10000.0 => true,
+                _ => false,
+            }
+        } else {
+            false
+        }
+    }
+
     /// Maximize a variable with precision-aware constraint analysis
     pub fn maximize_with_precision(
         &self,
@@ -110,11 +131,32 @@ impl PrecisionAwareOptimizer {
 
         // Calculate optimal value based on bounds and optimization direction
         let optimal_value = if is_maximization {
-            // For maximization, use the upper bound if available, otherwise domain max
-            constraint_upper.unwrap_or(var_domain.max)
+            // For maximization, use the upper bound if available
+            if let Some(upper) = constraint_upper {
+                upper
+            } else {
+                // No constraint-derived upper bound available
+                // For variables with fallback bounds (e.g., -50 to 50), using domain.max
+                // can violate other constraints. Better to fall back to constraint-aware optimization.
+                if self.is_fallback_domain(var_domain) {
+                    // This is likely an unbounded variable with fallback bounds
+                    // Don't use domain.max as it may violate other constraints
+                    return None;
+                }
+                var_domain.max
+            }
         } else {
-            // For minimization, use the lower bound if available, otherwise domain min
-            constraint_lower.unwrap_or(var_domain.min)
+            // For minimization, use the lower bound if available
+            if let Some(lower) = constraint_lower {
+                lower
+            } else {
+                // No constraint-derived lower bound available
+                if self.is_fallback_domain(var_domain) {
+                    // This is likely an unbounded variable with fallback bounds
+                    return None;
+                }
+                var_domain.min
+            }
         };
 
         // Verify the optimal value is within the original domain

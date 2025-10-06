@@ -8,6 +8,36 @@ use crate::model::core::Model;
 use crate::variables::{Val, VarId, VarIdBin};
 use crate::core::error::SolverError;
 
+// ============================================================================
+// FALLBACK BOUNDS FOR UNBOUNDED VARIABLES
+// ============================================================================
+
+/// Default fallback bounds for unbounded integer variables (when no context exists)
+/// 
+/// **Value**: `(-100_000, 100_000)` → domain size of 200,001 elements
+/// 
+/// **Rationale**:
+/// - Must respect `MAX_SPARSE_SET_DOMAIN_SIZE` (1 million elements) strictly
+/// - Large enough for most CSP and optimization problems
+/// - Domain size ~200K is well within 1M limit, leaves room for propagation
+/// - Small enough to ensure efficient sparse set operations
+const DEFAULT_INT_FALLBACK_MIN: i32 = -100_000;
+const DEFAULT_INT_FALLBACK_MAX: i32 = 100_000;
+
+/// Default fallback bounds for unbounded float variables (when no context exists)
+/// 
+/// **Value**: `(-1e9, 1e9)` → ±1 billion
+/// 
+/// **Rationale**:
+/// - Large enough for real-world optimization problems:
+///   - Financial modeling (millions/billions in currency)
+///   - Engineering (stress, forces, dimensions)
+///   - Operations research (costs, profits, resources)
+/// - Small enough to maintain numerical stability
+/// - Step size is automatically adapted to maintain reasonable domain size
+const DEFAULT_FLOAT_FALLBACK_MIN: f64 = -1e9;
+const DEFAULT_FLOAT_FALLBACK_MAX: f64 = 1e9;
+
 impl Model {
     // ========================================================================
     // INTERNAL LOW-LEVEL VARIABLE CREATION
@@ -85,7 +115,10 @@ impl Model {
         
         // Create the variable
         self.props_mut().on_new_var();
+        
+        // Use standard step size
         let step_size = self.float_step_size();
+        
         let var_id = self.vars_mut().new_var_with_bounds_and_step(inferred_min, inferred_max, step_size);
         
         Ok(var_id)
@@ -103,7 +136,7 @@ impl Model {
     /// **Algorithm**:
     /// 1. Check if variable is unbounded
     /// 2. If bounded variables of same type exist: expand their range by 1000x
-    /// 3. Otherwise: use fallback bounds (±10000)
+    /// 3. Otherwise: use fallback bounds (integers: ±100,000; floats: ±1e9)
     /// 4. Apply type-specific constraints (i32 range, domain size limits)
     /// 
     /// **Note**: This is an internal helper method.
@@ -169,7 +202,7 @@ impl Model {
                 } else {
                     // No context - use fallback
                     // Fallback must respect domain size limit strictly
-                    (-10000, 10000)
+                    (DEFAULT_INT_FALLBACK_MIN, DEFAULT_INT_FALLBACK_MAX)
                 };
                 
                 (Val::ValI(inferred_min), Val::ValI(inferred_max))
@@ -215,8 +248,8 @@ impl Model {
                     
                     (new_min, new_max)
                 } else {
-                    // No context - use fallback
-                    (-10000.0, 10000.0)
+                    // No context - use fallback bounds
+                    (DEFAULT_FLOAT_FALLBACK_MIN, DEFAULT_FLOAT_FALLBACK_MAX)
                 };
                 
                 (Val::ValF(inferred_min), Val::ValF(inferred_max))

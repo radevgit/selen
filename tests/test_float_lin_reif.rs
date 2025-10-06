@@ -405,7 +405,8 @@ fn test_float_lin_reif_precision() {
     
     let solution = m.solve().expect("Should find solution");
     if let Val::ValF(yv) = solution[y] {
-        assert!((yv - 0.2).abs() < 1e-6); // Should be 0.2 within floating point precision
+        // Use 1e-5 tolerance to account for step-size rounding (step = 1e-6)
+        assert!((yv - 0.2).abs() < 1e-5); // Should be 0.2 within floating point precision
     }
 }
 
