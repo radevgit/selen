@@ -36,7 +36,7 @@ m.new(x.mul(y).eq(12));                // x * y == 12
 m.new(z.div(y).ne(0));                 // z / y != 0
 ```
 
-**Mathematical syntax with post! macro**
+**Mathematical syntax with post! macro [deprecated]**
 ```rust
 post!(m, x < y);                        // x < y
 post!(m, y <= z);                       // y <= z

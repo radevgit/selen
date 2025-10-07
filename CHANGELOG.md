@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.4] - 2025-10-07
+- fixes for unbounded variables
+
 ## [0.9.4] - 2025-10-06
 - two fixes on unbounded variables and adaptive float step
 
