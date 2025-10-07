@@ -241,8 +241,20 @@ impl FloatInterval {
             return self.min; // Single value intervals
         }
         
-        // Calculate rough midpoint
-        let rough_mid = self.min + (self.max - self.min) / 2.0;
+        // Handle infinite bounds - critical for unbounded variables
+        let rough_mid = if self.min.is_infinite() && self.max.is_infinite() {
+            // Both bounds infinite: start at 0.0
+            0.0
+        } else if self.min.is_infinite() {
+            // Only lower bound infinite: use max - 1.0
+            self.max - 1.0
+        } else if self.max.is_infinite() {
+            // Only upper bound infinite: use min + 1.0
+            self.min + 1.0
+        } else {
+            // Both bounds finite: standard midpoint
+            self.min + (self.max - self.min) / 2.0
+        };
         
         // Round to nearest valid step boundary
         self.round_to_step(rough_mid)

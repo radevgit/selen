@@ -1263,6 +1263,7 @@ fn prune_float_lin_eq(coefficients: &[f64], variables: &[VarId], constant: f64, 
         
         let mut min_other = 0.0;
         let mut max_other = 0.0;
+        let mut has_unbounded_other = false;
         
         for j in 0..variables.len() {
             if i == j {
@@ -1277,6 +1278,12 @@ fn prune_float_lin_eq(coefficients: &[f64], variables: &[VarId], constant: f64, 
             
             let (min_term, max_term) = match (lb, ub) {
                 (Val::ValF(l), Val::ValF(u)) => {
+                    // Check if this variable is unbounded
+                    if l.is_infinite() || u.is_infinite() {
+                        // Can't compute meaningful bounds if any other variable is unbounded
+                        has_unbounded_other = true;
+                        break;
+                    }
                     if other_coeff > 0.0 {
                         (other_coeff * l, other_coeff * u)
                     } else {
@@ -1297,6 +1304,11 @@ fn prune_float_lin_eq(coefficients: &[f64], variables: &[VarId], constant: f64, 
             
             min_other += min_term;
             max_other += max_term;
+        }
+        
+        // Skip propagation for this variable if other variables are unbounded
+        if has_unbounded_other {
+            continue;
         }
         
         let target_min = constant - max_other;
@@ -1360,6 +1372,7 @@ fn prune_float_lin_le(coefficients: &[f64], variables: &[VarId], constant: f64, 
         }
         
         let mut min_other = 0.0;
+        let mut has_unbounded_other = false;
         
         for j in 0..variables.len() {
             if i == j {
@@ -1374,6 +1387,12 @@ fn prune_float_lin_le(coefficients: &[f64], variables: &[VarId], constant: f64, 
             
             let min_term = match (lb, ub) {
                 (Val::ValF(l), Val::ValF(u)) => {
+                    // Check if this variable is unbounded
+                    if l.is_infinite() || u.is_infinite() {
+                        // Can't compute meaningful bounds if any other variable is unbounded
+                        has_unbounded_other = true;
+                        break;
+                    }
                     if other_coeff > 0.0 {
                         other_coeff * l
                     } else {
@@ -1393,6 +1412,11 @@ fn prune_float_lin_le(coefficients: &[f64], variables: &[VarId], constant: f64, 
             };
             
             min_other += min_term;
+        }
+        
+        // Skip propagation for this variable if other variables are unbounded
+        if has_unbounded_other {
+            continue;
         }
         
         let remaining = constant - min_other;
