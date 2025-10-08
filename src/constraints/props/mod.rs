@@ -114,6 +114,61 @@ impl Propagators {
         &mut self.constraint_registry
     }
 
+    /// Extract linear constraints from propagators for LP solving.
+    /// 
+    /// Scans all propagators and extracts FloatLinEq and FloatLinLe constraints
+    /// into a LinearConstraintSystem that can be passed to the LP solver.
+    /// 
+    /// # Returns
+    /// A `LinearConstraintSystem` containing all linear constraints found in the model.
+    /// 
+    /// # Example
+    /// ```ignore
+    /// // After creating a model with linear constraints
+    /// let linear_system = model.propagators().extract_linear_system();
+    /// if linear_system.is_suitable_for_lp() {
+    ///     let lp_problem = linear_system.to_lp_problem(&model.vars());
+    ///     // Solve with LP solver...
+    /// }
+    /// ```
+    pub fn extract_linear_system(&self) -> crate::lpsolver::LinearConstraintSystem {
+        use crate::lpsolver::{LinearConstraint, LinearConstraintSystem};
+        use std::any::Any;
+        
+        let mut system = LinearConstraintSystem::new();
+        
+        // Iterate through all registered propagators
+        for prop_id in self.get_prop_ids_iter() {
+            let prop_box = self.get_state(prop_id);
+            
+            // Get the underlying propagator as Any for downcasting
+            let prop_any: &dyn Any = &**prop_box as &dyn Any;
+            
+            // Try to downcast to each linear constraint type
+            if let Some(eq) = prop_any.downcast_ref::<linear::FloatLinEq>() {
+                // Extract FloatLinEq: sum(coeffs * vars) = constant
+                let constraint = LinearConstraint::equality(
+                    eq.coefficients().to_vec(),
+                    eq.variables().to_vec(),
+                    eq.constant(),
+                );
+                system.add_constraint(constraint);
+            } else if let Some(le) = prop_any.downcast_ref::<linear::FloatLinLe>() {
+                // Extract FloatLinLe: sum(coeffs * vars) <= constant
+                let constraint = LinearConstraint::less_or_equal(
+                    le.coefficients().to_vec(),
+                    le.variables().to_vec(),
+                    le.constant(),
+                );
+                system.add_constraint(constraint);
+            }
+            // Note: FloatLinGe doesn't exist - use FloatLinLe with negated coefficients
+            // Other propagator types are not linear constraints - skip them
+        }
+        
+        system
+    }
+
     /// Optimize the order of AllDifferent constraints using multiple universal heuristics.
     /// 
     /// Uses a combination of three heuristics to determine priority:

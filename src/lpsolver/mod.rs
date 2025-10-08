@@ -17,12 +17,17 @@ pub mod lu;
 pub mod basis;
 pub mod simplex_primal;
 pub mod simplex_dual;
+pub mod csp_integration;
 
 // #[cfg(test)]
 // mod tests;
 
 pub use types::{LpProblem, LpSolution, LpStatus, LpError, LpConfig};
 pub use matrix::{Matrix, get_lp_memory_bytes, get_lp_memory_mb, reset_lp_memory};
+pub use csp_integration::{
+    LinearConstraintSystem, LinearConstraint, ConstraintRelation, LinearObjective,
+    apply_lp_solution,
+};
 
 /// Solve LP problem using Primal Simplex
 ///

@@ -59,10 +59,33 @@ The LP solver respects `SolverConfig` parameters from the main Selen model:
 **Status**: Complete with comprehensive testing
 
 ### ⏳ Week 4: CSP Integration & Performance (IN PROGRESS)
-- ⏳ Integration with constraint solver
-- ⏳ Performance benchmarks (~100 variable problems)
-- ⏳ Warm-start performance testing
+**Goal**: Integrate LP solver with Selen's constraint solver for efficient float linear constraint handling
+
+**Tasks**:
+- ⏳ **Detection & Extraction**
+  * Implement `extract_linear_system()` to detect linear constraints
+  * Add `LinearConstraintSystem` structure
+  * Create heuristics for when to use LP vs interval propagation
+  
+- ⏳ **Conversion Layer**
+  * Convert float linear constraints to `LpProblem` format
+  * Extract variable bounds from CSP domains
+  * Handle equality constraints (convert to two inequalities)
+  
+- ⏳ **Integration Points**
+  * Add LP invocation during propagation
+  * Implement `apply_lp_solution()` to update CSP bounds
+  * Add fallback to interval propagation for non-linear constraints
+  
+- ⏳ **Testing & Benchmarking**
+  * Test on 10-100 variable linear systems
+  * Compare LP solver vs interval propagation performance
+  * Measure speedup (target: 10-100x for large domains)
+
 - ✅ Memory tracking implemented
+- ✅ Statistics framework designed
+
+**Status**: Foundation complete, starting CSP integration. See [LP_SOLVER_CSP_INTEGRATION.md](LP_SOLVER_CSP_INTEGRATION.md) for detailed plan.
 
 ## Module Structure
 

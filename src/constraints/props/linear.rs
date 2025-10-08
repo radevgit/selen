@@ -467,6 +467,21 @@ impl FloatLinEq {
     pub fn new(coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64) -> Self {
         Self { coefficients, variables, constant }
     }
+    
+    /// Get the coefficients of this linear equation
+    pub(crate) fn coefficients(&self) -> &[f64] {
+        &self.coefficients
+    }
+    
+    /// Get the variables in this linear equation
+    pub(crate) fn variables(&self) -> &[VarId] {
+        &self.variables
+    }
+    
+    /// Get the constant term of this linear equation
+    pub(crate) fn constant(&self) -> f64 {
+        self.constant
+    }
 }
 
 impl Prune for FloatLinEq {
@@ -618,6 +633,21 @@ pub struct FloatLinLe {
 impl FloatLinLe {
     pub fn new(coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64) -> Self {
         Self { coefficients, variables, constant }
+    }
+    
+    /// Get the coefficients of this linear inequality
+    pub(crate) fn coefficients(&self) -> &[f64] {
+        &self.coefficients
+    }
+    
+    /// Get the variables in this linear inequality
+    pub(crate) fn variables(&self) -> &[VarId] {
+        &self.variables
+    }
+    
+    /// Get the constant term (right-hand side) of this linear inequality
+    pub(crate) fn constant(&self) -> f64 {
+        self.constant
     }
 }
 
