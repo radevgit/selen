@@ -139,6 +139,11 @@ impl Model {
         self.config.max_memory_mb
     }
     
+    /// Check if LP solver should be used for linear constraints
+    fn should_use_lp_solver(&self) -> bool {
+        self.config.prefer_lp_solver
+    }
+    
     /// Get the current estimated memory usage in bytes
     pub fn estimated_memory_bytes(&self) -> u64 {
         self.estimated_memory_bytes
