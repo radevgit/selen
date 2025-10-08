@@ -29,8 +29,10 @@ impl Default for LpConfig {
     }
 }
 
-/// LP problem in standard form:
-/// maximize c^T x subject to Ax <= b, l <= x <= u
+/// Linear Programming problem in standard form
+///
+/// Maximize: c^T x
+/// Subject to: Ax <= b, l <= x <= u
 #[derive(Debug, Clone)]
 pub struct LpProblem {
     /// Number of variables
@@ -55,6 +57,10 @@ pub struct LpProblem {
     
     /// Variable upper bounds (length n_vars)
     pub upper_bounds: Vec<f64>,
+    
+    /// Optional: Basic variable indices for warm-starting (length m_constraints)
+    /// Used by Dual Simplex to start from a previous solution
+    pub basic_indices: Option<Vec<usize>>,
 }
 
 impl LpProblem {
@@ -76,6 +82,7 @@ impl LpProblem {
             b,
             lower_bounds,
             upper_bounds,
+            basic_indices: None,
         }
     }
     

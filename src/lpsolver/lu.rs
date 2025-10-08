@@ -119,6 +119,50 @@ impl LuDecomposition {
         
         Ok(x)
     }
+
+    /// Solve transpose system: A^T x = b
+    ///
+    /// Uses the existing LU decomposition: (LU)^T x = b => U^T L^T x = b
+    pub fn solve_transpose(&self, b: &[f64]) -> Result<Vec<f64>, LpError> {
+        let n = self.lu.rows;
+        
+        if b.len() != n {
+            return Err(LpError::NumericalInstability);
+        }
+        
+        // Solve U^T y = b (forward substitution since U^T is lower triangular)
+        let mut y = vec![0.0; n];
+        for i in 0..n {
+            let mut sum = b[i];
+            for j in 0..i {
+                sum -= self.lu.get(j, i) * y[j];  // Note: transposed access
+            }
+            let diag = self.lu.get(i, i);
+            if diag.abs() < 1e-12 {
+                return Err(LpError::SingularBasis);
+            }
+            y[i] = sum / diag;
+        }
+        
+        // Solve L^T x = y (backward substitution since L^T is upper triangular)
+        // Note: L has 1s on diagonal
+        let mut x = vec![0.0; n];
+        for i in (0..n).rev() {
+            let mut sum = y[i];
+            for j in (i + 1)..n {
+                sum -= self.lu.get(j, i) * x[j];  // Note: transposed access
+            }
+            x[i] = sum;  // Diagonal is 1
+        }
+        
+        // Apply inverse permutation: result = P^T x
+        let mut result = vec![0.0; n];
+        for i in 0..n {
+            result[self.permutation[i]] = x[i];
+        }
+        
+        Ok(result)
+    }
     
     /// Solve multiple right-hand sides: AX = B
     pub fn solve_multiple(&self, b_matrix: &Matrix) -> Result<Matrix, LpError> {
