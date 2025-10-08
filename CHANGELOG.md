@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0] - 2025-10-08
+- remove constraint macros
+
 ## [0.9.4] - 2025-10-07
 - fixes for unbounded variables
 
