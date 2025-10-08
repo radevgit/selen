@@ -133,8 +133,8 @@ fn test_large_domain_optimization() {
     // Test optimization with large domains (the optimization bug we fixed)
     let mut m = Model::default();
     
-    let x = m.float(0.0, 10000.0);
-    let y = m.float(0.0, 10000.0);
+    let x = m.float(0.0, 1e6);
+    let y = m.float(0.0, 1e6);
     
     // x + y <= 8000
     let sum = m.add(x, y);
@@ -147,6 +147,8 @@ fn test_large_domain_optimization() {
     
     let x_val = solution.get_float(x);
     let y_val = solution.get_float(y);
+    
+    eprintln!("DEBUG: x={}, y={}", x_val, y_val);
     
     // Check constraints
     assert!(x_val + y_val <= 8000.1, "Constraint violated: {} + {} > 8000", x_val, y_val);

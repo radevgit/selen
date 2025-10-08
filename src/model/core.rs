@@ -437,6 +437,7 @@ impl Model {
         // First try specialized optimization before falling back to opposite+minimize pattern
         match self.try_optimization_maximize(&objective) {
             Some(mut solution) => {
+                eprintln!("DEBUG maximize: Optimization succeeded, returning solution");
                 // Optimization succeeded - update with minimal stats since no search was performed
                 solution.stats = crate::core::solution::SolveStats {
                     propagation_count: 0,
@@ -449,6 +450,7 @@ impl Model {
                 Ok(solution)
             }
             None => {
+                eprintln!("DEBUG maximize: Optimization failed, falling back to search");
                 // Optimization router failed - use search-based minimize(opposite)
                 // BUT: we need to correct the objective variable value in the result
                 // since minimize(opposite) negates the objective bounds

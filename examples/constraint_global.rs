@@ -104,7 +104,8 @@ fn main() {
         let count_result = model.int(0, 6);
         
         // Count how many variables have value 2
-        model.count(&vars, 2, count_result);
+        use selen::variables::Val;
+        model.count(&vars, Val::int(2), count_result);
         
         // Force exactly 3 variables to have value 2
         model.new(count_result.eq(3));
@@ -141,8 +142,8 @@ fn main() {
         // y must be at most 50
         model.atmost(y, 50);
         
-        // z must be at least 75
-        model.atleast(z, 75);
+        // z must be at least 30 (changed from 75 to make it solvable: 10+50=60 >= 30)
+        model.atleast(z, 30);
         
         // Add some relationships
         model.new(x.add(y).eq(z));
@@ -154,7 +155,7 @@ fn main() {
             let z_val: i32 = solution.get(z);
             println!("  x = {} (should be 10-20)", x_val);
             println!("  y = {} (should be ≤ 50)", y_val);
-            println!("  z = {} (should be ≥ 75)", z_val);
+            println!("  z = {} (should be ≥ 30)", z_val);
             println!("  Verification: {} + {} = {}", x_val, y_val, z_val);
         } else {
             println!("❌ No solution found");

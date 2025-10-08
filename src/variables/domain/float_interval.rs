@@ -27,6 +27,11 @@ pub const fn precision_to_step_size(precision_digits: i32) -> f64 {
 /// Based on DEFAULT_FLOAT_PRECISION_DIGITS (6 decimal places)
 pub const FLOAT_STEP_SIZE: f64 = precision_to_step_size(DEFAULT_FLOAT_PRECISION_DIGITS);
 
+/// Maximum number of steps to allow in a float domain before using adaptive step size
+/// This prevents enormous search spaces for large domains (e.g., [-1e6, 1e6] would be 2 trillion steps at 1e-6)
+/// With MAX_REASONABLE_STEPS = 1M, large domains will use larger steps while small domains keep precision
+pub const MAX_REASONABLE_STEPS: usize = 1_000_000;
+
 /// Saved state for FloatInterval backtracking
 #[derive(Debug, Clone, PartialEq)]
 pub struct FloatIntervalState {
@@ -43,15 +48,37 @@ pub struct FloatInterval {
 }
 
 impl FloatInterval {
-    /// Create a new float interval with calculated step size
+    /// Create a new float interval with adaptive step size using powers of 2
+    /// 
+    /// Uses power-of-2 based step sizes for better floating-point arithmetic alignment.
+    /// The step size is calculated to keep search space tractable (~512-1024 steps per domain).
+    /// Uses powers of 2 for both thresholds and steps for optimal binary representation.
+    /// 
+    /// Strategy: For domain range R, choose step = R / 512 rounded to nearest power of 2
     pub fn new(min: f64, max: f64) -> Self {
         if min > max {
             return Self::new(max, min);
         }
         
-        // Calculate step size - use absolute step for consistent precision
-        // This ensures the same precision regardless of interval range
-        let step = FLOAT_STEP_SIZE;
+        let domain_range = max - min;
+        
+        // Power-of-2 adaptive step sizing: aim for ~512-2048 steps per domain
+        // Balance between search tractability and constraint precision
+        let step = if domain_range >= 1048576.0 {  // 2^20 (1M+)
+            domain_range / 512.0   // ~512 steps for huge domains
+        } else if domain_range >= 16384.0 {  // 2^14 (16k+)
+            32.0                   // 2^5: gives 512-16384 steps
+        } else if domain_range >= 512.0 {    // 2^9 (512+)
+            1.0                    // 2^0: gives 512-16384 steps
+        } else if domain_range >= 16.0 {     // 2^4 (16+)
+            0.03125                // 2^-5 (1/32): gives 512-16384 steps
+        } else if domain_range >= 0.5 {      // 2^-1 (0.5+)
+            0.0009765625           // 2^-10 (1/1024): gives 512-16384 steps
+        } else if domain_range >= 0.00048828125 {  // 2^-11 (~0.0005+)
+            0.00000095367432       // 2^-20: high precision for small domains
+        } else {
+            0.00000000093132257    // 2^-30: nano-precision for tiny domains
+        };
         
         FloatInterval { min, max, step }
     }
@@ -299,7 +326,8 @@ mod tests {
         let interval = FloatInterval::new(0.0, 1.0);
         assert_eq!(interval.min, 0.0);
         assert_eq!(interval.max, 1.0);
-        assert_eq!(interval.step, FLOAT_STEP_SIZE);
+        // Adaptive step sizing: domain range = 1.0, falls into 0.5+ category -> 2^-10
+        assert_eq!(interval.step, 0.0009765625);
     }
 
     #[test]
@@ -671,24 +699,28 @@ mod tests {
 
     #[test]
     fn test_default_step_size_behavior() {
-        // Test intervals created with default step size
+        // Test intervals created with adaptive step sizing
         let interval = FloatInterval::new(0.0, 1.0);
-        assert_eq!(interval.step, FLOAT_STEP_SIZE);
+        // Range = 1.0, falls into 0.5+ category -> 2^-10
+        assert_eq!(interval.step, 0.0009765625);
         
-        // Test that step size is absolute, not range-dependent
+        // Test that step size IS range-dependent (adaptive)
         let small_interval = FloatInterval::new(0.0, 0.01);
         let large_interval = FloatInterval::new(0.0, 100.0);
         
-        // All intervals should have the same step size
-        assert_eq!(small_interval.step, FLOAT_STEP_SIZE);
-        assert_eq!(large_interval.step, FLOAT_STEP_SIZE);
-        assert_eq!(interval.step, small_interval.step);
-        assert_eq!(interval.step, large_interval.step);
+        // Different intervals now have different step sizes due to adaptive sizing
+        // small_interval: range=0.01, falls into <0.5 category -> 2^-20
+        assert_eq!(small_interval.step, 0.00000095367432);
+        // large_interval: range=100, falls into 16+ category -> 0.03125 (2^-5)
+        assert_eq!(large_interval.step, 0.03125);
+        // They should be different
+        assert_ne!(interval.step, small_interval.step);
+        assert_ne!(interval.step, large_interval.step);
         
-        // Different intervals will have different step counts
-        assert_eq!(interval.step_count(), 1_000_000); // (1.0 - 0.0) / 1e-6
-        assert_eq!(small_interval.step_count(), 10_000); // (0.01 - 0.0) / 1e-6  
-        assert_eq!(large_interval.step_count(), 100_000_000); // (100.0 - 0.0) / 1e-6
+        // Step counts are kept tractable by adaptive sizing
+        assert!(interval.step_count() <= 2048); // ~1024 steps for range=1.0
+        assert!(small_interval.step_count() <= 20000); // small domains get more precision
+        assert!(large_interval.step_count() <= 4096); // ~3200 steps for range=100
         
         // Operations should work correctly
         let mid = (interval.min + interval.max) / 2.0;
