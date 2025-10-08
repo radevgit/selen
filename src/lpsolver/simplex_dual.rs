@@ -31,6 +31,9 @@ impl DualSimplex {
     /// Requires: Initial basis must be dual-feasible (all reduced costs ≤ 0)
     /// but may be primal-infeasible (some basic variables < 0)
     pub fn solve(&mut self, problem: &LpProblem) -> Result<LpSolution, LpError> {
+        // Start timing for timeout checking
+        let start_time = std::time::Instant::now();
+        
         problem.validate()?;
 
         // Convert to standard form: Ax = b, x >= 0
@@ -58,6 +61,19 @@ impl DualSimplex {
         // Dual simplex iterations
         let max_iterations = self.config.max_iterations;
         for iterations in 0..max_iterations {
+            // Check timeout every 100 iterations (not every iteration for performance)
+            if iterations % 100 == 0 {
+                if let Some(timeout_ms) = self.config.timeout_ms {
+                    let elapsed = start_time.elapsed().as_millis() as u64;
+                    if elapsed > timeout_ms {
+                        return Err(LpError::TimeoutExceeded {
+                            elapsed_ms: elapsed,
+                            limit_ms: timeout_ms,
+                        });
+                    }
+                }
+            }
+            
             // Compute current basic solution
             let x_basic = basis.solve_basic(b)?;
             

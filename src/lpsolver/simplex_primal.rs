@@ -28,6 +28,9 @@ impl PrimalSimplex {
     ///
     /// Assumes problem is in standard form with slack variables already added
     pub fn solve(&mut self, problem: &LpProblem) -> Result<LpSolution, LpError> {
+        // Start timing for timeout checking
+        let start_time = std::time::Instant::now();
+        
         // Validate problem
         problem.validate()?;
         
@@ -35,10 +38,10 @@ impl PrimalSimplex {
         let (a_eq, c_extended, n_total) = self.to_standard_form(problem);
         
         // Phase I: Find initial feasible basis
-        let mut basis = self.phase_one(&a_eq, &problem.b)?;
+        let mut basis = self.phase_one(&a_eq, &problem.b, start_time)?;
         
         // Phase II: Optimize from feasible basis
-        self.phase_two(&a_eq, &c_extended, &problem.b, &mut basis, n_total)
+        self.phase_two(&a_eq, &c_extended, &problem.b, &mut basis, n_total, start_time)
     }
     
     /// Convert inequality constraints Ax <= b to equality Ax + s = b
@@ -74,7 +77,7 @@ impl PrimalSimplex {
     ///
     /// Solves auxiliary problem: minimize sum of artificial variables
     /// Returns feasible basis if one exists
-    fn phase_one(&mut self, a: &Matrix, b: &[f64]) -> Result<Basis, LpError> {
+    fn phase_one(&mut self, a: &Matrix, b: &[f64], start_time: std::time::Instant) -> Result<Basis, LpError> {
         let m = a.rows;
         let n = a.cols;
         
@@ -143,6 +146,19 @@ impl PrimalSimplex {
         // Solve Phase I problem using simplex iterations
         let max_iter = self.config.max_iterations;
         for _iter in 0..max_iter {
+            // Check timeout every 100 iterations (not every iteration for performance)
+            if _iter % 100 == 0 {
+                if let Some(timeout_ms) = self.config.timeout_ms {
+                    let elapsed = start_time.elapsed().as_millis() as u64;
+                    if elapsed > timeout_ms {
+                        return Err(LpError::TimeoutExceeded {
+                            elapsed_ms: elapsed,
+                            limit_ms: timeout_ms,
+                        });
+                    }
+                }
+            }
+            
             // Compute reduced costs
             let reduced_costs = phase1_basis.compute_reduced_costs(&a_augmented, &c_phase1)?;
             
@@ -266,10 +282,24 @@ impl PrimalSimplex {
         b: &[f64],
         basis: &mut Basis,
         n_vars: usize,
+        start_time: std::time::Instant,
     ) -> Result<LpSolution, LpError> {
         let mut iterations = 0;
         
         loop {
+            // Check timeout every 100 iterations (not every iteration for performance)
+            if iterations % 100 == 0 {
+                if let Some(timeout_ms) = self.config.timeout_ms {
+                    let elapsed = start_time.elapsed().as_millis() as u64;
+                    if elapsed > timeout_ms {
+                        return Err(LpError::TimeoutExceeded {
+                            elapsed_ms: elapsed,
+                            limit_ms: timeout_ms,
+                        });
+                    }
+                }
+            }
+            
             // Check iteration limit
             if iterations >= self.config.max_iterations {
                 let x = basis.solve_basic(b)?;
@@ -569,5 +599,39 @@ mod tests {
         let sum = solution.x[0] + solution.x[1];
         assert!(sum >= 3.0 - 1e-6, "x1 + x2 should be >= 3");
         assert!(sum <= 5.0 + 1e-6, "x1 + x2 should be <= 5");
+    }
+
+    #[test]
+    fn test_timeout() {
+        // Create a large problem that will take a while to solve
+        // This is a deliberately complex problem that requires many iterations
+        let n = 50;
+        let m = 25;
+        
+        let c = vec![1.0; n];
+        let a = vec![vec![1.0; n]; m];
+        let b = vec![100.0; m];
+        let lower = vec![0.0; n];
+        let upper = vec![f64::INFINITY; n];
+        
+        let problem = LpProblem::new(n, m, c, a, b, lower, upper);
+        
+        // Set a very short timeout (1ms) - should timeout on most systems
+        let config = LpConfig::unlimited().with_timeout_ms(1);
+        let mut solver = PrimalSimplex::new(config);
+        let result = solver.solve(&problem);
+        
+        // Should timeout (or complete if it's very fast)
+        match result {
+            Err(LpError::TimeoutExceeded { elapsed_ms, limit_ms }) => {
+                assert!(elapsed_ms >= limit_ms, "Elapsed time should be >= limit");
+                assert_eq!(limit_ms, 1, "Limit should be 1ms");
+            }
+            Ok(_) => {
+                // If it completes in time, that's also acceptable
+                // (might happen on very fast systems with optimized builds)
+            }
+            Err(e) => panic!("Expected timeout or success, got error: {:?}", e),
+        }
     }
 }

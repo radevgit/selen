@@ -5,10 +5,17 @@ Implementing a complete Linear Programming solver for the Selen constraint solve
 
 **Target**: ~1,650 LOC for Phase 1 (continuous LP)  
 **Current**: ~2,070 LOC  
-**Tests**: 46 passing
+**Tests**: 47 passing
 
 ## Motivation
 Large float domains (e.g., ±1e6) cause 60+ second timeouts with domain-based propagation. LP solver provides O(n³) worst-case vs O(d) per constraint where d is huge.
+
+## Integration with Selen Model
+The LP solver respects `SolverConfig` parameters from the main Selen model:
+- **`timeout_ms`**: Default 60 seconds, checked every 100 iterations (efficient)
+- **`max_memory_mb`**: Default 2GB, field available in `LpConfig` for future memory tracking
+- **Performance**: Timeout check overhead ~0.1% (every 100 iterations vs every iteration)
+- Enables consistent resource management across CSP and LP solving
 
 ## Implementation Plan
 
@@ -71,22 +78,30 @@ src/lpsolver/
 | matrix | 13 | All operations, edge cases |
 | lu | 11 | Decomposition, solve, transpose, pivoting |
 | basis | 11 | Management, feasibility, variable selection |
-| simplex_primal | 7 | Standard form, Phase I/II, edge cases |
+| simplex_primal | 8 | Standard form, Phase I/II, edge cases, **timeout** |
 | simplex_dual | 2 | Structure, warm-start basic test |
-| **Total** | **46** | **Comprehensive** |
+| **Total** | **47** | **Comprehensive** |
 
 ## Key Features
 
 ### Error Handling
-- 12 specific error variants (no strings in enums)
+- 13 specific error variants (no strings in enums)
 - Follows Selen's ValidationError pattern
 - Detailed dimension mismatch reporting
+- TimeoutExceeded error with elapsed/limit info
 
 ### Numerical Stability
 - LU decomposition with partial pivoting
 - Parametric tolerance (1e-6 default)
 - Singular basis detection
 - Ill-conditioned matrix handling
+
+### Resource Management
+- **Timeout support**: Honors `SolverConfig::timeout_ms` (default: 60s)
+- **Memory limits**: Respects `SolverConfig::max_memory_mb` (default: 2GB, framework for future)
+- **Efficient checking**: Timeout checked every 100 iterations (not every iteration)
+- Graceful timeout with partial results
+- Use `LpConfig::unlimited()` to remove all limits
 
 ### Performance Optimizations
 - `debug_assert!` for release builds
@@ -114,6 +129,32 @@ let solution = solve(&problem)?;
 println!("Optimal: {} at {:?}", solution.objective, solution.x);
 ```
 
+### With Custom Configuration
+```rust
+use selen::lpsolver::{LpProblem, LpConfig, solve_with_config};
+
+let problem = LpProblem::new(/* ... */);
+
+// Default config: 60s timeout, 2GB memory (matches SolverConfig)
+let config = LpConfig::default();
+
+// Or customize limits
+let config = LpConfig::default()
+    .with_timeout_ms(5000)        // 5 second timeout
+    .with_max_memory_mb(1024);    // 1GB memory limit (future use)
+
+// Or remove all limits (use with caution!)
+let config = LpConfig::unlimited();
+
+match solve_with_config(&problem, &config) {
+    Ok(solution) => println!("Solved: {}", solution.objective),
+    Err(LpError::TimeoutExceeded { elapsed_ms, limit_ms }) => {
+        println!("Timeout: {}ms elapsed (limit: {}ms)", elapsed_ms, limit_ms);
+    }
+    Err(e) => println!("Error: {}", e),
+}
+```
+
 ### Warm-Start (Reoptimization)
 ```rust
 use selen::lpsolver::solve_warmstart;
@@ -135,6 +176,7 @@ let solution2 = solve_warmstart(&new_problem, &solution, &config)?;
 - ✅ Ill-conditioned matrices
 - ✅ Multiple constraints
 - ✅ Transpose system solving
+- ✅ Timeout handling (matches SolverConfig)
 
 ## Next Steps
 

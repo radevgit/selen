@@ -16,6 +16,16 @@ pub struct LpConfig {
     
     /// Enable numerical stability checks (default: true)
     pub check_stability: bool,
+    
+    /// Maximum time to spend solving (in milliseconds)
+    /// Default: None (no timeout)
+    /// Set this to enforce time limits matching SolverConfig::timeout_ms
+    pub timeout_ms: Option<u64>,
+    
+    /// Maximum memory usage (in MB) during solving
+    /// Default: None (no memory limit)
+    /// Set this to enforce memory limits matching SolverConfig::max_memory_mb
+    pub max_memory_mb: Option<u64>,
 }
 
 impl Default for LpConfig {
@@ -25,7 +35,83 @@ impl Default for LpConfig {
             optimality_tol: 1e-6,
             max_iterations: 10000,
             check_stability: true,
+            timeout_ms: Some(60000),  // Default 60 seconds (matches SolverConfig)
+            max_memory_mb: Some(2048), // Default 2GB (matches SolverConfig)
         }
+    }
+}
+
+impl LpConfig {
+    /// Create an unlimited configuration (no timeout or memory limits)
+    ///
+    /// Use with caution - problems may run indefinitely
+    ///
+    /// # Example
+    /// ```ignore
+    /// let config = LpConfig::unlimited();
+    /// ```
+    #[must_use]
+    pub fn unlimited() -> Self {
+        Self {
+            feasibility_tol: 1e-6,
+            optimality_tol: 1e-6,
+            max_iterations: 10000,
+            check_stability: true,
+            timeout_ms: None,
+            max_memory_mb: None,
+        }
+    }
+    
+    /// Set the timeout in milliseconds
+    ///
+    /// This matches the SolverConfig::timeout_ms parameter
+    ///
+    /// # Example
+    /// ```ignore
+    /// let config = LpConfig::default().with_timeout_ms(5000); // 5 second timeout
+    /// ```
+    #[must_use]
+    pub fn with_timeout_ms(mut self, timeout_ms: u64) -> Self {
+        self.timeout_ms = Some(timeout_ms);
+        self
+    }
+    
+    /// Remove timeout limit
+    ///
+    /// # Example
+    /// ```ignore
+    /// let config = LpConfig::default().without_timeout();
+    /// ```
+    #[must_use]
+    pub fn without_timeout(mut self) -> Self {
+        self.timeout_ms = None;
+        self
+    }
+    
+    /// Set the maximum memory usage in MB
+    ///
+    /// This matches the SolverConfig::max_memory_mb parameter
+    ///
+    /// # Example
+    /// ```ignore
+    /// let config = LpConfig::default().with_max_memory_mb(1024); // 1GB limit
+    /// ```
+    #[must_use]
+    pub fn with_max_memory_mb(mut self, max_memory_mb: u64) -> Self {
+        self.max_memory_mb = Some(max_memory_mb);
+        self
+    }
+    
+    /// Remove memory limit
+    ///
+    /// # Example
+    /// ```ignore
+    /// let config = LpConfig::default().without_memory_limit();
+    /// ```
+    #[must_use]
+    pub fn without_memory_limit(mut self) -> Self {
+        self.max_memory_mb = None;
+        self
     }
 }
 
@@ -277,6 +363,9 @@ pub enum LpError {
     
     /// Singular basis matrix encountered
     SingularBasis,
+    
+    /// Timeout exceeded during solve
+    TimeoutExceeded { elapsed_ms: u64, limit_ms: u64 },
 }
 
 impl fmt::Display for LpError {
@@ -308,6 +397,9 @@ impl fmt::Display for LpError {
             LpError::RhsNotFinite => write!(f, "RHS contains NaN or Inf"),
             LpError::NumericalInstability => write!(f, "Numerical instability detected"),
             LpError::SingularBasis => write!(f, "Singular basis matrix"),
+            LpError::TimeoutExceeded { elapsed_ms, limit_ms } => {
+                write!(f, "Timeout exceeded: {}ms elapsed, limit was {}ms", elapsed_ms, limit_ms)
+            }
         }
     }
 }
