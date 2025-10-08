@@ -256,7 +256,7 @@ impl LpProblem {
     }
 }
 
-/// Solution to LP problem
+/// Solution to LP problem with comprehensive statistics
 #[derive(Debug, Clone)]
 pub struct LpSolution {
     /// Solution status
@@ -273,10 +273,126 @@ pub struct LpSolution {
     
     /// Indices of basic variables (for warm starting)
     pub basic_indices: Vec<usize>,
+    
+    /// Statistics about the solve process
+    pub stats: LpStats,
+}
+
+/// Statistics collected during LP solving
+#[derive(Debug, Clone, Default)]
+pub struct LpStats {
+    /// Total time spent solving (including both Phase I and Phase II)
+    pub solve_time_ms: f64,
+    
+    /// Time spent in Phase I (finding initial feasible solution)
+    pub phase1_time_ms: f64,
+    
+    /// Time spent in Phase II (optimization)
+    pub phase2_time_ms: f64,
+    
+    /// Number of iterations in Phase I
+    pub phase1_iterations: usize,
+    
+    /// Number of iterations in Phase II  
+    pub phase2_iterations: usize,
+    
+    /// Peak memory usage during solving (MB)
+    pub peak_memory_mb: f64,
+    
+    /// Number of variables in the problem (original count)
+    pub n_variables: usize,
+    
+    /// Number of constraints in the problem (original count)
+    pub n_constraints: usize,
+    
+    /// Number of basis factorizations performed
+    pub factorizations: usize,
+    
+    /// Whether Phase I was needed (false = initial basis was feasible)
+    pub phase1_needed: bool,
+}
+
+impl LpStats {
+    /// Create new LP statistics
+    pub fn new(
+        solve_time_ms: f64,
+        phase1_time_ms: f64,
+        phase2_time_ms: f64,
+        phase1_iterations: usize,
+        phase2_iterations: usize,
+        peak_memory_mb: f64,
+        n_variables: usize,
+        n_constraints: usize,
+        factorizations: usize,
+        phase1_needed: bool,
+    ) -> Self {
+        Self {
+            solve_time_ms,
+            phase1_time_ms,
+            phase2_time_ms,
+            phase1_iterations,
+            phase2_iterations,
+            peak_memory_mb,
+            n_variables,
+            n_constraints,
+            factorizations,
+            phase1_needed,
+        }
+    }
+    
+    /// Get total iterations (Phase I + Phase II)
+    pub fn total_iterations(&self) -> usize {
+        self.phase1_iterations + self.phase2_iterations
+    }
+    
+    /// Get average time per iteration (microseconds)
+    pub fn time_per_iteration_us(&self) -> f64 {
+        if self.total_iterations() > 0 {
+            (self.solve_time_ms * 1000.0) / self.total_iterations() as f64
+        } else {
+            0.0
+        }
+    }
+    
+    /// Get average time per factorization (milliseconds)
+    pub fn time_per_factorization_ms(&self) -> f64 {
+        if self.factorizations > 0 {
+            self.solve_time_ms / self.factorizations as f64
+        } else {
+            0.0
+        }
+    }
+    
+    /// Display a comprehensive summary of the LP solving statistics
+    pub fn display_summary(&self) {
+        println!("=== LP Solver Statistics ===");
+        println!("Problem size: {} variables, {} constraints", self.n_variables, self.n_constraints);
+        println!("Total time: {:.3}ms", self.solve_time_ms);
+        println!("Peak memory: {:.2}MB", self.peak_memory_mb);
+        println!();
+        
+        if self.phase1_needed {
+            println!("Phase I (feasibility): {:.3}ms, {} iterations", 
+                     self.phase1_time_ms, self.phase1_iterations);
+        } else {
+            println!("Phase I: Skipped (initial basis feasible)");
+        }
+        println!("Phase II (optimization): {:.3}ms, {} iterations", 
+                 self.phase2_time_ms, self.phase2_iterations);
+        println!();
+        
+        println!("Total iterations: {}", self.total_iterations());
+        println!("Basis factorizations: {}", self.factorizations);
+        println!("Average: {:.2}μs/iteration", self.time_per_iteration_us());
+        if self.factorizations > 0 {
+            println!("Average: {:.3}ms/factorization", self.time_per_factorization_ms());
+        }
+        println!("============================");
+    }
 }
 
 impl LpSolution {
-    /// Create a new solution
+    /// Create a new solution with statistics
     pub fn new(
         status: LpStatus,
         objective: f64,
@@ -290,6 +406,26 @@ impl LpSolution {
             x,
             iterations,
             basic_indices,
+            stats: LpStats::default(),
+        }
+    }
+    
+    /// Create a new solution with full statistics
+    pub fn with_stats(
+        status: LpStatus,
+        objective: f64,
+        x: Vec<f64>,
+        iterations: usize,
+        basic_indices: Vec<usize>,
+        stats: LpStats,
+    ) -> Self {
+        Self {
+            status,
+            objective,
+            x,
+            iterations,
+            basic_indices,
+            stats,
         }
     }
 }
