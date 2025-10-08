@@ -405,4 +405,55 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_lu_solve_transpose() {
+        // Test solving A^T x = b
+        let a = Matrix::from_rows(vec![
+            vec![2.0, 1.0, 0.0],
+            vec![1.0, 3.0, 1.0],
+            vec![0.0, 1.0, 2.0],
+        ]);
+        
+        let lu = LuDecomposition::decompose(&a, 1e-10).unwrap();
+        
+        // Solve A^T x = b where b = [1, 2, 3]
+        let b = vec![1.0, 2.0, 3.0];
+        let x = lu.solve_transpose(&b).unwrap();
+        
+        // Verify A^T x = b by computing the product
+        let a_transpose = a.transpose();
+        let result = a_transpose.mul_vec(&x);
+        
+        for i in 0..3 {
+            assert!(
+                (result[i] - b[i]).abs() < 1e-10,
+                "A^T x = b verification failed at index {}: {} != {}",
+                i,
+                result[i],
+                b[i]
+            );
+        }
+    }
+
+    #[test]
+    fn test_lu_solve_transpose_simple() {
+        // Simple 2x2 test
+        // A = [[2, 1], [4, 3]]
+        // A^T = [[2, 4], [1, 3]]
+        let a = Matrix::from_rows(vec![
+            vec![2.0, 1.0],
+            vec![4.0, 3.0],
+        ]);
+        
+        let lu = LuDecomposition::decompose(&a, 1e-10).unwrap();
+        
+        // Solve A^T x = [10, 7] where A^T = [[2, 4], [1, 3]]
+        // Expected solution: x = [1, 2] because [[2,4],[1,3]] * [1,2] = [10, 7]
+        let b2 = vec![10.0, 7.0];
+        let x2 = lu.solve_transpose(&b2).unwrap();
+        
+        assert!((x2[0] - 1.0).abs() < 1e-10, "x[0] should be 1.0, got {}", x2[0]);
+        assert!((x2[1] - 2.0).abs() < 1e-10, "x[1] should be 2.0, got {}", x2[1]);
+    }
 }

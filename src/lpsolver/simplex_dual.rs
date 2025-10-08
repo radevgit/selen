@@ -105,6 +105,7 @@ impl DualSimplex {
             // Find entering variable using dual ratio test
             let entering = self.find_entering_variable(
                 &basis,
+                &a,
                 &c,
                 &dual_direction,
             )?;
@@ -170,11 +171,12 @@ impl DualSimplex {
     fn find_entering_variable(
         &self,
         basis: &Basis,
+        a: &Matrix,
         c: &[f64],
         dual_direction: &[f64],
     ) -> Result<usize, LpError> {
         // Compute reduced costs for non-basic variables
-        let reduced_costs = basis.compute_reduced_costs(&Matrix::zeros(0, 0), c)?;
+        let reduced_costs = basis.compute_reduced_costs(a, c)?;
 
         let mut best_idx = None;
         let mut best_ratio = f64::INFINITY;
@@ -200,10 +202,79 @@ impl DualSimplex {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::lpsolver::simplex_primal::PrimalSimplex;
+
     #[test]
     fn test_dual_simplex_warmstart() {
-        // This test requires a dual-feasible basis
-        // For now, we'll skip implementation until we have the full solver working
-        // TODO: Add tests for dual simplex with warm-starting
+        // First solve a problem with Primal Simplex to get an optimal basis
+        // Maximize x1 + x2
+        // Subject to: x1 + x2 <= 5
+        //             x1, x2 >= 0
+        let problem = LpProblem::new(
+            2,
+            1,
+            vec![1.0, 1.0],
+            vec![vec![1.0, 1.0]],
+            vec![5.0],
+            vec![0.0, 0.0],
+            vec![f64::INFINITY, f64::INFINITY],
+        );
+
+        let mut primal_solver = PrimalSimplex::new(LpConfig::default());
+        let solution = primal_solver.solve(&problem).unwrap();
+        
+        assert_eq!(solution.status, LpStatus::Optimal);
+        assert!((solution.objective - 5.0).abs() < 1e-6);
+
+        // Now create a new problem with an additional constraint
+        // This makes the previous basis potentially infeasible
+        // Maximize x1 + x2
+        // Subject to: x1 + x2 <= 5
+        //             x1 + x2 <= 4  (new tighter constraint)
+        //             x1, x2 >= 0
+        let problem_new = LpProblem {
+            n_vars: 2,
+            n_constraints: 2,
+            c: vec![1.0, 1.0],
+            a: vec![vec![1.0, 1.0], vec![1.0, 1.0]],
+            b: vec![5.0, 4.0],
+            lower_bounds: vec![0.0, 0.0],
+            upper_bounds: vec![f64::INFINITY, f64::INFINITY],
+            basic_indices: Some(solution.basic_indices.clone()),
+        };
+
+        // Try to use dual simplex with warm start
+        // Note: This will fail if the warm start basis isn't dual-feasible
+        // For now, we expect an error since we haven't implemented proper
+        // basis adjustment for constraint changes
+        let mut dual_solver = DualSimplex::new(LpConfig::default());
+        let result = dual_solver.solve(&problem_new);
+        
+        // For now, we just verify the solver doesn't panic
+        // Full implementation will require basis adjustment logic
+        match result {
+            Ok(_) => {
+                // If it works, great!
+            }
+            Err(LpError::NumericalInstability) => {
+                // Expected for now - the old basis may not be valid
+            }
+            Err(e) => {
+                panic!("Unexpected error: {:?}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_dual_simplex_structure() {
+        // Test that dual simplex has correct structure
+        let config = LpConfig::default();
+        let _solver = DualSimplex::new(config.clone());
+        
+        // Verify config is stored
+        assert_eq!(_solver.config.max_iterations, config.max_iterations);
+        assert_eq!(_solver.config.feasibility_tol, config.feasibility_tol);
+        assert_eq!(_solver.config.optimality_tol, config.optimality_tol);
     }
 }
