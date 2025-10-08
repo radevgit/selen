@@ -35,42 +35,100 @@ impl PrimalSimplex {
         problem.validate()?;
         
         // Convert inequality constraints to standard form (Ax = b) by adding slacks
-        let (a_eq, c_extended, n_total) = self.to_standard_form(problem);
+        // Also handles variable bounds by substitution
+        let (a_eq, b_eq, c_extended, _n_total) = self.to_standard_form(problem);
         
         // Phase I: Find initial feasible basis
-        let mut basis = self.phase_one(&a_eq, &problem.b, start_time)?;
+        let mut basis = self.phase_one(&a_eq, &b_eq, start_time)?;
         
         // Phase II: Optimize from feasible basis
-        self.phase_two(&a_eq, &c_extended, &problem.b, &mut basis, n_total, start_time)
+        // Note: Pass problem.n_vars (original variable count) so solution extraction works correctly
+        let mut solution = self.phase_two(&a_eq, &c_extended, &b_eq, &mut basis, problem.n_vars, start_time)?;
+        
+        // Transform solution back: x = x' + l
+        for j in 0..problem.n_vars {
+            solution.x[j] += problem.lower_bounds[j];
+        }
+        
+        // Adjust objective value: f(x) = c^T x = c^T(x' + l) = c^T x' + c^T l
+        // The solver returns f(x') = c^T x', so we need to add c^T l
+        let mut constant_term = 0.0;
+        for j in 0..problem.n_vars {
+            constant_term += problem.c[j] * problem.lower_bounds[j];
+        }
+        solution.objective += constant_term;
+        
+        Ok(solution)
     }
     
     /// Convert inequality constraints Ax <= b to equality Ax + s = b
-    /// Returns (A_extended, c_extended, total_vars)
-    fn to_standard_form(&self, problem: &LpProblem) -> (Matrix, Vec<f64>, usize) {
+    /// Handles variable bounds by substitution
+    /// Returns (A_extended, b_extended, c_extended, total_vars)
+    fn to_standard_form(&self, problem: &LpProblem) -> (Matrix, Vec<f64>, Vec<f64>, usize) {
         let m = problem.n_constraints;
         let n = problem.n_vars;
-        let n_total = n + m; // Original variables + slack variables
         
-        // Create extended constraint matrix [A | I]
-        let mut a_extended = Matrix::zeros(m, n_total);
+        // Step 1: Handle variable lower bounds by substitution x'_j = x_j - l_j
+        // This transforms l_j <= x_j into 0 <= x'_j
+        // Also adjust RHS: b_i becomes b_i - sum_j(A_ij * l_j)
+        let mut b_adjusted = problem.b.clone();
+        for i in 0..m {
+            for j in 0..n {
+                b_adjusted[i] -= problem.a[i][j] * problem.lower_bounds[j];
+            }
+        }
         
-        // Copy original constraints
+        // Adjust objective: c_j becomes c_j (for x'_j), but we need to add constant term
+        // f(x) = c^T x = c^T(x' + l) = c^T x' + c^T l
+        // The constant term c^T l doesn't affect optimization
+        let c_adjusted = problem.c.clone();
+        
+        // Step 2: Count upper-bounded variables (u_j < infinity)
+        let n_upper_bounded = problem.upper_bounds.iter()
+            .filter(|&&u| u < f64::INFINITY)
+            .count();
+        
+        // Step 3: Calculate total variables needed
+        // Original variables + upper bound constraints (as inequalities) + slack variables for original constraints + slack variables for upper bounds
+        let n_constraints_total = m + n_upper_bounded;
+        let n_total = n + n_constraints_total;
+        
+        // Create extended constraint matrix
+        let mut a_extended = Matrix::zeros(n_constraints_total, n_total);
+        let mut b_extended = vec![0.0; n_constraints_total];
+        
+        // Copy original constraints (first m rows)
         for i in 0..m {
             for j in 0..n {
                 a_extended.set(i, j, problem.a[i][j]);
             }
+            b_extended[i] = b_adjusted[i];
         }
         
-        // Add slack variables (identity matrix)
+        // Add slack variables for original constraints
         for i in 0..m {
             a_extended.set(i, n + i, 1.0);
         }
         
-        // Extend objective vector (slacks have 0 cost)
-        let mut c_extended = problem.c.clone();
-        c_extended.extend(vec![0.0; m]);
+        // Add upper bound constraints: x'_j <= u_j - l_j (after substitution)
+        let mut upper_bound_row = m;
+        let mut upper_bound_slack = n + m;
+        for j in 0..n {
+            if problem.upper_bounds[j] < f64::INFINITY {
+                // x'_j + slack = u_j - l_j
+                a_extended.set(upper_bound_row, j, 1.0);
+                a_extended.set(upper_bound_row, upper_bound_slack, 1.0);
+                b_extended[upper_bound_row] = problem.upper_bounds[j] - problem.lower_bounds[j];
+                upper_bound_row += 1;
+                upper_bound_slack += 1;
+            }
+        }
         
-        (a_extended, c_extended, n_total)
+        // Extend objective vector (all slacks have 0 cost)
+        let mut c_extended = c_adjusted;
+        c_extended.extend(vec![0.0; n_constraints_total]);
+        
+        (a_extended, b_extended, c_extended, n_total)
     }
     
     /// Phase I: Find initial feasible basis using artificial variables
@@ -411,8 +469,8 @@ mod tests {
             vec![f64::INFINITY, f64::INFINITY], // upper bounds
         );
         
-        let mut solver = PrimalSimplex::new(LpConfig::default());
-        let (a_eq, c_ext, n_total) = solver.to_standard_form(&problem);
+        let solver = PrimalSimplex::new(LpConfig::default());
+        let (a_eq, b_eq, c_ext, n_total) = solver.to_standard_form(&problem);
         
         // Should add 1 slack variable
         assert_eq!(n_total, 3);
@@ -423,6 +481,9 @@ mod tests {
         assert_eq!(a_eq.get(0, 0), 1.0);
         assert_eq!(a_eq.get(0, 1), 1.0);
         assert_eq!(a_eq.get(0, 2), 1.0); // slack variable
+        
+        // Check RHS unchanged (no lower bounds)
+        assert_eq!(b_eq, vec![5.0]);
         
         // Check extended objective: [3 2 0]
         assert_eq!(c_ext, vec![3.0, 2.0, 0.0]);
