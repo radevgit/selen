@@ -25,7 +25,8 @@
 //! let mut m = Model::default();
 //! let x = m.int(1, 10);
 //! let y = m.int(1, 10);
-//! post!(m, x + y == int(15));
+//! let sum = m.add(x, y);
+//! m.new(sum.eq(15));
 //!
 //! // Solve and get solution with enhanced statistics
 //! let solution = m.solve().unwrap();

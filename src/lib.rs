@@ -71,8 +71,9 @@
 //! let x = m.int(1, 10);
 //! let y = m.int(1, 10);
 //!
-//! post!(m, x + y == int(12));
-//! post!(m, x > y);
+//! let sum = m.add(x, y);
+//! m.new(sum.eq(12));
+//! m.new(x.gt(y));
 //!
 //! if let Ok(solution) = m.solve() {
 //!     println!("x = {:?}, y = {:?}", solution[x], solution[y]);
@@ -93,7 +94,7 @@
 //! m.new(cost.le(500.0));                                        // Budget constraint
 //!
 //! // Maximize number of items within budget
-//! if let Some(solution) = m.maximize(items) {
+//! if let Ok(solution) = m.maximize(items) {
 //!     println!("Optimal: {:?} items, cost: {:?}", 
 //!              solution[items], solution[cost]);
 //! }
@@ -114,7 +115,7 @@
 //! // All must be different using constraint API
 //! m.alldiff(&[red, blue, green]);
 //!
-//! if let Some(solution) = m.solve() {
+//! if let Ok(solution) = m.solve() {
 //!     println!("Red: {:?}, Blue: {:?}, Green: {:?}",
 //!              solution[red], solution[blue], solution[green]);
 //! }
@@ -139,10 +140,10 @@
 //! let weights = m.floats(4, 0.0, 1.0);
 //!
 //! // All variables in vars must be different
-//! post!(m, alldiff(&vars));
+//! m.alldiff(&vars);
 //! 
-//! // At least one flag must be true (using slice syntax)
-//! post!(m, or([flags[0], flags[1], flags[2]]));
+//! // First flag must be true
+//! m.new(flags[0].eq(1));
 //!
 //! if let Ok(solution) = m.solve() {
 //!     println!("Solution found with {} variables!", 

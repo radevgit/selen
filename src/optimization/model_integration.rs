@@ -230,6 +230,11 @@ impl OptimizationRouter {
                 
                 match problem_type {
                     ProblemType::PureFloat { .. } => {
+                        // Check if constraints are complex before using precision optimizer
+                        let has_complex = self.has_complex_constraints(vars, props, var_id);
+                        if has_complex {
+                            return OptimizationAttempt::Fallback(FallbackReason::ComplexObjectiveExpression);
+                        }
                         // Step 3: Attempt float optimization with safe constraint handling
                         self.try_safe_float_minimize(vars, props, var_id_to_index(var_id))
                     },

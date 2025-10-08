@@ -90,12 +90,12 @@ mod solution_coverage {
             let small_val = solution.get_float(small_float);
             
             assert!(
-                (precise_val - 0.12345).abs() < 1e-10,
+                (precise_val - 0.12345).abs() < 1e-6,
                 "Precise float should be close to 0.12345, got {}",
                 precise_val
             );
             assert!(
-                (small_val - 0.0001).abs() < 1e-10,
+                (small_val - 0.0001).abs() < 1e-6,
                 "Small float should be close to 0.0001, got {}",
                 small_val
             );

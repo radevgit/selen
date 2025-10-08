@@ -77,7 +77,7 @@ impl Model {
     /// let enabled = m.bool();       // 0 or 1
     /// 
     /// // Use in constraints
-    /// post!(m, flag != enabled);    // Flags must be different
+    /// m.new(flag.ne(enabled));    // Flags must be different
     /// ```
     pub fn bool(&mut self) -> VarId {
         self.int(0, 1)
@@ -109,7 +109,7 @@ impl Model {
     /// // Non-contiguous range
     /// let sparse = m.intset(vec![1, 5, 10, 50, 100]);
     /// 
-    /// post!(m, prime != weekday);
+    /// m.new(prime.ne(weekday));
     /// ```
     pub fn intset(&mut self, values: Vec<i32>) -> VarId {
         self.props_mut().on_new_var();
@@ -187,7 +187,7 @@ impl Model {
     /// let choices = m.bools(10);        // 10 binary choices
     /// 
     /// // Use in constraints
-    /// post!(m, flags[0] != flags[1]);   // Different flags
+    /// m.new(flags[0].ne(flags[1]));   // Different flags
     /// ```
     pub fn bools(&mut self, n: usize) -> Vec<VarId> {
         self.int_vars(n, 0, 1).collect()
