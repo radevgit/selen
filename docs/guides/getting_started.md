@@ -53,8 +53,8 @@ fn main() {
     let y = m.int(5, 15);       // y can be 5, 6, 7, ..., 15
 
     // 3. Add constraints (rules that must be satisfied)
-    post!(m, x < y);            // x must be less than y
-    post!(m, x + y == int(12)); // x + y must equal 12
+    m.new(x.lt(y));             // x must be less than y
+    m.new(x.add(y).eq(12));     // x + y must equal 12
     
     // 4. Solve the problem
     match m.solve() {
@@ -112,72 +112,49 @@ let color = m.intset(vec![10, 20, 30]);   // Only these values
 let is_active = m.bool();       // is_active ∈ {0, 1} (false, true)
 ```
 
-## 🔧 Adding Constraints - Two Ways
+## 🔧 Adding Constraints
 
-The CSP Solver provides two syntax styles for building constraints:
-
-### 1. Mathematical Syntax (Recommended for Beginners)
-
-Use the `post!` macro with natural mathematical notation:
+Use the constraint API with method calls to build your constraints:
 
 ```rust
 // Basic comparisons
-post!(m, x < y);
-post!(m, x >= int(5));
-post!(m, y != int(0));
+m.new(x.lt(y));                    // x < y
+m.new(x.ge(5));                    // x >= 5
+m.new(y.ne(0));                    // y != 0
 
 // Arithmetic expressions
-post!(m, x + y == int(12));
-post!(m, x * y <= int(50));
-post!(m, x - y >= int(2));
+m.new(x.add(y).eq(12));            // x + y == 12
+m.new(x.mul(y).le(50));            // x * y <= 50
+m.new(x.sub(y).ge(2));             // x - y >= 2
 
 // Complex expressions
-post!(m, x + y * int(2) == z);
-post!(m, abs(x - y) <= int(3));
-```
-
-### 2. Programmatic API (For Dynamic Constraints)
-
-Use method calls for runtime constraint building:
-
-```rust
-// Expression builder with m.new()
-m.new(x.lt(y));                    // x < y
-m.new(x.ge(int(5)));               // x >= 5
-m.new(y.ne(int(0)));               // y != 0
-
-// Arithmetic expressions
-m.new(x.add(y).eq(int(12)));       // x + y == 12
-m.new(x.mul(y).le(int(50)));       // x * y <= 50
-m.new(x.sub(y).ge(int(2)));        // x - y >= 2
+m.new(x.add(y.mul(2)).eq(z));      // x + y * 2 == z
+m.new(x.sub(y).abs().le(3));       // abs(x - y) <= 3
 
 // Complex chaining
-m.new(x.mul(int(2)).add(y).le(int(10)));  // x * 2 + y <= 10
+m.new(x.mul(2).add(y).le(10));     // x * 2 + y <= 10
 ```
-
-**When to use each:**
-- **Mathematical syntax**: Static constraints known at compile time
-- **Programmatic API**: Dynamic constraints built from data or user input
 
 ## 🔗 Common Constraint Patterns
 
 ### Arithmetic Constraints
 ```rust
-post!(m, x + y == int(10));         // Sum equals 10
-post!(m, x * y <= int(50));         // Product at most 50
-post!(m, x - y >= int(2));          // Difference at least 2
-post!(m, x / y == int(3));          // x divided by y equals 3
-post!(m, x % int(3) == int(1));     // x mod 3 equals 1
+m.new(x.add(y).eq(10));             // Sum equals 10
+m.new(x.mul(y).le(50));             // Product at most 50
+m.new(x.sub(y).ge(2));              // Difference at least 2
+m.new(x.div(y).eq(3));              // x divided by y equals 3
+let mod_result = m.modulo(x, Val::from(3));
+m.new(mod_result.eq(1));            // x mod 3 equals 1
 ```
 
 ### Comparison Constraints
 ```rust
-post!(m, x < y);                    // Less than
-post!(m, x <= y);                   // Less than or equal
-post!(m, x > int(5));               // Greater than
-post!(m, x >= int(0));              // Greater than or equal
-post!(m, x == y);                   // Equal
-post!(m, x != int(0));              // Not equal
+m.new(x.lt(y));                     // Less than
+m.new(x.le(y));                     // Less than or equal
+m.new(x.gt(5));                     // Greater than
+m.new(x.ge(0));                     // Greater than or equal
+m.new(x.eq(y));                     // Equal
+m.new(x.ne(0));                     // Not equal
 ```
 
 ### Global Constraints

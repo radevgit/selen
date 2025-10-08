@@ -22,8 +22,8 @@ mod core_coverage {
         let x = model.int(1, 5);
         
         // Create clearly unsatisfiable constraints
-        post!(model, x == int(1));
-        post!(model, x == int(5));
+        model.new(x.eq(int(1)));
+        model.new(x.eq(int(5)));
         
         // Should return error for unsatisfiable model
         let result = model.solve();
@@ -36,7 +36,7 @@ mod core_coverage {
         
         // Create invalid domain where min > max - solver should handle this gracefully
         let invalid_var = model.int(10, 5); // min > max
-        post!(model, invalid_var >= int(3));
+        model.new(invalid_var.ge(int(3)));
         
         // Should either solve successfully (if solver corrects the domain) or fail gracefully
         let result = model.solve();
@@ -54,9 +54,9 @@ mod core_coverage {
         let y = model.int(5, 15);
         
         // Test validation with complex constraint combinations
-        post!(model, x <= y);
-        post!(model, y >= x);
-        post!(model, x != y);
+        model.new(x.le(y));
+        model.new(y.ge(x));
+        model.new(x.ne(y));
         
         // Run validation explicitly
         let validation_result = model.validate();
@@ -106,8 +106,8 @@ mod core_coverage {
         let z = model.float(0.0, 1.0);
         
         // Add constraints to get specific values
-        post!(model, x == int(7));
-        post!(model, y == int(-2));
+        model.new(x.eq(int(7)));
+        model.new(y.eq(int(-2)));
         
         let result = model.solve();
         
@@ -141,7 +141,7 @@ mod core_coverage {
         let bool_var = model.int(0, 1);   // Can be true or false
         
         // Add constraint to make bool_var = 1
-        post!(model, bool_var == int(1));
+        model.new(bool_var.eq(int(1)));
         
         let result = model.solve();
         
@@ -189,8 +189,8 @@ mod core_coverage {
         let sum = model.int(2, 10);
         
         // Constraint: x + y = sum
-        post!(model, x + y == sum);
-        post!(model, sum == int(6));
+        model.new(x.add(y).eq(sum));
+        model.new(sum.eq(int(6)));
         
         let result = model.solve();
         
@@ -217,8 +217,8 @@ mod core_coverage {
         let x = model.int(1, 10);
         
         // Add conflicting constraints
-        post!(model, x <= int(5));
-        post!(model, x >= int(8));
+        model.new(x.le(int(5)));
+        model.new(x.ge(int(8)));
         
         // Either validation catches it, or solving fails
         let validation_result = model.validate();
@@ -236,8 +236,8 @@ mod core_coverage {
         let y = model.float(0.0, 1.0);
         
         // Add simple precision constraint
-        post!(model, x >= float(0.5));
-        post!(model, y >= float(0.5));
+        model.new(x.ge(float(0.5)));
+        model.new(y.ge(float(0.5)));
         
         let validation_result = model.validate();
         assert!(validation_result.is_ok(), "Valid precision constraints should pass validation");
@@ -263,7 +263,7 @@ mod core_coverage {
         
         // Add constraints between many variables
         for i in 0..vars.len()-1 {
-            post!(model, vars[i] <= vars[i+1]);
+            model.new(vars[i].le(vars[i+1]));
         }
         
         // Validation should handle large models
@@ -292,17 +292,17 @@ mod core_coverage {
         let y = model.int(7, 15);
         
         // Mix different constraint types
-        post!(model, x != y);                    // Inequality
-        post!(model, x + y <= int(25));          // Arithmetic (increased limit)
-        post!(model, x >= int(5));               // Comparison
+        model.new(x.ne(y));                    // Inequality
+        model.new(x.add(y).le(int(25)));          // Arithmetic (increased limit)
+        model.new(x.ge(int(5)));               // Comparison
         
         // Global constraints
         let all_vars = vec![x, y];
         let min_var = model.min(&all_vars).expect("min should work");
-        post!(model, min_var >= int(5));  // min_var will be at least 5 (x's minimum)
+        model.new(min_var.ge(int(5)));  // min_var will be at least 5 (x's minimum)
         
         let max_var = model.max(&all_vars).expect("max should work");
-        post!(model, max_var <= int(15));
+        model.new(max_var.le(int(15)));
         
         // Validation should handle mixed types
         let validation_result = model.validate();
@@ -340,8 +340,8 @@ mod core_coverage {
         let x = model.int(1, 10);
         let y = model.float(0.0, 1.0);
         
-        post!(model, x >= int(5));
-        post!(model, y <= float(0.5));
+        model.new(x.ge(int(5)));
+        model.new(y.le(float(0.5)));
         
         // Test precision configuration
         let precision = model.float_precision_digits();
@@ -368,7 +368,7 @@ mod core_coverage {
         let x = model.int(1, 10);
         let y = model.int(1, 10);
         
-        post!(model, x + y <= int(15));
+        model.new(x.add(y).le(int(15)));
         
         // Test minimization
         let objective = model.add(x, y);
@@ -409,7 +409,7 @@ mod core_coverage {
         let sparse_var = model.intset(vec![2, 5, 7, 11, 13]); // Prime numbers
         let weekday = model.intset(vec![1, 2, 3, 4, 5, 6, 7]); // Days of week
         
-        post!(model, sparse_var != weekday);
+        model.new(sparse_var.ne(weekday));
         
         let result = model.solve();
         
@@ -432,7 +432,7 @@ mod core_coverage {
         let empty_var = model.intset(vec![]);
         
         // Add constraint on empty variable
-        post!(model, empty_var >= int(1));
+        model.new(empty_var.ge(int(1)));
         
         // Should handle gracefully
         let result = model.solve();
@@ -458,7 +458,7 @@ mod core_coverage {
         let small_var = model.int(42, 42);
         
         // Constraint between them
-        post!(model, large_var >= small_var);
+        model.new(large_var.ge(small_var));
         
         let result = model.solve();
         
@@ -487,7 +487,7 @@ mod core_coverage {
         let x = model.int(1, 100);
         let y = model.int(1, 100);
         
-        post!(model, x + y == int(50));
+        model.new(x.add(y).eq(int(50)));
         
         // Should handle small memory limit gracefully
         let result = model.solve();
@@ -513,8 +513,8 @@ mod core_coverage {
         let z = model.int(1, 1000);
         
         // Complex constraints that might take time
-        post!(model, x * y == z);
-        post!(model, x + y <= int(100));
+        model.new(x.mul(y).eq(z));
+        model.new(x.add(y).le(int(100)));
         
         let result = model.solve();
         // Should handle immediate timeout gracefully
@@ -535,7 +535,7 @@ mod core_coverage {
         let mut model = Model::with_config(config);
         let x = model.int(1, 5);  // This should mark model as invalid due to 0 MB limit
         
-        post!(model, x == int(3));
+        model.new(x.eq(int(3)));
         
         // Should return memory limit error instead of panicking
         let result = model.solve();

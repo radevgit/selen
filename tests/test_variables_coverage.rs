@@ -28,7 +28,7 @@ mod variables_coverage {
     fn test_variable_single_value_domain() {
         let mut model = Model::default();
         let x = model.int(42, 42); // Single value domain
-        post!(model, x == 42);
+        model.new(x.eq(42));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Creating variable with single value should succeed");
@@ -87,8 +87,8 @@ mod variables_coverage {
         let y = model.int(-50, 50);
         
         // Simple constraint
-        post!(model, x == 25);
-        post!(model, y == 0);
+        model.new(x.eq(25));
+        model.new(y.eq(0));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -105,7 +105,7 @@ mod variables_coverage {
         let mut model = Model::default();
         let x = model.float(0.0, 1.0);
         
-        post!(model, x >= 0.5);
+        model.new(x.ge(0.5));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -124,7 +124,7 @@ mod variables_coverage {
         // Use regular float for step simulation
         let x = model.float(0.0, 10.0);
         
-        post!(model, x == 3.5);
+        model.new(x.eq(3.5));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -144,8 +144,8 @@ mod variables_coverage {
         let y = model.int(1, 10);
         
         // Simple constraints
-        post!(model, x == 3);
-        post!(model, y == 7);
+        model.new(x.eq(3));
+        model.new(y.eq(7));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -164,10 +164,10 @@ mod variables_coverage {
         let y = model.int(1, 100);
         
         // Simple bounds
-        post!(model, x >= 20);
-        post!(model, x <= 30);
-        post!(model, y >= 40);
-        post!(model, y <= 50);
+        model.new(x.ge(20));
+        model.new(x.le(30));
+        model.new(y.ge(40));
+        model.new(y.le(50));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -185,8 +185,8 @@ mod variables_coverage {
         let x = model.int(1, 5);
         
         // Create infeasible constraints
-        post!(model, x >= 10);
-        post!(model, x <= 0);
+        model.new(x.ge(10));
+        model.new(x.le(0));
         
         let solution = model.solve();
         assert!(
@@ -202,7 +202,7 @@ mod variables_coverage {
         let b = model.int(0, 1);
         
         // Force true
-        post!(model, b == 1);
+        model.new(b.eq(1));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -218,8 +218,8 @@ mod variables_coverage {
         let y = model.int(10, 20);
         
         // Different values
-        post!(model, x != y);
-        post!(model, x == 15);
+        model.new(x.ne(y));
+        model.new(x.eq(15));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -240,8 +240,8 @@ mod variables_coverage {
         let y = model.int(0, 100);
         
         // Force specific values
-        post!(model, x == 30);
-        post!(model, y == 65);
+        model.new(x.eq(30));
+        model.new(y.eq(65));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -259,9 +259,9 @@ mod variables_coverage {
         let x = model.int(-100, 100);
         
         // Test boundary values
-        post!(model, x >= -100);
-        post!(model, x <= 100);
-        post!(model, x == 0); // Middle value
+        model.new(x.ge(-100));
+        model.new(x.le(100));
+        model.new(x.eq(0)); // Middle value
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -276,8 +276,8 @@ mod variables_coverage {
         let x = model.float(-1.0, 1.0);
         
         // Test small value
-        post!(model, x >= -0.000001);
-        post!(model, x <= 0.000001);
+        model.new(x.ge(-0.000001));
+        model.new(x.le(0.000001));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -299,9 +299,9 @@ mod variables_coverage {
         let z = model.int(1, 50);
         
         // Simple fixed values for testing
-        post!(model, x == 3);
-        post!(model, y == 4);
-        post!(model, z == 12);
+        model.new(x.eq(3));
+        model.new(y.eq(4));
+        model.new(z.eq(12));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -324,9 +324,9 @@ mod variables_coverage {
         let x = model.int(1, 1000);
         
         // Progressive reduction
-        post!(model, x >= 100);
-        post!(model, x <= 200);
-        post!(model, x == 150);
+        model.new(x.ge(100));
+        model.new(x.le(200));
+        model.new(x.eq(150));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -343,9 +343,9 @@ mod variables_coverage {
         let bool_var = model.int(0, 1); // Boolean simulation
         
         // Set specific values
-        post!(model, int_var == 5);
-        post!(model, float_var == 2.5);
-        post!(model, bool_var == 0);
+        model.new(int_var.eq(5));
+        model.new(float_var.eq(2.5));
+        model.new(bool_var.eq(0));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -370,9 +370,9 @@ mod variables_coverage {
         let large_var = model.int(-1000000, 1000000);
         
         // Constrain large var to small range 
-        post!(model, large_var >= -10);
-        post!(model, large_var <= 10);
-        post!(model, large_var == 0);
+        model.new(large_var.ge(-10));
+        model.new(large_var.le(10));
+        model.new(large_var.eq(0));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -392,9 +392,9 @@ mod variables_coverage {
         let z = model.int(1, 20);
         
         // Chain of simple constraints that should propagate
-        post!(model, x == 5);
-        post!(model, y == 10);
-        post!(model, z == 15);
+        model.new(x.eq(5));
+        model.new(y.eq(10));
+        model.new(z.eq(15));
         
         let solution = model.solve();
         if let Ok(solution) = solution {

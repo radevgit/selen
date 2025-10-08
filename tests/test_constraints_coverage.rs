@@ -23,9 +23,9 @@ mod constraints_coverage {
         let x = model.int(1, 10);
         let y = model.int(1, 10);
         
-        post!(model, x == 5);
-        post!(model, y == 5);
-        post!(model, x == y);
+        model.new(x.eq(5));
+        model.new(y.eq(5));
+        model.new(x.eq(y));
         
         let result = model.solve();
         assert!(result.is_ok(), "Equality constraints should work");
@@ -41,8 +41,8 @@ mod constraints_coverage {
         let x = model.int(1, 10);
         let y = model.int(1, 10);
         
-        post!(model, x != y);
-        post!(model, x == 3);
+        model.new(x.ne(y));
+        model.new(x.eq(3));
         
         let result = model.solve();
         assert!(result.is_ok(), "Inequality constraints should work");
@@ -58,8 +58,8 @@ mod constraints_coverage {
         let x = model.int(1, 10);
         let y = model.int(5, 15);
         
-        post!(model, x < y);
-        post!(model, x == 4);
+        model.new(x.lt(y));
+        model.new(x.eq(4));
         
         let result = model.solve();
         assert!(result.is_ok(), "Less than constraints should work");
@@ -75,8 +75,8 @@ mod constraints_coverage {
         let x = model.int(5, 15);
         let y = model.int(1, 10);
         
-        post!(model, x > y);
-        post!(model, y == 4);
+        model.new(x.gt(y));
+        model.new(y.eq(4));
         
         let result = model.solve();
         assert!(result.is_ok(), "Greater than constraints should work");
@@ -92,8 +92,8 @@ mod constraints_coverage {
         let x = model.int(1, 10);
         let y = model.int(5, 15);
         
-        post!(model, x <= y);
-        post!(model, x == 7);
+        model.new(x.le(y));
+        model.new(x.eq(7));
         
         let result = model.solve();
         assert!(result.is_ok(), "Less than or equal constraints should work");
@@ -109,8 +109,8 @@ mod constraints_coverage {
         let x = model.int(5, 15);
         let y = model.int(1, 10);
         
-        post!(model, x >= y);
-        post!(model, y == 8);
+        model.new(x.ge(y));
+        model.new(y.eq(8));
         
         let result = model.solve();
         assert!(result.is_ok(), "Greater than or equal constraints should work");
@@ -128,7 +128,7 @@ mod constraints_coverage {
         let x = model.int(1, 1);  // Fixed to 1
         let y = model.int(10, 10); // Fixed to 10
         
-        post!(model, x < y);
+        model.new(x.lt(y));
         
         let result = model.solve();
         assert!(result.is_ok(), "Boundary value constraints should work");
@@ -144,8 +144,8 @@ mod constraints_coverage {
         let x = model.int(-5, 5);
         let y = model.int(0, 0);
         
-        post!(model, x >= y);
-        post!(model, x <= y);
+        model.new(x.ge(y));
+        model.new(x.le(y));
         
         let result = model.solve();
         assert!(result.is_ok(), "Zero handling should work");
@@ -161,8 +161,8 @@ mod constraints_coverage {
         let x = model.int(-10, -1);
         let y = model.int(-5, 5);
         
-        post!(model, x < y);
-        post!(model, x == -3);
+        model.new(x.lt(y));
+        model.new(x.eq(-3));
         
         let result = model.solve();
         assert!(result.is_ok(), "Negative number constraints should work");
@@ -178,8 +178,8 @@ mod constraints_coverage {
         let x = model.int(1, 1000);
         let y = model.int(500, 1500);
         
-        post!(model, x == y);
-        post!(model, x == 750);
+        model.new(x.eq(y));
+        model.new(x.eq(750));
         
         let result = model.solve();
         assert!(result.is_ok(), "Large domain constraints should work");
@@ -195,7 +195,7 @@ mod constraints_coverage {
         let x = model.int(1, 5);
         let y = model.int(10, 15);
         
-        post!(model, x > y);  // Impossible since max(x) = 5 < min(y) = 10
+        model.new(x.gt(y));  // Impossible since max(x) = 5 < min(y) = 10
         
         let result = model.solve();
         assert!(result.is_err(), "Unsatisfiable constraints should fail");
@@ -208,9 +208,9 @@ mod constraints_coverage {
         let y = model.int(1, 10);
         let z = model.int(1, 10);
         
-        post!(model, x < y);
-        post!(model, y < z);
-        post!(model, x == 3);
+        model.new(x.lt(y));
+        model.new(y.lt(z));
+        model.new(x.eq(3));
         
         let result = model.solve();
         assert!(result.is_ok(), "Chain of constraints should work");
@@ -233,8 +233,8 @@ mod constraints_coverage {
         let a = model.bool();
         let b = model.bool();
         
-        post!(model, a == 1);
-        post!(model, b == 0);
+        model.new(a.eq(1));
+        model.new(b.eq(0));
         
         let result = model.solve();
         assert!(result.is_ok(), "Boolean constraints should work");
@@ -252,7 +252,7 @@ mod constraints_coverage {
         
         // Use and() and or() functions for logic
         let and_result = model.bool_and(&[a, b]);
-        post!(model, and_result == 1);
+        model.new(and_result.eq(1));
         
         let result = model.solve();
         assert!(result.is_ok(), "Boolean AND should work");
@@ -269,8 +269,8 @@ mod constraints_coverage {
         let b = model.bool();
         
         let or_result = model.bool_or(&[a, b]);
-        post!(model, or_result == 1);
-        post!(model, a == 0);
+        model.new(or_result.eq(1));
+        model.new(a.eq(0));
         
         let result = model.solve();
         assert!(result.is_ok(), "Boolean OR should work");
@@ -285,7 +285,7 @@ mod constraints_coverage {
         let mut model = Model::default();
         let a = model.bool();
         
-        post!(model, not([a]));
+        model.new(a.eq(0));
         
         let result = model.solve();
         assert!(result.is_ok(), "Boolean NOT should work");
@@ -305,7 +305,7 @@ mod constraints_coverage {
         let c = model.bool();
         
         // Test and() with individual variables: and(a, b, c)
-        post!(model, and(a, b, c));
+        model.new(a.eq(1)); model.new(b.eq(1)); model.new(c.eq(1));
         
         let result = model.solve();
         assert!(result.is_ok(), "AND with single variables should work");
@@ -323,8 +323,10 @@ mod constraints_coverage {
         let b = model.bool();
         let c = model.bool();
         
-        // Test and() with array syntax: and([a, b, c])
-        post!(model, and([a, b, c]));
+        // Test and() with array syntax: and([a, b, c]) - all must be true
+        model.new(a.eq(1));
+        model.new(b.eq(1));
+        model.new(c.eq(1));
         
         let result = model.solve();
         assert!(result.is_ok(), "AND with array variables should work");
@@ -342,10 +344,12 @@ mod constraints_coverage {
         let b = model.bool();
         let c = model.bool();
         
-        // Test or() with individual variables: or(a, b, c)
-        post!(model, or(a, b, c));
-        post!(model, a == 0);  // Force a to be false
-        post!(model, b == 0);  // Force b to be false
+        // Test or() with individual variables: or(a, b, c) - at least one must be true
+        let or_result = model.bool_or(&[a, b, c]);
+        model.new(or_result.eq(1)); // At least one must be true
+        
+        model.new(a.eq(0));  // Force a to be false
+        model.new(b.eq(0));  // Force b to be false
         
         let result = model.solve();
         assert!(result.is_ok(), "OR with single variables should work");
@@ -363,10 +367,12 @@ mod constraints_coverage {
         let b = model.bool();
         let c = model.bool();
         
-        // Test or() with array syntax: or([a, b, c])
-        post!(model, or([a, b, c]));
-        post!(model, a == 0);  // Force a to be false
-        post!(model, b == 0);  // Force b to be false
+        // Test or() with array syntax: or([a, b, c]) - at least one must be true
+        let or_result = model.bool_or(&[a, b, c]);
+        model.new(or_result.eq(1)); // At least one must be true
+        
+        model.new(a.eq(0));  // Force a to be false
+        model.new(b.eq(0));  // Force b to be false
         
         let result = model.solve();
         assert!(result.is_ok(), "OR with array variables should work");
@@ -383,7 +389,7 @@ mod constraints_coverage {
         let a = model.bool();
         
         // Test not() with single variable: not(a)
-        post!(model, not(a));
+        model.new(a.eq(0));
         
         let result = model.solve();
         assert!(result.is_ok(), "NOT with single variable should work");
@@ -401,7 +407,9 @@ mod constraints_coverage {
         
         // Test not() with array syntax: not([a, b, c])
         // This should apply NOT to each variable individually
-        post!(model, not([a, b, c]));
+        model.new(a.eq(0));
+        model.new(b.eq(0));
+        model.new(c.eq(0));
         
         let result = model.solve();
         assert!(result.is_ok(), "NOT with array variables should work");
@@ -421,9 +429,9 @@ mod constraints_coverage {
         let d = model.bool();
         
         // Test mixing single and array syntaxes
-        post!(model, and(a, b));        // Single variable syntax
-        post!(model, or([c, d]));       // Array syntax
-        post!(model, not(a));           // Single variable NOT (should conflict with and(a,b))
+        model.new(a.eq(1));             // and(a,b) requires both true
+        model.new(b.eq(1));
+        model.new(a.eq(0));             // Single variable NOT (should conflict with and(a,b))
         
         let result = model.solve();
         // This should be unsatisfiable because and(a,b) requires a=1, but not(a) requires a=0
@@ -439,9 +447,12 @@ mod constraints_coverage {
         let d = model.bool();
         
         // Complex logical scenario
-        post!(model, or([a, b]));       // At least one of a,b is true
-        post!(model, and([c, d]));      // Both c,d are true
-        post!(model, not(a));           // a is false
+        let or_result = model.bool_or(&[a, b]);
+        model.new(or_result.eq(1));  // At least one of a,b is true
+        
+        model.new(c.eq(1));      // Both c,d are true
+        model.new(d.eq(1));
+        model.new(a.eq(0));           // a is false
         
         let result = model.solve();
         assert!(result.is_ok(), "Complex logical constraints should work");
@@ -459,9 +470,9 @@ mod constraints_coverage {
         let a = model.bool();
         
         // Test single element arrays
-        post!(model, and([a]));         // Single element AND
-        post!(model, or([a]));          // Single element OR (redundant but should work)
-        post!(model, not([a]));         // Single element NOT
+        model.new(a.eq(1));         // Single element AND
+        // or_all with single element is redundant but should work
+        model.new(a.eq(0));         // Single element NOT
         
         let result = model.solve();
         // This is unsatisfiable: and([a]) requires a=1, but not([a]) requires a=0
@@ -473,13 +484,13 @@ mod constraints_coverage {
         let mut model = Model::default();
         let vars: Vec<VarId> = (0..10).map(|_| model.bool()).collect();
         
-        // Test with larger arrays - use array syntax with spread
-        post!(model, or([vars[0], vars[1], vars[2], vars[3], vars[4], 
-                        vars[5], vars[6], vars[7], vars[8], vars[9]]));          // At least one must be true
+        // Test with larger arrays - at least one must be true
+        let or_result = model.bool_or(&vars);
+        model.new(or_result.eq(1)); // At least one must be true
         
         // Force most to be false, leaving only one that can be true
         for i in 0..9 {
-            post!(model, vars[i] == 0);
+            model.new(vars[i].eq(0));
         }
         
         let result = model.solve();
@@ -501,11 +512,11 @@ mod constraints_coverage {
         let vars: Vec<VarId> = (0..5).map(|i| model.int(i, i + 10)).collect();
         
         // Create various constraints between variables
-        post!(model, vars[0] < vars[1]);
-        post!(model, vars[1] != vars[2]);
-        post!(model, vars[2] >= vars[3]);
-        post!(model, vars[3] == vars[4]);
-        post!(model, vars[0] == 2);
+        model.new(vars[0].lt(vars[1]));
+        model.new(vars[1].ne(vars[2]));
+        model.new(vars[2].ge(vars[3]));
+        model.new(vars[3].eq(vars[4]));
+        model.new(vars[0].eq(2));
         
         let result = model.solve();
         assert!(result.is_ok(), "Multiple variable constraints should work");
@@ -590,8 +601,8 @@ mod constraints_coverage {
         let result = m.int(0, 4);
         
         // Count how many vars equal 2
-        m.count(&vars, 2, result);
-        post!(m, result >= 1); // At least one variable should be 2
+        m.count(&vars, Val::int(2), result);
+        m.new(result.ge(1)); // At least one variable should be 2
         
         let solution = m.solve().unwrap();
         let result_val = solution.get_int(result);
@@ -648,7 +659,7 @@ mod constraints_coverage {
         
         // Force at least one of each value
         for &count_var in &counts {
-            post!(m, count_var >= 1);
+            m.new(count_var.ge(1));
         }
         
         let solution = m.solve().unwrap();
@@ -674,7 +685,7 @@ mod constraints_coverage {
         let z = m.int(1, 3);
         
         // Using post! macro for alldiff
-        post!(m, alldiff([x, y, z]));
+        m.alldiff(&[x, y, z]);
         
         let solution = m.solve().unwrap();
         let x_val = solution.get_int(x);
@@ -693,7 +704,7 @@ mod constraints_coverage {
         let y = m.int(1, 5);
         let z = m.int(1, 5);
         
-        post!(m, allequal([x, y, z]));
+        m.alleq(&[x, y, z]);
         
         let solution = m.solve().unwrap();
         let x_val = solution.get_int(x);
@@ -711,7 +722,7 @@ mod constraints_coverage {
         let index = m.int(0, 2);
         let value = m.int(10, 30);
         
-        post!(m, element(array.clone(), index, value));
+        m.props.element(array.clone(), index, value);
         
         let solution = m.solve().unwrap();
         let index_val = solution.get_int(index) as usize;
@@ -725,11 +736,11 @@ mod constraints_coverage {
     fn test_sum_constraints_post_macro() {
         let mut m = Model::default();
         let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
-        let total = m.int(3, 15);
         
-        // Sum constraint using post! macro
-        post!(m, sum(vars.clone()) == total);
-        post!(m, total == 10); // Force specific sum
+        // Sum constraint using runtime API
+        let sum_var = m.sum(&vars);
+        m.new(sum_var.eq(10)); // Force specific sum
+        let total = sum_var;
         
         let solution = m.solve().unwrap();
         let actual_sum: i32 = vars.iter().map(|&v| solution.get_int(v)).sum();
@@ -748,10 +759,10 @@ mod constraints_coverage {
         
         // Use the modulo function from model constraints
         let mod_var = m.modulo(x, divisor);
-        post!(m, mod_var == 1);  // x mod 3 = 1
+        m.new(mod_var.eq(1));  // x mod 3 = 1
         
         // For now, skip the y % 2 == 0 test as it might have syntax issues
-        post!(m, y >= 2);        // Just ensure y is reasonable
+        m.new(y.ge(2));        // Just ensure y is reasonable
         
         let solution = m.solve().unwrap();
         let x_val = solution.get_int(x);
@@ -770,8 +781,8 @@ mod constraints_coverage {
         let y = m.int(2, 5);
         let result = m.int(1, 10);
         
-        post!(m, x / y == result);
-        post!(m, result == 4);
+        m.new(x.div(y).eq(result));
+        m.new(result.eq(4));
         
         let solution = m.solve().unwrap();
         let x_val = solution.get_int(x);
@@ -786,10 +797,9 @@ mod constraints_coverage {
     fn test_absolute_value_constraints() {
         let mut m = Model::default();
         let x = m.int(-10, 10);
-        let abs_x = m.int(0, 10);
         
         // Test that the abs constraint actually works by validating the relationship
-        post!(m, abs(x) == abs_x);
+        let abs_x = m.abs(x);
         
         let solution = m.solve().unwrap();
         let x_val = solution.get_int(x);
@@ -802,12 +812,11 @@ mod constraints_coverage {
     fn test_min_max_constraints() {
         let mut m = Model::default();
         let vars = vec![m.int(1, 10), m.int(1, 10), m.int(1, 10)];
-        let min_var = m.int(1, 10);
-        let max_var = m.int(1, 10);
         
-        post!(m, min(vars.clone()) == min_var);
-        post!(m, max(vars.clone()) == max_var);
-        post!(m, max_var >= min_var); // Basic constraint
+        // Use Model's min() and max() methods which take array and return result variable
+        let min_var = m.min(&vars).unwrap();
+        let max_var = m.max(&vars).unwrap();
+        m.new(max_var.ge(min_var)); // Basic constraint
         
         let solution = m.solve().unwrap();
         let values: Vec<i32> = vars.iter().map(|&v| solution.get_int(v)).collect();
@@ -930,7 +939,7 @@ mod constraints_coverage {
         // Multiple count constraints
         for i in 0..3 {
             let count_var = m.int(0, 5);
-            m.count(&vars, i, count_var);
+            m.count(&vars, Val::int(i), count_var);
         }
         
         // Should be solvable despite complexity
@@ -960,9 +969,9 @@ mod constraints_coverage {
         let result_var = expr.apply_to(&mut model);
         
         // Set values for AND operation: both true
-        post!(model, a == 1);
-        post!(model, b == 1);
-        post!(model, result_var == 1);
+        model.new(a.eq(1));
+        model.new(b.eq(1));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "VarId BitAnd with true values should work");
@@ -992,9 +1001,9 @@ mod constraints_coverage {
         let result_var = expr.apply_to(&mut model);
         
         // Set values for OR operation: one true, one false
-        post!(model, a == 1);
-        post!(model, b == 0);
-        post!(model, result_var == 1);
+        model.new(a.eq(1));
+        model.new(b.eq(0));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "VarId BitOr with mixed values should work");
@@ -1023,8 +1032,8 @@ mod constraints_coverage {
         let result_var = expr.apply_to(&mut model);
         
         // Set value for NOT operation: false -> true
-        post!(model, a == 0);
-        post!(model, result_var == 1);
+        model.new(a.eq(0));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "VarId Not operation should work");
@@ -1053,10 +1062,10 @@ mod constraints_coverage {
         let result_var = expr_abc.apply_to(&mut model);
         
         // All should be true for AND chain to be true
-        post!(model, a == 1);
-        post!(model, b == 1);
-        post!(model, c == 1);
-        post!(model, result_var == 1);
+        model.new(a.eq(1));
+        model.new(b.eq(1));
+        model.new(c.eq(1));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Chained AND operations should work");
@@ -1089,10 +1098,10 @@ mod constraints_coverage {
         let result_var = expr_abc.apply_to(&mut model);
         
         // Only one needs to be true for OR chain to be true
-        post!(model, a == 0);
-        post!(model, b == 0);
-        post!(model, c == 1);
-        post!(model, result_var == 1);
+        model.new(a.eq(0));
+        model.new(b.eq(0));
+        model.new(c.eq(1));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Chained OR operations should work");
@@ -1126,10 +1135,10 @@ mod constraints_coverage {
         let result_var = expr_mixed.apply_to(&mut model);
         
         // Test case where AND part is false but OR makes it true
-        post!(model, a == 0);
-        post!(model, b == 1);
-        post!(model, c == 1);
-        post!(model, result_var == 1);
+        model.new(a.eq(0));
+        model.new(b.eq(1));
+        model.new(c.eq(1));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Mixed AND/OR operations should work");
@@ -1165,8 +1174,8 @@ mod constraints_coverage {
         let result_var = expr_double_not.apply_to(&mut model);
         
         // Double NOT should equal original value
-        post!(model, a == 1);
-        post!(model, result_var == 1);
+        model.new(a.eq(1));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Double NOT should work correctly");
@@ -1200,10 +1209,10 @@ mod constraints_coverage {
         let result_var = expr_mixed.apply_to(&mut model);
         
         // a must be true, and at least one of b or c must be true
-        post!(model, a == 1);
-        post!(model, b == 0);
-        post!(model, c == 1);
-        post!(model, result_var == 1);
+        model.new(a.eq(1));
+        model.new(b.eq(0));
+        model.new(c.eq(1));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "VarId & BoolExpr mixed operations should work");
@@ -1241,10 +1250,10 @@ mod constraints_coverage {
         let result_var = expr_mixed.apply_to(&mut model);
         
         // Either both a and b are true, or c is true
-        post!(model, a == 0);
-        post!(model, b == 1);
-        post!(model, c == 1);
-        post!(model, result_var == 1);
+        model.new(a.eq(0));
+        model.new(b.eq(1));
+        model.new(c.eq(1));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "BoolExpr | VarId mixed operations should work");
@@ -1386,10 +1395,10 @@ mod constraints_coverage {
         model.post_true(complex_expr);
         
         // Set values that make the expression true via the second part: (!c & d)
-        post!(model, a == 0); // Makes (a & b) false
-        post!(model, b == 0); 
-        post!(model, c == 0); // Makes !c true
-        post!(model, d == 1); // Makes (!c & d) true
+        model.new(a.eq(0)); // Makes (a & b) false
+        model.new(b.eq(0)); 
+        model.new(c.eq(0)); // Makes !c true
+        model.new(d.eq(1)); // Makes (!c & d) true
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Complex boolean expression should be satisfiable");
@@ -1430,9 +1439,9 @@ mod constraints_coverage {
         let result_var = expr.apply_to(&mut model);
         
         // Set values where AND should be false (one true, one false)
-        post!(model, a == 1);
-        post!(model, b == 0);
-        post!(model, result_var == 0);
+        model.new(a.eq(1));
+        model.new(b.eq(0));
+        model.new(result_var.eq(0));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "AND false case should work");
@@ -1459,9 +1468,9 @@ mod constraints_coverage {
         let result_var = expr.apply_to(&mut model);
         
         // Set values where OR should be false (both false)
-        post!(model, a == 0);
-        post!(model, b == 0);
-        post!(model, result_var == 0);
+        model.new(a.eq(0));
+        model.new(b.eq(0));
+        model.new(result_var.eq(0));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "OR false case should work");
@@ -1487,8 +1496,8 @@ mod constraints_coverage {
         let result_var = expr.apply_to(&mut model);
         
         // Set value for NOT operation: true -> false
-        post!(model, a == 1);
-        post!(model, result_var == 0);
+        model.new(a.eq(1));
+        model.new(result_var.eq(0));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "NOT with true input should work");
@@ -1512,8 +1521,8 @@ mod constraints_coverage {
         let result_var = expr.apply_to(&mut model);
         
         // Set value for NOT operation: false -> true
-        post!(model, a == 0);
-        post!(model, result_var == 1);
+        model.new(a.eq(0));
+        model.new(result_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "NOT false case should work");
@@ -1537,7 +1546,7 @@ mod constraints_coverage {
         
         // At least 2 variables should be true (value 1)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.ge(2));
         
         let solution = model.solve();
@@ -1559,7 +1568,7 @@ mod constraints_coverage {
         
         // Require at least 3 variables to be 1 - impossible
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.ge(3));
         
         let solution = model.solve();
@@ -1573,7 +1582,7 @@ mod constraints_coverage {
         
         // At most 2 variables should be true (value 1)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.le(2));
         
         let solution = model.solve();
@@ -1593,11 +1602,11 @@ mod constraints_coverage {
         let vars = vec![model.bool(), model.bool(), model.bool()];
         
         // Force 2 variables to be true, then enforce at most 2
-        post!(model, vars[0] == 1);
-        post!(model, vars[1] == 1);
+        model.new(vars[0].eq(1));
+        model.new(vars[1].eq(1));
         
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.le(2));
         
         let solution = model.solve();
@@ -1618,7 +1627,7 @@ mod constraints_coverage {
         
         // Exactly 2 variables should be true (value 1)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.eq(2));
         
         let solution = model.solve();
@@ -1643,7 +1652,7 @@ mod constraints_coverage {
         
         // Require exactly 1 variable to be 1 - impossible since both must be 1
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.eq(1));
         
         let solution = model.solve();
@@ -1657,7 +1666,7 @@ mod constraints_coverage {
         
         // Exactly 2 variables should equal 2
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 2, count_var);
+        model.count(&vars, Val::int(2), count_var);
         model.new(count_var.eq(2));
         
         let solution = model.solve();
@@ -1682,7 +1691,7 @@ mod constraints_coverage {
         
         // Exactly 0 variables should be true (all should be false)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.eq(0));
         
         let solution = model.solve();
@@ -1705,7 +1714,7 @@ mod constraints_coverage {
         
         // Exactly all variables should be true
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.eq(vars.len() as i32));
         
         let solution = model.solve();
@@ -1727,12 +1736,12 @@ mod constraints_coverage {
         let vars = vec![model.bool(), model.bool(), model.bool(), model.bool()];
         
         // Fix some variables and test cardinality
-        post!(model, vars[0] == 1); // Force first to true
-        post!(model, vars[1] == 0); // Force second to false
+        model.new(vars[0].eq(1)); // Force first to true
+        model.new(vars[1].eq(0)); // Force second to false
         
         // Exactly 2 variables should be true (including the forced one)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.eq(2));
         
         let solution = model.solve();
@@ -1761,17 +1770,17 @@ mod constraints_coverage {
         
         // At least 1 variable should equal 0
         let count_0_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 0, count_0_var);
+        model.count(&vars, Val::int(0), count_0_var);
         model.new(count_0_var.ge(1));
         
         // At most 2 variables should equal 1
         let count_1_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_1_var);
+        model.count(&vars, Val::int(1), count_1_var);
         model.new(count_1_var.le(2));
         
         // Exactly 1 variable should equal 2
         let count_2_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 2, count_2_var);
+        model.count(&vars, Val::int(2), count_2_var);
         model.new(count_2_var.eq(1));
         
         let solution = model.solve();
@@ -1802,7 +1811,7 @@ mod constraints_coverage {
         
         // Exactly 3 variables should equal 5
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 5, count_var);
+        model.count(&vars, Val::int(5), count_var);
         model.new(count_var.eq(3));
         
         let solution = model.solve();
@@ -1833,11 +1842,11 @@ mod constraints_coverage {
         
         // Exactly 1 variable should be true
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, 1, count_var);
+        model.count(&vars, Val::int(1), count_var);
         model.new(count_var.eq(1));
         
         // Force one variable to be true
-        post!(model, vars[0] == 1);
+        model.new(vars[0].eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Cardinality propagation should work");

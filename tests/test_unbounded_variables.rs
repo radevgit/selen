@@ -392,7 +392,7 @@ fn test_unbounded_integer_solves_correctly() {
     let y = m.int(0, 100);
     
     // Constraint: x + y == 50
-    post!(m, x + y == int(50));
+    m.new(x.add(y).eq(int(50)));
     
     let result = m.solve();
     assert!(result.is_ok(), "Should solve with inferred bounds");
@@ -415,7 +415,7 @@ fn test_unbounded_float_solves_correctly() {
     
     // Constraint: x + y == 50.0
     let sum = m.add(x, y);
-    post!(m, sum == 50.0);
+    m.new(sum.eq(50.0));
     
     let result = m.solve();
     assert!(result.is_ok(), "Should solve with inferred bounds");
@@ -439,7 +439,7 @@ fn test_loan_problem_with_unbounded_rate() {
     
     // Monthly payment = rate * balance
     // $100 = r * $1000
-    post!(m, rb == 100.0);
+    m.new(rb.eq(100.0));
     
     let result = m.solve();
     assert!(result.is_ok(), "Loan problem should solve");

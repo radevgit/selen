@@ -19,7 +19,7 @@ fn main() {
     let value = model.int(10, 50);  // Value should match array[index]
     
     // Element constraint: array[index] = value
-    post!(model, element([a0, a1, a2, a3, a4], index, value));
+    model.props.element(vec![a0, a1, a2, a3, a4], index, value);
     
     match model.solve() {
         Ok(solution) => {
@@ -58,7 +58,7 @@ fn main() {
     let idx = model2.int(1, 1);     // Fixed to index 1
     let val = model2.int(150, 250); // Should be constrained to 200
     
-    post!(model2, element([arr0, arr1, arr2], idx, val));
+    model2.props.element(vec![arr0, arr1, arr2], idx, val);
     
     match model2.solve() {
         Ok(solution) => {
@@ -90,7 +90,7 @@ fn main() {
     let idx3 = model3.int(0, 2);
     let val3 = model3.int(10, 20);  // No array element can have this value
     
-    post!(model3, element([b0, b1, b2], idx3, val3));
+    model3.props.element(vec![b0, b1, b2], idx3, val3);
     
     match model3.solve() {
         Ok(_) => {
@@ -113,7 +113,7 @@ fn main() {
     let idx4 = model4.int(0, 2);
     let val4 = model4.int(10, 30);
     
-    post!(model4, element(array_vec, idx4, val4));
+    model4.props.element(array_vec, idx4, val4);
     
     match model4.solve() {
         Ok(solution) => {
@@ -138,7 +138,7 @@ fn main() {
     let idx5 = model5.int(0, 2);
     let val5 = model5.int(22, 33);  // Should constrain both index and array elements
     
-    post!(model5, element([d0, d1, d2], idx5, val5));
+    model5.props.element(vec![d0, d1, d2], idx5, val5);
     
     match model5.solve() {
         Ok(solution) => {

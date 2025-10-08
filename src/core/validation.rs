@@ -27,8 +27,8 @@
 //! let y = m.int(5, 15);
 //!
 //! // This will be caught by validation before solving
-//! post!(m, x == int(20)); // x can't equal 20 (outside domain)
-//! post!(m, x == int(5));  // Conflicting with above
+//! m.new(x.eq(20)); // x can't equal 20 (outside domain)
+//! m.new(x.eq(5));  // Conflicting with above
 //!
 //! // Validation error will be reported when solve() is called
 //! match m.solve() {

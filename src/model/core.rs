@@ -209,9 +209,9 @@ impl Model {
     /// let y = m.int(1, 10);
     /// 
     /// assert_eq!(m.constraint_count(), 0);
-    /// post!(m, x != y);
+    /// m.new(x.ne(y));
     /// assert_eq!(m.constraint_count(), 1);
-    /// post!(m, x <= int(8));
+    /// m.new(x.le(8));
     /// assert_eq!(m.constraint_count(), 2);
     /// ```
     pub fn constraint_count(&self) -> usize {
@@ -312,7 +312,7 @@ impl Model {
     /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
-    /// post!(m, x > 3);
+    /// m.new(x.gt(3));
     /// let solution = m.minimize(x);
     /// ```
     #[must_use]
@@ -429,7 +429,7 @@ impl Model {
     /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
-    /// post!(m, x < 8);
+    /// m.new(x.lt(8));
     /// let solution = m.maximize(x);
     /// ```
     #[must_use]
@@ -454,6 +454,7 @@ impl Model {
                 // since minimize(opposite) negates the objective bounds
                 match self.minimize(objective.opposite()) {
                     Ok(solution) => {
+
                         // FIXED: Solution extraction consistency for maximize(objective) → minimize(opposite)
                         // The minimize(opposite) approach correctly finds constraint-respecting values for 
                         // decision variables. The main optimization bug is in the optimization router 
@@ -484,8 +485,8 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
-    /// post!(m, x + y <= int(15));
     /// let sum = m.add(x, y);
+    /// m.new(sum.le(15));
     /// let result = m.maximize(sum);
     /// ```
     /// 
@@ -562,7 +563,7 @@ impl Model {
     /// use selen::prelude::*;
     /// let mut m = Model::default();
     /// let vars: Vec<_> = m.int_vars(4, 1, 4).collect();
-    /// post!(m, alldiff(vars));
+    /// m.alldiff(&vars);
     /// m.optimize_constraint_order();
     /// ```
     pub fn optimize_constraint_order(&mut self) -> &mut Self {
@@ -582,7 +583,7 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
-    /// post!(m, x != y);
+    /// m.new(x.ne(y));
     /// let mut engine = m.engine();
     /// engine.register_cleanup(Box::new(|| println!("Cleanup executed!")));
     /// let solution = engine.solve_any();
@@ -607,7 +608,7 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
-    /// post!(m, x != y);
+    /// m.new(x.ne(y));
     /// 
     /// match m.solve() {
     ///     Ok(solution) => println!("Found: x={:?}, y={:?}", solution[x], solution[y]),
@@ -753,7 +754,7 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(1, 3);
     /// let y = m.int(1, 3);
-    /// post!(m, x != y);  // x and y must be different
+    /// m.new(x.ne(y));  // x and y must be different
     /// 
     /// // Collect all solutions
     /// let solutions: Vec<_> = m.enumerate().collect();
@@ -810,7 +811,7 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(1, 3);
     /// let y = m.int(1, 3);
-    /// post!(m, x != y);
+    /// m.new(x.ne(y));
     /// 
     /// let (solutions, stats) = m.enumerate_with_stats();
     /// 

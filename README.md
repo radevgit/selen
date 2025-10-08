@@ -14,37 +14,81 @@ This library provides efficient algorithms and data structures for solving const
 
 **Variable Types**: `int`, `float`, mixed constraints
 
-**Unbounded Variables**: Automatic bound inference for `int(i32::MIN, i32::MAX)` and `float(f64::NEG_INFINITY, f64::INFINITY)` - bounds inferred from context or sensible defaults
-
-**Constraint Categories**:
-- **Mathematical**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
-- **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=` (natural syntax)
-- **Boolean Logic**: `and()`, `or()`, `not()` with array syntax `and([a,b,c])` and variadic syntax `and(a,b,c,d)`
-- **Global**: `alldiff()`, `allequal()`, element `x[y] = z`, `count(vars, value, count)`, `table(vars, tuples)`
-- **Ordering**: `a <= b <= c`, `a < b < c`, `a >= b >= c`, `a > b > c` (natural `between` constraints) 
-- **Cardinality**: `at_least(vars, value, count)`, `at_most(vars, value, count)`, `exactly(vars, value, count)`
-- **Conditional**: `if_then(condition, constraint)`, `if_then_else(condition, then_constraint, else_constraint)`
-
-**Programmatic version of constraints**
+**Constraint API**
 ```rust
+// Comparison constraints (via runtime API)
 m.new(x.lt(y));                        // x < y
 m.new(y.le(z));                        // y <= z
 m.new(z.gt(5));                        // z > 5
+m.new(x.eq(10));                       // x == 10
+m.new(x.ne(y));                        // x != y
+m.new(x.ge(5));                        // x >= 5
+
+// Arithmetic operations (return new variables)
+let sum = m.add(x, y);                 // sum = x + y
+let diff = m.sub(x, y);                // diff = x - y
+let product = m.mul(x, y);             // product = x * y
+let quotient = m.div(x, y);            // quotient = x / y
+let remainder = m.modulo(x, y);        // remainder = x % y
+let absolute = m.abs(x);               // absolute = |x|
+
+// Aggregate operations
+let minimum = m.min(&[x, y, z])?;      // minimum of variables
+let maximum = m.max(&[x, y, z])?;      // maximum of variables
+let total = m.sum(&[x, y, z]);         // sum of variables
+
+// Global constraints
+m.alldiff(&[x, y, z]);                 // all variables different
+m.alleq(&[x, y, z]);                   // all variables equal
+m.element(&array, index, value);       // array[index] == value
+m.table(&vars, tuples);                // table constraint (valid tuples)
+m.count(&vars, value, count_var);      // count occurrences of value
+m.between(lower, middle, upper);       // lower <= middle <= upper
+m.at_least(&vars, value, n);           // at least n vars == value
+m.at_most(&vars, value, n);            // at most n vars == value
+m.exactly(&vars, value, n);            // exactly n vars == value
+m.gcc(&vars, values, counts);          // global cardinality constraint
+
+// Boolean operations (return boolean variables)
+let and_result = m.bool_and(&[a, b]);  // a AND b
+let or_result = m.bool_or(&[a, b]);    // a OR b
+let not_result = m.bool_not(a);        // NOT a
+m.bool_clause(&[a, b], &[c]);          // a ∨ b ∨ ¬c (CNF clause)
+
+// Fluent expression building
 m.new(x.add(y).le(z));                 // x + y <= z
 m.new(y.sub(x).ge(0));                 // y - x >= 0
 m.new(x.mul(y).eq(12));                // x * y == 12
 m.new(z.div(y).ne(0));                 // z / y != 0
-```
 
-**Mathematical syntax with post! macro [deprecated]**
-```rust
-post!(m, x < y);                        // x < y
-post!(m, y <= z);                       // y <= z
-post!(m, z > int(5));                   // z > 5
-post!(m, x + y <= z);                   // x + y <= z
-post!(m, y - x >= int(0));              // y - x >= 0
-post!(m, x * y == int(12));             // x * y == 12
-post!(m, z / y != int(0));              // z / y != 0
+// Linear constraints (weighted sums)
+m.int_lin_eq(&[2, 3], &[x, y], 10);    // 2x + 3y == 10
+m.int_lin_le(&[1, -1], &[x, y], 5);    // x - y <= 5
+m.int_lin_ne(&[2, 1], &[x, y], 8);     // 2x + y != 8
+m.float_lin_eq(&[1.5, 2.0], &[x, y], 7.5);  // 1.5x + 2.0y == 7.5
+m.float_lin_le(&[0.5, 1.0], &[x, y], 3.0);  // 0.5x + y <= 3.0
+m.bool_lin_eq(&[1, 1, 1], &[a, b, c], 2);   // a + b + c == 2
+
+// Reified constraints (with boolean result)
+m.int_eq_reif(x, y, b);                // b ↔ (x == y)
+m.int_lt_reif(x, y, b);                // b ↔ (x < y)
+m.int_le_reif(x, y, b);                // b ↔ (x <= y)
+m.float_eq_reif(x, y, b);              // b ↔ (x == y) for floats
+m.int_lin_eq_reif(&[2, 1], &[x, y], 5, b);  // b ↔ (2x + y == 5)
+
+// Type conversion constraints
+m.int2float(int_var, float_var);       // float_var = int_var (as float)
+m.float2int_floor(float_var, int_var); // int_var = floor(float_var)
+m.float2int_ceil(float_var, int_var);  // int_var = ceil(float_var)
+m.float2int_round(float_var, int_var); // int_var = round(float_var)
+
+// Array operations
+m.array_int_element(index, &array, result);     // result = array[index]
+m.array_int_minimum(&array)?;                   // minimum of array
+m.array_int_maximum(&array)?;                   // maximum of array
+m.array_float_element(index, &array, result);   // result = array[index] (floats)
+m.array_float_minimum(&array)?;                 // minimum of array (floats)
+m.array_float_maximum(&array)?;                 // maximum of array (floats)
 ```
 
 **FlatZinc/MiniZinc Support**
@@ -130,9 +174,9 @@ fn main() {
     let x = m.int(1, 10);       // Integer variable from 1 to 10
     let y = m.int(5, 15);       // Integer variable from 5 to 15
 
-    // Add constraints
-    post!(m, x < y);            // x must be less than y
-    post!(m, x + y == int(12)); // x + y must equal 12
+    // Add constraints using the constraint API
+    m.new(x.lt(y));             // x must be less than y
+    m.new(x.add(y).eq(12));     // x + y must equal 12
     
     // Solve the problem
     if let Ok(solution) = m.solve() {

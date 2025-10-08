@@ -71,8 +71,9 @@
 //! let x = m.int(1, 10);
 //! let y = m.int(1, 10);
 //!
-//! post!(m, x + y == int(12));
-//! post!(m, x > y);
+//! let sum = m.add(x, y);
+//! m.new(sum.eq(12));
+//! m.new(x.gt(y));
 //!
 //! if let Ok(solution) = m.solve() {
 //!     println!("x = {:?}, y = {:?}", solution[x], solution[y]);
@@ -88,8 +89,9 @@
 //! let items = m.int(1, 100);        // Number of items
 //! let cost = m.float(0.0, 1000.0);  // Total cost
 //!
-//! post!(m, cost == items * float(12.5));  // $12.50 per item
-//! post!(m, cost <= float(500.0));         // Budget constraint
+//! // Use constraint API methods
+//! m.float_lin_eq(&vec![1.0, -12.5], &vec![cost, items], 0.0);  // cost = items * 12.5
+//! m.new(cost.le(500.0));                                        // Budget constraint
 //!
 //! // Maximize number of items within budget
 //! if let Ok(solution) = m.maximize(items) {
@@ -110,8 +112,8 @@
 //! let blue = m.intset(vec![2, 4, 6, 8]);     // Even numbers  
 //! let green = m.intset(vec![2, 3, 5, 7]);    // Prime numbers
 //!
-//! // All must be different
-//! post!(m, alldiff([red, blue, green]));
+//! // All must be different using constraint API
+//! m.alldiff(&[red, blue, green]);
 //!
 //! if let Ok(solution) = m.solve() {
 //!     println!("Red: {:?}, Blue: {:?}, Green: {:?}",
@@ -138,10 +140,10 @@
 //! let weights = m.floats(4, 0.0, 1.0);
 //!
 //! // All variables in vars must be different
-//! post!(m, alldiff(&vars));
+//! m.alldiff(&vars);
 //! 
-//! // At least one flag must be true (using slice syntax)
-//! post!(m, or([flags[0], flags[1], flags[2]]));
+//! // First flag must be true
+//! m.new(flags[0].eq(1));
 //!
 //! if let Ok(solution) = m.solve() {
 //!     println!("Solution found with {} variables!", 

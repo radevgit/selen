@@ -12,11 +12,11 @@ fn main() {
         let (a, b, c, d) = (vars[0], vars[1], vars[2], vars[3]);
         
         // All must be true (1) for result to be true
-        post!(m, and([a, b, c, d]));
-        post!(m, a == 1);
-        post!(m, b == 1);
-        post!(m, c == 1);
-        post!(m, d == 1);
+        // Simply constrain each boolean variable to be 1 (true)
+        m.new(a.eq(1));
+        m.new(b.eq(1));
+        m.new(c.eq(1));
+        m.new(d.eq(1));
         
         if let Ok(sol) = m.solve() {
             let va = if let Val::ValI(v) = sol[a] { v } else { 0 };
@@ -34,11 +34,13 @@ fn main() {
         let vars = m.bools(4);
         let (a, b, c, d) = (vars[0], vars[1], vars[2], vars[3]);
         
-        // At least one must be true
-        post!(m, or([a, b, c, d]));
-        post!(m, a == 0);
-        post!(m, b == 0);
-        post!(m, c == 1);  // This one is true
+        // At least one must be true - using or_all
+        if let Some(or_constraint) = or_all(vec![a.eq(1), b.eq(1), c.eq(1), d.eq(1)]) {
+            m.new(or_constraint);
+        }
+        m.new(a.eq(0));
+        m.new(b.eq(0));
+        m.new(c.eq(1));  // This one is true
         
         if let Ok(sol) = m.solve() {
             let va = if let Val::ValI(v) = sol[a] { v } else { 0 };
@@ -56,11 +58,11 @@ fn main() {
         let vars = m.bools(4);
         let (a, b, c, d) = (vars[0], vars[1], vars[2], vars[3]);
         
-        post!(m, and(a, b, c, d));
-        post!(m, a == 1);
-        post!(m, b == 1);
-        post!(m, c == 1);
-        post!(m, d == 1);
+        // Variadic and(a,b,c,d) means all must be true - constrain each to 1
+        m.new(a.eq(1));
+        m.new(b.eq(1));
+        m.new(c.eq(1));
+        m.new(d.eq(1));
         
         if let Ok(sol) = m.solve() {
             let va = if let Val::ValI(v) = sol[a] { v } else { 0 };
@@ -78,11 +80,15 @@ fn main() {
         let vars = m.bools(4);
         let (a, b, c, d) = (vars[0], vars[1], vars[2], vars[3]);
         
-        post!(m, or(a, b, c, d));
-        post!(m, a == 0);
-        post!(m, b == 0);
-        post!(m, c == 0);
-        post!(m, d == 1);  // This one makes OR true
+        // Variadic or(a,b,c,d) means at least one must be true
+        // Using or_all with constraints that each variable is true
+        if let Some(or_constraint) = or_all(vec![a.eq(1), b.eq(1), c.eq(1), d.eq(1)]) {
+            m.new(or_constraint);
+        }
+        m.new(a.eq(0));
+        m.new(b.eq(0));
+        m.new(c.eq(0));
+        m.new(d.eq(1));  // This one makes OR true
         
         if let Ok(sol) = m.solve() {
             let va = if let Val::ValI(v) = sol[a] { v } else { 0 };
@@ -100,8 +106,10 @@ fn main() {
         let vars = m.bools(3);
         let (a, b, c) = (vars[0], vars[1], vars[2]);
         
-        // This applies not() to each variable individually
-        post!(m, not([a, b, c]));
+        // This applies not() to each variable individually - all must be false
+        m.new(a.eq(0));
+        m.new(b.eq(0));
+        m.new(c.eq(0));
         
         if let Ok(sol) = m.solve() {
             let va = if let Val::ValI(v) = sol[a] { v } else { 0 };
@@ -118,13 +126,17 @@ fn main() {
         let vars = m.bools(4);
         let (x, y, z, w) = (vars[0], vars[1], vars[2], vars[3]);
         
-        // Use separate constraints since nested arrays might not work yet
-        post!(m, and([x, y]));     // x AND y must be true
-        post!(m, or([z, w]));      // z OR w must be true
-        post!(m, x == 1);
-        post!(m, y == 1);
-        post!(m, z == 0);
-        post!(m, w == 1);
+        // and([x, y]) - both must be true
+        m.new(x.eq(1));
+        m.new(y.eq(1));
+        
+        // or([z, w]) - at least one must be true
+        if let Some(or_constraint) = or_all(vec![z.eq(1), w.eq(1)]) {
+            m.new(or_constraint);
+        }
+        
+        m.new(z.eq(0));
+        m.new(w.eq(1));
         
         if let Ok(sol) = m.solve() {
             let vx = if let Val::ValI(v) = sol[x] { v } else { 0 };
@@ -150,19 +162,24 @@ fn main() {
         
         // Server starts if emergency override OR manual start is activated
         // (since we know disk_healthy will be 0, normal startup won't work)
-        post!(m, or([emergency_override, manual_start]));
+        if let Some(or_constraint) = or_all(vec![emergency_override.eq(1), manual_start.eq(1)]) {
+            m.new(or_constraint);
+        }
         
         // Also demonstrate: all safety systems except disk must be working
-        post!(m, and([power_stable, network_ready, memory_ok, cpu_cool]));
+        m.new(power_stable.eq(1));
+        m.new(network_ready.eq(1));
+        m.new(memory_ok.eq(1));
+        m.new(cpu_cool.eq(1));
         
         // Set test conditions
-        post!(m, power_stable == 1);
-        post!(m, network_ready == 1);
-        post!(m, disk_healthy == 0);    // Disk has issues
-        post!(m, memory_ok == 1);
-        post!(m, cpu_cool == 1);
-        post!(m, emergency_override == 0);
-        post!(m, manual_start == 1);     // Manual override saves the day
+        m.new(power_stable.eq(1));
+        m.new(network_ready.eq(1));
+        m.new(disk_healthy.eq(0));    // Disk has issues
+        m.new(memory_ok.eq(1));
+        m.new(cpu_cool.eq(1));
+        m.new(emergency_override.eq(0));
+        m.new(manual_start.eq(1));     // Manual override saves the day
         
         if let Ok(sol) = m.solve() {
             let vpower = if let Val::ValI(v) = sol[power_stable] { v } else { 0 };

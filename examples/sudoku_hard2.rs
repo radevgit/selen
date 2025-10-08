@@ -15,7 +15,6 @@
 //! Some may take MINUTES even in release mode. Use `cargo run --release --example sudoku_hard2`
 
 use selen::prelude::*;
-use selen::{post};
 use std::time::Instant;
 
 fn main() {
@@ -479,13 +478,13 @@ fn solve_sudoku_with_stats(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usi
     // Add Sudoku constraints
     // Row constraints: each row contains 1-9 exactly once
     for row in 0..9 {
-        post!(m, alldiff(grid[row]));
+        m.alldiff(&grid[row]);
     }
     
     // Column constraints: each column contains 1-9 exactly once
     for col in 0..9 {
         let column: Vec<VarId> = (0..9).map(|row| grid[row][col]).collect();
-        post!(m, alldiff(column));
+        m.alldiff(&column);
     }
     
     // Box constraints: each 3x3 box contains 1-9 exactly once
@@ -497,7 +496,7 @@ fn solve_sudoku_with_stats(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usi
                     box_vars.push(grid[box_row * 3 + r][box_col * 3 + c]);
                 }
             }
-            post!(m, alldiff(box_vars));
+            m.alldiff(&box_vars);
         }
     }
     

@@ -20,8 +20,8 @@
 //! let mut m = Model::default();
 //! let x = m.int(1, 5);
 //! let y = m.int(1, 5);
-//! post!(m, x > y);
-//! post!(m, y > x);  // Contradictory constraint
+//! m.new(x.gt(y));
+//! m.new(y.gt(x));  // Contradictory constraint
 //!
 //! match m.solve() {
 //!     Ok(solution) => println!("Found solution: x={:?}, y={:?}", solution[x], solution[y]),

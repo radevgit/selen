@@ -23,7 +23,7 @@ fn main() {
     
     // All letters must have different values
     let all_vars = vec![s, e, n, d, m, o, r, y];
-    post!(model, alldiff(all_vars));
+    model.alldiff(&all_vars);
     
     // Create intermediate calculations using model methods
     // SEND = 1000*S + 100*E + 10*N + D
@@ -54,7 +54,7 @@ fn main() {
     
     // SEND + MORE = MONEY
     let sum = model.add(send, more);
-    post!(model, sum == money);
+    model.new(sum.eq(money));
     
     println!("🔍 Solving...");
     match model.solve() {

@@ -19,7 +19,7 @@ mod tests {
         let y = m.float(5.0, 15.0);
         
         // Add a simple constraint
-        post!(m, x <= y);
+        m.new(x.le(y));
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -42,7 +42,7 @@ mod tests {
         let y = m.int(5, 15);
         
         // Add a simple constraint
-        post!(m, x <= y);
+        m.new(x.le(y));
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -67,8 +67,8 @@ mod tests {
         let int_b = m.int(5, 15);
         
         // Add constraints within each type (simulating separable problem)
-        post!(m, float_x <= float_y);
-        post!(m, int_a <= int_b);
+        m.new(float_x.le(float_y));
+        m.new(int_a.le(int_b));
         
         let result = VariablePartitioner::partition_model(&model);
         
@@ -94,7 +94,7 @@ mod tests {
         let float_y = m.float(5.0, 15.0);
         let _int_a = m.int(0, 10);
         
-        post!(m, float_x <= float_y);
+        m.new(float_x.le(float_y));
         
         let partition_result = VariablePartitioner::partition_model(&model);
         

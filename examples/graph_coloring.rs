@@ -10,7 +10,6 @@
 //! - Performance comparison between different graph types
 
 use selen::prelude::*;
-use selen::post;
 use std::collections::HashMap;
 
 /// Represents a graph with vertices and edges
@@ -129,7 +128,7 @@ pub fn solve_graph_coloring(graph: &Graph, num_colors: usize) -> Result<Solution
     for &(u, v) in &graph.edges {
         let var_u = color_vars[&u];
         let var_v = color_vars[&v];
-        post!(model, var_u != var_v);
+        model.new(var_u.ne(var_v));
     }
     
     // Solve the model
@@ -245,7 +244,7 @@ fn check_bipartite(graph: &Graph) -> bool {
     for &(u, v) in &graph.edges {
         let var_u = color_vars[&u];
         let var_v = color_vars[&v];
-        post!(model, var_u != var_v);
+        model.new(var_u.ne(var_v));
     }
     
     model.solve().is_ok()

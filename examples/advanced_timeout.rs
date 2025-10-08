@@ -12,7 +12,7 @@ fn main() {
     let mut model = Model::with_config(config);
     let x = model.int(1, 3);
     let y = model.int(1, 3);
-    post!(model, x != y);
+    model.new(x.ne(y));
 
     let start = Instant::now();
     match model.solve() {
@@ -40,7 +40,7 @@ fn main() {
     let mut model = Model::with_config(config);
     let a = model.int(1, 1000);
     let b = model.int(1, 1000);
-    post!(model, a != b);
+    model.new(a.ne(b));
 
     let start = Instant::now();
     match model.solve() {
@@ -65,7 +65,7 @@ fn main() {
     let mut model = Model::with_config(config);
     let p = model.int(1, 10);
     let q = model.int(1, 10);
-    post!(model, p + q == int(15));
+    model.new(p.add(q).eq(int(15)));
 
     let start = Instant::now();
     match model.solve() {
