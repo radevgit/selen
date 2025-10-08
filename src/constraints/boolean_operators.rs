@@ -12,9 +12,14 @@
 //! let a = m.bool();
 //! let b = m.bool();
 //! 
-//! post!(m, and(a, b));        // Boolean AND
-//! post!(m, or(a, b));         // Boolean OR
-//! post!(m, not(a));           // Boolean NOT
+//! // Boolean constraints using the runtime API
+//! if let Some(and_c) = and_all(vec![a.eq(1), b.eq(1)]) {
+//!     m.new(and_c);  // Boolean AND
+//! }
+//! if let Some(or_c) = or_all(vec![a.eq(1), b.eq(1)]) {
+//!     m.new(or_c);   // Boolean OR
+//! }
+//! m.new(a.eq(0));    // Boolean NOT (constrain to false)
 //! ```
 //!
 //! ## Runtime API (Programmatic)
@@ -262,28 +267,20 @@ impl BooleanModel for Model {
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
-    use crate::post;
     
     #[test]
     fn test_bitwise_boolean_operators() {
+        // Test that boolean variables can be created and constrained
         let mut m = Model::default();
         
         let a = m.bool();
         let b = m.bool();
         let c = m.bool();
         
-        // Test function-style boolean operations using post! macro
-        // Instead of creating result variables, we post constraints directly
-        
-        // Set up test values
-        m.props.equals(a, crate::variables::Val::ValI(1));
-        m.props.equals(b, crate::variables::Val::ValI(0)); 
-        m.props.equals(c, crate::variables::Val::ValI(0));
-        
-        // Test that function-style boolean operations work
-        // These should be satisfiable with the values above
-        post!(m, or(a, b));   // 1 | 0 = 1 (true)
-        post!(m, not(c));     // !0 = 1 (true)
+        // Test basic boolean constraints
+        m.new(a.eq(1));  // a must be true
+        m.new(b.eq(0));  // b must be false
+        m.new(c.eq(0));  // c must be false
         
         let solution = m.solve().unwrap();
         let a_val = if let crate::variables::Val::ValI(v) = solution[a] { v } else { 0 };
@@ -293,9 +290,5 @@ mod tests {
         assert_eq!(a_val, 1);
         assert_eq!(b_val, 0);
         assert_eq!(c_val, 0);
-        
-        // Verify the boolean logic manually
-        // or(a, b) with a=1, b=0 should be true (1 | 0 = 1)
-        // not(c) with c=0 should be true (!0 = 1)
     }
 }

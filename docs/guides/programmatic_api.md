@@ -106,7 +106,7 @@ m.new(sum(vars.clone()).eq(int(15)));
 - Always use `int()` or `float()` for constants in constraints
 - Use method chaining to build up complex expressions
 - Use `m.new()` to post each constraint
-- For static constraints, prefer the `post!` macro and mathematical syntax
+- For static constraints, the constraint API provides a natural fluent syntax
 
 ---
 

@@ -14,9 +14,6 @@ pub use crate::search::*;
 // Runtime constraint API
 pub use crate::runtime_api::{ExprBuilder, Constraint, Builder, VarIdExt, ModelExt, ConstraintVecExt, and_all, or_all, all_of, any_of};
 
-// Mathematical constraint macros (exported at crate root)
-pub use crate::{post, postall};
-
 // Convenient constructor functions for common values
 /// Create an integer value - shorthand for Val::ValI()
 pub const fn int(value: i32) -> crate::variables::Val {

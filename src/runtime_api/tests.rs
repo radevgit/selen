@@ -439,7 +439,7 @@ fn test_count_constraint() {
     let count_result = m.int(0, 5);
     
     // Count occurrences of value 2
-    m.count(&vars, 2, count_result);
+    m.count(&vars, Val::int(2), count_result);
     
     // Force exactly 2 occurrences of value 2
     m.new(count_result.eq(2));

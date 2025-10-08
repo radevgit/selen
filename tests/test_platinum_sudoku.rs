@@ -1,5 +1,4 @@
 use selen::prelude::*;
-use selen::{post};
 use std::time::Instant;
 
 fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)> {
@@ -23,7 +22,7 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
     // OPTIMIZATION 2: Pre-allocate vectors and use more efficient constraint posting
     // Row constraints: each row has all digits 1-9
     for row in 0..9 {
-        post!(m, alldiff(grid[row]));
+        m.alldiff(&grid[row]);
     }
     
     // Column constraints: each column has all digits 1-9
@@ -33,7 +32,7 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
             grid[3][col], grid[4][col], grid[5][col],
             grid[6][col], grid[7][col], grid[8][col]
         ];
-        post!(m, alldiff(column));
+        m.alldiff(&column);
     }
     
     // Box constraints: each 3x3 box has all digits 1-9
@@ -45,7 +44,7 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
                     box_vars.push(grid[box_row * 3 + row][box_col * 3 + col]);
                 }
             }
-            post!(m, alldiff(box_vars));
+            m.alldiff(&box_vars);
         }
     }
     

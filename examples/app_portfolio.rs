@@ -7,7 +7,6 @@
 //! - Simple constraint satisfaction with floating-point calculations
 
 use selen::prelude::*;
-use selen::{post};
 
 fn main() {
     println!("💰 Portfolio Balance Calculator");
@@ -43,7 +42,7 @@ fn main() {
     
     // Constraint: Total allocation must be 100%
     let total_weight = m.add(stock_weight, bond_weight);
-    post!(m, total_weight == float(100.0));
+    m.new(total_weight.eq(100.0));
     
     println!("\nConstraints:");
     println!("  • Stock allocation: 30% to 70%");

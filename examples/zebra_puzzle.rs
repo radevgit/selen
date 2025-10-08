@@ -47,36 +47,36 @@ fn main() {
     let german = model.int(1, 5);
     
     // All values in each category must be different
-    post!(model, alldiff(vec![red_house, green_house, blue_house, yellow_house, white_house]));
-    post!(model, alldiff(vec![dog, cat, bird, fish, zebra]));
-    post!(model, alldiff(vec![tea, coffee, water, beer, milk]));
-    post!(model, alldiff(vec![kools, chesterfield, winston, lucky, parliament]));
-    post!(model, alldiff(vec![british, swedish, danish, norwegian, german]));
+    model.alldiff(&vec![red_house, green_house, blue_house, yellow_house, white_house]);
+    model.alldiff(&vec![dog, cat, bird, fish, zebra]);
+    model.alldiff(&vec![tea, coffee, water, beer, milk]);
+    model.alldiff(&vec![kools, chesterfield, winston, lucky, parliament]);
+    model.alldiff(&vec![british, swedish, danish, norwegian, german]);
     
     // Basic constraints (simplified version of Einstein's puzzle)
     // 1. The British person lives in the red house
-    post!(model, british == red_house);
+    model.new(british.eq(red_house));
     
     // 2. The Swedish person keeps dogs
-    post!(model, swedish == dog);
+    model.new(swedish.eq(dog));
     
     // 3. The Danish person drinks tea
-    post!(model, danish == tea);
+    model.new(danish.eq(tea));
     
     // 4. The green house owner drinks coffee
-    post!(model, green_house == coffee);
+    model.new(green_house.eq(coffee));
     
     // 5. The person who smokes Parliament rears birds
-    post!(model, parliament == bird);
+    model.new(parliament.eq(bird));
     
     // 6. The owner of the yellow house smokes Kools
-    post!(model, yellow_house == kools);
+    model.new(yellow_house.eq(kools));
     
     // 7. The man living in the center house drinks milk
-    post!(model, milk == int(3));
+    model.new(milk.eq(int(3)));
     
     // 8. The Norwegian lives in the first house
-    post!(model, norwegian == int(1));
+    model.new(norwegian.eq(int(1)));
     
     println!("🔍 Solving the puzzle...");
     match model.solve() {

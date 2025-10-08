@@ -13,8 +13,8 @@ mod solution_coverage {
         let x = model.int(1, 10);
         let y = model.float(0.0, 5.0);
         
-        post!(model, x == 7);
-        post!(model, y == 3.5);
+        model.new(x.eq(7));
+        model.new(y.eq(3.5));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Model should be solvable");
@@ -38,11 +38,11 @@ mod solution_coverage {
         let x5 = model.int(40, 60);
         
         // Assign specific values to each variable
-        post!(model, x1 == 5);
-        post!(model, x2 == 15);
-        post!(model, x3 == 25);
-        post!(model, x4 == 35);
-        post!(model, x5 == 45);
+        model.new(x1.eq(5));
+        model.new(x2.eq(15));
+        model.new(x3.eq(25));
+        model.new(x4.eq(35));
+        model.new(x5.eq(45));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Model with multiple variables should be solvable");
@@ -63,9 +63,9 @@ mod solution_coverage {
         let max_int = model.int(-1000, 1000);
         let zero_int = model.int(-100, 100);
         
-        post!(model, min_int == -999);
-        post!(model, max_int == 999);
-        post!(model, zero_int == 0);
+        model.new(min_int.eq(-999));
+        model.new(max_int.eq(999));
+        model.new(zero_int.eq(0));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -81,8 +81,8 @@ mod solution_coverage {
         let precise_float = model.float(0.0, 1.0);
         let small_float = model.float(-0.001, 0.001);
         
-        post!(model, precise_float == 0.12345);
-        post!(model, small_float == 0.0001);
+        model.new(precise_float.eq(0.12345));
+        model.new(small_float.eq(0.0001));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -110,9 +110,9 @@ mod solution_coverage {
         let bool3 = model.int(0, 1);
         
         // Set different boolean values
-        post!(model, bool1 == 1);
-        post!(model, bool2 == 0);
-        post!(model, bool3 == 1);
+        model.new(bool1.eq(1));
+        model.new(bool2.eq(0));
+        model.new(bool3.eq(1));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -130,9 +130,9 @@ mod solution_coverage {
         let z = model.int(1, 20);
         
         // Create relationships between variables
-        post!(model, x == 3);
-        post!(model, y == 4);
-        post!(model, z == 7);
+        model.new(x.eq(3));
+        model.new(y.eq(4));
+        model.new(z.eq(7));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -158,8 +158,8 @@ mod solution_coverage {
         let sparse1 = model.int(0, 1000000);
         let sparse2 = model.int(-500000, 500000);
         
-        post!(model, sparse1 == 123456);
-        post!(model, sparse2 == -98765);
+        model.new(sparse1.eq(123456));
+        model.new(sparse2.eq(-98765));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -178,9 +178,9 @@ mod solution_coverage {
         let boundary_high = model.float(-1000.0, 1000.0);
         let boundary_zero = model.float(-10.0, 10.0);
         
-        post!(model, boundary_low == -999.999);
-        post!(model, boundary_high == 999.999);
-        post!(model, boundary_zero == 0.0);
+        model.new(boundary_low.eq(-999.999));
+        model.new(boundary_high.eq(999.999));
+        model.new(boundary_zero.eq(0.0));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -218,11 +218,11 @@ mod solution_coverage {
         let bool_var = model.int(0, 1);
         
         // Set specific values
-        post!(model, int_small == 3);
-        post!(model, int_large == 1500);
-        post!(model, float_small == 0.75);
-        post!(model, float_large == 150.25);
-        post!(model, bool_var == 1);
+        model.new(int_small.eq(3));
+        model.new(int_large.eq(1500));
+        model.new(float_small.eq(0.75));
+        model.new(float_large.eq(150.25));
+        model.new(bool_var.eq(1));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -256,9 +256,9 @@ mod solution_coverage {
         let first = model.int(0, 10);  
         let second = model.int(10, 20);
         
-        post!(model, first == 5);
-        post!(model, second == 15);
-        post!(model, third == 25);
+        model.new(first.eq(5));
+        model.new(second.eq(15));
+        model.new(third.eq(25));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -283,12 +283,12 @@ mod solution_coverage {
         let y = model.int(1, 100);
         
         // Add constraints that should be satisfied in solution
-        post!(model, x >= 20);
-        post!(model, x <= 30);
-        post!(model, y >= 40);
-        post!(model, y <= 50);
-        post!(model, x == 25);
-        post!(model, y == 45);
+        model.new(x.ge(20));
+        model.new(x.le(30));
+        model.new(y.ge(40));
+        model.new(y.le(50));
+        model.new(x.eq(25));
+        model.new(y.eq(45));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -311,8 +311,8 @@ mod solution_coverage {
         let x = model.int(1, 10);
         
         // Create unsolvable model
-        post!(model, x >= 20);
-        post!(model, x <= 5);
+        model.new(x.ge(20));
+        model.new(x.le(5));
         
         let solution = model.solve();
         assert!(
@@ -358,16 +358,16 @@ mod solution_coverage {
         let x10 = model.int(9, 109);
         
         // Constrain each to a specific value
-        post!(model, x1 == 50);
-        post!(model, x2 == 51);
-        post!(model, x3 == 52);
-        post!(model, x4 == 53);
-        post!(model, x5 == 54);
-        post!(model, x6 == 55);
-        post!(model, x7 == 56);
-        post!(model, x8 == 57);
-        post!(model, x9 == 58);
-        post!(model, x10 == 59);
+        model.new(x1.eq(50));
+        model.new(x2.eq(51));
+        model.new(x3.eq(52));
+        model.new(x4.eq(53));
+        model.new(x5.eq(54));
+        model.new(x6.eq(55));
+        model.new(x7.eq(56));
+        model.new(x8.eq(57));
+        model.new(x9.eq(58));
+        model.new(x10.eq(59));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -393,8 +393,8 @@ mod solution_coverage {
         let precise_float = model.float(0.999999, 1.000001);
         
         // Use 0.0001 instead of 0.0000005 (which is below precision)
-        post!(model, tiny_float == 0.0001);
-        post!(model, precise_float == 1.0);
+        model.new(tiny_float.eq(0.0001));
+        model.new(precise_float.eq(1.0));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -421,8 +421,8 @@ mod solution_coverage {
         let x = model.int(1, 10);
         let y = model.int(1, 10);
         
-        post!(model, x == 7);
-        post!(model, y == 3);
+        model.new(x.eq(7));
+        model.new(y.eq(3));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -454,16 +454,16 @@ mod solution_coverage {
         let n5 = model.int(-50, -40);
         
         // Set specific values
-        post!(model, p1 == 5);
-        post!(model, n1 == -5);
-        post!(model, p2 == 15);
-        post!(model, n2 == -15);
-        post!(model, p3 == 25);
-        post!(model, n3 == -25);
-        post!(model, p4 == 35);
-        post!(model, n4 == -35);
-        post!(model, p5 == 45);
-        post!(model, n5 == -45);
+        model.new(p1.eq(5));
+        model.new(n1.eq(-5));
+        model.new(p2.eq(15));
+        model.new(n2.eq(-15));
+        model.new(p3.eq(25));
+        model.new(n3.eq(-25));
+        model.new(p4.eq(35));
+        model.new(n4.eq(-35));
+        model.new(p5.eq(45));
+        model.new(n5.eq(-45));
         
         let solution = model.solve();
         if let Ok(solution) = solution {
@@ -487,8 +487,8 @@ mod solution_coverage {
         let int_var = model.int(1, 100);
         let float_var = model.float(1.0, 100.0);
         
-        post!(model, int_var == 50);
-        post!(model, float_var == 75.5);
+        model.new(int_var.eq(50));
+        model.new(float_var.eq(75.5));
         
         let solution = model.solve();
         if let Ok(solution) = solution {

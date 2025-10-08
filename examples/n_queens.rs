@@ -91,7 +91,7 @@ fn solve_n_queens(n: usize) -> Option<(Vec<i32>, SolverStats)> {
     
     // Constraint 1: All queens must be in different rows
     // This is the most direct AllDifferent constraint
-    post!(model, alldiff(queen_rows.clone()));
+    model.alldiff(&queen_rows.clone());
     
     // Constraint 2: No two queens on the same ascending diagonal
     // Ascending diagonal: queen_row[i] + i must be different for all i
@@ -101,7 +101,7 @@ fn solve_n_queens(n: usize) -> Option<(Vec<i32>, SolverStats)> {
             model.add(queen_row, col_offset)
         })
         .collect();
-    post!(model, alldiff(ascending_diagonals));
+    model.alldiff(&ascending_diagonals);
     
     // Constraint 3: No two queens on the same descending diagonal  
     // Descending diagonal: queen_row[i] - i must be different for all i
@@ -111,7 +111,7 @@ fn solve_n_queens(n: usize) -> Option<(Vec<i32>, SolverStats)> {
             model.add(queen_row, col_offset)
         })
         .collect();
-    post!(model, alldiff(descending_diagonals));
+    model.alldiff(&descending_diagonals);
     
     // Solve the model with statistics tracking
     // Solve the model with embedded statistics

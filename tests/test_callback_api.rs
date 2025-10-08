@@ -9,7 +9,7 @@ fn main() -> SolverResult<()> {
     let x = m.int(1, 9);
     let y = m.int(1, 9);
     
-    post!(m, x != y);
+    m.new(x.ne(y));
     
     let solution = m.solve()?;
     

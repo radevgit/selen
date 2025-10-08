@@ -14,7 +14,7 @@ fn test_model_with_config_basic() {
     let y = m.float(0.0, 1.0);
     
     let target = m.float(1.0, 1.0);
-    post!(m, x + y == target);
+    m.new(x.add(y).eq(target));
     
     // Should be able to solve with the custom configuration
     let solution = m.solve();

@@ -11,6 +11,7 @@
 //! - **linear**: Linear (weighted sum) constraints (int/float lin_eq/le/ne, reified versions)
 //! - **conversion**: Type conversion constraints (int2float, float2int_floor/ceil/round)
 //! - **array**: Array operation constraints (array_float_minimum/maximum/element)
+//! - **global**: Global constraints (alldiff, alleq, element, table, count, gcc, between, at_least, at_most, exactly)
 
 pub mod arithmetic;
 pub mod boolean;
@@ -18,3 +19,4 @@ pub mod reified;
 pub mod linear;
 pub mod conversion;
 pub mod array;
+pub mod global;

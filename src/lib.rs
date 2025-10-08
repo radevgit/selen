@@ -88,11 +88,12 @@
 //! let items = m.int(1, 100);        // Number of items
 //! let cost = m.float(0.0, 1000.0);  // Total cost
 //!
-//! post!(m, cost == items * float(12.5));  // $12.50 per item
-//! post!(m, cost <= float(500.0));         // Budget constraint
+//! // Use constraint API methods
+//! m.float_lin_eq(&vec![1.0, -12.5], &vec![cost, items], 0.0);  // cost = items * 12.5
+//! m.new(cost.le(500.0));                                        // Budget constraint
 //!
 //! // Maximize number of items within budget
-//! if let Ok(solution) = m.maximize(items) {
+//! if let Some(solution) = m.maximize(items) {
 //!     println!("Optimal: {:?} items, cost: {:?}", 
 //!              solution[items], solution[cost]);
 //! }
@@ -110,10 +111,10 @@
 //! let blue = m.intset(vec![2, 4, 6, 8]);     // Even numbers  
 //! let green = m.intset(vec![2, 3, 5, 7]);    // Prime numbers
 //!
-//! // All must be different
-//! post!(m, alldiff([red, blue, green]));
+//! // All must be different using constraint API
+//! m.alldiff(&[red, blue, green]);
 //!
-//! if let Ok(solution) = m.solve() {
+//! if let Some(solution) = m.solve() {
 //!     println!("Red: {:?}, Blue: {:?}, Green: {:?}",
 //!              solution[red], solution[blue], solution[green]);
 //! }

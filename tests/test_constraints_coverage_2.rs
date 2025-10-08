@@ -9,7 +9,7 @@
 
 use selen::{
     model::Model,
-    post,
+    runtime_api::{ModelExt, VarIdExt},
     constraints::props::conditional::{Condition, SimpleConstraint, IfThenElseConstraint},
     variables::Val,
 };
@@ -33,7 +33,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Force condition to be true
-        post!(model, condition_var == 1);
+        model.new(condition_var.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Basic conditional constraint should be satisfiable");
@@ -60,8 +60,8 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Force condition to be false
-        post!(model, condition_var == 0);
-        post!(model, x == 7); // x can be anything when condition is false
+        model.new(condition_var.eq(0));
+        model.new(x.eq(7)); // x can be anything when condition is false
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Conditional with false condition should be satisfiable");
@@ -87,7 +87,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, Some(else_constraint));
 
         // Set values for testing using proper API
-        post!(model, condition_var == 1);
+        model.new(condition_var.eq(1));
 
         let solution = model.solve();
         assert!(solution.is_ok(), "If-then-else constraint should be satisfiable");
@@ -119,9 +119,9 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition2, constraint2, None);
 
         // Set values using proper API
-        post!(model, x == 5);
-        post!(model, z == 2);
-        post!(model, y == 3); // Force y to expected value for robustness
+        model.new(x.eq(5));
+        model.new(z.eq(2));
+        model.new(y.eq(3)); // Force y to expected value for robustness
 
         let solution = model.solve();
         assert!(solution.is_ok(), "Different conditions should be satisfiable");
@@ -160,9 +160,9 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition3, constraint3, None);
 
         // Set values using proper API
-        post!(model, x == 10);
-        post!(model, y == 15);
-        post!(model, z == 5);
+        model.new(x.eq(10));
+        model.new(y.eq(15));
+        model.new(z.eq(5));
 
         let solution = model.solve();
         assert!(solution.is_ok(), "SimpleConstraint variants should be satisfiable");
@@ -190,7 +190,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Set trigger to 7 (greater than 5)
-        post!(model, trigger == 7);
+        model.new(trigger.eq(7));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "GreaterThan condition should work");
@@ -215,8 +215,8 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, constraint, None);
 
         // Set values using proper API
-        post!(model, threshold_var == 7);
-        post!(model, result_var == 50);
+        model.new(threshold_var.eq(7));
+        model.new(result_var.eq(50));
 
         let solution = model.solve();
         assert!(solution.is_ok(), "GreaterThan condition should be satisfiable");
@@ -242,8 +242,8 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, constraint, None);
 
         // Set values using proper API
-        post!(model, limit_var == 8);
-        post!(model, output_var == 25);
+        model.new(limit_var.eq(8));
+        model.new(output_var.eq(25));
 
         let solution = model.solve();
         assert!(solution.is_ok(), "LessThan condition should be satisfiable");
@@ -269,7 +269,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Set switch to 0 (not equal to 1)
-        post!(model, switch == 0);
+        model.new(switch.eq(0));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "NotEquals condition should work");
@@ -294,7 +294,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Set level to 2 (less than 3)
-        post!(model, level == 2);
+        model.new(level.eq(2));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "LessThan condition should work");
@@ -319,7 +319,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Force trigger
-        post!(model, trigger == 1);
+        model.new(trigger.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "GreaterOrEqual then constraint should work");
@@ -344,7 +344,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Force enable
-        post!(model, enable == 1);
+        model.new(enable.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "LessOrEqual then constraint should work");
@@ -369,8 +369,8 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Force mode
-        post!(model, mode == 2);
-        post!(model, output == 7); // Force output to something other than 5
+        model.new(mode.eq(2));
+        model.new(output.eq(7)); // Force output to something other than 5
         
         let solution = model.solve();
         assert!(solution.is_ok(), "NotEquals then constraint should work");
@@ -396,7 +396,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Force active
-        post!(model, active == 1);
+        model.new(active.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "GreaterThan then constraint should work");
@@ -421,7 +421,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Force restrict
-        post!(model, restrict == 1);
+        model.new(restrict.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "LessThan then constraint should work");
@@ -453,8 +453,8 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition2, then2, None);
         
         // Force both conditions to be false to avoid conditional constraint enforcement
-        post!(model, cond1 == 0);
-        post!(model, cond2 == 0);
+        model.new(cond1.eq(0));
+        model.new(cond2.eq(0));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Multiple conditional constraints should work");
@@ -517,7 +517,7 @@ mod constraints_coverage_2 {
         model.props.if_then_else_constraint(condition, then_constraint, None);
         
         // Force condition true
-        post!(model, cond == 1);
+        model.new(cond.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Edge case with fixed domain should work");
@@ -550,7 +550,7 @@ mod constraints_coverage_2 {
         model.props.table_constraint(vec![x, y], tuples);
         
         // Force one solution
-        post!(model, x == 0);
+        model.new(x.eq(0));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Basic table constraint should be satisfiable");
@@ -582,7 +582,7 @@ mod constraints_coverage_2 {
         model.props.table_constraint(vec![x, y, z], tuples);
         
         // Force a specific solution
-        post!(model, x == 1);
+        model.new(x.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Three-variable table constraint should work");
@@ -657,7 +657,7 @@ mod constraints_coverage_2 {
         model.props.table_constraint(vec![x, y], tuples);
         
         // Add additional constraint to test propagation
-        post!(model, x >= 7);
+        model.new(x.ge(7));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Domain filtering table constraint should work");
@@ -709,7 +709,7 @@ mod constraints_coverage_2 {
         model.props.table_constraint(vec![x, y], tuples);
         
         // Test with specific constraint
-        post!(model, y == -3);
+        model.new(y.eq(-3));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Mixed values table constraint should work");
@@ -742,8 +742,8 @@ mod constraints_coverage_2 {
         model.props.table_constraint(vec![var1, var2, var3, var4], tuples.clone());
         
         // Force first two variables
-        post!(model, var1 == 0);
-        post!(model, var2 == 1);
+        model.new(var1.eq(0));
+        model.new(var2.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Large arity table constraint should work");
@@ -790,7 +790,7 @@ mod constraints_coverage_2 {
         // Test through the model API only
         model.props.table_constraint(vec![x, y], tuples);
         
-        post!(model, x == 1);
+        model.new(x.eq(1));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Variable methods test should work");
@@ -816,7 +816,7 @@ mod constraints_coverage_2 {
         model.props.table_constraint(vec![x, y], tuples);
         
         // Additional constraint to select specific tuple
-        post!(model, y == 8);
+        model.new(y.eq(8));
         
         let solution = model.solve();
         assert!(solution.is_ok(), "Edge case with fixed domain should work");

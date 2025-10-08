@@ -39,11 +39,8 @@ fn configuration_problem_demo() {
         // Note: No Intel CPU + AMD motherboard or vice versa
     ];
     
-    // Explicitly use the table variable to avoid warnings
-    let _ = &valid_configs;
-    
     // Apply table constraint
-    post!(m, table([cpu, gpu, motherboard], valid_configs));
+    m.table(&[cpu, gpu, motherboard], valid_configs);
     
     if let Ok(solution) = m.solve() {
         let cpu_val = match solution[cpu] {
@@ -93,12 +90,10 @@ fn compatibility_matrix_demo() {
         // Note: Some combinations are incompatible (gaps in compatibility)
     ];
     
-    // Explicitly use the table variable to avoid warnings
-    let _ = &compatibility_table;
-    post!(m, table([software, hardware], compatibility_table));
+    m.table(&[software, hardware], compatibility_table);
     
     // Add additional constraint: prefer newer software
-    post!(m, software >= int(2));
+    m.new(software.ge(int(2)));
     
     if let Ok(solution) = m.solve() {
         let sw_val = match solution[software] {
@@ -139,13 +134,11 @@ fn lookup_table_demo() {
         vec![int(5), int(18)], // f(5) = 25 - 10 + 3 = 18
     ];
     
-    // Explicitly use the table variable to avoid warnings
-    let _ = &function_table;
-    post!(m, table([input, output], function_table));
+    m.table(&[input, output], function_table);
     
     // Find input that gives output between 5 and 12
-    post!(m, output >= int(5));
-    post!(m, output <= int(12));
+    m.new(output.ge(int(5)));
+    m.new(output.le(int(12)));
     
     if let Ok(solution) = m.solve() {
         let in_val = match solution[input] {
@@ -197,12 +190,10 @@ fn course_scheduling_demo() {
     ];
     
     // Explicitly use the table variable to avoid warnings
-    let _ = &schedule_table;
-    
-    post!(m, table([course, time_slot, room], schedule_table));
+    m.table(&[course, time_slot, room], schedule_table);
     
     // Prefer morning classes
-    post!(m, time_slot <= int(2));
+    m.new(time_slot.le(int(2)));
     
     if let Ok(solution) = m.solve() {
         let course_val = match solution[course] {

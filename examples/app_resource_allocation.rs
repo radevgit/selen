@@ -8,7 +8,6 @@
 //! - Handling worker efficiency variations
 
 use selen::prelude::*;
-use selen::{post};
 
 fn main() {
     println!("📋 Resource Allocation Optimizer");
@@ -45,7 +44,7 @@ fn main() {
     // Each task must be assigned to exactly one worker
     for task_assignments in &worker_assignments {
         let task_assignment_sum = m.sum(task_assignments);
-        post!(m, task_assignment_sum == int(1));
+        m.new(task_assignment_sum.eq(1));
     }
     println!("Constraint: Each task must be assigned to exactly one worker");
     

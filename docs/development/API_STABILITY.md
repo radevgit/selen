@@ -14,7 +14,7 @@ All current public APIs are considered stable and will remain compatible within 
 #### **Core Model Interface**
 - `Model::default()`, `Model::with_config()`, `Model::with_float_precision()`
 - Variable creation: `int()`, `float()`, `bool()`, `ints()`, `binary()`
-- Constraint posting: `post!()`, `postall!()` macros
+- Constraint API methods: `new()`, `alldiff()`, `allequal()`, `int_lin_eq()`, `float_lin_eq()`, etc.
 - Solving methods: `solve()`, `minimize()`, `maximize()`, `enumerate()`
 - Iterator methods: `minimize_and_iterate()`, `maximize_and_iterate()`
 - Embedded statistics: All solutions include `stats` field with propagation/node counts
