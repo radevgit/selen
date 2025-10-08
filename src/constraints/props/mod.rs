@@ -32,7 +32,10 @@ type PropagatorBox = Box<dyn Prune>;
 type SharedPropagator = Rc<PropagatorBox>;
 
 /// Enforce a specific constraint by pruning domain of decision variables.
-pub trait Prune: core::fmt::Debug {
+/// 
+/// The `Any` supertrait allows downcasting to concrete propagator types,
+/// which is used for LP solver integration (extracting linear constraints).
+pub trait Prune: core::fmt::Debug + std::any::Any {
     /// Perform pruning based on variable domains and internal state.
     fn prune(&self, ctx: &mut Context) -> Option<()>;
 }
@@ -133,19 +136,18 @@ impl Propagators {
     /// ```
     pub fn extract_linear_system(&self) -> crate::lpsolver::LinearConstraintSystem {
         use crate::lpsolver::{LinearConstraint, LinearConstraintSystem};
-        use std::any::Any;
         
         let mut system = LinearConstraintSystem::new();
         
-        // Iterate through all registered propagators
-        for prop_id in self.get_prop_ids_iter() {
-            let prop_box = self.get_state(prop_id);
-            
-            // Get the underlying propagator as Any for downcasting
-            let prop_any: &dyn Any = &**prop_box as &dyn Any;
+        // Iterate through all registered propagators and access state directly
+        // We access self.state directly to get the concrete types
+        for prop_rc in &self.state {
+            let prop_box: &Box<dyn Prune> = prop_rc.as_ref();
+            let prop_ref: &dyn Prune = prop_box.as_ref();
             
             // Try to downcast to each linear constraint type
-            if let Some(eq) = prop_any.downcast_ref::<linear::FloatLinEq>() {
+            // Note: This requires Prune to have Any as supertrait
+            if let Some(eq) = (prop_ref as &dyn std::any::Any).downcast_ref::<linear::FloatLinEq>() {
                 // Extract FloatLinEq: sum(coeffs * vars) = constant
                 let constraint = LinearConstraint::equality(
                     eq.coefficients().to_vec(),
@@ -153,7 +155,7 @@ impl Propagators {
                     eq.constant(),
                 );
                 system.add_constraint(constraint);
-            } else if let Some(le) = prop_any.downcast_ref::<linear::FloatLinLe>() {
+            } else if let Some(le) = (prop_ref as &dyn std::any::Any).downcast_ref::<linear::FloatLinLe>() {
                 // Extract FloatLinLe: sum(coeffs * vars) <= constant
                 let constraint = LinearConstraint::less_or_equal(
                     le.coefficients().to_vec(),

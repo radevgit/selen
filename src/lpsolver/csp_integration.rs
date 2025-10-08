@@ -17,6 +17,7 @@
 //! ```
 
 use crate::variables::{VarId, Vars, Val};
+use crate::variables::views::Context;
 use crate::lpsolver::{LpProblem, LpSolution, LpStatus};
 
 /// Type of relation in a linear constraint
@@ -289,46 +290,73 @@ fn extract_bounds(var: VarId, vars: &Vars) -> (f64, f64) {
 /// Apply LP solution back to CSP variable domains
 /// 
 /// This updates the variable bounds in the CSP to match the LP solution,
-/// effectively pruning the search space.
+/// effectively pruning the search space. The strategy is to tighten the
+/// variable bounds based on the LP solution values.
+/// 
+/// # Arguments
+/// * `system` - The linear constraint system with variable mapping
+/// * `solution` - The LP solution containing optimal values
+/// * `ctx` - Mutable context for updating variable domains
 /// 
 /// # Returns
-/// `None` if any bound update causes inconsistency (prune this branch)
+/// `None` if any bound update causes inconsistency (prune this branch),
+/// `Some(())` if all updates succeeded
+/// 
+/// # Strategy
+/// For each variable in the LP solution:
+/// 1. Extract the LP solution value
+/// 2. Tighten the CSP domain bounds towards this value
+/// 3. Use a tolerance for floating point comparisons
 pub fn apply_lp_solution(
     system: &LinearConstraintSystem,
     solution: &LpSolution,
-    vars: &mut Vars,
+    ctx: &mut Context,
 ) -> Option<()> {
+    use crate::variables::views::View;
+    
     // Only apply if we got an optimal solution
     if solution.status != LpStatus::Optimal {
         return Some(()); // Don't fail, just don't update
     }
     
+    // Tolerance for floating point comparisons
+    const TOLERANCE: f64 = 1e-6;
+    
     // Update each variable with its LP solution value
     for (i, &var_id) in system.variables.iter().enumerate() {
         let lp_value = solution.x[i];
         
-        // For now, use LP solution to tighten bounds
-        // Strategy: Set both bounds to LP value (fixes variable)
-        // This is aggressive but guarantees consistency with LP constraints
-        
         // Get current bounds
-        let (current_lower, current_upper) = extract_bounds(var_id, vars);
+        let (current_lower, current_upper) = extract_bounds(var_id, ctx.vars());
         
-        // Only tighten if LP value is within current bounds (sanity check)
-        if lp_value < current_lower - 1e-6 || lp_value > current_upper + 1e-6 {
-            // LP solution violates current bounds - shouldn't happen
-            // This indicates numerical issues or inconsistency
+        // Sanity check: LP value should be within current bounds
+        if lp_value < current_lower - TOLERANCE || lp_value > current_upper + TOLERANCE {
+            // LP solution violates current bounds - this indicates
+            // numerical issues or inconsistency. Skip this variable.
             continue;
         }
         
-        // Update bounds to LP solution
-        // Note: This requires access to domain update methods
-        // For now, we'll document that this needs integration with Context
-        // TODO: Integrate with Context::try_set_min/try_set_max
+        // Strategy: Tighten bounds towards LP solution
+        // We use a conservative approach: only tighten if LP value
+        // is significantly different from current bounds
         
-        // Placeholder: Would call something like:
-        // var_id.try_set_min(Val::ValF(lp_value), context)?;
-        // var_id.try_set_max(Val::ValF(lp_value), context)?;
+        // Tighten lower bound if LP value is higher
+        if lp_value > current_lower + TOLERANCE {
+            let new_min = Val::ValF(lp_value);
+            if var_id.try_set_min(new_min, ctx).is_none() {
+                // Inconsistency detected - propagation failed
+                return None;
+            }
+        }
+        
+        // Tighten upper bound if LP value is lower
+        if lp_value < current_upper - TOLERANCE {
+            let new_max = Val::ValF(lp_value);
+            if var_id.try_set_max(new_max, ctx).is_none() {
+                // Inconsistency detected - propagation failed
+                return None;
+            }
+        }
     }
     
     Some(())

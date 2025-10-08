@@ -692,6 +692,88 @@ impl Model {
     //     }
     // }
 
+    /// Extract linear constraints from the model for LP solving.
+    ///
+    /// Scans all propagators in the model and extracts float linear equality
+    /// and inequality constraints into a LinearConstraintSystem that can be
+    /// passed to the LP solver.
+    ///
+    /// # Returns
+    /// A `LinearConstraintSystem` containing all linear constraints found.
+    /// Use `is_suitable_for_lp()` to check if the system is worth solving with LP.
+    ///
+    /// # Example
+    /// ```ignore
+    /// use selen::prelude::*;
+    /// 
+    /// let mut m = Model::default();
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// m.float_lin_eq(&[1.0, 2.0], &[x, y], 15.0);
+    /// m.float_lin_le(&[3.0, 1.0], &[x, y], 20.0);
+    /// 
+    /// let linear_system = m.extract_linear_system();
+    /// if linear_system.is_suitable_for_lp() {
+    ///     // System has enough constraints to benefit from LP
+    /// }
+    /// ```
+    pub fn extract_linear_system(&self) -> crate::lpsolver::LinearConstraintSystem {
+        self.props.extract_linear_system()
+    }
+
+    /// Solve linear constraints using the LP solver and apply results to CSP domains.
+    ///
+    /// This method extracts linear constraints from the model, solves them using
+    /// the LP solver, and tightens variable bounds based on the LP solution.
+    /// This can significantly prune the search space before or during CSP search.
+    ///
+    /// # Arguments
+    /// * `ctx` - Mutable context for updating variable domains
+    ///
+    /// # Returns
+    /// * `Some(())` - LP solving succeeded and bounds were updated
+    /// * `None` - LP solving failed or bounds update caused inconsistency
+    ///
+    /// # Example
+    /// ```ignore
+    /// use selen::prelude::*;
+    /// 
+    /// let mut m = Model::default();
+    /// let x = m.float(0.0, 100.0);
+    /// let y = m.float(0.0, 100.0);
+    /// m.float_lin_eq(&[1.0, 1.0], &[x, y], 50.0);
+    /// m.float_lin_le(&[2.0, 1.0], &[x, y], 80.0);
+    /// 
+    /// // During propagation, try LP solving
+    /// let mut ctx = Context::new(&mut m.vars);
+    /// if let Some(()) = m.solve_with_lp(&mut ctx) {
+    ///     // LP solution successfully tightened bounds
+    /// }
+    /// ```
+    pub fn solve_with_lp(&self, ctx: &mut crate::variables::views::Context) -> Option<()> {
+        use crate::lpsolver::solve;
+        
+        // Extract linear constraints
+        let linear_system = self.extract_linear_system();
+        
+        // Check if worth solving with LP
+        if !linear_system.is_suitable_for_lp(ctx.vars()) {
+            return Some(()); // Not enough constraints, skip LP
+        }
+        
+        // Convert to LP problem format
+        let lp_problem = linear_system.to_lp_problem(ctx.vars());
+        
+        // Solve LP problem
+        let solution = match solve(&lp_problem) {
+            Ok(sol) => sol,
+            Err(_) => return Some(()), // LP solving failed, skip
+        };
+        
+        // Apply LP solution to CSP domains
+        crate::lpsolver::apply_lp_solution(&linear_system, &solution, ctx)
+    }
+
     #[doc(hidden)]
     /// Internal helper that validates the model and optimizes constraints before search.
     /// This ensures all solving methods benefit from validation and constraint optimization.
