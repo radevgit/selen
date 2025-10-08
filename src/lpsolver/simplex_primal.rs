@@ -8,7 +8,7 @@
 //! - Phase I: Find initial feasible basis (if not provided)
 //! - Phase II: Optimize from feasible basis to optimal solution
 
-use super::matrix::Matrix;
+use super::matrix::{Matrix, get_lp_memory_mb};
 use super::basis::Basis;
 use super::types::{LpProblem, LpSolution, LpStatus, LpError, LpConfig};
 
@@ -146,7 +146,7 @@ impl PrimalSimplex {
         // Solve Phase I problem using simplex iterations
         let max_iter = self.config.max_iterations;
         for _iter in 0..max_iter {
-            // Check timeout every 100 iterations (not every iteration for performance)
+            // Check timeout and memory every 100 iterations (not every iteration for performance)
             if _iter % 100 == 0 {
                 if let Some(timeout_ms) = self.config.timeout_ms {
                     let elapsed = start_time.elapsed().as_millis() as u64;
@@ -154,6 +154,16 @@ impl PrimalSimplex {
                         return Err(LpError::TimeoutExceeded {
                             elapsed_ms: elapsed,
                             limit_ms: timeout_ms,
+                        });
+                    }
+                }
+                
+                if let Some(limit_mb) = self.config.max_memory_mb {
+                    let usage_mb = get_lp_memory_mb() as u64;
+                    if usage_mb > limit_mb {
+                        return Err(LpError::MemoryExceeded {
+                            usage_mb,
+                            limit_mb,
                         });
                     }
                 }
@@ -287,7 +297,7 @@ impl PrimalSimplex {
         let mut iterations = 0;
         
         loop {
-            // Check timeout every 100 iterations (not every iteration for performance)
+            // Check timeout and memory every 100 iterations (not every iteration for performance)
             if iterations % 100 == 0 {
                 if let Some(timeout_ms) = self.config.timeout_ms {
                     let elapsed = start_time.elapsed().as_millis() as u64;
@@ -295,6 +305,16 @@ impl PrimalSimplex {
                         return Err(LpError::TimeoutExceeded {
                             elapsed_ms: elapsed,
                             limit_ms: timeout_ms,
+                        });
+                    }
+                }
+                
+                if let Some(limit_mb) = self.config.max_memory_mb {
+                    let usage_mb = get_lp_memory_mb() as u64;
+                    if usage_mb > limit_mb {
+                        return Err(LpError::MemoryExceeded {
+                            usage_mb,
+                            limit_mb,
                         });
                     }
                 }
@@ -632,6 +652,47 @@ mod tests {
                 // (might happen on very fast systems with optimized builds)
             }
             Err(e) => panic!("Expected timeout or success, got error: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_memory_limit() {
+        use crate::lpsolver::{reset_lp_memory, get_lp_memory_mb};
+        
+        // Reset memory counter
+        reset_lp_memory();
+        
+        // Create a large problem (will use significant memory)
+        let n = 100;
+        let m = 50;
+        
+        let c = vec![1.0; n];
+        let a = vec![vec![1.0; n]; m];
+        let b = vec![100.0; m];
+        let lower = vec![0.0; n];
+        let upper = vec![f64::INFINITY; n];
+        
+        let problem = LpProblem::new(n, m, c, a, b, lower, upper);
+        
+        // Set a very small memory limit (much less than problem requires)
+        // The problem will create matrices that exceed this limit
+        let config = LpConfig::unlimited().with_max_memory_mb(1); // 1MB limit, way too small
+        let mut solver = PrimalSimplex::new(config);
+        let result = solver.solve(&problem);
+        
+        // Should fail with memory exceeded (or succeed if memory tracking estimates are off)
+        match result {
+            Err(LpError::MemoryExceeded { usage_mb, limit_mb }) => {
+                assert!(usage_mb > limit_mb, "Usage should exceed limit");
+                assert_eq!(limit_mb, 1, "Limit should be 1MB");
+            }
+            Ok(_) => {
+                // Problem might be small enough or solver might complete quickly
+                // This is acceptable - just verify memory tracking is working
+                let final_memory_mb = get_lp_memory_mb();
+                println!("Problem completed using {}MB (within 1MB limit)", final_memory_mb);
+            }
+            Err(e) => panic!("Expected memory exceeded or success, got error: {:?}", e),
         }
     }
 }

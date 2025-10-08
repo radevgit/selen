@@ -9,7 +9,7 @@
 //! - Reoptimization after adding/removing constraints
 
 use crate::lpsolver::basis::Basis;
-use crate::lpsolver::matrix::Matrix;
+use crate::lpsolver::matrix::{Matrix, get_lp_memory_mb};
 use crate::lpsolver::types::{LpConfig, LpError, LpProblem, LpSolution, LpStatus};
 
 /// Dual Simplex solver
@@ -61,7 +61,7 @@ impl DualSimplex {
         // Dual simplex iterations
         let max_iterations = self.config.max_iterations;
         for iterations in 0..max_iterations {
-            // Check timeout every 100 iterations (not every iteration for performance)
+            // Check timeout and memory every 100 iterations (not every iteration for performance)
             if iterations % 100 == 0 {
                 if let Some(timeout_ms) = self.config.timeout_ms {
                     let elapsed = start_time.elapsed().as_millis() as u64;
@@ -69,6 +69,16 @@ impl DualSimplex {
                         return Err(LpError::TimeoutExceeded {
                             elapsed_ms: elapsed,
                             limit_ms: timeout_ms,
+                        });
+                    }
+                }
+                
+                if let Some(limit_mb) = self.config.max_memory_mb {
+                    let usage_mb = get_lp_memory_mb() as u64;
+                    if usage_mb > limit_mb {
+                        return Err(LpError::MemoryExceeded {
+                            usage_mb,
+                            limit_mb,
                         });
                     }
                 }

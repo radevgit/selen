@@ -5,7 +5,7 @@ Implementing a complete Linear Programming solver for the Selen constraint solve
 
 **Target**: ~1,650 LOC for Phase 1 (continuous LP)  
 **Current**: ~2,070 LOC  
-**Tests**: 47 passing
+**Tests**: 49 passing
 
 ## Motivation
 Large float domains (e.g., ±1e6) cause 60+ second timeouts with domain-based propagation. LP solver provides O(n³) worst-case vs O(d) per constraint where d is huge.
@@ -13,8 +13,12 @@ Large float domains (e.g., ±1e6) cause 60+ second timeouts with domain-based pr
 ## Integration with Selen Model
 The LP solver respects `SolverConfig` parameters from the main Selen model:
 - **`timeout_ms`**: Default 60 seconds, checked every 100 iterations (efficient)
-- **`max_memory_mb`**: Default 2GB, field available in `LpConfig` for future memory tracking
-- **Performance**: Timeout check overhead ~0.1% (every 100 iterations vs every iteration)
+- **`max_memory_mb`**: Default 2GB, with automatic matrix memory tracking
+  * All Matrix allocations tracked via atomic counters
+  * Drop trait ensures memory is released properly
+  * Clone trait tracks copies
+- **Performance**: Resource check overhead ~0.1% (every 100 iterations vs every iteration)
+- **API**: `get_lp_memory_mb()` for monitoring, `reset_lp_memory()` for testing
 - Enables consistent resource management across CSP and LP solving
 
 ## Implementation Plan
@@ -75,20 +79,21 @@ src/lpsolver/
 | Module | Tests | Coverage |
 |--------|-------|----------|
 | types | 2 | Problem validation, config |
-| matrix | 13 | All operations, edge cases |
+| matrix | 14 | All operations, edge cases, **memory tracking** |
 | lu | 11 | Decomposition, solve, transpose, pivoting |
 | basis | 11 | Management, feasibility, variable selection |
-| simplex_primal | 8 | Standard form, Phase I/II, edge cases, **timeout** |
+| simplex_primal | 9 | Standard form, Phase I/II, edge cases, **timeout**, **memory limit** |
 | simplex_dual | 2 | Structure, warm-start basic test |
-| **Total** | **47** | **Comprehensive** |
+| **Total** | **49** | **Comprehensive** |
 
 ## Key Features
 
 ### Error Handling
-- 13 specific error variants (no strings in enums)
+- 14 specific error variants (no strings in enums)
 - Follows Selen's ValidationError pattern
 - Detailed dimension mismatch reporting
 - TimeoutExceeded error with elapsed/limit info
+- MemoryExceeded error with usage/limit info
 
 ### Numerical Stability
 - LU decomposition with partial pivoting
@@ -98,9 +103,15 @@ src/lpsolver/
 
 ### Resource Management
 - **Timeout support**: Honors `SolverConfig::timeout_ms` (default: 60s)
-- **Memory limits**: Respects `SolverConfig::max_memory_mb` (default: 2GB, framework for future)
-- **Efficient checking**: Timeout checked every 100 iterations (not every iteration)
-- Graceful timeout with partial results
+- **Memory tracking**: Automatic tracking of all matrix allocations/deallocations
+  * Uses atomic counters for thread-safe tracking
+  * Tracks Matrix creation, cloning, and dropping
+  * Zero overhead when not checked
+- **Memory limits**: Respects `SolverConfig::max_memory_mb` (default: 2GB)
+  * Checked every 100 iterations alongside timeout
+  * Tracks constraint matrices, LU decompositions, basis matrices, vectors
+- **Efficient checking**: Timeout and memory checked every 100 iterations (~0.1% overhead)
+- Graceful errors with detailed usage information
 - Use `LpConfig::unlimited()` to remove all limits
 
 ### Performance Optimizations
@@ -151,8 +162,25 @@ match solve_with_config(&problem, &config) {
     Err(LpError::TimeoutExceeded { elapsed_ms, limit_ms }) => {
         println!("Timeout: {}ms elapsed (limit: {}ms)", elapsed_ms, limit_ms);
     }
+    Err(LpError::MemoryExceeded { usage_mb, limit_mb }) => {
+        println!("Memory limit exceeded: {}MB used (limit: {}MB)", usage_mb, limit_mb);
+    }
     Err(e) => println!("Error: {}", e),
 }
+```
+
+### Monitor Memory Usage
+```rust
+use selen::lpsolver::{get_lp_memory_mb, reset_lp_memory};
+
+// Reset counter (useful for testing)
+reset_lp_memory();
+
+// Solve problem
+let solution = solve(&problem)?;
+
+// Check memory usage
+println!("LP solver used {:.2}MB of memory", get_lp_memory_mb());
 ```
 
 ### Warm-Start (Reoptimization)
@@ -177,6 +205,7 @@ let solution2 = solve_warmstart(&new_problem, &solution, &config)?;
 - ✅ Multiple constraints
 - ✅ Transpose system solving
 - ✅ Timeout handling (matches SolverConfig)
+- ✅ Memory limit enforcement (automatic tracking)
 
 ## Next Steps
 

@@ -366,6 +366,9 @@ pub enum LpError {
     
     /// Timeout exceeded during solve
     TimeoutExceeded { elapsed_ms: u64, limit_ms: u64 },
+    
+    /// Memory limit exceeded during solve
+    MemoryExceeded { usage_mb: u64, limit_mb: u64 },
 }
 
 impl fmt::Display for LpError {
@@ -399,6 +402,9 @@ impl fmt::Display for LpError {
             LpError::SingularBasis => write!(f, "Singular basis matrix"),
             LpError::TimeoutExceeded { elapsed_ms, limit_ms } => {
                 write!(f, "Timeout exceeded: {}ms elapsed, limit was {}ms", elapsed_ms, limit_ms)
+            }
+            LpError::MemoryExceeded { usage_mb, limit_mb } => {
+                write!(f, "Memory limit exceeded: {}MB used, limit was {}MB", usage_mb, limit_mb)
             }
         }
     }

@@ -22,7 +22,7 @@ pub mod simplex_dual;
 // mod tests;
 
 pub use types::{LpProblem, LpSolution, LpStatus, LpError, LpConfig};
-pub use matrix::Matrix;
+pub use matrix::{Matrix, get_lp_memory_bytes, get_lp_memory_mb, reset_lp_memory};
 
 /// Solve LP problem using Primal Simplex
 ///
