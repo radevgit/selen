@@ -13,6 +13,21 @@ impl<U, V> Add<U, V> {
     pub const fn new(x: U, y: V, s: VarId) -> Self {
         Self { x, y, s }
     }
+    
+    /// Get the first operand (x in x + y = s)
+    pub const fn x(&self) -> &U {
+        &self.x
+    }
+    
+    /// Get the second operand (y in x + y = s)
+    pub const fn y(&self) -> &V {
+        &self.y
+    }
+    
+    /// Get the result variable (s in x + y = s)
+    pub const fn s(&self) -> VarId {
+        self.s
+    }
 }
 
 impl<U: View, V: View> Prune for Add<U, V> {

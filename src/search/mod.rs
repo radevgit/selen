@@ -84,23 +84,73 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     // Try LP solving at root node if suitable linear system exists
     let (mut vars, props) = (vars, props);
     {
-        let linear_system = props.extract_linear_system();
-        if linear_system.is_suitable_for_lp(&vars) {
+        let mut linear_system = props.extract_linear_system();
+        eprintln!("LP: Extracted {} constraints, {} variables", 
+            linear_system.constraints.len(), 
+            linear_system.variables.len());
+        
+        // Extract objective from Mode for LP solver
+        let lp_has_objective = if let Some((var_id, minimize)) = mode.lp_objective() {
+            eprintln!("LP: Extracted objective: variable {:?}, minimize={}", var_id, minimize);
+            
+            // Find the index of this variable in the linear system
+            if let Some(idx) = linear_system.variables.iter().position(|&v| v == var_id) {
+                // Create objective vector: all zeros except 1.0 at the variable's position
+                let mut coeffs = vec![0.0; linear_system.variables.len()];
+                coeffs[idx] = 1.0;
+                linear_system.set_objective(coeffs, minimize);
+                eprintln!("LP: Set objective for variable at index {} (minimize={})", idx, minimize);
+                true
+            } else {
+                eprintln!("LP: Warning - objective variable {:?} not found in linear system (non-linear problem)", var_id);
+                false
+            }
+        } else {
+            eprintln!("LP: No simple variable objective found (might be complex expression)");
+            false
+        };
+        
+        let is_suitable = linear_system.is_suitable_for_lp(&vars);
+        eprintln!("LP: is_suitable_for_lp() = {}, lp_has_objective = {}", is_suitable, lp_has_objective);
+        
+        // Only use LP if: (1) suitable AND (2) has objective in linear system
+        // Without objective in linear system, LP can't help optimize
+        if is_suitable && lp_has_objective {
+            eprintln!("LP: System is suitable for LP with objective, solving...");
             // Convert to LP problem and solve
             let lp_problem = linear_system.to_lp_problem(&vars);
+            eprintln!("LP: Problem has {} vars, {} constraints", lp_problem.n_vars, lp_problem.n_constraints);
             
-            if let Ok(solution) = crate::lpsolver::solve(&lp_problem) {
-                if solution.status == crate::lpsolver::LpStatus::Optimal {
-                    // Apply LP solution to tighten variable domains
-                    use crate::variables::views::Context;
-                    let mut events = Vec::new();
-                    let mut ctx = Context::new(&mut vars, &mut events);
+            match crate::lpsolver::solve(&lp_problem) {
+                Ok(solution) => {
+                    eprintln!("LP: Solution status = {:?}", solution.status);
                     
-                    // Apply LP tightening - if it fails, the problem is infeasible
-                    if crate::lpsolver::apply_lp_solution(&linear_system, &solution, &mut ctx).is_none() {
+                    // Check if LP found the problem infeasible
+                    if solution.status == crate::lpsolver::LpStatus::Infeasible {
+                        eprintln!("LP: Problem is infeasible");
                         return Search::Done(None);
                     }
-                    // LP tightening successful, affected variables are now in events
+                    
+                    // LP found optimal solution
+                    eprintln!("LP: Solution status = {:?}, objective = {}", solution.status, solution.objective);
+                    
+                    // Apply LP solution to tighten variable bounds
+                    use crate::variables::views::Context;
+                    let mut events = Vec::new();
+                    let mut vars_mut = vars;
+                    {
+                        let mut ctx = Context::new(&mut vars_mut, &mut events);
+                        if crate::lpsolver::csp_integration::apply_lp_solution(&linear_system, &solution, &mut ctx).is_none() {
+                            eprintln!("LP: Failed to apply solution (propagation failure)");
+                            return Search::Done(None);
+                        }
+                    }
+                    vars = vars_mut;
+                    eprintln!("LP: Successfully applied LP bounds");
+                }
+                Err(e) => {
+                    eprintln!("LP: Solver returned error: {:?}", e);
+                    // Continue with CSP search without LP bounds
                 }
             }
         }
@@ -111,9 +161,12 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     let agenda = Agenda::with_props(props.get_prop_ids_iter());
 
     // Propagate constraints until search is stalled or a solution is found
+    eprintln!("LP: Starting initial propagation...");
     let Some((is_stalled, space)) = propagate(Space { vars, props }, agenda) else {
+        eprintln!("LP: Initial propagation returned None (infeasible)");
         return Search::Done(None);
     };
+    eprintln!("LP: Initial propagation succeeded, is_stalled={}", is_stalled);
 
     // Explore space by alternating branching and propagation
     if is_stalled {

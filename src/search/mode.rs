@@ -12,6 +12,12 @@ pub trait Mode: core::fmt::Debug {
 
     /// Update internal state when new solution is found.
     fn on_solution(&mut self, _vars: &Vars) {}
+    
+    /// Extract optimization objective for LP solver (if any)
+    /// Returns (variable, minimize=true) or None if not optimizing
+    fn lp_objective(&self) -> Option<(crate::variables::VarId, bool)> {
+        None
+    }
 }
 
 /// Enumerate assignments that satisfy all constraints.
@@ -52,5 +58,30 @@ impl<V: View> Mode for Minimize<V> {
     fn on_solution(&mut self, vars: &Vars) {
         // New objective value is necessarily lower than previous lowest
         self.minimum_opt = Some(self.objective.min_raw(vars));
+    }
+    
+    fn lp_objective(&self) -> Option<(crate::variables::VarId, bool)> {
+        // Check if V is VarId (minimize) or Opposite<VarId> (maximize)
+        use std::any::TypeId;
+        
+        // Get the type ID of the objective
+        let type_id = TypeId::of::<V>();
+        
+        // Check if it's VarId (minimize)
+        if type_id == TypeId::of::<crate::variables::VarId>() {
+            // SAFETY: We just checked the type
+            let var_id = unsafe { *(&self.objective as *const V as *const crate::variables::VarId) };
+            return Some((var_id, true)); // minimize=true
+        }
+        
+        // Check if it's Opposite<VarId> (maximize)
+        if type_id == TypeId::of::<crate::variables::views::Opposite<crate::variables::VarId>>() {
+            // SAFETY: We just checked the type. Opposite is a tuple struct Opposite(VarId)
+            // so we can cast the pointer and dereference to get the inner VarId
+            let var_id = unsafe { *(&self.objective as *const V as *const crate::variables::VarId) };
+            return Some((var_id, false)); // minimize=false (i.e., maximize)
+        }
+        
+        None
     }
 }

@@ -12,6 +12,16 @@ impl<U, V> LessThanOrEquals<U, V> {
     pub const fn new(x: U, y: V) -> Self {
         Self { x, y }
     }
+    
+    /// Get the left side (x in x <= y)
+    pub const fn x(&self) -> &U {
+        &self.x
+    }
+    
+    /// Get the right side (y in x <= y)
+    pub const fn y(&self) -> &V {
+        &self.y
+    }
 }
 
 impl<U: View, V: View> Prune for LessThanOrEquals<U, V> {
