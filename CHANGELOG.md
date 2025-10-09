@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2025-10-09
+- LP Solver integrated
+
 ## [0.10.0] - 2025-10-08
 - remove constraint macros
 

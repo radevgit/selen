@@ -101,7 +101,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-selen = "0.10"
+selen = "0.11"
 ```
 
 ## Examples

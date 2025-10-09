@@ -1,6 +1,6 @@
 [package]
 name = "selen"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2024"
 description = "Constraint Satisfaction Problem (CSP) solver"
 rust-version = "1.88"
@@ -81,8 +81,6 @@ unescaped_backticks      = "warn"
 [workspace.lints]
 rust.unsafe_code = "forbid"
 
-# LINEBENDER LINT SET - Cargo.toml - v2
-# See https://linebender.org/wiki/canonical-lints/
 rust.keyword_idents_2024 = "forbid"
 rust.non_ascii_idents = "forbid"
 rust.non_local_definitions = "forbid"
