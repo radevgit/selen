@@ -32,7 +32,10 @@ type PropagatorBox = Box<dyn Prune>;
 type SharedPropagator = Rc<PropagatorBox>;
 
 /// Enforce a specific constraint by pruning domain of decision variables.
-pub trait Prune: core::fmt::Debug {
+/// 
+/// The `Any` supertrait allows downcasting to concrete propagator types,
+/// which is used for LP solver integration (extracting linear constraints).
+pub trait Prune: core::fmt::Debug + std::any::Any {
     /// Perform pruning based on variable domains and internal state.
     fn prune(&self, ctx: &mut Context) -> Option<()>;
 }
@@ -112,6 +115,60 @@ impl Propagators {
     /// Get mutable access to the constraint metadata registry
     pub fn get_constraint_registry_mut(&mut self) -> &mut crate::optimization::constraint_metadata::ConstraintRegistry {
         &mut self.constraint_registry
+    }
+
+    /// Extract linear constraints from propagators for LP solving.
+    /// 
+    /// Scans all propagators and extracts FloatLinEq and FloatLinLe constraints
+    /// into a LinearConstraintSystem that can be passed to the LP solver.
+    /// 
+    /// # Returns
+    /// A `LinearConstraintSystem` containing all linear constraints found in the model.
+    /// 
+    /// # Example
+    /// ```ignore
+    /// // After creating a model with linear constraints
+    /// let linear_system = model.propagators().extract_linear_system();
+    /// if linear_system.is_suitable_for_lp() {
+    ///     let lp_problem = linear_system.to_lp_problem(&model.vars());
+    ///     // Solve with LP solver...
+    /// }
+    /// ```
+    pub fn extract_linear_system(&self) -> crate::lpsolver::LinearConstraintSystem {
+        use crate::lpsolver::{LinearConstraint, LinearConstraintSystem};
+        
+        let mut system = LinearConstraintSystem::new();
+        
+        // Iterate through all registered propagators and access state directly
+        // We access self.state directly to get the concrete types
+        for prop_rc in &self.state {
+            let prop_box: &Box<dyn Prune> = prop_rc.as_ref();
+            let prop_ref: &dyn Prune = prop_box.as_ref();
+            
+            // Try to downcast to each linear constraint type
+            // Note: This requires Prune to have Any as supertrait
+            if let Some(eq) = (prop_ref as &dyn std::any::Any).downcast_ref::<linear::FloatLinEq>() {
+                // Extract FloatLinEq: sum(coeffs * vars) = constant
+                let constraint = LinearConstraint::equality(
+                    eq.coefficients().to_vec(),
+                    eq.variables().to_vec(),
+                    eq.constant(),
+                );
+                system.add_constraint(constraint);
+            } else if let Some(le) = (prop_ref as &dyn std::any::Any).downcast_ref::<linear::FloatLinLe>() {
+                // Extract FloatLinLe: sum(coeffs * vars) <= constant
+                let constraint = LinearConstraint::less_or_equal(
+                    le.coefficients().to_vec(),
+                    le.variables().to_vec(),
+                    le.constant(),
+                );
+                system.add_constraint(constraint);
+            }
+            // Note: FloatLinGe doesn't exist - use FloatLinLe with negated coefficients
+            // Other propagator types are not linear constraints - skip them
+        }
+        
+        system
     }
 
     /// Optimize the order of AllDifferent constraints using multiple universal heuristics.

@@ -241,6 +241,10 @@ pub mod search;
 #[doc(hidden)]
 pub mod optimization;
 
+// LP solver (internal use for optimization)
+#[doc(hidden)]
+pub mod lpsolver;
+
 // API and convenience modules
 pub mod api;
 pub mod prelude;
