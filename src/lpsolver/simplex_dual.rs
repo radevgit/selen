@@ -9,7 +9,7 @@
 //! - Reoptimization after adding/removing constraints
 
 use crate::lpsolver::basis::Basis;
-use crate::lpsolver::matrix::{Matrix, get_lp_memory_mb};
+use crate::lpsolver::matrix::Matrix;
 use crate::lpsolver::types::{LpConfig, LpError, LpProblem, LpSolution, LpStatus};
 
 /// Dual Simplex solver
@@ -24,6 +24,22 @@ impl DualSimplex {
     /// Create new Dual Simplex solver with given configuration
     pub fn new(config: LpConfig) -> Self {
         Self { config }
+    }
+    
+    /// Estimate memory usage for matrices in MB
+    fn estimate_memory_mb(&self, a: &Matrix, _basis: &Basis) -> f64 {
+        // Sum up memory from main constraint matrix and working memory
+        let mut total_bytes = a.memory_bytes();
+        
+        // Basis stores L, U, and permutation vectors
+        let m = a.rows;
+        total_bytes += 2 * m * m * std::mem::size_of::<f64>();
+        total_bytes += m * std::mem::size_of::<usize>();
+        
+        // Working vectors
+        total_bytes += (a.rows + a.cols) * std::mem::size_of::<f64>();
+        
+        total_bytes as f64 / (1024.0 * 1024.0)
     }
 
     /// Solve LP problem using dual simplex method
@@ -74,7 +90,7 @@ impl DualSimplex {
                 }
                 
                 if let Some(limit_mb) = self.config.max_memory_mb {
-                    let usage_mb = get_lp_memory_mb() as u64;
+                    let usage_mb = self.estimate_memory_mb(&a, &basis) as u64;
                     if usage_mb > limit_mb {
                         return Err(LpError::MemoryExceeded {
                             usage_mb,

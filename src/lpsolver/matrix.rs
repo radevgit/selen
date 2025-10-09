@@ -4,25 +4,6 @@
 //! Uses row-major storage format for cache efficiency.
 
 use std::fmt;
-use std::sync::atomic::{AtomicU64, Ordering};
-
-/// Global memory tracker for LP solver matrices
-static LP_MEMORY_BYTES: AtomicU64 = AtomicU64::new(0);
-
-/// Get current memory usage of LP solver matrices in bytes
-pub fn get_lp_memory_bytes() -> u64 {
-    LP_MEMORY_BYTES.load(Ordering::Relaxed)
-}
-
-/// Get current memory usage of LP solver matrices in MB
-pub fn get_lp_memory_mb() -> f64 {
-    get_lp_memory_bytes() as f64 / (1024.0 * 1024.0)
-}
-
-/// Reset memory tracker (useful for testing)
-pub fn reset_lp_memory() {
-    LP_MEMORY_BYTES.store(0, Ordering::Relaxed);
-}
 
 /// Dense matrix stored in row-major format
 #[derive(Debug, PartialEq)]
@@ -38,11 +19,20 @@ pub struct Matrix {
 }
 
 impl Matrix {
+    /// Get memory usage of this matrix in bytes
+    pub fn memory_bytes(&self) -> usize {
+        self.data.len() * std::mem::size_of::<f64>()
+    }
+    
+    /// Get memory usage of this matrix in MB
+    pub fn memory_mb(&self) -> f64 {
+        self.memory_bytes() as f64 / (1024.0 * 1024.0)
+    }
+}
+
+impl Matrix {
     /// Create a new matrix with given dimensions, initialized to zero
     pub fn zeros(rows: usize, cols: usize) -> Self {
-        let size_bytes = (rows * cols * std::mem::size_of::<f64>()) as u64;
-        LP_MEMORY_BYTES.fetch_add(size_bytes, Ordering::Relaxed);
-        
         Self {
             rows,
             cols,
@@ -52,9 +42,6 @@ impl Matrix {
     
     /// Create a new matrix with given dimensions, initialized to given value
     pub fn filled(rows: usize, cols: usize, value: f64) -> Self {
-        let size_bytes = (rows * cols * std::mem::size_of::<f64>()) as u64;
-        LP_MEMORY_BYTES.fetch_add(size_bytes, Ordering::Relaxed);
-        
         Self {
             rows,
             cols,
@@ -64,9 +51,6 @@ impl Matrix {
     
     /// Create an identity matrix of given size
     pub fn identity(size: usize) -> Self {
-        let size_bytes = (size * size * std::mem::size_of::<f64>()) as u64;
-        LP_MEMORY_BYTES.fetch_add(size_bytes, Ordering::Relaxed);
-        
         let mut data = vec![0.0; size * size];
         for i in 0..size {
             data[i * size + i] = 1.0;
@@ -96,9 +80,6 @@ impl Matrix {
             assert_eq!(row.len(), n_cols, "All rows must have same length");
             data.extend(row);
         }
-        
-        let size_bytes = (n_rows * n_cols * std::mem::size_of::<f64>()) as u64;
-        LP_MEMORY_BYTES.fetch_add(size_bytes, Ordering::Relaxed);
         
         Self {
             rows: n_rows,
@@ -252,32 +233,16 @@ impl Matrix {
     pub fn frobenius_norm(&self) -> f64 {
         self.data.iter().map(|x| x * x).sum::<f64>().sqrt()
     }
-    
-    /// Get memory usage of this matrix in bytes
-    pub fn memory_bytes(&self) -> u64 {
-        (self.data.len() * std::mem::size_of::<f64>()) as u64
-    }
 }
 
-// Manual Clone implementation to track memory on copy
+// Derive Clone since we're not tracking memory globally anymore
 impl Clone for Matrix {
     fn clone(&self) -> Self {
-        let size_bytes = (self.data.len() * std::mem::size_of::<f64>()) as u64;
-        LP_MEMORY_BYTES.fetch_add(size_bytes, Ordering::Relaxed);
-        
         Self {
             rows: self.rows,
             cols: self.cols,
             data: self.data.clone(),
         }
-    }
-}
-
-// Track deallocation
-impl Drop for Matrix {
-    fn drop(&mut self) {
-        let size_bytes = (self.data.len() * std::mem::size_of::<f64>()) as u64;
-        LP_MEMORY_BYTES.fetch_sub(size_bytes, Ordering::Relaxed);
     }
 }
 
@@ -371,27 +336,22 @@ mod tests {
     
     #[test]
     fn test_memory_tracking() {
-        // Reset memory counter
-        reset_lp_memory();
-        assert_eq!(get_lp_memory_bytes(), 0);
-        
-        // Create a matrix and check memory increased
+        // Test instance-based memory tracking
         let m1 = Matrix::zeros(10, 10);
-        let expected_bytes = (100 * std::mem::size_of::<f64>()) as u64;
-        assert_eq!(get_lp_memory_bytes(), expected_bytes);
-        assert!((get_lp_memory_mb() - (expected_bytes as f64 / 1024.0 / 1024.0)).abs() < 1e-9);
+        let expected_bytes = 100 * std::mem::size_of::<f64>();
+        let expected_mb = expected_bytes as f64 / (1024.0 * 1024.0);
         
-        // Clone and check memory doubled
+        assert_eq!(m1.memory_bytes(), expected_bytes);
+        assert!((m1.memory_mb() - expected_mb).abs() < 1e-9);
+        
+        // Clone and check both have same size
         let m2 = m1.clone();
-        assert_eq!(get_lp_memory_bytes(), 2 * expected_bytes);
+        assert_eq!(m2.memory_bytes(), expected_bytes);
+        assert_eq!(m1.memory_bytes(), expected_bytes);
         
-        // Drop one and check memory halved
-        drop(m1);
-        assert_eq!(get_lp_memory_bytes(), expected_bytes);
-        
-        // Drop the other and check memory is zero
-        drop(m2);
-        assert_eq!(get_lp_memory_bytes(), 0);
+        // Different sized matrix
+        let m3 = Matrix::zeros(5, 20);
+        assert_eq!(m3.memory_bytes(), expected_bytes); // Same total size
     }
 
     #[test]
