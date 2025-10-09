@@ -61,6 +61,17 @@ pub fn search_with_timeout<M: Mode>(
 }
 
 /// Perform search with timeout and memory limit support.
+///
+/// **LP Solver Integration:**
+/// Before starting CSP search, this function automatically:
+/// 1. Extracts linear constraints (FloatLinEq, FloatLinLe) from the propagator set
+/// 2. Checks if LP solving is suitable (requires ≥2 constraints AND ≥2 variables)
+/// 3. If suitable, solves the LP relaxation at the root node
+/// 4. Tightens variable domains based on the LP solution
+/// 5. Returns infeasible immediately if LP detects inconsistency
+///
+/// This happens **only once** at the root node, not during branch-and-bound search,
+/// to avoid performance overhead. Non-linear problems are unaffected (zero overhead).
 #[doc(hidden)]
 pub fn search_with_timeout_and_memory<M: Mode>(
     vars: Vars, 
@@ -69,6 +80,33 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     timeout: Option<std::time::Duration>,
     memory_limit_mb: Option<u64>
 ) -> Search<M> {
+    // ===== LP SOLVER INTEGRATION (Root Node Only) =====
+    // Try LP solving at root node if suitable linear system exists
+    let (mut vars, props) = (vars, props);
+    {
+        let linear_system = props.extract_linear_system();
+        if linear_system.is_suitable_for_lp(&vars) {
+            // Convert to LP problem and solve
+            let lp_problem = linear_system.to_lp_problem(&vars);
+            
+            if let Ok(solution) = crate::lpsolver::solve(&lp_problem) {
+                if solution.status == crate::lpsolver::LpStatus::Optimal {
+                    // Apply LP solution to tighten variable domains
+                    use crate::variables::views::Context;
+                    let mut events = Vec::new();
+                    let mut ctx = Context::new(&mut vars, &mut events);
+                    
+                    // Apply LP tightening - if it fails, the problem is infeasible
+                    if crate::lpsolver::apply_lp_solution(&linear_system, &solution, &mut ctx).is_none() {
+                        return Search::Done(None);
+                    }
+                    // LP tightening successful, affected variables are now in events
+                }
+            }
+        }
+    }
+    // ===== End LP Integration =====
+
     // Schedule all propagators during initial propagation step
     let agenda = Agenda::with_props(props.get_prop_ids_iter());
 
