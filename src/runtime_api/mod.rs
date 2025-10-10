@@ -301,8 +301,90 @@ fn extract_lp_constraint(kind: &ConstraintKind) -> Option<LinearConstraint> {
             
             Some(LinearConstraint::new(coeffs, vars, relation, rhs))
         }
-        // Boolean combinations (And, Or, Not) are not linear constraints
-        _ => None,
+        
+        // Handle LinearInt constraints (already converted from expressions)
+        ConstraintKind::LinearInt { coeffs, vars, op, constant } => {
+            let relation = match op {
+                ComparisonOp::Eq => ConstraintRelation::Equality,
+                ComparisonOp::Le => ConstraintRelation::LessOrEqual,
+                ComparisonOp::Ge => ConstraintRelation::GreaterOrEqual,
+                ComparisonOp::Lt | ComparisonOp::Gt | ComparisonOp::Ne => {
+                    return None;  // Strict inequalities not supported by LP
+                }
+            };
+            
+            // Convert i32 coefficients to f64
+            let f_coeffs: Vec<f64> = coeffs.iter().map(|&c| c as f64).collect();
+            Some(LinearConstraint::new(f_coeffs, vars.clone(), relation, *constant as f64))
+        }
+        
+        // Handle LinearFloat constraints (already converted from expressions)
+        ConstraintKind::LinearFloat { coeffs, vars, op, constant } => {
+            let relation = match op {
+                ComparisonOp::Eq => ConstraintRelation::Equality,
+                ComparisonOp::Le => ConstraintRelation::LessOrEqual,
+                ComparisonOp::Ge => ConstraintRelation::GreaterOrEqual,
+                ComparisonOp::Lt | ComparisonOp::Gt | ComparisonOp::Ne => {
+                    return None;  // Strict inequalities not supported by LP
+                }
+            };
+            
+            Some(LinearConstraint::new(coeffs.clone(), vars.clone(), relation, *constant))
+        }
+        
+        // Handle Sum constraint: sum(vars) = result
+        // This can be rewritten as: sum(vars) - result = 0
+        ConstraintKind::Sum { vars, result } => {
+            let mut coeffs = vec![1.0; vars.len()];
+            let mut all_vars = vars.clone();
+            
+            // Add result variable with coefficient -1
+            all_vars.push(*result);
+            coeffs.push(-1.0);
+            
+            Some(LinearConstraint::new(
+                coeffs,
+                all_vars,
+                ConstraintRelation::Equality,
+                0.0
+            ))
+        }
+        
+        // Minimum: result = min(vars)
+        // This could be modeled as: result <= vars[i] for all i, and at least one result == vars[i]
+        // But this requires auxiliary constraints or disjunctions, which LP doesn't handle well
+        // Better to leave it to the CSP propagator
+        ConstraintKind::Minimum { .. } => None,
+        
+        // Maximum: result = max(vars)  
+        // Similar to Minimum, needs disjunctions
+        ConstraintKind::Maximum { .. } => None,
+        
+        // Reified constraints involve boolean variables and would need big-M formulations
+        // which require variable bounds. Skip for now.
+        ConstraintKind::ReifiedBinary { .. } => None,
+        ConstraintKind::ReifiedLinearInt { .. } => None,
+        ConstraintKind::ReifiedLinearFloat { .. } => None,
+        
+        // Boolean logic operations
+        ConstraintKind::BoolAnd { .. } => None,
+        ConstraintKind::BoolOr { .. } => None,
+        ConstraintKind::BoolNot { .. } => None,
+        ConstraintKind::BoolXor { .. } => None,
+        ConstraintKind::BoolImplies { .. } => None,
+        
+        // Global constraints - not suitable for LP
+        ConstraintKind::AllDifferent { .. } => None,
+        ConstraintKind::AllEqual { .. } => None,
+        ConstraintKind::Element { .. } => None,
+        ConstraintKind::Table { .. } => None,
+        ConstraintKind::GlobalCardinality { .. } => None,
+        ConstraintKind::Cumulative { .. } => None,
+        
+        // Boolean combinations
+        ConstraintKind::And(..) => None,
+        ConstraintKind::Or(..) => None,
+        ConstraintKind::Not(..) => None,
     }
 }
 

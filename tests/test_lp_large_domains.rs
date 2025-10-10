@@ -145,7 +145,7 @@ fn test_large_domain_float_linear_equality() {
     let z = m.float(0.0, 10000.0);
     
     // x + 2y + 3z = 7500
-    m.float_lin_eq(&[1.0, 2.0, 3.0], &[x, y, z], 7500.0);
+    m.lin_eq(&[1.0, 2.0, 3.0], &[x, y, z], 7500.0);
     
     // x >= 500
     m.new(x.ge(500.0));

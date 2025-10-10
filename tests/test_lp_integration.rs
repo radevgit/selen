@@ -14,7 +14,7 @@ fn test_lp_integration_simple_linear() {
     let y = model.float(3.0, 20.0);
     
     // x + y <= 10
-    model.float_lin_le(&[1.0, 1.0], &[x, y], 10.0);
+    model.lin_le(&[1.0, 1.0], &[x, y], 10.0);
     
     // Any feasible solution will work - LP should tighten bounds
     let result = model.solve();
@@ -43,7 +43,7 @@ fn test_lp_integration_infeasible() {
     let y = model.float(10.0, 20.0);
     
     // x + y <= 5
-    model.float_lin_le(&[1.0, 1.0], &[x, y], 5.0);
+    model.lin_le(&[1.0, 1.0], &[x, y], 5.0);
     
     // Should find no solution
     let result = model.solve();
@@ -61,7 +61,7 @@ fn test_lp_integration_int_linear() {
     let y = model.int(1, 10);
     
     // 2x + 3y <= 20
-    model.int_lin_le(&[2, 3], &[x, y], 20);
+    model.lin_le(&[2, 3], &[x, y], 20);
     
     // Should find a solution
     let result = model.solve();
