@@ -4,12 +4,19 @@
 [![Documentation](https://docs.rs/selen/badge.svg)](https://docs.rs/selen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A Constraint Satisfaction Problem (CSP) solver library written in Rust with zero external dependencies. 
+A Constraint Satisfaction Problem (CSP) solver library written in Rust with zero external dependencies, featuring an integrated LP solver for linear optimization problems.
 
 
 ## Overview
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
+
+**Key Features**:
+- 🚀 **Zero dependencies** - Pure Rust implementation
+- 🔧 **Generic API** - Works with both integers and floats
+- 📊 **LP Solver Integration** - Automatic linear programming optimization
+- 🎯 **Constraint Propagation** - Efficient domain reduction
+- 🔄 **Hybrid Solving** - Combines CP and LP techniques
 
 
 **Variable Types**: `int`, `float`, mixed constraints
@@ -61,20 +68,22 @@ m.new(y.sub(x).ge(0));                 // y - x >= 0
 m.new(x.mul(y).eq(12));                // x * y == 12
 m.new(z.div(y).ne(0));                 // z / y != 0
 
-// Linear constraints (weighted sums)
-m.int_lin_eq(&[2, 3], &[x, y], 10);    // 2x + 3y == 10
-m.int_lin_le(&[1, -1], &[x, y], 5);    // x - y <= 5
-m.int_lin_ne(&[2, 1], &[x, y], 8);     // 2x + y != 8
-m.float_lin_eq(&[1.5, 2.0], &[x, y], 7.5);  // 1.5x + 2.0y == 7.5
-m.float_lin_le(&[0.5, 1.0], &[x, y], 3.0);  // 0.5x + y <= 3.0
+// Linear constraints (weighted sums) - generic for int and float
+m.lin_eq(&[2, 3], &[x, y], 10);        // 2x + 3y == 10
+m.lin_le(&[1, -1], &[x, y], 5);        // x - y <= 5
+m.lin_ne(&[2, 1], &[x, y], 8);         // 2x + y != 8
+m.lin_eq(&[1.5, 2.0], &[x, y], 7.5);   // 1.5x + 2.0y == 7.5 (works with floats)
+m.lin_le(&[0.5, 1.0], &[x, y], 3.0);   // 0.5x + y <= 3.0 (works with floats)
 m.bool_lin_eq(&[1, 1, 1], &[a, b, c], 2);   // a + b + c == 2
 
-// Reified constraints (with boolean result)
-m.int_eq_reif(x, y, b);                // b ↔ (x == y)
-m.int_lt_reif(x, y, b);                // b ↔ (x < y)
-m.int_le_reif(x, y, b);                // b ↔ (x <= y)
-m.float_eq_reif(x, y, b);              // b ↔ (x == y) for floats
-m.int_lin_eq_reif(&[2, 1], &[x, y], 5, b);  // b ↔ (2x + y == 5)
+// Reified constraints (with boolean result) - generic for int and float
+m.eq_reif(x, y, b);                    // b ↔ (x == y)
+m.ne_reif(x, y, b);                    // b ↔ (x != y)
+m.lt_reif(x, y, b);                    // b ↔ (x < y)
+m.le_reif(x, y, b);                    // b ↔ (x <= y)
+m.gt_reif(x, y, b);                    // b ↔ (x > y)
+m.ge_reif(x, y, b);                    // b ↔ (x >= y)
+m.lin_eq_reif(&[2, 1], &[x, y], 5, b); // b ↔ (2x + y == 5)
 
 // Type conversion constraints
 m.int2float(int_var, float_var);       // float_var = int_var (as float)
@@ -91,9 +100,29 @@ m.array_float_minimum(&array)?;                 // minimum of array (floats)
 m.array_float_maximum(&array)?;                 // maximum of array (floats)
 ```
 
+**Optimization**
+
+The solver automatically uses LP (Linear Programming) techniques for linear constraints with optimization objectives:
+
+```rust
+let mut m = Model::default();
+let x = m.float(0.0, 1000.0);
+let y = m.float(0.0, 1000.0);
+
+// Linear constraints
+m.lin_le(&[1.0, 1.0], &[x, y], 100.0);  // x + y <= 100
+m.lin_le(&[2.0, 1.0], &[x, y], 150.0);  // 2x + y <= 150
+
+// Maximize objective
+let solution = m.maximize(x).expect("Should find optimal solution");
+println!("Optimal x: {:?}", solution[x]);
+```
+
+For problems with large domains (±1e6) and linear constraints, the LP solver provides dramatic performance improvements (60s+ → <1s).
+
 **FlatZinc/MiniZinc Support**
 
-For FlatZinc `.fzn` file support, use the separate [Zelen](https://github.com/radevgit/zelen) crate.
+For FlatZinc `.fzn` file support, use the separate [Zelen](https://github.com/radevgit/zelen) crate. Note: FlatZinc exports should use the new generic API (`lin_eq` instead of `float_lin_eq`). See [Migration Guide](docs/FLATZINC_MIGRATION.md).
 
 ## Installation
 
@@ -101,7 +130,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-selen = "0.11"
+selen = "0.12"
 ```
 
 ## Examples
@@ -131,35 +160,11 @@ Puzzle:                                 Solution:
 
 ```
 
-### Core Problems
 ```bash
 cargo run --release --example sudoku                 # Classic 9x9 Sudoku solver
 cargo run --release --example n_queens               # N-Queens backtracking
 cargo run --release --example send_more_money        # Cryptarithmetic puzzle
-cargo run --release --example graph_coloring         # Graph constraint problems
 cargo run --release --example zebra_puzzle           # Logic puzzle solving
-```
-
-### Constraint Types
-```bash
-cargo run --release --example constraint_global      # AllEqual, Count, AllDiff
-cargo run --release --example constraint_element     # Element constraint usage
-cargo run --release --example constraint_table       # Table constraints
-cargo run --release --example constraint_boolean     # Boolean arrays and logic
-```
-
-### Advanced Features
-```bash
-cargo run --release --example advanced_runtime_api   # Dynamic constraint building
-cargo run --release --example advanced_memory_limits # Memory management demo
-cargo run --release --example advanced_timeout       # Timeout handling
-```
-
-### Real Applications
-```bash
-cargo run --release --example app_manufacturing      # Industrial optimization
-cargo run --release --example app_portfolio          # Financial modeling
-cargo run --release --example app_resource_allocation # Resource planning
 ```
 
 ### Basic Usage

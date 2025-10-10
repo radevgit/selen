@@ -11,6 +11,19 @@
 //! - LU factorization for basis updates
 //! - Dense matrix storage (suitable for ~100 variables)
 
+/// Global debug flag for LP solver - set to false to disable all LP solver debug output
+pub(crate) const LP_SOLVER_DEBUG: bool = false;
+
+/// Macro for conditional debug printing
+#[macro_export]
+macro_rules! lp_debug {
+    ($($arg:tt)*) => {
+        if $crate::lpsolver::LP_SOLVER_DEBUG {
+            eprintln!($($arg)*);
+        }
+    };
+}
+
 pub mod types;
 pub mod matrix;
 pub mod lu;

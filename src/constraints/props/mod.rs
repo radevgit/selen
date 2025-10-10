@@ -136,36 +136,77 @@ impl Propagators {
     /// ```
     pub fn extract_linear_system(&self) -> crate::lpsolver::LinearConstraintSystem {
         use crate::lpsolver::{LinearConstraint, LinearConstraintSystem};
+        use crate::variables::VarId;
+        use std::collections::HashMap;
         
         let mut system = LinearConstraintSystem::new();
         
-        // Iterate through all registered propagators and access state directly
-        // We access self.state directly to get the concrete types
+        // Phase 1: Build map of derived variables to their linear expressions
+        // e.g., sum = x + y  stores  sum -> ([(x, 1.0), (y, 1.0)], 0.0)
+        let mut derived_vars: HashMap<VarId, (Vec<(VarId, f64)>, f64)> = HashMap::new();
+        
+        // Phase 1: Extract direct constraints and build derived variable map
         for prop_rc in &self.state {
             let prop_box: &Box<dyn Prune> = prop_rc.as_ref();
             let prop_ref: &dyn Prune = prop_box.as_ref();
             
-            // Try to downcast to each linear constraint type
-            // Note: This requires Prune to have Any as supertrait
             if let Some(eq) = (prop_ref as &dyn std::any::Any).downcast_ref::<linear::FloatLinEq>() {
-                // Extract FloatLinEq: sum(coeffs * vars) = constant
+                // Direct linear equality constraint
                 let constraint = LinearConstraint::equality(
                     eq.coefficients().to_vec(),
                     eq.variables().to_vec(),
                     eq.constant(),
                 );
                 system.add_constraint(constraint);
+                
             } else if let Some(le) = (prop_ref as &dyn std::any::Any).downcast_ref::<linear::FloatLinLe>() {
-                // Extract FloatLinLe: sum(coeffs * vars) <= constant
+                // Direct linear inequality constraint
                 let constraint = LinearConstraint::less_or_equal(
                     le.coefficients().to_vec(),
                     le.variables().to_vec(),
                     le.constant(),
                 );
                 system.add_constraint(constraint);
+                
+            } else if let Some(add) = (prop_ref as &dyn std::any::Any).downcast_ref::<add::Add<VarId, VarId>>() {
+                // Add: x + y = s (derived variable definition)
+                // Store: s -> ([(x, 1.0), (y, 1.0)], 0.0)
+                let x = *add.x();
+                let y = *add.y();
+                let s = add.s();
+                eprintln!("LP EXTRACTION: Found Add constraint: {:?} + {:?} = {:?}", x, y, s);
+                derived_vars.insert(s, (vec![(x, 1.0), (y, 1.0)], 0.0));
+                
+                // Also add as linear equality for LP: x + y - s = 0
+                let constraint = LinearConstraint::equality(
+                    vec![1.0, 1.0, -1.0],
+                    vec![x, y, s],
+                    0.0,
+                );
+                system.add_constraint(constraint);
             }
-            // Note: FloatLinGe doesn't exist - use FloatLinLe with negated coefficients
-            // Other propagator types are not linear constraints - skip them
+        }
+        
+        // Phase 2: Extract LessThanOrEquals constraints: x <= y becomes x - y <= 0
+        // The LP solver will handle variable bounds from domains automatically
+        for prop_rc in &self.state {
+            let prop_box: &Box<dyn Prune> = prop_rc.as_ref();
+            let prop_ref: &dyn Prune = prop_box.as_ref();
+            
+            if let Some(leq) = (prop_ref as &dyn std::any::Any).downcast_ref::<leq::LessThanOrEquals<VarId, VarId>>() {
+                let x_var = *leq.x();
+                let y_var = *leq.y();
+                
+                eprintln!("LP EXTRACTION: Found LessThanOrEquals constraint: {:?} <= {:?}", x_var, y_var);
+                
+                // x <= y  →  x - y <= 0  →  1.0*x + (-1.0)*y <= 0
+                let constraint = LinearConstraint::less_or_equal(
+                    vec![1.0, -1.0],
+                    vec![x_var, y_var],
+                    0.0,
+                );
+                system.add_constraint(constraint);
+            }
         }
         
         system
@@ -1811,7 +1852,7 @@ impl Propagators {
 
 /// Propagator handle that is not bound to a specific memory location.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct PropId(usize);
+pub struct PropId(pub usize);
 
 impl Index<PropId> for Vec<Box<dyn Prune>> {
     type Output = Box<dyn Prune>;

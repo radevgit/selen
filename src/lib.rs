@@ -36,30 +36,63 @@
 //! - **Multiple floats**: `m.floats(n, min, max)` - create n float variables with same bounds  
 //! - **Multiple booleans**: `m.bools(n)` - create n boolean variables
 //!
-//! ## Constraint Types
+//! ## Constraint API
 //!
-//! - **Arithmetic**: `+`, `-`, `*`, `/`, `%`, `abs()`, `min()`, `max()`, `sum()`
-//! - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=`
-//! - **Boolean logic**: `and()`, `or()`, `not()` - supports array and variadic syntax
-//! - **Global constraints**: `alldiff()`, `allequal()`, `element()`
+//! ```rust
+//! use selen::prelude::*;
+//! # fn main() {
+//! let mut m = Model::default();
+//! let (x, y, z) = (m.int(0, 10), m.int(0, 10), m.int(0, 10));
 //!
-//! 
-//! ## Post a mathematical constraint to the model
-//! 
-//! post() - Post single contrraint to the model. 
-//! postall() -  Post multiple constraints to the model in a single call.
-//! Accepts comma-separated constraint expressions, each following the same patterns as `post!`
+//! // Comparison constraints (via runtime API)
+//! m.new(x.lt(y));                        // x < y
+//! m.new(y.le(z));                        // y <= z
+//! m.new(z.gt(5));                        // z > 5
+//! m.new(x.eq(10));                       // x == 10
+//! m.new(x.ne(y));                        // x != y
 //!
-//! Supported constraint patterns:
-//! **Basic comparisons**: `var op var`, `var op literal`, `var op (expr)`, `var op int(value)`, `var op float(value)`
-//! **Arithmetic**: `var op var +/- var`, `var op var */÷ var`, `var op var % divisor`
-//! **Functions**: `func(var) op target` where `func` is `abs`, `min`, `max`, `sum` 
-//! **Boolean**: `and(vars...)`, `or(vars...)`, `not(var)` - supports arrays `and([a,b,c])` and variadic `and(a,b,c,d)`
-//! **Global**: `alldiff([vars...])`, `allequal([vars...])`, `element(array, index, value)`
-//! **Multiplication with constants**: `target op var * int(value)`, `target op var * float(value)`
-//! 
-//! Where `op` is any of: `==`, `!=`, `<`, `<=`, `>`, `>=`
-//! 
+//! // Arithmetic operations (return new variables)
+//! let sum = m.add(x, y);                 // sum = x + y
+//! let diff = m.sub(x, y);                // diff = x - y
+//! let product = m.mul(x, y);             // product = x * y
+//! let quotient = m.div(x, y);            // quotient = x / y
+//! let absolute = m.abs(x);               // absolute = |x|
+//!
+//! // Aggregate operations
+//! let minimum = m.min(&[x, y, z]).unwrap();  // minimum of variables
+//! let maximum = m.max(&[x, y, z]).unwrap();  // maximum of variables
+//! let total = m.sum(&[x, y, z]);             // sum of variables
+//!
+//! // Global constraints
+//! m.alldiff(&[x, y, z]);                 // all variables different
+//! m.alleq(&[x, y, z]);                   // all variables equal
+//!
+//! // Boolean operations (return boolean variables)
+//! let (a, b) = (m.bool(), m.bool());
+//! let and_result = m.bool_and(&[a, b]);  // a AND b
+//! let or_result = m.bool_or(&[a, b]);    // a OR b
+//! let not_result = m.bool_not(a);        // NOT a
+//!
+//! // Fluent expression building
+//! m.new(x.add(y).le(z));                 // x + y <= z
+//! m.new(y.sub(x).ge(0));                 // y - x >= 0
+//!
+//! // Linear constraints (weighted sums) - generic for int and float
+//! m.lin_eq(&[2, 3], &[x, y], 10);        // 2x + 3y == 10
+//! m.lin_le(&[1, -1], &[x, y], 5);        // x - y <= 5
+//! m.lin_ne(&[2, 1], &[x, y], 8);         // 2x + y != 8
+//!
+//! // Reified constraints (with boolean result) - generic for int and float
+//! let b = m.bool();
+//! m.eq_reif(x, y, b);                    // b ↔ (x == y)
+//! m.ne_reif(x, y, b);                    // b ↔ (x != y)
+//! m.lt_reif(x, y, b);                    // b ↔ (x < y)
+//! m.le_reif(x, y, b);                    // b ↔ (x <= y)
+//! m.gt_reif(x, y, b);                    // b ↔ (x > y)
+//! m.ge_reif(x, y, b);                    // b ↔ (x >= y)
+//! # }
+//! ```
+//!
 //! 
 //!
 //! ## Example 1: Basic Integer Problem
@@ -90,8 +123,8 @@
 //! let cost = m.float(0.0, 1000.0);  // Total cost
 //!
 //! // Use constraint API methods
-//! m.float_lin_eq(&vec![1.0, -12.5], &vec![cost, items], 0.0);  // cost = items * 12.5
-//! m.new(cost.le(500.0));                                        // Budget constraint
+//! m.lin_eq(&vec![1.0, -12.5], &vec![cost, items], 0.0);  // cost = items * 12.5
+//! m.new(cost.le(500.0));                                  // Budget constraint
 //!
 //! // Maximize number of items within budget
 //! if let Ok(solution) = m.maximize(items) {

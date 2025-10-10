@@ -45,26 +45,36 @@ impl PrimalSimplex {
     ///
     /// Assumes problem is in standard form with slack variables already added
     pub fn solve(&mut self, problem: &LpProblem) -> Result<LpSolution, LpError> {
+        lp_debug!("SIMPLEX: Starting solve for problem with {} vars, {} constraints", 
+            problem.n_vars, problem.n_constraints);
+        
         // Start timing for timeout checking
         let start_time = std::time::Instant::now();
         
         // Validate problem
         problem.validate()?;
+        lp_debug!("SIMPLEX: Problem validated");
         
         // Convert inequality constraints to standard form (Ax = b) by adding slacks
         // Also handles variable bounds by substitution
+        lp_debug!("SIMPLEX: Converting to standard form...");
         let (a_eq, b_eq, c_extended, _n_total) = self.to_standard_form(problem);
+        lp_debug!("SIMPLEX: Standard form has {} rows, {} cols", a_eq.rows, a_eq.cols);
         
         // Phase I: Find initial feasible basis
+        lp_debug!("SIMPLEX: Starting Phase I...");
         let phase1_start = std::time::Instant::now();
         let (mut basis, phase1_iterations) = self.phase_one(&a_eq, &b_eq, start_time)?;
         let phase1_time_ms = phase1_start.elapsed().as_secs_f64() * 1000.0;
+        lp_debug!("SIMPLEX: Phase I completed in {:.2}ms with {} iterations", phase1_time_ms, phase1_iterations);
         
         // Phase II: Optimize from feasible basis
         // Note: Pass problem.n_vars (original variable count) so solution extraction works correctly
+        lp_debug!("SIMPLEX: Starting Phase II...");
         let phase2_start = std::time::Instant::now();
         let mut solution = self.phase_two(&a_eq, &c_extended, &b_eq, &mut basis, problem.n_vars, start_time, phase1_iterations)?;
         let phase2_time_ms = phase2_start.elapsed().as_secs_f64() * 1000.0;
+        lp_debug!("SIMPLEX: Phase II completed in {:.2}ms", phase2_time_ms);
         
         // Calculate phase2 iterations from total iterations
         let phase2_iterations = solution.iterations.saturating_sub(phase1_iterations);
@@ -174,19 +184,25 @@ impl PrimalSimplex {
     fn phase_one(&mut self, a: &Matrix, b: &[f64], start_time: std::time::Instant) -> Result<(Basis, usize), LpError> {
         let m = a.rows;
         let n = a.cols;
+        lp_debug!("SIMPLEX Phase I: m={}, n={}", m, n);
         
         // First, try the identity basis (slack variables)
         let mut basis = Basis::initial(n, m);
+        lp_debug!("SIMPLEX Phase I: Created initial basis");
         
         // Factorize initial basis
         basis.factorize(a, &self.config)?;
+        lp_debug!("SIMPLEX Phase I: Factorized initial basis");
         
         // Check if initial basis is feasible
         let x = basis.solve_basic(b)?;
+        lp_debug!("SIMPLEX Phase I: Solved for basic solution, checking feasibility...");
         
         if basis.is_primal_feasible(&x, self.config.feasibility_tol) {
+            lp_debug!("SIMPLEX Phase I: Initial basis is feasible, skipping Phase I");
             return Ok((basis, 0)); // No Phase I iterations needed
         }
+        lp_debug!("SIMPLEX Phase I: Initial basis not feasible, creating augmented problem...");
         
         // If not feasible (b has negative components or constraints incompatible),
         // we need to use artificial variables and solve the auxiliary problem:
@@ -208,26 +224,32 @@ impl PrimalSimplex {
             }
         }
         
-        // Add identity matrix for artificial variables
-        for i in 0..m {
-            a_augmented.set(i, n + i, 1.0);
-        }
-        
         // Adjust RHS to be non-negative by flipping rows if needed
+        // This is necessary because artificial variables must start non-negative
+        // When b[i] < 0, multiply constraint i by -1 to get b[i] > 0
         let mut b_augmented = b.to_vec();
+        
         for i in 0..m {
             if b_augmented[i] < 0.0 {
-                // Multiply row by -1
+                // Multiply row by -1 (flip the constraint)
                 b_augmented[i] = -b_augmented[i];
-                for j in 0..n_augmented {
+                for j in 0..n {
                     a_augmented.set(i, j, -a_augmented.get(i, j));
                 }
             }
         }
         
+        // Add identity matrix for artificial variables AFTER flipping
+        // This ensures artificial variables appear with positive coefficients
+        for i in 0..m {
+            a_augmented.set(i, n + i, 1.0);
+        }
+        
         // Initial basis: artificial variables (last m columns)
+        lp_debug!("SIMPLEX Phase I: Creating augmented basis with {} vars", n_augmented);
         let mut phase1_basis = Basis::initial(n_augmented, m);
         phase1_basis.factorize(&a_augmented, &self.config)?;
+        lp_debug!("SIMPLEX Phase I: Factorized augmented basis");
         
         // Objective for Phase I: minimize sum of artificial variables
         // This means cost vector is [0, 0, ..., 0, 1, 1, ..., 1]
@@ -238,10 +260,18 @@ impl PrimalSimplex {
         }
         
         // Solve Phase I problem using simplex iterations
+        lp_debug!("SIMPLEX Phase I: Starting simplex iterations (max {})", self.config.max_iterations);
         let max_iter = self.config.max_iterations;
         for phase1_iterations in 0..max_iter {
-            // Check timeout and memory every 100 iterations (not every iteration for performance)
-            if phase1_iterations % 100 == 0 {
+            if phase1_iterations < 10 {
+                lp_debug!("SIMPLEX Phase I: === Starting iteration {} ===", phase1_iterations);
+            }
+            
+            // Check timeout and memory every 10 iterations for better responsiveness
+            if phase1_iterations % 10 == 0 {
+                if phase1_iterations > 0 {
+                    lp_debug!("SIMPLEX Phase I: Iteration {} (checking timeout/memory)", phase1_iterations);
+                }
                 if let Some(timeout_ms) = self.config.timeout_ms {
                     let elapsed = start_time.elapsed().as_millis() as u64;
                     if elapsed > timeout_ms {
@@ -264,9 +294,19 @@ impl PrimalSimplex {
             }
             
             // Compute reduced costs
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Computing reduced costs for iteration 0");
+            }
             let reduced_costs = phase1_basis.compute_reduced_costs(&a_augmented, &c_phase1)?;
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Computed reduced costs, finding entering variable");
+                lp_debug!("SIMPLEX Phase I: reduced_costs.len() = {}", reduced_costs.len());
+            }
             
             // Find entering variable (most negative reduced cost for minimization)
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Starting filter+min_by search");
+            }
             let entering = if let Some(idx) = reduced_costs
                 .iter()
                 .enumerate()
@@ -274,11 +314,17 @@ impl PrimalSimplex {
                 .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
                 .map(|(idx, _)| idx)
             {
+                if phase1_iterations == 0 {
+                    lp_debug!("SIMPLEX Phase I: Found entering variable: {}", idx);
+                }
                 idx
             } else {
                 // No improving direction found - check if we have a feasible solution
                 let x_basic = phase1_basis.solve_basic(&b_augmented)?;
                 let obj = phase1_basis.objective_value(&x_basic, &c_phase1);
+                
+                lp_debug!("SIMPLEX Phase I: No improving direction, obj={}, feasibility_tol={}", 
+                          obj, self.config.feasibility_tol);
                 
                 if obj < self.config.feasibility_tol {
                     // Found feasible solution for original problem
@@ -334,45 +380,140 @@ impl PrimalSimplex {
                         }
                         
                         // Could not construct a valid basis
+                        lp_debug!("SIMPLEX Phase I: ERROR - Could not construct valid basis from Phase I");
                         return Err(LpError::NumericalInstability);
                     }
                 } else {
-                    // Phase I objective > 0 means original problem is infeasible
+                    // Phase I objective >= feasibility_tol means original problem is infeasible
+                    lp_debug!("SIMPLEX Phase I: ERROR - Phase I objective {} >= feasibility_tol {}, problem is infeasible",
+                              obj, self.config.feasibility_tol);
                     return Err(LpError::NumericalInstability);
                 }
             };
             
             // Compute search direction for entering variable
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Computing search direction for entering var {}", entering);
+            }
             let a_col = a_augmented.col(entering);
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Got column, solving with LU");
+            }
             let direction = phase1_basis.lu.as_ref()
                 .ok_or(LpError::NumericalInstability)?
                 .solve(&a_col)?;
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Solved for direction, getting basic solution");
+            }
             
             // Get current basic solution
             let x_basic = phase1_basis.solve_basic(&b_augmented)?;
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Got basic solution, finding leaving variable");
+            }
             
             // Find leaving variable using minimum ratio test
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: About to call find_leaving_variable");
+                lp_debug!("SIMPLEX Phase I: x_basic.len() = {}, direction.len() = {}", x_basic.len(), direction.len());
+            }
             let leaving_idx = phase1_basis.find_leaving_variable(
                 &x_basic,
                 &direction,
                 self.config.feasibility_tol,
             );
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: find_leaving_variable returned {:?}", leaving_idx);
+            }
             
             // Check for unboundedness (shouldn't happen in Phase I with proper setup)
             if leaving_idx.is_none() {
+                lp_debug!("SIMPLEX Phase I: ERROR at iteration {} - find_leaving_variable returned None (unbounded direction)", 
+                          phase1_iterations);
+                lp_debug!("SIMPLEX Phase I: entering={}, direction={:?}", entering, &direction[..direction.len().min(10)]);
+                lp_debug!("SIMPLEX Phase I: x_basic={:?}", &x_basic[..x_basic.len().min(10)]);
+                lp_debug!("SIMPLEX Phase I: basic vars={:?}", phase1_basis.basic);
+                lp_debug!("SIMPLEX Phase I: For i where d_i > 0: checking ratio x_i/d_i");
+                for (i, (&x_i, &d_i)) in x_basic.iter().zip(direction.iter()).enumerate() {
+                    if d_i > self.config.feasibility_tol {
+                        lp_debug!("SIMPLEX Phase I:   i={}, x_i={}, d_i={}, ratio={}", i, x_i, d_i, x_i/d_i);
+                    }
+                }
                 return Err(LpError::NumericalInstability);
+            }
+            
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Finding entering_nonbasic_idx for entering={}", entering);
             }
             
             // Perform basis swap
             let entering_nonbasic_idx = phase1_basis.nonbasic.iter()
-                .position(|&idx| idx == entering)
-                .ok_or(LpError::NumericalInstability)?;
+                .position(|&idx| idx == entering);
+            
+            if entering_nonbasic_idx.is_none() {
+                lp_debug!("SIMPLEX Phase I: ERROR at iteration {} - entering variable {} not found in nonbasic list!", 
+                          phase1_iterations, entering);
+                lp_debug!("SIMPLEX Phase I: nonbasic = {:?}", phase1_basis.nonbasic);
+                lp_debug!("SIMPLEX Phase I: basic = {:?}", phase1_basis.basic);
+                return Err(LpError::NumericalInstability);
+            }
+            let entering_nonbasic_idx = entering_nonbasic_idx.unwrap();
+            
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Found entering_nonbasic_idx={}, performing swap", entering_nonbasic_idx);
+            }
             
             phase1_basis.swap(entering_nonbasic_idx, leaving_idx.unwrap());
+            
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Swap complete, starting factorize");
+            }
+            
             phase1_basis.factorize(&a_augmented, &self.config)?;
+            
+            if phase1_iterations == 0 {
+                lp_debug!("SIMPLEX Phase I: Factorize complete, iteration 0 done");
+            }
+            
+            // Check if Phase I objective is zero (feasible solution found)
+            // even if reduced costs suggest further improvement
+            let x_basic_check = phase1_basis.solve_basic(&b_augmented)?;
+            let obj_check = phase1_basis.objective_value(&x_basic_check, &c_phase1);
+            
+            if obj_check < self.config.feasibility_tol {
+                lp_debug!("SIMPLEX Phase I: Feasible solution found at iteration {} (obj={})", 
+                          phase1_iterations, obj_check);
+                
+                // Extract basis for original problem
+                let original_basic: Vec<usize> = phase1_basis.basic
+                    .iter()
+                    .filter(|&&idx| idx < n)
+                    .copied()
+                    .collect();
+                
+                if original_basic.len() == m {
+                    let original_nonbasic: Vec<usize> = (0..n)
+                        .filter(|idx| !original_basic.contains(idx))
+                        .collect();
+                    
+                    let mut final_basis = Basis::from_indices(original_basic, original_nonbasic);
+                    final_basis.factorize(a, &self.config)?;
+                    return Ok((final_basis, phase1_iterations));
+                }
+            }
+            
+            // Log every iteration for first few, then every 10
+            if phase1_iterations < 7 || phase1_iterations % 10 == 0 {
+                lp_debug!("SIMPLEX Phase I: Completed iteration {}, obj={}", phase1_iterations, obj_check);
+                if phase1_iterations >= 3 && phase1_iterations <= 6 {
+                    lp_debug!("SIMPLEX Phase I: basis.basic = {:?}", phase1_basis.basic);
+                    lp_debug!("SIMPLEX Phase I: basis.nonbasic = {:?}", phase1_basis.nonbasic);
+                }
+            }
         }
         
         // Max iterations reached
+        lp_debug!("SIMPLEX Phase I: ERROR - Max iterations ({}) reached without finding solution", max_iter);
         Err(LpError::NumericalInstability)
     }
     

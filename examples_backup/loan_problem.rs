@@ -55,7 +55,7 @@ fn main() {
     
     // From FlatZinc: constraint float_lin_eq([1.0,-1.0],[I,X_INTRODUCED_1_],-1.0);
     // Meaning: 1.0*I + (-1.0)*X1 = -1.0  =>  I - X1 = -1.0  =>  X1 = I + 1
-    model.float_lin_eq(&[1.0, -1.0], &[i, x1], -1.0);
+    model.lin_eq(&[1.0, -1.0], &[i, x1], -1.0);
     println!("  1. X1 = I + 1  (convert interest to multiplier)");
     
     // From FlatZinc: constraint float_times(P,X_INTRODUCED_1_,X_INTRODUCED_2_);
@@ -64,7 +64,7 @@ fn main() {
     model.new(x2.eq(x2_calc));
     println!("  2. X2 = P * X1");    // From FlatZinc: constraint float_lin_eq([1.0,-1.0,1.0],[B1,X_INTRODUCED_2_,R],-0.0);
     // Meaning: 1.0*B1 + (-1.0)*X2 + 1.0*R = 0  =>  B1 = X2 - R
-    model.float_lin_eq(&[1.0, -1.0, 1.0], &[b1, x2, r], 0.0);
+    model.lin_eq(&[1.0, -1.0, 1.0], &[b1, x2, r], 0.0);
     println!("  3. B1 = X2 - R  (balance after Q1)");
     
     // From FlatZinc: constraint float_times(B1,X_INTRODUCED_1_,X_INTRODUCED_6_);
@@ -73,7 +73,7 @@ fn main() {
     println!("  4. X6 = B1 * X1");
     
     // From FlatZinc: constraint float_lin_eq([1.0,-1.0,1.0],[B2,X_INTRODUCED_6_,R],-0.0);
-    model.float_lin_eq(&[1.0, -1.0, 1.0], &[b2, x6, r], 0.0);
+    model.lin_eq(&[1.0, -1.0, 1.0], &[b2, x6, r], 0.0);
     println!("  5. B2 = X6 - R  (balance after Q2)");
     
     // From FlatZinc: constraint float_times(B2,X_INTRODUCED_1_,X_INTRODUCED_8_);
@@ -82,7 +82,7 @@ fn main() {
     println!("  6. X8 = B2 * X1");
     
     // From FlatZinc: constraint float_lin_eq([1.0,-1.0,1.0],[B3,X_INTRODUCED_8_,R],-0.0);
-    model.float_lin_eq(&[1.0, -1.0, 1.0], &[b3, x8, r], 0.0);
+    model.lin_eq(&[1.0, -1.0, 1.0], &[b3, x8, r], 0.0);
     println!("  7. B3 = X8 - R  (balance after Q3)");
     
     // From FlatZinc: constraint float_times(B3,X_INTRODUCED_1_,X_INTRODUCED_10_);
@@ -91,7 +91,7 @@ fn main() {
     println!("  8. X10 = B3 * X1");
     
     // From FlatZinc: constraint float_lin_eq([1.0,-1.0,1.0],[B4,X_INTRODUCED_10_,R],-0.0);
-    model.float_lin_eq(&[1.0, -1.0, 1.0], &[b4, x10, r], 0.0);
+    model.lin_eq(&[1.0, -1.0, 1.0], &[b4, x10, r], 0.0);
     println!("  9. B4 = X10 - R  (balance after Q4)\n");
     
     println!("Total: 9 constraints posted\n");

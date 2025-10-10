@@ -159,34 +159,18 @@ impl LinearConstraintSystem {
     /// Check if this system is suitable for LP solving
     /// 
     /// Returns true if:
-    /// - Has at least 3 constraints (otherwise propagation is fast enough)
-    /// - All variables are float type
-    /// - Variables have large domains (where LP excels)
-    pub fn is_suitable_for_lp(&self, vars: &Vars) -> bool {
-        // Need multiple constraints to justify LP overhead
-        if self.constraints.len() < 3 {
-            return false;
-        }
-        
-        // Check if variables have large domains
-        let mut has_large_domain = false;
-        for &var in &self.variables {
-            // Check if variable is float and has large domain
-            let (lower, upper) = extract_bounds(var, vars);
-            let domain_size = upper - lower;
-            
-            // Consider domain "large" if > 1000
-            if domain_size > 1000.0 {
-                has_large_domain = true;
-            }
-            
-            // If any variable has small discrete domain, propagation might be better
-            if domain_size < 10.0 {
-                return false;
-            }
-        }
-        
-        has_large_domain
+    /// - Has at least 1 linear constraint
+    /// - Has at least 2 variables (single variable is trivial)
+    /// 
+    /// LP is always beneficial for linear systems with multiple variables,
+    /// including:
+    /// - Pure float problems
+    /// - Mixed integer-float problems (LP relaxation provides bounds)
+    /// - Any domain size (LP handles both small and large domains efficiently)
+    pub fn is_suitable_for_lp(&self, _vars: &Vars) -> bool {
+        // Need at least one constraint and at least 2 variables
+        // Single variable problems are trivial and don't need LP
+        !self.constraints.is_empty() && self.variables.len() >= 2
     }
     
     /// Convert this system to an LpProblem for the LP solver
@@ -196,59 +180,118 @@ impl LinearConstraintSystem {
     /// 
     /// # Returns
     /// An LpProblem in standard form (maximize c^T x s.t. Ax ≤ b, l ≤ x ≤ u)
+    /// 
+    /// Note: Constants (variables with lower_bound == upper_bound) are substituted
+    /// into constraints and not included as LP variables.
     pub fn to_lp_problem(&self, vars: &Vars) -> LpProblem {
-        let n_vars = self.variables.len();
+        // Use the default LP tolerance for consistency with solver
+        let tolerance = crate::lpsolver::LpConfig::default().feasibility_tol;
+        
+        // Step 1: Identify constants and build mapping from system vars to LP vars
+        let mut var_to_lp_index: std::collections::HashMap<VarId, usize> = std::collections::HashMap::new();
+        let mut lp_index_to_var: Vec<VarId> = Vec::new();
+        let mut constants: std::collections::HashMap<VarId, f64> = std::collections::HashMap::new();
+        
+        for &var in &self.variables {
+            let (lower, upper) = extract_bounds(var, vars);
+            if (upper - lower).abs() < tolerance {
+                // This is a constant
+                constants.insert(var, lower);
+            } else {
+                // This is a decision variable
+                let lp_idx = lp_index_to_var.len();
+                var_to_lp_index.insert(var, lp_idx);
+                lp_index_to_var.push(var);
+            }
+        }
+        
+        let n_vars = lp_index_to_var.len();
         
         // Build objective vector (default to zero if no objective)
-        let mut c = if let Some(ref obj) = self.objective {
-            // Map objective coefficients to variable order
+        // Only include non-constant variables
+        let c = if let Some(ref obj) = self.objective {
+            // Map objective coefficients to LP variable order (excluding constants)
             let mut obj_vec = vec![0.0; n_vars];
-            for (i, &var) in self.variables.iter().enumerate() {
-                // Find this variable in objective
-                if i < obj.coefficients.len() {
-                    obj_vec[i] = obj.coefficients[i];
+            for (sys_idx, &var) in self.variables.iter().enumerate() {
+                if let Some(&lp_idx) = var_to_lp_index.get(&var) {
+                    if sys_idx < obj.coefficients.len() {
+                        obj_vec[lp_idx] = if obj.minimize {
+                            -obj.coefficients[sys_idx]
+                        } else {
+                            obj.coefficients[sys_idx]
+                        };
+                    }
                 }
             }
-            
-            // LP solver maximizes, so negate if we want to minimize
-            if obj.minimize {
-                obj_vec.iter().map(|&x| -x).collect()
-            } else {
-                obj_vec
-            }
+            obj_vec
         } else {
             vec![0.0; n_vars]
         };
         
         // Build constraint matrix A and RHS b
-        let mut a = Vec::new();
-        let mut b = Vec::new();
+        // Substitute constants and only include non-constant variables
+        // Pre-allocate: estimate 2 rows per constraint (for equality constraints)
+        let estimated_rows = self.constraints.len() * 2;
+        let mut a = Vec::with_capacity(estimated_rows);
+        let mut b = Vec::with_capacity(estimated_rows);
+        
+        if self.constraints.len() > 20 {
+            lp_debug!("LP BUILD: Processing {} constraints with {} variables (output suppressed for performance)...", 
+                self.constraints.len(), n_vars);
+        }
         
         for constraint in &self.constraints {
+            // Only print detailed info for small problems (avoid performance hit)
+            if self.constraints.len() <= 20 {
+                lp_debug!("LP BUILD: Converting constraint with {} vars, relation {:?}, rhs {}", 
+                    constraint.variables.len(), constraint.relation, constraint.rhs);
+            }
+            
             // Convert each constraint to standard form (one or two ≤ constraints)
             for (std_coeffs, std_rhs) in constraint.to_standard_form() {
-                // Map coefficients to our variable ordering
+                // Build row with only non-constant variables
+                // Substitute constants into RHS
                 let mut row = vec![0.0; n_vars];
+                let mut rhs_adjusted = std_rhs;
+                
                 for (j, &var) in constraint.variables.iter().enumerate() {
-                    if let Some(idx) = self.variables.iter().position(|&v| v == var) {
-                        row[idx] = std_coeffs[j];
+                    let coeff = std_coeffs[j];
+                    
+                    if let Some(&const_val) = constants.get(&var) {
+                        // This is a constant - move it to RHS
+                        rhs_adjusted -= coeff * const_val;
+                        if self.constraints.len() <= 20 {
+                            lp_debug!("LP BUILD:   var {:?} is constant = {}, adjusting RHS by -{} * {} = {}", 
+                                var, const_val, coeff, const_val, -coeff * const_val);
+                        }
+                    } else if let Some(&lp_idx) = var_to_lp_index.get(&var) {
+                        // This is a decision variable
+                        row[lp_idx] = coeff;
                     }
                 }
+                
+                // Only print rows for small problems (printing 225-element vectors is SLOW!)
+                if self.constraints.len() <= 20 {
+                    lp_debug!("LP BUILD: Constraint row = {:?}, rhs = {}", row, rhs_adjusted);
+                }
                 a.push(row);
-                b.push(std_rhs);
+                b.push(rhs_adjusted);
             }
         }
         
-        // Extract variable bounds
-        let lower_bounds: Vec<f64> = self.variables.iter()
+        // Extract variable bounds (only for non-constant variables)
+        let lower_bounds: Vec<f64> = lp_index_to_var.iter()
             .map(|&v| extract_bounds(v, vars).0)
             .collect();
             
-        let upper_bounds: Vec<f64> = self.variables.iter()
+        let upper_bounds: Vec<f64> = lp_index_to_var.iter()
             .map(|&v| extract_bounds(v, vars).1)
             .collect();
         
         let n_constraints = a.len();
+        
+        lp_debug!("LP BUILD: Final problem: {} variables (excluding {} constants), {} constraints", 
+            n_vars, constants.len(), n_constraints);
         
         LpProblem::new(n_vars, n_constraints, c, a, b, lower_bounds, upper_bounds)
     }
@@ -319,18 +362,44 @@ pub fn apply_lp_solution(
         return Some(()); // Don't fail, just don't update
     }
     
-    // Tolerance for floating point comparisons
-    const TOLERANCE: f64 = 1e-6;
+    // Use the default LP tolerance for consistency with solver
+    let tolerance = crate::lpsolver::LpConfig::default().feasibility_tol;
     
-    // Update each variable with its LP solution value
-    for (i, &var_id) in system.variables.iter().enumerate() {
-        let lp_value = solution.x[i];
+    // Rebuild the mapping from LP indices to variables (excluding constants)
+    let mut lp_index_to_var: Vec<VarId> = Vec::new();
+    for &var in &system.variables {
+        let (lower, upper) = extract_bounds(var, ctx.vars());
+        if (upper - lower).abs() >= tolerance {
+            // Non-constant variable
+            lp_index_to_var.push(var);
+        }
+    }
+    
+    // Sanity check: LP solution should have same number of variables
+    if solution.x.len() != lp_index_to_var.len() {
+        lp_debug!("LP APPLY: WARNING: LP solution has {} variables but expected {}", 
+            solution.x.len(), lp_index_to_var.len());
+        return Some(()); // Don't apply if mismatch
+    }
+    
+    // Update each non-constant variable with its LP solution value
+    for (lp_idx, &var_id) in lp_index_to_var.iter().enumerate() {
+        let lp_value = solution.x[lp_idx];
         
         // Get current bounds
         let (current_lower, current_upper) = extract_bounds(var_id, ctx.vars());
         
+        lp_debug!("LP APPLY: var {:?} LP_value={} bounds=[{}, {}]", var_id, lp_value, current_lower, current_upper);
+        
+        // Skip constants (variables where lower == upper)
+        // These are fixed values and shouldn't be modified
+        if (current_upper - current_lower).abs() < tolerance {
+            lp_debug!("LP APPLY: var {:?} is constant, skipping", var_id);
+            continue;
+        }
+        
         // Sanity check: LP value should be within current bounds
-        if lp_value < current_lower - TOLERANCE || lp_value > current_upper + TOLERANCE {
+        if lp_value < current_lower - tolerance || lp_value > current_upper + tolerance {
             // LP solution violates current bounds - this indicates
             // numerical issues or inconsistency. Skip this variable.
             continue;
@@ -341,7 +410,7 @@ pub fn apply_lp_solution(
         // is significantly different from current bounds
         
         // Tighten lower bound if LP value is higher
-        if lp_value > current_lower + TOLERANCE {
+        if lp_value > current_lower + tolerance {
             let new_min = Val::ValF(lp_value);
             if var_id.try_set_min(new_min, ctx).is_none() {
                 // Inconsistency detected - propagation failed
@@ -350,7 +419,7 @@ pub fn apply_lp_solution(
         }
         
         // Tighten upper bound if LP value is lower
-        if lp_value < current_upper - TOLERANCE {
+        if lp_value < current_upper - tolerance {
             let new_max = Val::ValF(lp_value);
             if var_id.try_set_max(new_max, ctx).is_none() {
                 // Inconsistency detected - propagation failed

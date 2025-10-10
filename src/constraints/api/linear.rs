@@ -1,46 +1,27 @@
 //! Linear constraint operations
 //!
-//! This module contains linear (weighted sum) constraints for booleans, integers and floats:
+//! This module contains linear (weighted sum) constraints with a unified generic API:
+//! - Generic linear: lin_eq, lin_le, lin_ne (works for both int and float)
+//! - Generic linear reified: lin_eq_reif, lin_le_reif, lin_ne_reif (works for both int and float)
 //! - Boolean linear: bool_lin_eq, bool_lin_le, bool_lin_ne
 //! - Boolean linear reified: bool_lin_eq_reif, bool_lin_le_reif, bool_lin_ne_reif
-//! - Integer linear: int_lin_eq, int_lin_le, int_lin_ne
-//! - Integer linear reified: int_lin_eq_reif, int_lin_le_reif, int_lin_ne_reif
-//! - Float linear: float_lin_eq, float_lin_le, float_lin_ne
-//! - Float linear reified: float_lin_eq_reif, float_lin_le_reif, float_lin_ne_reif
+//!
+//! **Note:** The old type-specific methods (int_lin_eq, float_lin_eq, etc.) have been removed  
+//! in favor of the new generic lin_eq() method, which automatically infers the type from
+//! the coefficient/constant types.
 
 use crate::model::Model;
-use crate::variables::{VarId, Val};
-use crate::variables::views::ViewRaw;
+use crate::variables::VarId;
 
 impl Model {
-    pub fn int_lin_eq(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
-        // Handle mismatched lengths - will be detected as unsatisfiable during solving
-        if coefficients.len() != variables.len() {
-            // Create an unsatisfiable constraint: 0 = 1
-            self.props.equals(Val::ValI(0), Val::ValI(1));
-            return;
-        }
+    // ========== New Generic Linear Constraint API ==========
+    // These methods provide a unified interface that works with both int and float
+    // by using the LinearCoeff trait. They delegate to the standalone functions.
 
-        if variables.is_empty() {
-            // Empty sum = constant
-            // This is satisfiable only if constant == 0, otherwise unsatisfiable
-            self.props.equals(Val::ValI(0), Val::ValI(constant));
-            return;
-        }
-
-        // Use dedicated propagator for linear equality
-        self.props.int_lin_eq(coefficients.to_vec(), variables.to_vec(), constant);
-    }
-
-    /// Post a linear less-than-or-equal constraint: `sum(coeffs[i] * vars[i]) ≤ constant`.
+    /// Post a generic linear equality constraint: `sum(coeffs[i] * vars[i]) = constant`.
     /// 
-    /// This implements the FlatZinc `int_lin_le` constraint, which represents
-    /// a weighted sum of variables less than or equal to a constant value.
-    /// 
-    /// # Arguments
-    /// * `coefficients` - Array of integer coefficients
-    /// * `variables` - Array of variables (must have same length as coefficients)
-    /// * `constant` - The upper bound for the weighted sum
+    /// This works for both integer and float coefficients/constants.
+    /// Type is inferred from the coefficient/constant types.
     /// 
     /// # Examples
     /// ```
@@ -48,40 +29,23 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(0, 10);
     /// let y = m.int(0, 10);
-    /// let z = m.int(0, 10);
     /// 
-    /// // x + y + z ≤ 20
-    /// m.int_lin_le(&[1, 1, 1], &[x, y, z], 20);
+    /// // Integer: 2x + 3y = 10
+    /// m.lin_eq(&[2, 3], &[x, y], 10);
+    /// 
+    /// // Float: 2.5x + 1.5y = 10.0
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// m.lin_eq(&[2.5, 1.5], &[x, y], 10.0);
     /// ```
-    /// 
-    pub fn int_lin_le(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
-        // Handle mismatched lengths - will be detected as unsatisfiable during solving
-        if coefficients.len() != variables.len() {
-            // Create an unsatisfiable constraint: 0 = 1
-            self.props.equals(Val::ValI(0), Val::ValI(1));
-            return;
-        }
-
-        if variables.is_empty() {
-            // Empty sum ≤ constant
-            // This is satisfiable only if 0 ≤ constant, otherwise unsatisfiable
-            self.props.less_than_or_equals(Val::ValI(0), Val::ValI(constant));
-            return;
-        }
-
-        // Use dedicated propagator for linear inequality
-        self.props.int_lin_le(coefficients.to_vec(), variables.to_vec(), constant);
+    pub fn lin_eq<T: crate::constraints::functions::LinearCoeff>(&mut self, coeffs: &[T], vars: &[VarId], constant: T) {
+        crate::constraints::functions::lin_eq(self, coeffs, vars, constant);
     }
 
-    /// Post a linear not-equal constraint: `sum(coeffs[i] * vars[i]) ≠ constant`.
+    /// Post a generic linear less-than-or-equal constraint: `sum(coeffs[i] * vars[i]) ≤ constant`.
     /// 
-    /// This implements the FlatZinc `int_lin_ne` constraint, which represents
-    /// a weighted sum of variables not equal to a constant value.
-    /// 
-    /// # Arguments
-    /// * `coefficients` - Array of integer coefficients
-    /// * `variables` - Array of variables (must have same length as coefficients)
-    /// * `constant` - The value that the weighted sum must not equal
+    /// This works for both integer and float coefficients/constants.
+    /// Type is inferred from the coefficient/constant types.
     /// 
     /// # Examples
     /// ```
@@ -89,45 +53,23 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(0, 10);
     /// let y = m.int(0, 10);
-    /// let z = m.int(0, 10);
     /// 
-    /// // x + y + z ≠ 15
-    /// m.int_lin_ne(&[1, 1, 1], &[x, y, z], 15);
+    /// // Integer: x + y ≤ 15
+    /// m.lin_le(&[1, 1], &[x, y], 15);
+    /// 
+    /// // Float: 1.5x + 2.0y ≤ 20.0
+    /// let x = m.float(0.0, 10.0);
+    /// let y = m.float(0.0, 10.0);
+    /// m.lin_le(&[1.5, 2.0], &[x, y], 20.0);
     /// ```
-    /// 
-    pub fn int_lin_ne(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
-        // Handle mismatched lengths - will be detected as unsatisfiable during solving
-        if coefficients.len() != variables.len() {
-            // Create an unsatisfiable constraint: 0 = 1
-            self.props.equals(Val::ValI(0), Val::ValI(1));
-            return;
-        }
-
-        if variables.is_empty() {
-            // Empty sum ≠ constant
-            // This is satisfiable only if 0 ≠ constant, otherwise unsatisfiable
-            self.props.not_equals(Val::ValI(0), Val::ValI(constant));
-            return;
-        }
-
-        // Use dedicated propagator for linear not-equal
-        self.props.int_lin_ne(coefficients.to_vec(), variables.to_vec(), constant);
+    pub fn lin_le<T: crate::constraints::functions::LinearCoeff>(&mut self, coeffs: &[T], vars: &[VarId], constant: T) {
+        crate::constraints::functions::lin_le(self, coeffs, vars, constant);
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // 🔢 Integer Linear Reified Constraints (FlatZinc Integration)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    /// Post a reified integer linear equality: `b ⇔ (sum(coeffs[i] * vars[i]) = constant)`.
+    /// Post a generic linear not-equal constraint: `sum(coeffs[i] * vars[i]) ≠ constant`.
     /// 
-    /// This implements the FlatZinc `int_lin_eq_reif` constraint.
-    /// The boolean variable `b` is 1 if and only if the linear equation holds.
-    /// 
-    /// # Arguments
-    /// * `coefficients` - Array of integer coefficients
-    /// * `variables` - Array of variables (must have same length as coefficients)
-    /// * `constant` - The constant value
-    /// * `reif_var` - Boolean variable for reification (0 or 1)
+    /// This works for both integer and float coefficients/constants.
+    /// Type is inferred from the coefficient/constant types.
     /// 
     /// # Examples
     /// ```
@@ -135,294 +77,41 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(0, 10);
     /// let y = m.int(0, 10);
-    /// let b = m.bool();
     /// 
-    /// // b ⇔ (x + y = 7)
-    /// m.int_lin_eq_reif(&[1, 1], &[x, y], 7, b);
+    /// // Integer: x + y ≠ 7
+    /// m.lin_ne(&[1, 1], &[x, y], 7);
     /// ```
-    pub fn int_lin_eq_reif(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32, reif_var: VarId) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(reif_var, Val::ValI(0));
-            return;
-        }
-        if variables.is_empty() {
-            if constant == 0 {
-                self.props.equals(reif_var, Val::ValI(1));
-            } else {
-                self.props.equals(reif_var, Val::ValI(0));
-            }
-            return;
-        }
-        // Use dedicated propagator for reified linear equality
-        self.props.int_lin_eq_reif(coefficients.to_vec(), variables.to_vec(), constant, reif_var);
+    pub fn lin_ne<T: crate::constraints::functions::LinearCoeff>(&mut self, coeffs: &[T], vars: &[VarId], constant: T) {
+        crate::constraints::functions::lin_ne(self, coeffs, vars, constant);
     }
 
-    /// Post a reified integer linear less-than-or-equal: `b ⇔ (sum(coeffs[i] * vars[i]) ≤ constant)`.
+    /// Post a reified generic linear equality: `b ⇔ (sum(coeffs[i] * vars[i]) = constant)`.
     /// 
-    /// This implements the FlatZinc `int_lin_le_reif` constraint.
-    /// The boolean variable `b` is 1 if and only if the linear inequality holds.
-    /// 
-    /// # Arguments
-    /// * `coefficients` - Array of integer coefficients
-    /// * `variables` - Array of variables (must have same length as coefficients)
-    /// * `constant` - The constant value
-    /// * `reif_var` - Boolean variable for reification (0 or 1)
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.int(0, 10);
-    /// let y = m.int(0, 10);
-    /// let b = m.bool();
-    /// 
-    /// // b ⇔ (x + y ≤ 20)
-    /// m.int_lin_le_reif(&[1, 1], &[x, y], 20, b);
-    /// ```
-    pub fn int_lin_le_reif(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32, reif_var: VarId) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(reif_var, Val::ValI(0));
-            return;
-        }
-        if variables.is_empty() {
-            if constant >= 0 {
-                self.props.equals(reif_var, Val::ValI(1));
-            } else {
-                self.props.equals(reif_var, Val::ValI(0));
-            }
-            return;
-        }
-        // Use dedicated propagator for reified linear inequality
-        self.props.int_lin_le_reif(coefficients.to_vec(), variables.to_vec(), constant, reif_var);
+    /// Works for both integer and float types.
+    pub fn lin_eq_reif<T: crate::constraints::functions::LinearCoeff>(&mut self, coeffs: &[T], vars: &[VarId], constant: T, b: VarId) {
+        crate::constraints::functions::lin_eq_reif(self, coeffs, vars, constant, b);
     }
 
-    /// Post a reified integer linear not-equal: `b ⇔ (sum(coeffs[i] * vars[i]) ≠ constant)`.
+    /// Post a reified generic linear inequality: `b ⇔ (sum(coeffs[i] * vars[i]) ≤ constant)`.
     /// 
-    /// This implements the FlatZinc `int_lin_ne_reif` constraint.
-    /// The boolean variable `b` is 1 if and only if the linear inequality holds.
-    /// 
-    /// # Arguments
-    /// * `coefficients` - Array of integer coefficients
-    /// * `variables` - Array of variables (must have same length as coefficients)
-    /// * `constant` - The constant value
-    /// * `reif_var` - Boolean variable for reification (0 or 1)
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.int(0, 10);
-    /// let y = m.int(0, 10);
-    /// let b = m.bool();
-    /// 
-    /// // b ⇔ (x + y ≠ 5)
-    /// m.int_lin_ne_reif(&[1, 1], &[x, y], 5, b);
-    /// ```
-    pub fn int_lin_ne_reif(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32, reif_var: VarId) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(reif_var, Val::ValI(0));
-            return;
-        }
-        if variables.is_empty() {
-            if constant != 0 {
-                self.props.equals(reif_var, Val::ValI(1));
-            } else {
-                self.props.equals(reif_var, Val::ValI(0));
-            }
-            return;
-        }
-        // Use dedicated propagator for reified linear not-equal
-        self.props.int_lin_ne_reif(coefficients.to_vec(), variables.to_vec(), constant, reif_var);
+    /// Works for both integer and float types.
+    pub fn lin_le_reif<T: crate::constraints::functions::LinearCoeff>(&mut self, coeffs: &[T], vars: &[VarId], constant: T, b: VarId) {
+        crate::constraints::functions::lin_le_reif(self, coeffs, vars, constant, b);
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // � Float Linear Constraints (FlatZinc Integration)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    /// Post a float linear equality constraint: `sum(coeffs[i] * vars[i]) = constant`.
+    /// Post a reified generic linear not-equal: `b ⇔ (sum(coeffs[i] * vars[i]) ≠ constant)`.
     /// 
-    /// This implements the FlatZinc `float_lin_eq` constraint.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(0.0, 10.0);
-    /// let y = m.float(0.0, 10.0);
-    /// 
-    /// // 2.5*x + 3.7*y = 18.5
-    /// m.float_lin_eq(&[2.5, 3.7], &[x, y], 18.5);
-    /// ```
-    pub fn float_lin_eq(&mut self, coefficients: &[f64], variables: &[VarId], constant: f64) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(Val::ValF(0.0), Val::ValF(1.0));
-            return;
-        }
-        if variables.is_empty() {
-            self.props.equals(Val::ValF(0.0), Val::ValF(constant));
-            return;
-        }
-        // Use dedicated propagator for float linear equality
-        self.props.float_lin_eq(coefficients.to_vec(), variables.to_vec(), constant);
-    }
-
-    /// Post a float linear less-than-or-equal constraint: `sum(coeffs[i] * vars[i]) ≤ constant`.
-    /// 
-    /// This implements the FlatZinc `float_lin_le` constraint.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(0.0, 10.0);
-    /// let y = m.float(0.0, 10.0);
-    /// 
-    /// // x + y ≤ 20.5
-    /// m.float_lin_le(&[1.0, 1.0], &[x, y], 20.5);
-    /// ```
-    pub fn float_lin_le(&mut self, coefficients: &[f64], variables: &[VarId], constant: f64) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(Val::ValF(0.0), Val::ValF(1.0));
-            return;
-        }
-        if variables.is_empty() {
-            self.props.less_than_or_equals(Val::ValF(0.0), Val::ValF(constant));
-            return;
-        }
-        // Use dedicated propagator for float linear inequality
-        self.props.float_lin_le(coefficients.to_vec(), variables.to_vec(), constant);
-    }
-
-    /// Post a float linear not-equal constraint: `sum(coeffs[i] * vars[i]) ≠ constant`.
-    /// 
-    /// This implements the FlatZinc `float_lin_ne` constraint.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(0.0, 10.0);
-    /// let y = m.float(0.0, 10.0);
-    /// 
-    /// // x + y ≠ 5.0
-    /// m.float_lin_ne(&[1.0, 1.0], &[x, y], 5.0);
-    /// ```
-    pub fn float_lin_ne(&mut self, coefficients: &[f64], variables: &[VarId], constant: f64) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(Val::ValF(0.0), Val::ValF(1.0));
-            return;
-        }
-        if variables.is_empty() {
-            self.props.not_equals(Val::ValF(0.0), Val::ValF(constant));
-            return;
-        }
-        // Use dedicated propagator for float linear not-equal
-        self.props.float_lin_ne(coefficients.to_vec(), variables.to_vec(), constant);
-    }
-
-    /// Post a reified float linear equality: `b ⇔ (sum(coeffs[i] * vars[i]) = constant)`.
-    /// 
-    /// This implements the FlatZinc `float_lin_eq_reif` constraint.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(0.0, 10.0);
-    /// let y = m.float(0.0, 10.0);
-    /// let b = m.bool();
-    /// 
-    /// // b ⇔ (x + y = 7.5)
-    /// m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
-    /// ```
-    pub fn float_lin_eq_reif(&mut self, coefficients: &[f64], variables: &[VarId], constant: f64, reif_var: VarId) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(reif_var, Val::ValI(0));
-            return;
-        }
-        if variables.is_empty() {
-            if constant.abs() < 1e-10 {
-                self.props.equals(reif_var, Val::ValI(1));
-            } else {
-                self.props.equals(reif_var, Val::ValI(0));
-            }
-            return;
-        }
-        // Use dedicated propagator for reified float linear equality
-        self.props.float_lin_eq_reif(coefficients.to_vec(), variables.to_vec(), constant, reif_var);
-    }
-
-    /// Post a reified float linear less-than-or-equal: `b ⇔ (sum(coeffs[i] * vars[i]) ≤ constant)`.
-    /// 
-    /// This implements the FlatZinc `float_lin_le_reif` constraint.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(0.0, 10.0);
-    /// let y = m.float(0.0, 10.0);
-    /// let b = m.bool();
-    /// 
-    /// // b ⇔ (x + y ≤ 20.5)
-    /// m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 20.5, b);
-    /// ```
-    pub fn float_lin_le_reif(&mut self, coefficients: &[f64], variables: &[VarId], constant: f64, reif_var: VarId) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(reif_var, Val::ValI(0));
-            return;
-        }
-        if variables.is_empty() {
-            if constant >= -1e-10 {
-                self.props.equals(reif_var, Val::ValI(1));
-            } else {
-                self.props.equals(reif_var, Val::ValI(0));
-            }
-            return;
-        }
-        // Use dedicated propagator for reified float linear inequality
-        self.props.float_lin_le_reif(coefficients.to_vec(), variables.to_vec(), constant, reif_var);
-    }
-
-    /// Post a reified float linear not-equal: `b ⇔ (sum(coeffs[i] * vars[i]) ≠ constant)`.
-    /// 
-    /// This implements the FlatZinc `float_lin_ne_reif` constraint.
-    /// 
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let x = m.float(0.0, 10.0);
-    /// let y = m.float(0.0, 10.0);
-    /// let b = m.bool();
-    /// 
-    /// // b ⇔ (x + y ≠ 5.0)
-    /// m.float_lin_ne_reif(&[1.0, 1.0], &[x, y], 5.0, b);
-    /// ```
-    pub fn float_lin_ne_reif(&mut self, coefficients: &[f64], variables: &[VarId], constant: f64, reif_var: VarId) {
-        if coefficients.len() != variables.len() {
-            self.props.equals(reif_var, Val::ValI(0));
-            return;
-        }
-        if variables.is_empty() {
-            if constant.abs() > 1e-10 {
-                self.props.equals(reif_var, Val::ValI(1));
-            } else {
-                self.props.equals(reif_var, Val::ValI(0));
-            }
-            return;
-        }
-        // Use dedicated propagator for reified float linear not-equal
-        self.props.float_lin_ne_reif(coefficients.to_vec(), variables.to_vec(), constant, reif_var);
+    /// Works for both integer and float types.
+    pub fn lin_ne_reif<T: crate::constraints::functions::LinearCoeff>(&mut self, coeffs: &[T], vars: &[VarId], constant: T, b: VarId) {
+        crate::constraints::functions::lin_ne_reif(self, coeffs, vars, constant, b);
     }
 
     // ============================================================================
     // Boolean Linear Constraints
     // ============================================================================
-    // Note: These are thin wrappers over int_lin_* constraints since boolean
-    // variables are represented as integers with domain {0, 1}. The same
-    // propagators work for both. These methods provide better API discoverability
-    // and document the intent that variables should be boolean.
+    // Note: These are thin wrappers that call the generic lin_* methods.
+    // They provide better API discoverability and document the intent that
+    // variables should be boolean.
 
     /// Post a boolean linear equality constraint: `sum(coeffs[i] * bools[i]) = constant`.
     /// 
@@ -432,8 +121,6 @@ impl Model {
     /// Boolean variables are represented as integers with domain {0, 1} where:
     /// - 0 = false
     /// - 1 = true
-    /// 
-    /// This method is a wrapper over `int_lin_eq` but documents that variables should be boolean.
     /// 
     /// # Arguments
     /// * `coefficients` - Array of integer coefficients
@@ -455,9 +142,8 @@ impl Model {
     /// m.bool_lin_eq(&[2, 3, 1], &[b1, b2, b3], 5);
     /// ```
     pub fn bool_lin_eq(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
-        // Delegate to integer linear constraint - same propagator works for booleans
-        // Boolean variables are represented as integers with domain {0, 1}
-        self.int_lin_eq(coefficients, variables, constant);
+        // Delegate to generic lin_eq
+        self.lin_eq(coefficients, variables, constant);
     }
 
     /// Post a boolean linear less-than-or-equal constraint: `sum(coeffs[i] * bools[i]) ≤ constant`.
@@ -476,7 +162,7 @@ impl Model {
     /// m.bool_lin_le(&[1, 1, 1], &[b1, b2, b3], 2);
     /// ```
     pub fn bool_lin_le(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
-        self.int_lin_le(coefficients, variables, constant);
+        self.lin_le(coefficients, variables, constant);
     }
 
     /// Post a boolean linear not-equal constraint: `sum(coeffs[i] * bools[i]) ≠ constant`.
@@ -495,7 +181,7 @@ impl Model {
     /// m.bool_lin_ne(&[1, 1, 1], &[b1, b2, b3], 2);
     /// ```
     pub fn bool_lin_ne(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32) {
-        self.int_lin_ne(coefficients, variables, constant);
+        self.lin_ne(coefficients, variables, constant);
     }
 
     /// Post a reified boolean linear equality: `b ⇔ (sum(coeffs[i] * bools[i]) = constant)`.
@@ -516,7 +202,7 @@ impl Model {
     /// m.bool_lin_eq_reif(&[1, 1, 1], &[b1, b2, b3], 2, reif);
     /// ```
     pub fn bool_lin_eq_reif(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32, reif_var: VarId) {
-        self.int_lin_eq_reif(coefficients, variables, constant, reif_var);
+        self.lin_eq_reif(coefficients, variables, constant, reif_var);
     }
 
     /// Post a reified boolean linear inequality: `b ⇔ (sum(coeffs[i] * bools[i]) ≤ constant)`.
@@ -537,7 +223,7 @@ impl Model {
     /// m.bool_lin_le_reif(&[1, 1, 1], &[b1, b2, b3], 2, reif);
     /// ```
     pub fn bool_lin_le_reif(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32, reif_var: VarId) {
-        self.int_lin_le_reif(coefficients, variables, constant, reif_var);
+        self.lin_le_reif(coefficients, variables, constant, reif_var);
     }
 
     /// Post a reified boolean linear not-equal: `b ⇔ (sum(coeffs[i] * bools[i]) ≠ constant)`.
@@ -558,7 +244,6 @@ impl Model {
     /// m.bool_lin_ne_reif(&[1, 1, 1], &[b1, b2, b3], 2, reif);
     /// ```
     pub fn bool_lin_ne_reif(&mut self, coefficients: &[i32], variables: &[VarId], constant: i32, reif_var: VarId) {
-        self.int_lin_ne_reif(coefficients, variables, constant, reif_var);
+        self.lin_ne_reif(coefficients, variables, constant, reif_var);
     }
-
 }

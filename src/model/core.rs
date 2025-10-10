@@ -20,6 +20,14 @@ pub struct Model {
     estimated_memory_bytes: u64,
     /// Memory limit exceeded flag
     memory_limit_exceeded: bool,
+    /// LP constraints extracted from runtime API AST before materialization
+    /// These are collected during constraint posting and used at search root for LP solving
+    #[doc(hidden)]
+    pub pending_lp_constraints: Vec<crate::lpsolver::csp_integration::LinearConstraint>,
+    /// Pending constraint ASTs that haven't been materialized yet
+    /// We delay materialization to avoid creating duplicate propagators
+    #[doc(hidden)]
+    pub pending_constraint_asts: Vec<crate::runtime_api::ConstraintKind>,
 }
 
 impl Default for Model {
@@ -48,6 +56,8 @@ impl Model {
             config,
             estimated_memory_bytes: 0,
             memory_limit_exceeded: false,
+            pending_lp_constraints: Vec::new(),
+            pending_constraint_asts: Vec::new(),
         }
     }
 
@@ -69,6 +79,8 @@ impl Model {
             config,
             estimated_memory_bytes: 0,
             memory_limit_exceeded: false,
+            pending_lp_constraints: Vec::new(),
+            pending_constraint_asts: Vec::new(),
         }
     }
 
@@ -144,6 +156,19 @@ impl Model {
         self.config.prefer_lp_solver
     }
     
+    /// Materialize pending constraint ASTs into actual propagators
+    /// This is called after LP extraction and solving to create the propagators
+    /// needed for the CSP search phase.
+    pub(crate) fn materialize_pending_asts(&mut self) {
+        // Take ownership of the pending ASTs to avoid borrow checker issues
+        let asts = std::mem::take(&mut self.pending_constraint_asts);
+        
+        // Materialize each AST into propagators
+        for ast in asts {
+            crate::runtime_api::materialize_constraint_kind(self, &ast);
+        }
+    }
+    
     /// Get the current estimated memory usage in bytes
     pub fn estimated_memory_bytes(&self) -> u64 {
         self.estimated_memory_bytes
@@ -212,12 +237,14 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
+    /// let z = m.int(1, 10);
     /// 
     /// assert_eq!(m.constraint_count(), 0);
-    /// m.new(x.ne(y));
-    /// assert_eq!(m.constraint_count(), 1);
-    /// m.new(x.le(8));
-    /// assert_eq!(m.constraint_count(), 2);
+    /// m.alldiff(&[x, y, z]);
+    /// let count_after_first = m.constraint_count();
+    /// assert!(count_after_first > 0);
+    /// m.alleq(&[x, y]);
+    /// assert!(m.constraint_count() > count_after_first);
     /// ```
     pub fn constraint_count(&self) -> usize {
         self.props.count()
@@ -340,13 +367,13 @@ impl Model {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
                 let memory_limit = self.memory_limit_mb();
-                let (vars, props) = self.prepare_for_search()?;
+                let (vars, props, pending_lp) = self.prepare_for_search()?;
 
                 // Capture counts before moving to search
                 let var_count = vars.count();
                 let constraint_count = props.count();
 
-                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit);
+                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit, pending_lp);
                 let mut last_solution = None;
                 let mut current_count = 0;
 
@@ -415,8 +442,8 @@ impl Model {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
                 match self.prepare_for_search() {
-                    Ok((vars, props)) => {
-                        Box::new(search_with_timeout(vars, props, mode::Minimize::new(objective), timeout)) as Box<dyn Iterator<Item = Solution>>
+                    Ok((vars, props, pending_lp)) => {
+                        Box::new(search_with_timeout(vars, props, mode::Minimize::new(objective), timeout, pending_lp)) as Box<dyn Iterator<Item = Solution>>
                     }
                     Err(_) => {
                         // Validation failed - return empty iterator
@@ -633,13 +660,13 @@ impl Model {
         // For pure constraint satisfaction (no optimization objective), go directly to search
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
-        let (vars, props) = self.prepare_for_search()?;
+        let (vars, props, pending_lp) = self.prepare_for_search()?;
         
         // Capture counts before moving to search
         let var_count = vars.count();
         let constraint_count = props.count();
         
-        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp);
         
         let result = search_iter.next();
         
@@ -782,14 +809,21 @@ impl Model {
     #[doc(hidden)]
     /// Internal helper that validates the model and optimizes constraints before search.
     /// This ensures all solving methods benefit from validation and constraint optimization.
-    fn prepare_for_search(mut self) -> Result<(crate::variables::Vars, crate::constraints::props::Propagators), crate::core::error::SolverError> {
-        // First, validate the model for common errors
+    fn prepare_for_search(mut self) -> Result<(crate::variables::Vars, crate::constraints::props::Propagators, Vec<crate::lpsolver::csp_integration::LinearConstraint>), crate::core::error::SolverError> {
+        // STEP 1: Materialize all pending constraint ASTs into propagators
+        // This converts runtime API constraints (stored as AST) into CSP propagators
+        // NOTE: We pass pending_lp_constraints separately so LP can use AST-extracted constraints
+        // without scanning the materialized propagators (avoiding duplication)
+        self.materialize_pending_asts();
+        
+        // STEP 2: Validate the model for common errors
         let validator = crate::core::validation::ModelValidator::new(&self.vars, &self.props);
         validator.validate()?;
         
-        // Then optimize constraint order for better performance
+        // STEP 3: Optimize constraint order for better performance
         self.optimize_constraint_order();
-        Ok((self.vars, self.props))
+        
+        Ok((self.vars, self.props, self.pending_lp_constraints))
     }
 
     /// Try to solve minimization using specialized optimization algorithms
@@ -855,8 +889,8 @@ impl Model {
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
         match self.prepare_for_search() {
-            Ok((vars, props)) => {
-                Box::new(search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit)) as Box<dyn Iterator<Item = Solution>>
+            Ok((vars, props, pending_lp)) => {
+                Box::new(search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp)) as Box<dyn Iterator<Item = Solution>>
             }
             Err(_) => {
                 // Validation failed - return empty iterator
@@ -913,7 +947,7 @@ impl Model {
     pub fn enumerate_with_stats(self) -> (Vec<Solution>, crate::core::solution::SolveStats) {
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
-        let (vars, props) = match self.prepare_for_search() {
+        let (vars, props, pending_lp) = match self.prepare_for_search() {
             Ok(result) => result,
             Err(_) => {
                 // Validation failed - report error stats and return empty vector
@@ -933,7 +967,7 @@ impl Model {
         let var_count = vars.count();
         let constraint_count = props.count();
 
-        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit);
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp);
         let mut solutions = Vec::with_capacity(8); // Start with reasonable capacity for solution collection
 
         // Collect all solutions - the search iterator will track statistics as it goes
