@@ -280,43 +280,145 @@ pub trait LinearCoeff: Copy {
 
 impl LinearCoeff for i32 {
     fn post_lin_eq(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
-        model.int_lin_eq(coeffs, vars, constant);
+        // Phase 2: Create AST node instead of calling Model method directly
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::LinearInt {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Eq,
+            constant,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_le(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
-        model.int_lin_le(coeffs, vars, constant);
+        // Phase 2: Create AST node
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::LinearInt {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Le,
+            constant,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_ne(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
-        model.int_lin_ne(coeffs, vars, constant);
+        // Phase 2: Create AST node
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::LinearInt {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Ne,
+            constant,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_eq_reif(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self, b: VarId) {
-        model.int_lin_eq_reif(coeffs, vars, constant, b);
+        // Phase 2: Create AST node for reified constraint
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::ReifiedLinearInt {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Eq,
+            constant,
+            reif_var: b,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_le_reif(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self, b: VarId) {
-        model.int_lin_le_reif(coeffs, vars, constant, b);
+        // Phase 2: Create AST node for reified constraint
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::ReifiedLinearInt {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Le,
+            constant,
+            reif_var: b,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_ne_reif(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self, b: VarId) {
-        model.int_lin_ne_reif(coeffs, vars, constant, b);
+        // Phase 2: Create AST node for reified constraint
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::ReifiedLinearInt {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Ne,
+            constant,
+            reif_var: b,
+        };
+        model.pending_constraint_asts.push(ast);
     }
 }
 
 impl LinearCoeff for f64 {
     fn post_lin_eq(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
-        model.float_lin_eq(coeffs, vars, constant);
+        // Phase 2: Create AST node instead of calling Model method directly
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::LinearFloat {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Eq,
+            constant,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_le(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
-        model.float_lin_le(coeffs, vars, constant);
+        // Phase 2: Create AST node
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::LinearFloat {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Le,
+            constant,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_ne(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
-        model.float_lin_ne(coeffs, vars, constant);
+        // Phase 2: Create AST node
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::LinearFloat {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Ne,
+            constant,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_eq_reif(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self, b: VarId) {
-        model.float_lin_eq_reif(coeffs, vars, constant, b);
+        // Phase 2: Create AST node for reified constraint
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::ReifiedLinearFloat {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Eq,
+            constant,
+            reif_var: b,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_le_reif(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self, b: VarId) {
-        model.float_lin_le_reif(coeffs, vars, constant, b);
+        // Phase 2: Create AST node for reified constraint
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::ReifiedLinearFloat {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Le,
+            constant,
+            reif_var: b,
+        };
+        model.pending_constraint_asts.push(ast);
     }
     fn post_lin_ne_reif(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self, b: VarId) {
-        model.float_lin_ne_reif(coeffs, vars, constant, b);
+        // Phase 2: Create AST node for reified constraint
+        use crate::runtime_api::{ConstraintKind, ComparisonOp};
+        let ast = ConstraintKind::ReifiedLinearFloat {
+            coeffs: coeffs.to_vec(),
+            vars: vars.to_vec(),
+            op: ComparisonOp::Ne,
+            constant,
+            reif_var: b,
+        };
+        model.pending_constraint_asts.push(ast);
     }
 }
 

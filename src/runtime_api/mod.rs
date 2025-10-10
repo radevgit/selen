@@ -125,6 +125,113 @@ pub enum ConstraintKind {
     And(Box<Constraint>, Box<Constraint>),
     Or(Box<Constraint>, Box<Constraint>),
     Not(Box<Constraint>),
+    
+    // =================== Phase 2: Extended Constraint Types ===================
+    
+    /// Linear constraint: coeffs[0]*vars[0] + coeffs[1]*vars[1] + ... op constant
+    LinearInt {
+        coeffs: Vec<i32>,
+        vars: Vec<VarId>,
+        op: ComparisonOp,
+        constant: i32,
+    },
+    LinearFloat {
+        coeffs: Vec<f64>,
+        vars: Vec<VarId>,
+        op: ComparisonOp,
+        constant: f64,
+    },
+    
+    /// Reified comparison: b <-> (left op right)
+    ReifiedBinary {
+        left: ExprBuilder,
+        op: ComparisonOp,
+        right: ExprBuilder,
+        reif_var: VarId,  // Boolean variable that is true iff constraint holds
+    },
+    
+    /// Reified linear constraint
+    ReifiedLinearInt {
+        coeffs: Vec<i32>,
+        vars: Vec<VarId>,
+        op: ComparisonOp,
+        constant: i32,
+        reif_var: VarId,
+    },
+    ReifiedLinearFloat {
+        coeffs: Vec<f64>,
+        vars: Vec<VarId>,
+        op: ComparisonOp,
+        constant: f64,
+        reif_var: VarId,
+    },
+    
+    /// Logical constraints
+    BoolAnd {
+        x: VarId,
+        y: VarId,
+        z: VarId,  // z <-> (x AND y)
+    },
+    BoolOr {
+        x: VarId,
+        y: VarId,
+        z: VarId,  // z <-> (x OR y)
+    },
+    BoolNot {
+        x: VarId,
+        y: VarId,  // y <-> NOT x
+    },
+    BoolXor {
+        x: VarId,
+        y: VarId,
+        z: VarId,  // z <-> (x XOR y)
+    },
+    BoolImplies {
+        x: VarId,
+        y: VarId,  // x -> y
+    },
+    
+    /// Global constraints
+    AllDifferent {
+        vars: Vec<VarId>,
+    },
+    AllEqual {
+        vars: Vec<VarId>,
+    },
+    Minimum {
+        vars: Vec<VarId>,
+        result: VarId,
+    },
+    Maximum {
+        vars: Vec<VarId>,
+        result: VarId,
+    },
+    Sum {
+        vars: Vec<VarId>,
+        result: VarId,
+    },
+    Element {
+        index: VarId,
+        array: Vec<VarId>,
+        value: VarId,
+    },
+    
+    /// Advanced global constraints (stubs for now)
+    Table {
+        vars: Vec<VarId>,
+        tuples: Vec<Vec<i32>>,
+    },
+    GlobalCardinality {
+        vars: Vec<VarId>,
+        card_vars: Vec<VarId>,
+        covers: Vec<i32>,
+    },
+    Cumulative {
+        starts: Vec<VarId>,
+        durations: Vec<VarId>,
+        demands: Vec<VarId>,
+        capacity: VarId,
+    },
 }
 
 #[derive(Clone, Debug)]
@@ -765,13 +872,229 @@ fn get_expr_var(model: &mut Model, expr: &ExprBuilder) -> VarId {
     }
 }
 
+/// Try to convert expression-based constraints to linear constraint AST
+/// 
+/// Analyzes Binary constraints with Add/Mul expressions like:
+/// - add(mul(x, int(5)), mul(y, int(4))).eq(int(3))  →  LinearInt: 5*x + 4*y == 3
+/// - add(x, y).le(int(10))                             →  LinearInt: x + y <= 10
+/// - sub(mul(x, int(2)), y).eq(int(0))                →  LinearInt: 2*x - y == 0
+///
+/// Returns the original constraint if it's not linear.
+fn try_convert_to_linear_ast(kind: &ConstraintKind) -> ConstraintKind {
+    match kind {
+        ConstraintKind::Binary { left, op, right } => {
+            // Try to extract linear form from both sides
+            if let (Some((left_coeffs, left_vars, left_const)), Some((right_coeffs, right_vars, right_const))) = 
+                (try_extract_linear_form(left), try_extract_linear_form(right)) {
+                
+                // Combine into single linear constraint: left - right op 0
+                // left_expr op right_expr  =>  left_expr - right_expr op 0
+                let mut coeffs = Vec::new();
+                let mut vars = Vec::new();
+                let mut all_ints = true;
+                
+                // Add left side coefficients
+                for (var, coeff) in left_vars.iter().zip(left_coeffs.iter()) {
+                    vars.push(*var);
+                    coeffs.push(*coeff);
+                    if !matches!(coeff, LinearCoefficient::Int(_)) {
+                        all_ints = false;
+                    }
+                }
+                
+                // Subtract right side coefficients
+                for (var, coeff) in right_vars.iter().zip(right_coeffs.iter()) {
+                    if let Some(idx) = vars.iter().position(|v| v == var) {
+                        // Variable exists, combine coefficients
+                        coeffs[idx] = subtract_coefficients(&coeffs[idx], coeff);
+                    } else {
+                        // New variable, add with negative coefficient
+                        vars.push(*var);
+                        coeffs.push(negate_coefficient(coeff));
+                    }
+                    if !matches!(coeff, LinearCoefficient::Int(_)) {
+                        all_ints = false;
+                    }
+                }
+                
+                // Constant: left_const - right_const, then move to right side
+                let constant = subtract_coefficients(&left_const, &right_const);
+                let constant = negate_coefficient(&constant); // Move to RHS
+                
+                // Check if constant is also an integer
+                if !matches!(constant, LinearCoefficient::Int(_)) {
+                    all_ints = false;
+                }
+                
+                // Convert to LinearInt or LinearFloat
+                if all_ints {
+                    let int_coeffs: Vec<i32> = coeffs.iter().map(|c| match c {
+                        LinearCoefficient::Int(i) => *i,
+                        _ => 0,
+                    }).collect();
+                    let int_const = match constant {
+                        LinearCoefficient::Int(i) => i,
+                        _ => 0,
+                    };
+                    
+                    return ConstraintKind::LinearInt {
+                        coeffs: int_coeffs,
+                        vars,
+                        op: op.clone(),
+                        constant: int_const,
+                    };
+                } else {
+                    let float_coeffs: Vec<f64> = coeffs.iter().map(|c| match c {
+                        LinearCoefficient::Int(i) => *i as f64,
+                        LinearCoefficient::Float(f) => *f,
+                    }).collect();
+                    let float_const = match constant {
+                        LinearCoefficient::Int(i) => i as f64,
+                        LinearCoefficient::Float(f) => f,
+                    };
+                    
+                    return ConstraintKind::LinearFloat {
+                        coeffs: float_coeffs,
+                        vars,
+                        op: op.clone(),
+                        constant: float_const,
+                    };
+                }
+            }
+            
+            // Not linear, return original
+            kind.clone()
+        }
+        // Other constraint types: return as-is
+        _ => kind.clone(),
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum LinearCoefficient {
+    Int(i32),
+    Float(f64),
+}
+
+fn negate_coefficient(coeff: &LinearCoefficient) -> LinearCoefficient {
+    match coeff {
+        LinearCoefficient::Int(i) => LinearCoefficient::Int(-i),
+        LinearCoefficient::Float(f) => LinearCoefficient::Float(-f),
+    }
+}
+
+fn subtract_coefficients(a: &LinearCoefficient, b: &LinearCoefficient) -> LinearCoefficient {
+    match (a, b) {
+        (LinearCoefficient::Int(ia), LinearCoefficient::Int(ib)) => LinearCoefficient::Int(ia - ib),
+        (LinearCoefficient::Float(fa), LinearCoefficient::Float(fb)) => LinearCoefficient::Float(fa - fb),
+        (LinearCoefficient::Int(ia), LinearCoefficient::Float(fb)) => LinearCoefficient::Float(*ia as f64 - fb),
+        (LinearCoefficient::Float(fa), LinearCoefficient::Int(ib)) => LinearCoefficient::Float(fa - *ib as f64),
+    }
+}
+
+/// Try to extract linear form from an expression: coeffs, vars, constant
+/// Returns None if the expression is not linear
+/// 
+/// Examples:
+/// - Var(x) → ([1], [x], 0)
+/// - Val(5) → ([], [], 5)  
+/// - Mul(Var(x), Val(3)) → ([3], [x], 0)
+/// - Add(Mul(Var(x), Val(2)), Var(y)) → ([2, 1], [x, y], 0)
+/// - Add(Mul(Var(x), Val(2)), Val(5)) → ([2], [x], 5)
+fn try_extract_linear_form(expr: &ExprBuilder) -> Option<(Vec<LinearCoefficient>, Vec<VarId>, LinearCoefficient)> {
+    match expr {
+        ExprBuilder::Var(var) => {
+            // Single variable with coefficient 1
+            Some((vec![LinearCoefficient::Int(1)], vec![*var], LinearCoefficient::Int(0)))
+        }
+        ExprBuilder::Val(val) => {
+            // Just a constant
+            match val {
+                Val::ValI(i) => Some((vec![], vec![], LinearCoefficient::Int(*i))),
+                Val::ValF(f) => Some((vec![], vec![], LinearCoefficient::Float(*f))),
+            }
+        }
+        ExprBuilder::Mul(left, right) => {
+            // Check for Var * Const or Const * Var patterns
+            match (left.as_ref(), right.as_ref()) {
+                (ExprBuilder::Var(var), ExprBuilder::Val(val)) => {
+                    let coeff = match val {
+                        Val::ValI(i) => LinearCoefficient::Int(*i),
+                        Val::ValF(f) => LinearCoefficient::Float(*f),
+                    };
+                    Some((vec![coeff], vec![*var], LinearCoefficient::Int(0)))
+                }
+                (ExprBuilder::Val(val), ExprBuilder::Var(var)) => {
+                    let coeff = match val {
+                        Val::ValI(i) => LinearCoefficient::Int(*i),
+                        Val::ValF(f) => LinearCoefficient::Float(*f),
+                    };
+                    Some((vec![coeff], vec![*var], LinearCoefficient::Int(0)))
+                }
+                _ => None, // Var * Var or other non-linear patterns
+            }
+        }
+        ExprBuilder::Add(left, right) => {
+            // Recursively extract both sides and combine
+            let (mut left_coeffs, mut left_vars, left_const) = try_extract_linear_form(left)?;
+            let (right_coeffs, right_vars, right_const) = try_extract_linear_form(right)?;
+            
+            // Combine terms
+            for (var, coeff) in right_vars.iter().zip(right_coeffs.iter()) {
+                if let Some(idx) = left_vars.iter().position(|v| v == var) {
+                    // Variable exists, add coefficients
+                    left_coeffs[idx] = add_coefficients(&left_coeffs[idx], coeff);
+                } else {
+                    // New variable
+                    left_vars.push(*var);
+                    left_coeffs.push(coeff.clone());
+                }
+            }
+            
+            let combined_const = add_coefficients(&left_const, &right_const);
+            Some((left_coeffs, left_vars, combined_const))
+        }
+        ExprBuilder::Sub(left, right) => {
+            // Similar to Add but subtract right side
+            let (mut left_coeffs, mut left_vars, left_const) = try_extract_linear_form(left)?;
+            let (right_coeffs, right_vars, right_const) = try_extract_linear_form(right)?;
+            
+            // Subtract terms
+            for (var, coeff) in right_vars.iter().zip(right_coeffs.iter()) {
+                if let Some(idx) = left_vars.iter().position(|v| v == var) {
+                    left_coeffs[idx] = subtract_coefficients(&left_coeffs[idx], coeff);
+                } else {
+                    left_vars.push(*var);
+                    left_coeffs.push(negate_coefficient(coeff));
+                }
+            }
+            
+            let combined_const = subtract_coefficients(&left_const, &right_const);
+            Some((left_coeffs, left_vars, combined_const))
+        }
+        ExprBuilder::Div(_,_) => None, // Division is not linear
+    }
+}
+
+fn add_coefficients(a: &LinearCoefficient, b: &LinearCoefficient) -> LinearCoefficient {
+    match (a, b) {
+        (LinearCoefficient::Int(ia), LinearCoefficient::Int(ib)) => LinearCoefficient::Int(ia + ib),
+        (LinearCoefficient::Float(fa), LinearCoefficient::Float(fb)) => LinearCoefficient::Float(fa + fb),
+        (LinearCoefficient::Int(ia), LinearCoefficient::Float(fb)) => LinearCoefficient::Float(*ia as f64 + fb),
+        (LinearCoefficient::Float(fa), LinearCoefficient::Int(ib)) => LinearCoefficient::Float(fa + *ib as f64),
+    }
+}
+
 /// Post a constraint by storing its AST for later materialization
 /// This allows LP extraction BEFORE creating propagators
 #[inline]
 #[doc(hidden)]
 pub fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
+    // STEP 0: Try to convert expression-based constraints to linear AST
+    let kind = try_convert_to_linear_ast(kind);
+    
     // STEP 1: Extract LP constraint from AST
-    if let Some(lp_constraint) = extract_lp_constraint(kind) {
+    if let Some(lp_constraint) = extract_lp_constraint(&kind) {
         eprintln!("LP EXTRACTION: Extracted linear constraint from AST: {:?}", lp_constraint);
         model.pending_lp_constraints.push(lp_constraint);
     }
@@ -846,6 +1169,153 @@ pub(crate) fn materialize_constraint_kind(model: &mut Model, kind: &ConstraintKi
             // For NOT, we need to use boolean variables and logic
             // This is a simplified implementation - a full implementation would use reification
             materialize_constraint_kind(model, &constraint.kind)
+        }
+        
+        // =================== Phase 2: Extended Constraint Types ===================
+        
+        ConstraintKind::LinearInt { coeffs, vars, op, constant } => {
+            match op {
+                ComparisonOp::Eq => model.props.int_lin_eq(coeffs.clone(), vars.clone(), *constant),
+                ComparisonOp::Le => model.props.int_lin_le(coeffs.clone(), vars.clone(), *constant),
+                ComparisonOp::Ne => model.props.int_lin_ne(coeffs.clone(), vars.clone(), *constant),
+                ComparisonOp::Ge => {
+                    // a1*x1 + ... >= c  <==>  -a1*x1 - ... <= -c
+                    let neg_coeffs: Vec<i32> = coeffs.iter().map(|c| -c).collect();
+                    model.props.int_lin_le(neg_coeffs, vars.clone(), -constant)
+                }
+                ComparisonOp::Gt => {
+                    // a1*x1 + ... > c  <==>  a1*x1 + ... >= c+1
+                    let neg_coeffs: Vec<i32> = coeffs.iter().map(|c| -c).collect();
+                    model.props.int_lin_le(neg_coeffs, vars.clone(), -constant - 1)
+                }
+                ComparisonOp::Lt => {
+                    // a1*x1 + ... < c  <==>  a1*x1 + ... <= c-1
+                    model.props.int_lin_le(coeffs.clone(), vars.clone(), constant - 1)
+                }
+            }
+        }
+        
+        ConstraintKind::LinearFloat { coeffs, vars, op, constant } => {
+            match op {
+                ComparisonOp::Eq => model.props.float_lin_eq(coeffs.clone(), vars.clone(), *constant),
+                ComparisonOp::Le => model.props.float_lin_le(coeffs.clone(), vars.clone(), *constant),
+                ComparisonOp::Ne => model.props.float_lin_ne(coeffs.clone(), vars.clone(), *constant),
+                ComparisonOp::Ge => {
+                    let neg_coeffs: Vec<f64> = coeffs.iter().map(|c| -c).collect();
+                    model.props.float_lin_le(neg_coeffs, vars.clone(), -constant)
+                }
+                _ => {
+                    // Strict inequalities not supported for floats
+                    panic!("Strict inequalities (< and >) not supported for float linear constraints");
+                }
+            }
+        }
+        
+        ConstraintKind::ReifiedBinary { left, op, right, reif_var } => {
+            let left_var = get_expr_var(model, left);
+            let right_var = get_expr_var(model, right);
+            
+            match op {
+                ComparisonOp::Eq => model.props.int_eq_reif(left_var, right_var, *reif_var),
+                ComparisonOp::Ne => model.props.int_ne_reif(left_var, right_var, *reif_var),
+                ComparisonOp::Lt => model.props.int_lt_reif(left_var, right_var, *reif_var),
+                ComparisonOp::Le => model.props.int_le_reif(left_var, right_var, *reif_var),
+                ComparisonOp::Gt => model.props.int_gt_reif(left_var, right_var, *reif_var),
+                ComparisonOp::Ge => model.props.int_ge_reif(left_var, right_var, *reif_var),
+            }
+        }
+        
+        ConstraintKind::ReifiedLinearInt { coeffs, vars, op, constant, reif_var } => {
+            match op {
+                ComparisonOp::Eq => model.props.int_lin_eq_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
+                ComparisonOp::Le => model.props.int_lin_le_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
+                ComparisonOp::Ne => model.props.int_lin_ne_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
+                _ => panic!("Only ==, <=, != supported for reified integer linear constraints"),
+            }
+        }
+        
+        ConstraintKind::ReifiedLinearFloat { coeffs, vars, op, constant, reif_var } => {
+            match op {
+                ComparisonOp::Eq => model.props.float_lin_eq_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
+                ComparisonOp::Le => model.props.float_lin_le_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
+                ComparisonOp::Ne => model.props.float_lin_ne_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
+                _ => panic!("Only ==, <=, != supported for reified float linear constraints"),
+            }
+        }
+        
+        // NOTE: The following constraints create AST but fall back to Model methods for materialization
+        // They don't benefit from LP solver integration, so we just call the existing implementations
+        
+        ConstraintKind::BoolAnd { x, y, z } => {
+            model.bool_and(&[*x, *y, *z]);
+            PropId(0) // Dummy - Model methods don't return PropId
+        }
+        
+        ConstraintKind::BoolOr { x, y, z } => {
+            model.bool_or(&[*x, *y, *z]);
+            PropId(0)
+        }
+        
+        ConstraintKind::BoolNot { x, y } => {
+            model.props.bool_not(*x, *y)
+        }
+        
+        ConstraintKind::BoolXor { .. } => {
+            // XOR not directly implemented, use composition
+            todo!("BoolXor materialization not yet implemented")
+        }
+        
+        ConstraintKind::BoolImplies { .. } => {
+            // Implies not directly implemented
+            todo!("BoolImplies materialization not yet implemented")
+        }
+        
+        ConstraintKind::AllDifferent { vars } => {
+            model.alldiff(vars);
+            PropId(0)
+        }
+        
+        ConstraintKind::AllEqual { vars } => {
+            model.alleq(vars);
+            PropId(0)
+        }
+        
+        ConstraintKind::Minimum { vars, result } => {
+            // min() returns Result<VarId, ...>, we need to equate it with result
+            let min_var = model.min(vars).unwrap();
+            model.props.equals(min_var, *result)
+        }
+        
+        ConstraintKind::Maximum { vars, result } => {
+            let max_var = model.max(vars).unwrap();
+            model.props.equals(max_var, *result)
+        }
+        
+        ConstraintKind::Sum { vars, result } => {
+            model.props.sum(vars.clone(), *result)
+        }
+        
+        ConstraintKind::Element { index, array, value } => {
+            // Element signature: element(array: &[VarId], index: VarId, value: VarId)
+            model.element(array, *index, *value)
+        }
+        
+        ConstraintKind::Table { vars, tuples } => {
+            let val_tuples: Vec<Vec<Val>> = tuples.iter()
+                .map(|tuple| tuple.iter().map(|&v| Val::ValI(v)).collect())
+                .collect();
+            model.table(vars, val_tuples);
+            PropId(0)
+        }
+        
+        ConstraintKind::GlobalCardinality { vars, card_vars, covers } => {
+            // gcc signature: gcc(vars: &[VarId], values: &[i32], counts: &[VarId]) -> Vec<PropId>
+            let prop_ids = model.gcc(vars, covers, card_vars);
+            prop_ids.first().copied().unwrap_or(PropId(0))
+        }
+        
+        ConstraintKind::Cumulative { .. } => {
+            todo!("Cumulative constraint not yet implemented");
         }
     }
 }
