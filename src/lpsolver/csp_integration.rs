@@ -230,12 +230,22 @@ impl LinearConstraintSystem {
         
         // Build constraint matrix A and RHS b
         // Substitute constants and only include non-constant variables
-        let mut a = Vec::new();
-        let mut b = Vec::new();
+        // Pre-allocate: estimate 2 rows per constraint (for equality constraints)
+        let estimated_rows = self.constraints.len() * 2;
+        let mut a = Vec::with_capacity(estimated_rows);
+        let mut b = Vec::with_capacity(estimated_rows);
+        
+        if self.constraints.len() > 20 {
+            eprintln!("LP BUILD: Processing {} constraints with {} variables (output suppressed for performance)...", 
+                self.constraints.len(), n_vars);
+        }
         
         for constraint in &self.constraints {
-            eprintln!("LP BUILD: Converting constraint with {} vars, relation {:?}, rhs {}", 
-                constraint.variables.len(), constraint.relation, constraint.rhs);
+            // Only print detailed info for small problems (avoid performance hit)
+            if self.constraints.len() <= 20 {
+                eprintln!("LP BUILD: Converting constraint with {} vars, relation {:?}, rhs {}", 
+                    constraint.variables.len(), constraint.relation, constraint.rhs);
+            }
             
             // Convert each constraint to standard form (one or two ≤ constraints)
             for (std_coeffs, std_rhs) in constraint.to_standard_form() {
@@ -250,15 +260,20 @@ impl LinearConstraintSystem {
                     if let Some(&const_val) = constants.get(&var) {
                         // This is a constant - move it to RHS
                         rhs_adjusted -= coeff * const_val;
-                        eprintln!("LP BUILD:   var {:?} is constant = {}, adjusting RHS by -{} * {} = {}", 
-                            var, const_val, coeff, const_val, -coeff * const_val);
+                        if self.constraints.len() <= 20 {
+                            eprintln!("LP BUILD:   var {:?} is constant = {}, adjusting RHS by -{} * {} = {}", 
+                                var, const_val, coeff, const_val, -coeff * const_val);
+                        }
                     } else if let Some(&lp_idx) = var_to_lp_index.get(&var) {
                         // This is a decision variable
                         row[lp_idx] = coeff;
                     }
                 }
                 
-                eprintln!("LP BUILD: Constraint row = {:?}, rhs = {}", row, rhs_adjusted);
+                // Only print rows for small problems (printing 225-element vectors is SLOW!)
+                if self.constraints.len() <= 20 {
+                    eprintln!("LP BUILD: Constraint row = {:?}, rhs = {}", row, rhs_adjusted);
+                }
                 a.push(row);
                 b.push(rhs_adjusted);
             }
