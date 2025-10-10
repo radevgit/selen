@@ -113,11 +113,10 @@ let solution = m.maximize(x).expect("Should find optimal solution");
 println!("Optimal x: {:?}", solution[x]);
 ```
 
-For problems with large domains (±1e6) and linear constraints, the LP solver provides dramatic performance improvements (60s+ → <1s).
 
 **FlatZinc/MiniZinc Support**
 
-For FlatZinc `.fzn` file support, use the separate [Zelen](https://github.com/radevgit/zelen) crate. Note: FlatZinc exports should use the new generic API (`lin_eq` instead of `float_lin_eq`). See [Migration Guide](docs/FLATZINC_MIGRATION.md).
+For FlatZinc `.fzn` file support, use the separate [Zelen](https://github.com/radevgit/zelen) crate.
 
 ## Installation
 
@@ -185,45 +184,4 @@ fn main() {
     }
 }
 ```
-
-### Programmatic API Example
-
-For developers who prefer a more explicit, programmatic approach, the same constraints can be built using the runtime API:
-
-```rust
-use selen::prelude::*;
-
-fn main() {
-    let mut m = Model::default();
-
-    // Create variables
-    let x = m.int(1, 10);
-    let y = m.int(5, 15);
-
-    // Add constraints using programmatic API
-    m.new(x.lt(y));                    // x < y
-    m.new(x.add(y).eq(12));            // x + y == 12
-
-    // Global constraints
-    let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
-    m.alldiff(&vars.clone());       // All different
-    
-    // Mathematical functions
-    let abs_result = m.abs(x);
-    m.new(abs_result.ge(1));           // abs(x) >= 1
-    
-    // Solve the problem
-    if let Ok(solution) = m.solve() {
-        println!("x = {:?}", solution[x]);
-        println!("y = {:?}", solution[y]);
-    }
-}
-```
-
-
-
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
