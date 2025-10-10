@@ -33,9 +33,9 @@ impl Model {
     /// ```
     /// # use selen::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_int_var(0, 10);
-    /// let y = model.new_int_var(0, 10);
-    /// let b = model.new_bool_var();
+    /// let x = model.int(0, 10);
+    /// let y = model.int(0, 10);
+    /// let b = model.bool();
     /// model.eq_reif(x, y, b); // b is true iff x == y
     /// ```
     pub fn eq_reif(&mut self, x: VarId, y: VarId, b: VarId) {
@@ -56,9 +56,9 @@ impl Model {
     /// ```
     /// # use selen::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_int_var(0, 10);
-    /// let y = model.new_int_var(0, 10);
-    /// let b = model.new_bool_var();
+    /// let x = model.int(0, 10);
+    /// let y = model.int(0, 10);
+    /// let b = model.bool();
     /// model.ne_reif(x, y, b); // b is true iff x != y
     /// ```
     pub fn ne_reif(&mut self, x: VarId, y: VarId, b: VarId) {
@@ -79,9 +79,9 @@ impl Model {
     /// ```
     /// # use selen::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_int_var(0, 10);
-    /// let y = model.new_int_var(0, 10);
-    /// let b = model.new_bool_var();
+    /// let x = model.int(0, 10);
+    /// let y = model.int(0, 10);
+    /// let b = model.bool();
     /// model.lt_reif(x, y, b); // b is true iff x < y
     /// ```
     pub fn lt_reif(&mut self, x: VarId, y: VarId, b: VarId) {
@@ -102,9 +102,9 @@ impl Model {
     /// ```
     /// # use selen::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_int_var(0, 10);
-    /// let y = model.new_int_var(0, 10);
-    /// let b = model.new_bool_var();
+    /// let x = model.int(0, 10);
+    /// let y = model.int(0, 10);
+    /// let b = model.bool();
     /// model.le_reif(x, y, b); // b is true iff x <= y
     /// ```
     pub fn le_reif(&mut self, x: VarId, y: VarId, b: VarId) {
@@ -125,9 +125,9 @@ impl Model {
     /// ```
     /// # use selen::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_int_var(0, 10);
-    /// let y = model.new_int_var(0, 10);
-    /// let b = model.new_bool_var();
+    /// let x = model.int(0, 10);
+    /// let y = model.int(0, 10);
+    /// let b = model.bool();
     /// model.gt_reif(x, y, b); // b is true iff x > y
     /// ```
     pub fn gt_reif(&mut self, x: VarId, y: VarId, b: VarId) {
@@ -148,9 +148,9 @@ impl Model {
     /// ```
     /// # use selen::prelude::*;
     /// let mut model = Model::default();
-    /// let x = model.new_int_var(0, 10);
-    /// let y = model.new_int_var(0, 10);
-    /// let b = model.new_bool_var();
+    /// let x = model.int(0, 10);
+    /// let y = model.int(0, 10);
+    /// let b = model.bool();
     /// model.ge_reif(x, y, b); // b is true iff x >= y
     /// ```
     pub fn ge_reif(&mut self, x: VarId, y: VarId, b: VarId) {

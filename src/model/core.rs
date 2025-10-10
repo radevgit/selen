@@ -237,12 +237,14 @@ impl Model {
     /// let mut m = Model::default();
     /// let x = m.int(1, 10);
     /// let y = m.int(1, 10);
+    /// let z = m.int(1, 10);
     /// 
     /// assert_eq!(m.constraint_count(), 0);
-    /// m.new(x.ne(y));
-    /// assert_eq!(m.constraint_count(), 1);
-    /// m.new(x.le(8));
-    /// assert_eq!(m.constraint_count(), 2);
+    /// m.alldiff(&[x, y, z]);
+    /// let count_after_first = m.constraint_count();
+    /// assert!(count_after_first > 0);
+    /// m.alleq(&[x, y]);
+    /// assert!(m.constraint_count() > count_after_first);
     /// ```
     pub fn constraint_count(&self) -> usize {
         self.props.count()

@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [0.12.0] - 2025-10-10
 - Breaking API changes: Unified (Generic) API
+- Fixes in LP Solver
 
 ## [0.11.0] - 2025-10-09
 - LP Solver integrated

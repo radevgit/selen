@@ -236,14 +236,14 @@ impl LinearConstraintSystem {
         let mut b = Vec::with_capacity(estimated_rows);
         
         if self.constraints.len() > 20 {
-            eprintln!("LP BUILD: Processing {} constraints with {} variables (output suppressed for performance)...", 
+            lp_debug!("LP BUILD: Processing {} constraints with {} variables (output suppressed for performance)...", 
                 self.constraints.len(), n_vars);
         }
         
         for constraint in &self.constraints {
             // Only print detailed info for small problems (avoid performance hit)
             if self.constraints.len() <= 20 {
-                eprintln!("LP BUILD: Converting constraint with {} vars, relation {:?}, rhs {}", 
+                lp_debug!("LP BUILD: Converting constraint with {} vars, relation {:?}, rhs {}", 
                     constraint.variables.len(), constraint.relation, constraint.rhs);
             }
             
@@ -261,7 +261,7 @@ impl LinearConstraintSystem {
                         // This is a constant - move it to RHS
                         rhs_adjusted -= coeff * const_val;
                         if self.constraints.len() <= 20 {
-                            eprintln!("LP BUILD:   var {:?} is constant = {}, adjusting RHS by -{} * {} = {}", 
+                            lp_debug!("LP BUILD:   var {:?} is constant = {}, adjusting RHS by -{} * {} = {}", 
                                 var, const_val, coeff, const_val, -coeff * const_val);
                         }
                     } else if let Some(&lp_idx) = var_to_lp_index.get(&var) {
@@ -272,7 +272,7 @@ impl LinearConstraintSystem {
                 
                 // Only print rows for small problems (printing 225-element vectors is SLOW!)
                 if self.constraints.len() <= 20 {
-                    eprintln!("LP BUILD: Constraint row = {:?}, rhs = {}", row, rhs_adjusted);
+                    lp_debug!("LP BUILD: Constraint row = {:?}, rhs = {}", row, rhs_adjusted);
                 }
                 a.push(row);
                 b.push(rhs_adjusted);
@@ -290,7 +290,7 @@ impl LinearConstraintSystem {
         
         let n_constraints = a.len();
         
-        eprintln!("LP BUILD: Final problem: {} variables (excluding {} constants), {} constraints", 
+        lp_debug!("LP BUILD: Final problem: {} variables (excluding {} constants), {} constraints", 
             n_vars, constants.len(), n_constraints);
         
         LpProblem::new(n_vars, n_constraints, c, a, b, lower_bounds, upper_bounds)
@@ -377,7 +377,7 @@ pub fn apply_lp_solution(
     
     // Sanity check: LP solution should have same number of variables
     if solution.x.len() != lp_index_to_var.len() {
-        eprintln!("LP APPLY: WARNING: LP solution has {} variables but expected {}", 
+        lp_debug!("LP APPLY: WARNING: LP solution has {} variables but expected {}", 
             solution.x.len(), lp_index_to_var.len());
         return Some(()); // Don't apply if mismatch
     }
@@ -389,12 +389,12 @@ pub fn apply_lp_solution(
         // Get current bounds
         let (current_lower, current_upper) = extract_bounds(var_id, ctx.vars());
         
-        eprintln!("LP APPLY: var {:?} LP_value={} bounds=[{}, {}]", var_id, lp_value, current_lower, current_upper);
+        lp_debug!("LP APPLY: var {:?} LP_value={} bounds=[{}, {}]", var_id, lp_value, current_lower, current_upper);
         
         // Skip constants (variables where lower == upper)
         // These are fixed values and shouldn't be modified
         if (current_upper - current_lower).abs() < tolerance {
-            eprintln!("LP APPLY: var {:?} is constant, skipping", var_id);
+            lp_debug!("LP APPLY: var {:?} is constant, skipping", var_id);
             continue;
         }
         

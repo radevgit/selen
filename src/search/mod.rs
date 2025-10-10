@@ -1,5 +1,8 @@
 use crate::{prelude::Solution, constraints::props::Propagators, search::{agenda::Agenda, branch::{split_on_unassigned, SplitOnUnassigned}, mode::Mode}, variables::Vars, variables::views::Context};
 
+/// Debug flag - set to false to disable LP solver debug output
+const LP_DEBUG: bool = false;
+
 #[doc(hidden)]
 pub mod mode;
 
@@ -95,12 +98,16 @@ pub fn search_with_timeout_and_memory<M: Mode>(
         //    - Must scan propagators to find linear relationships
         // Result: Both APIs work together without duplication
         
-        eprintln!("LP: Starting with {} AST-extracted constraints (runtime API)", pending_lp_constraints.len());
+        if LP_DEBUG {
+            eprintln!("LP: Starting with {} AST-extracted constraints (runtime API)", pending_lp_constraints.len());
+        }
         
         // Always scan propagators for old API constraints (m.add, m.mul, etc.)
         // These are created directly as propagators, not through AST
         let prop_system = props.extract_linear_system();
-        eprintln!("LP: Found {} propagator constraints (old API)", prop_system.constraints.len());
+        if LP_DEBUG {
+            eprintln!("LP: Found {} propagator constraints (old API)", prop_system.constraints.len());
+        }
         
         // Build linear system from BOTH sources
         let mut linear_system = crate::lpsolver::csp_integration::LinearConstraintSystem::new();
@@ -115,13 +122,17 @@ pub fn search_with_timeout_and_memory<M: Mode>(
             linear_system.add_constraint(constraint);
         }
         
-        eprintln!("LP: Extracted {} total constraints, {} variables", 
-            linear_system.constraints.len(), 
-            linear_system.variables.len());
+        if LP_DEBUG {
+            eprintln!("LP: Extracted {} total constraints, {} variables", 
+                linear_system.constraints.len(), 
+                linear_system.variables.len());
+        }
         
         // Extract objective from Mode for LP solver
         let lp_has_objective = if let Some((var_id, minimize)) = mode.lp_objective() {
-            eprintln!("LP: Extracted objective: variable {:?}, minimize={}", var_id, minimize);
+            if LP_DEBUG {
+                eprintln!("LP: Extracted objective: variable {:?}, minimize={}", var_id, minimize);
+            }
             
             // Find the index of this variable in the linear system
             if let Some(idx) = linear_system.variables.iter().position(|&v| v == var_id) {
@@ -129,40 +140,58 @@ pub fn search_with_timeout_and_memory<M: Mode>(
                 let mut coeffs = vec![0.0; linear_system.variables.len()];
                 coeffs[idx] = 1.0;
                 linear_system.set_objective(coeffs, minimize);
-                eprintln!("LP: Set objective for variable at index {} (minimize={})", idx, minimize);
+                if LP_DEBUG {
+                    eprintln!("LP: Set objective for variable at index {} (minimize={})", idx, minimize);
+                }
                 true
             } else {
-                eprintln!("LP: Warning - objective variable {:?} not found in linear system (non-linear problem)", var_id);
+                if LP_DEBUG {
+                    eprintln!("LP: Warning - objective variable {:?} not found in linear system (non-linear problem)", var_id);
+                }
                 false
             }
         } else {
-            eprintln!("LP: No simple variable objective found (might be complex expression)");
+            if LP_DEBUG {
+                eprintln!("LP: No simple variable objective found (might be complex expression)");
+            }
             false
         };
         
         let is_suitable = linear_system.is_suitable_for_lp(&vars);
-        eprintln!("LP: is_suitable_for_lp() = {}, lp_has_objective = {}", is_suitable, lp_has_objective);
+        if LP_DEBUG {
+            eprintln!("LP: is_suitable_for_lp() = {}, lp_has_objective = {}", is_suitable, lp_has_objective);
+        }
         
         // Only use LP if: (1) suitable AND (2) has objective in linear system
         // Without objective in linear system, LP can't help optimize
         if is_suitable && lp_has_objective {
-            eprintln!("LP: System is suitable for LP with objective, solving...");
+            if LP_DEBUG {
+                eprintln!("LP: System is suitable for LP with objective, solving...");
+            }
             // Convert to LP problem and solve
             let lp_problem = linear_system.to_lp_problem(&vars);
-            eprintln!("LP: Problem has {} vars, {} constraints", lp_problem.n_vars, lp_problem.n_constraints);
+            if LP_DEBUG {
+                eprintln!("LP: Problem has {} vars, {} constraints", lp_problem.n_vars, lp_problem.n_constraints);
+            }
             
             match crate::lpsolver::solve(&lp_problem) {
                 Ok(solution) => {
-                    eprintln!("LP: Solution status = {:?}", solution.status);
+                    if LP_DEBUG {
+                        eprintln!("LP: Solution status = {:?}", solution.status);
+                    }
                     
                     // Check if LP found the problem infeasible
                     if solution.status == crate::lpsolver::LpStatus::Infeasible {
-                        eprintln!("LP: Problem is infeasible");
+                        if LP_DEBUG {
+                            eprintln!("LP: Problem is infeasible");
+                        }
                         return Search::Done(None);
                     }
                     
                     // LP found optimal solution
-                    eprintln!("LP: Solution status = {:?}, objective = {}", solution.status, solution.objective);
+                    if LP_DEBUG {
+                        eprintln!("LP: Solution status = {:?}, objective = {}", solution.status, solution.objective);
+                    }
                     
                     // Apply LP solution to tighten variable bounds
                     use crate::variables::views::Context;
@@ -171,15 +200,21 @@ pub fn search_with_timeout_and_memory<M: Mode>(
                     {
                         let mut ctx = Context::new(&mut vars_mut, &mut events);
                         if crate::lpsolver::csp_integration::apply_lp_solution(&linear_system, &solution, &mut ctx).is_none() {
-                            eprintln!("LP: Failed to apply solution (propagation failure)");
+                            if LP_DEBUG {
+                                eprintln!("LP: Failed to apply solution (propagation failure)");
+                            }
                             return Search::Done(None);
                         }
                     }
                     vars = vars_mut;
-                    eprintln!("LP: Successfully applied LP bounds");
+                    if LP_DEBUG {
+                        eprintln!("LP: Successfully applied LP bounds");
+                    }
                 }
                 Err(e) => {
-                    eprintln!("LP: Solver returned error: {:?}", e);
+                    if LP_DEBUG {
+                        eprintln!("LP: Solver returned error: {:?}", e);
+                    }
                     // Continue with CSP search without LP bounds
                 }
             }
@@ -191,12 +226,18 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     let agenda = Agenda::with_props(props.get_prop_ids_iter());
 
     // Propagate constraints until search is stalled or a solution is found
-    eprintln!("LP: Starting initial propagation...");
+    if LP_DEBUG {
+        eprintln!("LP: Starting initial propagation...");
+    }
     let Some((is_stalled, space)) = propagate(Space { vars, props }, agenda) else {
-        eprintln!("LP: Initial propagation returned None (infeasible)");
+        if LP_DEBUG {
+            eprintln!("LP: Initial propagation returned None (infeasible)");
+        }
         return Search::Done(None);
     };
-    eprintln!("LP: Initial propagation succeeded, is_stalled={}", is_stalled);
+    if LP_DEBUG {
+        eprintln!("LP: Initial propagation succeeded, is_stalled={}", is_stalled);
+    }
 
     // Explore space by alternating branching and propagation
     if is_stalled {
