@@ -6,6 +6,9 @@
 //! - Propagators for constraint enforcement
 //! - Constraint builders for fluent API
 
+// New unified constraint functions (Phase 1 of refactoring)
+pub mod functions;
+
 // Constraint API - organized user-facing methods
 pub mod api;
 

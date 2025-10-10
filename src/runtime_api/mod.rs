@@ -71,6 +71,7 @@ use crate::{
     model::Model,
     variables::{Val, VarId},
     constraints::props::PropId,
+    lpsolver::csp_integration::{LinearConstraint, ConstraintRelation},
 };
 
 /// Represents an expression that can be built at runtime
@@ -97,7 +98,7 @@ pub enum ExprBuilder {
 }
 
 /// A constraint that can be posted to the model
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[doc(hidden)]
 pub struct Constraint {
     kind: ConstraintKind,
@@ -111,7 +112,9 @@ pub struct Builder<'a> {
 }
 
 #[derive(Clone)]
-enum ConstraintKind {
+#[doc(hidden)]
+#[derive(Debug)]
+pub enum ConstraintKind {
     /// Simple binary constraint: left op right
     Binary {
         left: ExprBuilder,
@@ -125,13 +128,206 @@ enum ConstraintKind {
 }
 
 #[derive(Clone, Debug)]
-enum ComparisonOp {
+#[doc(hidden)]
+pub enum ComparisonOp {
     Eq,  // ==
     Ne,  // !=  
     Lt,  // <
     Le,  // <=
     Gt,  // >
     Ge,  // >=
+}
+
+/// Extract a linear constraint from a ConstraintKind AST node for LP solving
+/// 
+/// This function analyzes the AST BEFORE materialization to preserve the
+/// constraint structure. It handles patterns like:
+/// - Add(x, y).eq(z) → x + y = z
+/// - x.le(y) → x ≤ y  
+/// - x.eq(Val(c)) → x = c
+/// - Add(x, y).le(Val(c)) → x + y ≤ c
+/// - Sub(x, y).eq(z) → x - y = z
+/// 
+/// Returns None if the constraint is non-linear or not suitable for LP.
+fn extract_lp_constraint(kind: &ConstraintKind) -> Option<LinearConstraint> {
+    match kind {
+        ConstraintKind::Binary { left, op, right } => {
+            // Try to extract linear expression from both sides
+            let left_linear = extract_linear_expr(left)?;
+            let right_linear = extract_linear_expr(right)?;
+            
+            // Combine into a single constraint: left_expr op right_expr
+            // Rewrite as: left_expr - right_expr op 0
+            let mut coeffs = Vec::new();
+            let mut vars = Vec::new();
+            
+            // Add left side with positive coefficients
+            for (var, coeff) in left_linear.terms {
+                vars.push(var);
+                coeffs.push(coeff);
+            }
+            
+            // Add right side with negative coefficients  
+            for (var, coeff) in right_linear.terms {
+                if let Some(idx) = vars.iter().position(|&v| v == var) {
+                    // Variable already exists, combine coefficients
+                    coeffs[idx] -= coeff;
+                } else {
+                    vars.push(var);
+                    coeffs.push(-coeff);
+                }
+            }
+            
+            // RHS is: right_constant - left_constant
+            let rhs = right_linear.constant - left_linear.constant;
+            
+            // Convert comparison operator to constraint relation
+            let relation = match op {
+                ComparisonOp::Eq => ConstraintRelation::Equality,
+                ComparisonOp::Le => ConstraintRelation::LessOrEqual,
+                ComparisonOp::Ge => ConstraintRelation::GreaterOrEqual,
+                ComparisonOp::Lt | ComparisonOp::Gt | ComparisonOp::Ne => {
+                    // Strict inequalities and != are not handled by LP
+                    return None;
+                }
+            };
+            
+            Some(LinearConstraint::new(coeffs, vars, relation, rhs))
+        }
+        // Boolean combinations (And, Or, Not) are not linear constraints
+        _ => None,
+    }
+}
+
+/// Represents a linear expression: sum of (coeff * var) + constant
+struct LinearExpr {
+    terms: Vec<(VarId, f64)>,  // (variable, coefficient) pairs
+    constant: f64,
+}
+
+/// Extract a linear expression from an ExprBuilder AST node
+/// Returns None if the expression is non-linear (contains Mul or Div with variables)
+fn extract_linear_expr(expr: &ExprBuilder) -> Option<LinearExpr> {
+    match expr {
+        ExprBuilder::Var(var) => {
+            // Single variable: 1.0 * var + 0.0
+            Some(LinearExpr {
+                terms: vec![(*var, 1.0)],
+                constant: 0.0,
+            })
+        }
+        ExprBuilder::Val(val) => {
+            // Constant: 0 * x + constant
+            let constant = match val {
+                Val::ValI(i) => *i as f64,
+                Val::ValF(f) => *f,
+            };
+            Some(LinearExpr {
+                terms: vec![],
+                constant,
+            })
+        }
+        ExprBuilder::Add(left, right) => {
+            // Addition: (left_expr) + (right_expr)
+            let left_linear = extract_linear_expr(left)?;
+            let right_linear = extract_linear_expr(right)?;
+            
+            let mut terms = left_linear.terms;
+            
+            // Add right terms, combining coefficients for same variables
+            for (var, coeff) in right_linear.terms {
+                if let Some(idx) = terms.iter().position(|(v, _)| *v == var) {
+                    terms[idx].1 += coeff;
+                } else {
+                    terms.push((var, coeff));
+                }
+            }
+            
+            Some(LinearExpr {
+                terms,
+                constant: left_linear.constant + right_linear.constant,
+            })
+        }
+        ExprBuilder::Sub(left, right) => {
+            // Subtraction: (left_expr) - (right_expr)
+            let left_linear = extract_linear_expr(left)?;
+            let right_linear = extract_linear_expr(right)?;
+            
+            let mut terms = left_linear.terms;
+            
+            // Subtract right terms, combining coefficients for same variables
+            for (var, coeff) in right_linear.terms {
+                if let Some(idx) = terms.iter().position(|(v, _)| *v == var) {
+                    terms[idx].1 -= coeff;
+                } else {
+                    terms.push((var, -coeff));
+                }
+            }
+            
+            Some(LinearExpr {
+                terms,
+                constant: left_linear.constant - right_linear.constant,
+            })
+        }
+        ExprBuilder::Mul(left, right) => {
+            // Multiplication is only linear if one side is constant
+            let left_linear = extract_linear_expr(left)?;
+            let right_linear = extract_linear_expr(right)?;
+            
+            // Check if left is constant (no variable terms)
+            if left_linear.terms.is_empty() {
+                let scalar = left_linear.constant;
+                let terms = right_linear.terms
+                    .into_iter()
+                    .map(|(var, coeff)| (var, coeff * scalar))
+                    .collect();
+                return Some(LinearExpr {
+                    terms,
+                    constant: right_linear.constant * scalar,
+                });
+            }
+            
+            // Check if right is constant (no variable terms)
+            if right_linear.terms.is_empty() {
+                let scalar = right_linear.constant;
+                let terms = left_linear.terms
+                    .into_iter()
+                    .map(|(var, coeff)| (var, coeff * scalar))
+                    .collect();
+                return Some(LinearExpr {
+                    terms,
+                    constant: left_linear.constant * scalar,
+                });
+            }
+            
+            // Both sides have variables - non-linear!
+            None
+        }
+        ExprBuilder::Div(left, right) => {
+            // Division is only linear if right side is constant
+            let left_linear = extract_linear_expr(left)?;
+            let right_linear = extract_linear_expr(right)?;
+            
+            // Right must be constant (no variable terms)
+            if !right_linear.terms.is_empty() {
+                return None;  // Division by variable - non-linear!
+            }
+            
+            let divisor = right_linear.constant;
+            if divisor.abs() < 1e-10 {
+                return None;  // Division by zero or near-zero
+            }
+            
+            let terms = left_linear.terms
+                .into_iter()
+                .map(|(var, coeff)| (var, coeff / divisor))
+                .collect();
+            Some(LinearExpr {
+                terms,
+                constant: left_linear.constant / divisor,
+            })
+        }
+    }
 }
 
 #[doc(hidden)]
@@ -569,9 +765,30 @@ fn get_expr_var(model: &mut Model, expr: &ExprBuilder) -> VarId {
     }
 }
 
-/// Optimized constraint posting that avoids unnecessary variable creation
+/// Post a constraint by storing its AST for later materialization
+/// This allows LP extraction BEFORE creating propagators
 #[inline]
-fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
+#[doc(hidden)]
+pub fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
+    // STEP 1: Extract LP constraint from AST
+    if let Some(lp_constraint) = extract_lp_constraint(kind) {
+        eprintln!("LP EXTRACTION: Extracted linear constraint from AST: {:?}", lp_constraint);
+        model.pending_lp_constraints.push(lp_constraint);
+    }
+    
+    // STEP 2: Store AST for later materialization (delay propagator creation)
+    model.pending_constraint_asts.push(kind.clone());
+    
+    // Return dummy PropId (actual PropId will be assigned during materialization)
+    PropId(model.pending_constraint_asts.len() - 1)
+}
+
+/// Materialize a constraint AST into propagators
+/// This is the actual implementation that creates propagators from AST
+/// Called by Model::materialize_pending_asts() to convert delayed ASTs into propagators
+#[inline]
+pub(crate) fn materialize_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
+    // This is the original post_constraint_kind logic that actually creates propagators
     match kind {
         ConstraintKind::Binary { left, op, right } => {
             // Optimization: Handle simple var-constant constraints directly
@@ -596,9 +813,9 @@ fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
             }
         }
         ConstraintKind::And(left, right) => {
-            // Post both constraints - AND is implicit
-            post_constraint_kind(model, &left.kind);
-            post_constraint_kind(model, &right.kind)
+            // Materialize both constraints - AND is implicit
+            materialize_constraint_kind(model, &left.kind);
+            materialize_constraint_kind(model, &right.kind)
         }
         ConstraintKind::Or(left, right) => {
             // Special case: multiple equality constraints on the same variable
@@ -622,13 +839,13 @@ fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
             
             // For general OR cases, we need proper reification (not yet implemented)
             // For now, fall back to posting both constraints (which may conflict for some cases)
-            post_constraint_kind(model, &left.kind);
-            post_constraint_kind(model, &right.kind)
+            materialize_constraint_kind(model, &left.kind);
+            materialize_constraint_kind(model, &right.kind)
         }
         ConstraintKind::Not(constraint) => {
             // For NOT, we need to use boolean variables and logic
             // This is a simplified implementation - a full implementation would use reification
-            post_constraint_kind(model, &constraint.kind)
+            materialize_constraint_kind(model, &constraint.kind)
         }
     }
 }

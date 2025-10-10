@@ -46,7 +46,7 @@ impl Space {
 /// Perform search, iterating over assignments that satisfy all constraints.
 #[doc(hidden)]
 pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
-    search_with_timeout(vars, props, mode, None)
+    search_with_timeout(vars, props, mode, None, vec![])
 }
 
 /// Perform search with timeout support.
@@ -55,9 +55,10 @@ pub fn search_with_timeout<M: Mode>(
     vars: Vars, 
     props: Propagators, 
     mode: M, 
-    timeout: Option<std::time::Duration>
+    timeout: Option<std::time::Duration>,
+    pending_lp_constraints: Vec<crate::lpsolver::csp_integration::LinearConstraint>
 ) -> Search<M> {
-    search_with_timeout_and_memory(vars, props, mode, timeout, None)
+    search_with_timeout_and_memory(vars, props, mode, timeout, None, pending_lp_constraints)
 }
 
 /// Perform search with timeout and memory limit support.
@@ -78,14 +79,43 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     props: Propagators, 
     mode: M, 
     timeout: Option<std::time::Duration>,
-    memory_limit_mb: Option<u64>
+    memory_limit_mb: Option<u64>,
+    pending_lp_constraints: Vec<crate::lpsolver::csp_integration::LinearConstraint>
 ) -> Search<M> {
     // ===== LP SOLVER INTEGRATION (Root Node Only) =====
     // Try LP solving at root node if suitable linear system exists
     let (mut vars, props) = (vars, props);
     {
-        let mut linear_system = props.extract_linear_system();
-        eprintln!("LP: Extracted {} constraints, {} variables", 
+        // Build linear system from TWO sources:
+        // 1. AST-extracted constraints (runtime API: x.add(y).eq(z))
+        //    - Extracted BEFORE materialization in post_constraint_kind()
+        //    - No propagators created yet (delayed materialization)
+        // 2. Propagator-scanned constraints (old API: m.add(x,y), m.mul(x,y))
+        //    - Old API creates propagators immediately (no AST)
+        //    - Must scan propagators to find linear relationships
+        // Result: Both APIs work together without duplication
+        
+        eprintln!("LP: Starting with {} AST-extracted constraints (runtime API)", pending_lp_constraints.len());
+        
+        // Always scan propagators for old API constraints (m.add, m.mul, etc.)
+        // These are created directly as propagators, not through AST
+        let prop_system = props.extract_linear_system();
+        eprintln!("LP: Found {} propagator constraints (old API)", prop_system.constraints.len());
+        
+        // Build linear system from BOTH sources
+        let mut linear_system = crate::lpsolver::csp_integration::LinearConstraintSystem::new();
+        
+        // Add AST-extracted constraints (runtime API)
+        for constraint in pending_lp_constraints {
+            linear_system.add_constraint(constraint);
+        }
+        
+        // Add propagator-extracted constraints (old API)
+        for constraint in prop_system.constraints {
+            linear_system.add_constraint(constraint);
+        }
+        
+        eprintln!("LP: Extracted {} total constraints, {} variables", 
             linear_system.constraints.len(), 
             linear_system.variables.len());
         

@@ -1852,7 +1852,7 @@ impl Propagators {
 
 /// Propagator handle that is not bound to a specific memory location.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub struct PropId(usize);
+pub struct PropId(pub usize);
 
 impl Index<PropId> for Vec<Box<dyn Prune>> {
     type Output = Box<dyn Prune>;
