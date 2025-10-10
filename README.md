@@ -4,26 +4,18 @@
 [![Documentation](https://docs.rs/selen/badge.svg)](https://docs.rs/selen)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-A Constraint Satisfaction Problem (CSP) solver library written in Rust with zero external dependencies, featuring an integrated LP solver for linear optimization problems.
-
+A Constraint Satisfaction Problem (CSP) solver library written in Rust with zero external dependencies.
 
 ## Overview
 
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
-
-**Key Features**:
-- 🚀 **Zero dependencies** - Pure Rust implementation
-- 🔧 **Generic API** - Works with both integers and floats
-- 📊 **LP Solver Integration** - Automatic linear programming optimization
-- 🎯 **Constraint Propagation** - Efficient domain reduction
-- 🔄 **Hybrid Solving** - Combines CP and LP techniques
 
 
 **Variable Types**: `int`, `float`, mixed constraints
 
 **Constraint API**
 ```rust
-// Comparison constraints (via runtime API)
+// Comparison constraints
 m.new(x.lt(y));                        // x < y
 m.new(y.le(z));                        // y <= z
 m.new(z.gt(5));                        // z > 5
@@ -62,7 +54,7 @@ let or_result = m.bool_or(&[a, b]);    // a OR b
 let not_result = m.bool_not(a);        // NOT a
 m.bool_clause(&[a, b], &[c]);          // a ∨ b ∨ ¬c (CNF clause)
 
-// Fluent expression building
+// Fluent expression building (runtime API)
 m.new(x.add(y).le(z));                 // x + y <= z
 m.new(y.sub(x).ge(0));                 // y - x >= 0
 m.new(x.mul(y).eq(12));                // x * y == 12
@@ -74,7 +66,11 @@ m.lin_le(&[1, -1], &[x, y], 5);        // x - y <= 5
 m.lin_ne(&[2, 1], &[x, y], 8);         // 2x + y != 8
 m.lin_eq(&[1.5, 2.0], &[x, y], 7.5);   // 1.5x + 2.0y == 7.5 (works with floats)
 m.lin_le(&[0.5, 1.0], &[x, y], 3.0);   // 0.5x + y <= 3.0 (works with floats)
-m.bool_lin_eq(&[1, 1, 1], &[a, b, c], 2);   // a + b + c == 2
+
+// Boolean linear constraints (for boolean variables)
+m.bool_lin_eq(&[1, 1, 1], &[a, b, c], 2);    // a + b + c == 2
+m.bool_lin_le(&[1, 1, 1], &[a, b, c], 2);    // a + b + c <= 2
+m.bool_lin_ne(&[1, 1, 1], &[a, b, c], 3);    // a + b + c != 3
 
 // Reified constraints (with boolean result) - generic for int and float
 m.eq_reif(x, y, b);                    // b ↔ (x == y)
@@ -84,20 +80,19 @@ m.le_reif(x, y, b);                    // b ↔ (x <= y)
 m.gt_reif(x, y, b);                    // b ↔ (x > y)
 m.ge_reif(x, y, b);                    // b ↔ (x >= y)
 m.lin_eq_reif(&[2, 1], &[x, y], 5, b); // b ↔ (2x + y == 5)
+m.lin_le_reif(&[2, 1], &[x, y], 5, b); // b ↔ (2x + y <= 5)
+m.lin_ne_reif(&[2, 1], &[x, y], 5, b); // b ↔ (2x + y != 5)
 
-// Type conversion constraints
-m.int2float(int_var, float_var);       // float_var = int_var (as float)
-m.float2int_floor(float_var, int_var); // int_var = floor(float_var)
-m.float2int_ceil(float_var, int_var);  // int_var = ceil(float_var)
-m.float2int_round(float_var, int_var); // int_var = round(float_var)
+// Boolean linear reified constraints
+m.bool_lin_eq_reif(&[1, 1], &[a, b], 2, c);  // c ↔ (a + b == 2)
+m.bool_lin_le_reif(&[1, 1], &[a, b], 1, c);  // c ↔ (a + b <= 1)
+m.bool_lin_ne_reif(&[1, 1], &[a, b], 0, c);  // c ↔ (a + b != 0)
 
-// Array operations
-m.array_int_element(index, &array, result);     // result = array[index]
-m.array_int_minimum(&array)?;                   // minimum of array
-m.array_int_maximum(&array)?;                   // maximum of array
-m.array_float_element(index, &array, result);   // result = array[index] (floats)
-m.array_float_minimum(&array)?;                 // minimum of array (floats)
-m.array_float_maximum(&array)?;                 // maximum of array (floats)
+// Type conversion functions (from constraints::functions)
+let float_result = to_float(&mut m, int_var);      // convert int to float
+let floor_result = floor(&mut m, float_var);       // floor(float_var)
+let ceil_result = ceil(&mut m, float_var);         // ceil(float_var)
+let round_result = round(&mut m, float_var);       // round(float_var)
 ```
 
 **Optimization**
