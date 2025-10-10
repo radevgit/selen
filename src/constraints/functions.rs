@@ -23,11 +23,19 @@ use crate::runtime_api::{ExprBuilder, VarIdExt, ModelExt};
 /// Works with both integer and float variables.
 ///
 /// # Examples
-/// ```ignore
+/// ```
+/// use selen::prelude::*;
+/// 
+/// let mut model = Model::default();
+/// let x = model.int(0, 10);
+/// let y = model.int(0, 10);
+/// let z = model.int(0, 20);
+/// 
 /// // Post constraint: x + y = z
 /// model.new(add(x, y).eq(z));
 /// 
 /// // Compose: (x + y) + z
+/// let result = model.int(0, 30);
 /// model.new(add(add(x, y), z).eq(result));
 /// ```
 pub fn add(x: impl Into<ExprBuilder>, y: impl Into<ExprBuilder>) -> ExprBuilder {
