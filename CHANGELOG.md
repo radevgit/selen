@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.3] - 2025-10-11
+- Unbounded variables algorithm changed to work on AST
+
 ## [0.12.0] - 2025-10-10
 - Breaking API changes: Unified (Generic) API
 - Fixes in LP Solver
