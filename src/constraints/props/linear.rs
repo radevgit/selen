@@ -561,12 +561,10 @@ impl Prune for FloatLinEq {
             let current_min = match var_id.min(ctx) {
                 Val::ValF(f) => f,
                 Val::ValI(i) => i as f64,
-                _ => new_min, // Fallback to computed value if type mismatch
             };
             let current_max = match var_id.max(ctx) {
                 Val::ValF(f) => f,
                 Val::ValI(i) => i as f64,
-                _ => new_max, // Fallback to computed value if type mismatch
             };
             
             // Only apply clamping if the difference is small (precision error, not real infeasibility)
@@ -1359,12 +1357,10 @@ fn prune_float_lin_eq(coefficients: &[f64], variables: &[VarId], constant: f64, 
         let current_min = match var_id.min(ctx) {
             Val::ValF(f) => f,
             Val::ValI(i) => i as f64,
-            _ => new_min,
         };
         let current_max = match var_id.max(ctx) {
             Val::ValF(f) => f,
             Val::ValI(i) => i as f64,
-            _ => new_max,
         };
         
         let tolerance = 1e-6;

@@ -1325,7 +1325,7 @@ pub(crate) fn materialize_constraint_kind(model: &mut Model, kind: &ConstraintKi
                 ComparisonOp::Eq => model.props.int_lin_eq_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
                 ComparisonOp::Le => model.props.int_lin_le_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
                 ComparisonOp::Ne => model.props.int_lin_ne_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
-                unsupported_op => {
+                _ => {
                     // Other comparison operators not yet supported for reified integer linear constraints
                     // TODO: Add proper support for all comparison operators or return Result<PropId, Error>
                     // For now, post a trivial constraint: 0 <= 1 ⇔ true (always sets reif_var to 1)
@@ -1342,7 +1342,7 @@ pub(crate) fn materialize_constraint_kind(model: &mut Model, kind: &ConstraintKi
                 ComparisonOp::Eq => model.props.float_lin_eq_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
                 ComparisonOp::Le => model.props.float_lin_le_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
                 ComparisonOp::Ne => model.props.float_lin_ne_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
-                unsupported_op => {
+                _ => {
                     // Other comparison operators not yet supported for reified float linear constraints
                     // TODO: Add proper support for all comparison operators or return Result<PropId, Error>
                     // For now, post a trivial constraint: 0.0 <= 1.0 ⇔ true (always sets reif_var to 1)

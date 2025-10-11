@@ -76,10 +76,10 @@ fn main() {
     
     
     // Solve all four puzzles - including Platinum!
-    let (easy_propagations, easy_nodes) = solve_and_display("EASY", &easy_puzzle);
-    let (hard_propagations, hard_nodes) = solve_and_display("HARD", &hard_puzzle);
-    let (extreme_propagations, extreme_nodes) = solve_and_display("EXTREME", &extreme_puzzle);
-    let (platinum_propagations, platinum_nodes) = solve_and_display("PLATINUM", &platinum_puzzle);
+    let (_easy_propagations, _easy_nodes) = solve_and_display("EASY", &easy_puzzle);
+    let (_hard_propagations, _hard_nodes) = solve_and_display("HARD", &hard_puzzle);
+    let (_extreme_propagations, _extreme_nodes) = solve_and_display("EXTREME", &extreme_puzzle);
+    let (_platinum_propagations, _platinum_nodes) = solve_and_display("PLATINUM", &platinum_puzzle);
     
 }
 

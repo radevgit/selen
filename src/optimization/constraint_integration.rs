@@ -260,7 +260,7 @@ impl ConstraintAwareOptimizer {
         };
         
         // Create agenda with all propagators initially scheduled
-        let mut agenda = Agenda::with_props(props.get_prop_ids_iter());
+        let agenda = Agenda::with_props(props.get_prop_ids_iter());
         
         // Run propagation to fixpoint
         match propagate(space, agenda) {

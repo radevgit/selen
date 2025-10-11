@@ -562,6 +562,9 @@ impl OptimizationRouter {
     /// BUGFIX: Previously this function assigned arbitrary values (midpoints) to non-optimized
     /// variables, causing constraint violations. Now it properly propagates constraints after
     /// fixing the optimal variable to ensure all composite variables are consistent.
+    ///
+    /// Note: Currently unused - replaced by alternative implementation. Kept for reference.
+    #[allow(dead_code)]
     fn create_constrained_solution(
         &self,
         vars: &Vars,
@@ -596,7 +599,7 @@ impl OptimizationRouter {
         };
         
         // Create agenda with all propagators initially scheduled
-        let mut agenda = Agenda::with_props(props.get_prop_ids_iter());
+        let agenda = Agenda::with_props(props.get_prop_ids_iter());
         
         // Run propagation to fixpoint
         match propagate(space, agenda) {

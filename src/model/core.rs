@@ -151,11 +151,6 @@ impl Model {
         self.config.max_memory_mb
     }
     
-    /// Check if LP solver should be used for linear constraints
-    fn should_use_lp_solver(&self) -> bool {
-        self.config.prefer_lp_solver
-    }
-    
     /// Materialize pending constraint ASTs into actual propagators
     /// This is called after LP extraction and solving to create the propagators
     /// needed for the CSP search phase.
