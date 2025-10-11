@@ -11,7 +11,7 @@
 
 use crate::model::Model;
 use crate::variables::{VarId, Val};
-use crate::runtime_api::{ExprBuilder, VarIdExt, ModelExt};
+use crate::runtime_api::{ExprBuilder, ModelExt};
 
 // ============================================================================
 // Arithmetic Operations (return ExprBuilder for composition)

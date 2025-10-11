@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use crate::variables::VarId;
 
 // Constraint Propagator Framework
 // 

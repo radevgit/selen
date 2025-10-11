@@ -1291,14 +1291,17 @@ pub(crate) fn materialize_constraint_kind(model: &mut Model, kind: &ConstraintKi
                     let neg_coeffs: Vec<f64> = coeffs.iter().map(|c| -c).collect();
                     model.props.float_lin_le(neg_coeffs, vars.clone(), -constant)
                 }
-                _ => {
-                    // Strict inequalities (< and >) not supported for float linear constraints
-                    // This is a limitation of the current float linear constraint implementation
-                    // TODO: Add proper support for strict inequalities or return Result<PropId, Error>
-                    // For now, post a trivial constraint: 0*x <= 1 (always true) to maintain PropId consistency
-                    // Users should use <= or >= instead, or decompose their constraints
-                    let zero_coeffs: Vec<f64> = vec![0.0; vars.len()];
-                    model.props.float_lin_le(zero_coeffs, vars.clone(), 1.0)
+                ComparisonOp::Lt => {
+                    // a1*x1 + ... < c  <==>  a1*x1 + ... <= c - epsilon
+                    // Use float step size based on model precision to approximate strict inequality
+                    let epsilon = crate::variables::domain::float_interval::precision_to_step_size(model.float_precision_digits);
+                    model.props.float_lin_le(coeffs.clone(), vars.clone(), constant - epsilon)
+                }
+                ComparisonOp::Gt => {
+                    // a1*x1 + ... > c  <==>  a1*x1 + ... >= c + epsilon  <==>  -(a1*x1 + ...) <= -(c + epsilon)
+                    let epsilon = crate::variables::domain::float_interval::precision_to_step_size(model.float_precision_digits);
+                    let neg_coeffs: Vec<f64> = coeffs.iter().map(|c| -c).collect();
+                    model.props.float_lin_le(neg_coeffs, vars.clone(), -constant - epsilon)
                 }
             }
         }
@@ -1322,7 +1325,7 @@ pub(crate) fn materialize_constraint_kind(model: &mut Model, kind: &ConstraintKi
                 ComparisonOp::Eq => model.props.int_lin_eq_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
                 ComparisonOp::Le => model.props.int_lin_le_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
                 ComparisonOp::Ne => model.props.int_lin_ne_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
-                unsupported_op => {
+                _ => {
                     // Other comparison operators not yet supported for reified integer linear constraints
                     // TODO: Add proper support for all comparison operators or return Result<PropId, Error>
                     // For now, post a trivial constraint: 0 <= 1 ⇔ true (always sets reif_var to 1)
@@ -1339,7 +1342,7 @@ pub(crate) fn materialize_constraint_kind(model: &mut Model, kind: &ConstraintKi
                 ComparisonOp::Eq => model.props.float_lin_eq_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
                 ComparisonOp::Le => model.props.float_lin_le_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
                 ComparisonOp::Ne => model.props.float_lin_ne_reif(coeffs.clone(), vars.clone(), *constant, *reif_var),
-                unsupported_op => {
+                _ => {
                     // Other comparison operators not yet supported for reified float linear constraints
                     // TODO: Add proper support for all comparison operators or return Result<PropId, Error>
                     // For now, post a trivial constraint: 0.0 <= 1.0 ⇔ true (always sets reif_var to 1)

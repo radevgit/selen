@@ -6,7 +6,6 @@
 
 use crate::model::*;
 use crate::prelude::*;
-use crate::runtime_api::*;
 use std::time::Instant;
 
 /// A sparse set optimized for Sudoku candidate tracking (domain 1-9).
@@ -404,6 +403,9 @@ impl SudokuSolver {
     
     /// Apply box/line reduction (pointing pairs/triples): if a digit can only appear
     /// in one row/column within a box, eliminate it from that row/column outside the box.
+    /// 
+    /// Note: Currently unused - benchmarking showed other techniques are more effective.
+    #[allow(dead_code)]
     fn apply_box_line_reduction(&mut self) -> bool {
         let mut progress = false;
         
@@ -461,6 +463,9 @@ impl SudokuSolver {
     
     /// Apply X-Wing pattern: if a digit forms a rectangle in exactly 2 rows and 2 columns,
     /// eliminate it from those rows/columns elsewhere.
+    /// 
+    /// Note: Currently unused - benchmarking showed other techniques are more effective.
+    #[allow(dead_code)]
     fn apply_x_wing(&mut self) -> bool {
         let mut progress = false;
         
@@ -703,6 +708,10 @@ impl SudokuSolver {
     
     /// Apply Alternating Inference Chain (AIC) technique: build chains of logical
     /// implications to find contradictions and make eliminations.
+    /// 
+    /// Note: Currently unused - benchmarking showed other techniques are more effective.
+    /// This method and its helpers are kept for potential future use.
+    #[allow(dead_code)]
     fn apply_alternating_inference_chains(&mut self) -> bool {
         let mut progress = false;
         
@@ -715,6 +724,7 @@ impl SudokuSolver {
     }
     
     /// Build AIC chains for a specific digit to find eliminations.
+    #[allow(dead_code)]
     fn build_aic_chains_for_digit(&mut self, digit: i32) -> bool {
         let mut progress = false;
         
@@ -744,6 +754,7 @@ impl SudokuSolver {
     
     /// Recursively build an alternating inference chain.
     /// Returns true if a contradiction or useful elimination was found.
+    #[allow(dead_code)]
     fn build_chain(
         &mut self,
         digit: i32,
@@ -797,6 +808,7 @@ impl SudokuSolver {
     }
     
     /// Find strong links for AIC: positions where if one is false, another must be true.
+    #[allow(dead_code)]
     fn find_strong_links(&self, digit: i32, pos: (usize, usize)) -> Vec<(usize, usize)> {
         let mut links = Vec::new();
         let (row, col) = pos;
@@ -854,6 +866,7 @@ impl SudokuSolver {
     }
     
     /// Find weak links for AIC: positions that see each other (can't both be true).
+    #[allow(dead_code)]
     fn find_weak_links(&self, digit: i32, pos: (usize, usize)) -> Vec<(usize, usize)> {
         let mut links = Vec::new();
         let (row, col) = pos;
@@ -874,6 +887,7 @@ impl SudokuSolver {
     }
     
     /// Check if two positions "see" each other (same row, column, or box).
+    #[allow(dead_code)]
     fn positions_see_each_other(&self, pos1: (usize, usize), pos2: (usize, usize)) -> bool {
         let (row1, col1) = pos1;
         let (row2, col2) = pos2;
@@ -897,6 +911,7 @@ impl SudokuSolver {
     }
     
     /// Find eliminations based on AIC chain analysis.
+    #[allow(dead_code)]
     fn find_aic_elimination(&self, digit: i32, chain: &[((usize, usize), bool)]) -> Option<(usize, usize)> {
         if chain.len() < 4 {
             return None;

@@ -49,7 +49,7 @@ impl Space {
 /// Perform search, iterating over assignments that satisfy all constraints.
 #[doc(hidden)]
 pub fn search<M: Mode>(vars: Vars, props: Propagators, mode: M) -> Search<M> {
-    search_with_timeout(vars, props, mode, None, vec![])
+    search_with_timeout(vars, props, mode, None, vec![], crate::variables::domain::float_interval::DEFAULT_FLOAT_PRECISION_DIGITS)
 }
 
 /// Perform search with timeout support.
@@ -59,9 +59,10 @@ pub fn search_with_timeout<M: Mode>(
     props: Propagators, 
     mode: M, 
     timeout: Option<std::time::Duration>,
-    pending_lp_constraints: Vec<crate::lpsolver::csp_integration::LinearConstraint>
+    pending_lp_constraints: Vec<crate::lpsolver::csp_integration::LinearConstraint>,
+    float_precision_digits: i32
 ) -> Search<M> {
-    search_with_timeout_and_memory(vars, props, mode, timeout, None, pending_lp_constraints)
+    search_with_timeout_and_memory(vars, props, mode, timeout, None, pending_lp_constraints, float_precision_digits)
 }
 
 /// Perform search with timeout and memory limit support.
@@ -83,7 +84,8 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     mode: M, 
     timeout: Option<std::time::Duration>,
     memory_limit_mb: Option<u64>,
-    pending_lp_constraints: Vec<crate::lpsolver::csp_integration::LinearConstraint>
+    pending_lp_constraints: Vec<crate::lpsolver::csp_integration::LinearConstraint>,
+    float_precision_digits: i32
 ) -> Search<M> {
     // ===== LP SOLVER INTEGRATION (Root Node Only) =====
     // Try LP solving at root node if suitable linear system exists
@@ -174,7 +176,18 @@ pub fn search_with_timeout_and_memory<M: Mode>(
                 eprintln!("LP: Problem has {} vars, {} constraints", lp_problem.n_vars, lp_problem.n_constraints);
             }
             
-            match crate::lpsolver::solve(&lp_problem) {
+            // Create LP config with tolerance based on float precision
+            // Also propagate timeout and memory limits from solver config
+            let tolerance = crate::variables::domain::float_interval::precision_to_step_size(float_precision_digits);
+            let lp_config = crate::lpsolver::LpConfig {
+                feasibility_tol: tolerance,
+                optimality_tol: tolerance,
+                timeout_ms: timeout.map(|d| d.as_millis() as u64),
+                max_memory_mb: memory_limit_mb,
+                ..Default::default()
+            };
+            
+            match crate::lpsolver::solve_with_config(&lp_problem, &lp_config) {
                 Ok(solution) => {
                     if LP_DEBUG {
                         eprintln!("LP: Solution status = {:?}", solution.status);
@@ -319,6 +332,9 @@ impl<M: Mode> Iterator for Search<M> {
                     variable_count: space.vars.count(),
                     constraint_count: space.props.count(),
                     peak_memory_mb: space.estimate_memory_kb() / 1024, // Convert KB to MB
+                    lp_solver_used: false,
+                    lp_constraint_count: 0,
+                    lp_stats: None,
                 };
                 space.vars.into_solution_with_stats(stats)
             }),
@@ -559,6 +575,9 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::constraints::props::PropId)>> It
                             variable_count: space.vars.count(),
                             constraint_count: space.props.count(),
                             peak_memory_mb: space.estimate_memory_kb() / 1024, // Convert KB to MB
+                            lp_solver_used: false,
+                            lp_constraint_count: 0,
+                            lp_stats: None,
                         };
                         return Some(space.vars.into_solution_with_stats(stats));
                     }

@@ -174,7 +174,7 @@ impl Propagators {
                 let x = *add.x();
                 let y = *add.y();
                 let s = add.s();
-                eprintln!("LP EXTRACTION: Found Add constraint: {:?} + {:?} = {:?}", x, y, s);
+                // Debug: eprintln!("LP EXTRACTION: Found Add constraint: {:?} + {:?} = {:?}", x, y, s);
                 derived_vars.insert(s, (vec![(x, 1.0), (y, 1.0)], 0.0));
                 
                 // Also add as linear equality for LP: x + y - s = 0
@@ -197,7 +197,7 @@ impl Propagators {
                 let x_var = *leq.x();
                 let y_var = *leq.y();
                 
-                eprintln!("LP EXTRACTION: Found LessThanOrEquals constraint: {:?} <= {:?}", x_var, y_var);
+                // Debug: eprintln!("LP EXTRACTION: Found LessThanOrEquals constraint: {:?} <= {:?}", x_var, y_var);
                 
                 // x <= y  →  x - y <= 0  →  1.0*x + (-1.0)*y <= 0
                 let constraint = LinearConstraint::less_or_equal(

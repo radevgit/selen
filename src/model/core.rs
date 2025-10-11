@@ -151,11 +151,6 @@ impl Model {
         self.config.max_memory_mb
     }
     
-    /// Check if LP solver should be used for linear constraints
-    fn should_use_lp_solver(&self) -> bool {
-        self.config.prefer_lp_solver
-    }
-    
     /// Materialize pending constraint ASTs into actual propagators
     /// This is called after LP extraction and solving to create the propagators
     /// needed for the CSP search phase.
@@ -360,6 +355,9 @@ impl Model {
                     variable_count: solution.stats.variable_count, // Preserve if already set
                     constraint_count: solution.stats.constraint_count, // Preserve if already set
                     peak_memory_mb: solution.stats.peak_memory_mb, // Preserve from optimization
+                    lp_solver_used: false,
+                    lp_constraint_count: 0,
+                    lp_stats: None,
                 };
                 Ok(solution)
             }
@@ -367,13 +365,14 @@ impl Model {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
                 let memory_limit = self.memory_limit_mb();
+                let float_precision = self.float_precision_digits;
                 let (vars, props, pending_lp) = self.prepare_for_search()?;
 
                 // Capture counts before moving to search
                 let var_count = vars.count();
                 let constraint_count = props.count();
 
-                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit, pending_lp);
+                let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit, pending_lp, float_precision);
                 let mut last_solution = None;
                 let mut current_count = 0;
 
@@ -391,6 +390,9 @@ impl Model {
                     variable_count: var_count,
                     constraint_count,
                     peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
+                    lp_solver_used: false,
+                    lp_constraint_count: 0,
+                    lp_stats: None,
                 };
                 
                 // Check if search terminated due to timeout
@@ -441,9 +443,10 @@ impl Model {
             None => {
                 // Optimization failed or not applicable - fall back to traditional search
                 let timeout = self.timeout_duration();
+                let float_precision = self.float_precision_digits;
                 match self.prepare_for_search() {
                     Ok((vars, props, pending_lp)) => {
-                        Box::new(search_with_timeout(vars, props, mode::Minimize::new(objective), timeout, pending_lp)) as Box<dyn Iterator<Item = Solution>>
+                        Box::new(search_with_timeout(vars, props, mode::Minimize::new(objective), timeout, pending_lp, float_precision)) as Box<dyn Iterator<Item = Solution>>
                     }
                     Err(_) => {
                         // Validation failed - return empty iterator
@@ -477,6 +480,9 @@ impl Model {
                     variable_count: solution.stats.variable_count, // Preserve if already set
                     constraint_count: solution.stats.constraint_count, // Preserve if already set
                     peak_memory_mb: solution.stats.peak_memory_mb, // Preserve from optimization
+                    lp_solver_used: false,
+                    lp_constraint_count: 0,
+                    lp_stats: None,
                 };
                 Ok(solution)
             }
@@ -582,6 +588,555 @@ impl Model {
         }
     }
 
+    /// Infer bounds for unbounded variables by analyzing constraint ASTs.
+    ///
+    /// This method scans all pending constraint ASTs (before materialization) to extract
+    /// bounds information for variables that were created with unbounded domains (i32::MIN/MAX).
+    /// 
+    /// The inference analyzes:
+    /// - Binary comparisons: x < y, x <= c, etc.
+    /// - Linear constraints: 2x + 3y <= 10
+    /// - Element constraints: array[x] bounds x by array size
+    /// - AllDifferent: bounds variables by constraint size
+    ///
+    /// This provides much better bounds than the simple variable-context inference
+    /// at creation time, since all constraints are available for analysis.
+    ///
+    /// # Returns
+    /// Ok(()) if inference succeeds, Err if unbounded variables cannot be reasonably bounded.
+    fn infer_unbounded_from_asts(&mut self) -> Result<(), SolverError> {
+        use std::collections::HashMap;
+        
+        // PHASE 1: Identify unbounded variables
+        let unbounded_vars = self.identify_unbounded_variables();
+        if unbounded_vars.is_empty() {
+            return Ok(()); // No unbounded variables, nothing to do
+        }
+        
+        // PHASE 2: Extract bounds from constraint ASTs
+        let mut bounds_map: HashMap<VarId, (Option<Val>, Option<Val>)> = HashMap::new();
+        for var_id in &unbounded_vars {
+            bounds_map.insert(*var_id, (None, None));
+        }
+        
+        for constraint_ast in &self.pending_constraint_asts {
+            self.extract_bounds_from_constraint(&constraint_ast, &unbounded_vars, &mut bounds_map);
+        }
+        
+        // PHASE 3: Aggregate and apply bounds
+        for var_id in &unbounded_vars {
+            if let Some((min_bound, max_bound)) = bounds_map.get(var_id) {
+                self.apply_inferred_bounds(*var_id, min_bound, max_bound)?;
+            }
+        }
+        
+        // PHASE 4: Fallback for still-unbounded variables
+        for var_id in &unbounded_vars {
+            if self.is_still_unbounded(*var_id) {
+                self.apply_fallback_bounds(*var_id)?;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Phase 1: Identify variables with unbounded domains
+    fn identify_unbounded_variables(&self) -> Vec<VarId> {
+        let mut unbounded = Vec::new();
+        
+        for var_idx in 0..self.vars.count() {
+            let var_id = VarId::from_index(var_idx);
+            match &self.vars[var_id] {
+                crate::variables::Var::VarI(sparse_set) => {
+                    let min_val = sparse_set.min_universe_value();
+                    let max_val = sparse_set.max_universe_value();
+                    
+                    // Check if unbounded (uses sentinel values)
+                    if min_val == i32::MIN || max_val == i32::MAX {
+                        unbounded.push(var_id);
+                    }
+                }
+                crate::variables::Var::VarF(interval) => {
+                    // Check if float is unbounded
+                    if interval.min == f64::NEG_INFINITY || interval.max == f64::INFINITY {
+                        unbounded.push(var_id);
+                    }
+                }
+            }
+        }
+        
+        unbounded
+    }
+    
+    /// Phase 2: Extract bounds from a single constraint AST
+    fn extract_bounds_from_constraint(
+        &self,
+        constraint: &crate::runtime_api::ConstraintKind,
+        unbounded_vars: &[VarId],
+        bounds_map: &mut std::collections::HashMap<VarId, (Option<Val>, Option<Val>)>,
+    ) {
+        use crate::runtime_api::ConstraintKind;
+        
+        match constraint {
+            // Binary comparisons: x op y or x op constant
+            ConstraintKind::Binary { left, op, right } => {
+                self.extract_binary_bounds(left, op, right, unbounded_vars, bounds_map);
+            }
+            
+            // Linear constraints: sum(coeffs * vars) op constant
+            ConstraintKind::LinearInt { coeffs, vars, op, constant } => {
+                self.extract_linear_int_bounds(coeffs, vars, op, *constant, unbounded_vars, bounds_map);
+            }
+            
+            ConstraintKind::LinearFloat { coeffs, vars, op, constant } => {
+                self.extract_linear_float_bounds(coeffs, vars, op, *constant, unbounded_vars, bounds_map);
+            }
+            
+            // Element constraint: array[index] = value
+            ConstraintKind::Element { index, array, .. } => {
+                if unbounded_vars.contains(index) {
+                    // Index must be in [0, array.len() - 1]
+                    self.update_bounds(bounds_map, *index, Some(Val::ValI(0)), Some(Val::ValI(array.len() as i32 - 1)));
+                }
+            }
+            
+            // AllDifferent: n variables need at least n distinct values
+            ConstraintKind::AllDifferent { vars } => {
+                // For each unbounded variable in this constraint, we know it needs
+                // to be distinct from the others. This provides weak bounds.
+                // If other vars are bounded [a, b], unbounded var should be roughly [a, b] too
+                for var_id in vars {
+                    if unbounded_vars.contains(var_id) {
+                        self.extract_alldiff_bounds(*var_id, vars, bounds_map);
+                    }
+                }
+            }
+            
+            _ => {
+                // Other constraint types don't provide useful bounds yet
+                // TODO: Add support for more constraint types (Sum, Min, Max, etc.)
+            }
+        }
+    }
+    
+    /// Extract bounds from binary comparison constraints
+    fn extract_binary_bounds(
+        &self,
+        left: &crate::runtime_api::ExprBuilder,
+        op: &crate::runtime_api::ComparisonOp,
+        right: &crate::runtime_api::ExprBuilder,
+        unbounded_vars: &[VarId],
+        bounds_map: &mut std::collections::HashMap<VarId, (Option<Val>, Option<Val>)>,
+    ) {
+        use crate::runtime_api::{ExprBuilder, ComparisonOp};
+        
+        // Pattern: Var op Constant
+        if let (ExprBuilder::Var(var_id), ExprBuilder::Val(val)) = (left, right) {
+            if unbounded_vars.contains(var_id) {
+                match op {
+                    ComparisonOp::Lt => {
+                        // x < c  →  x <= c-1 (for integers)
+                        let upper = match val {
+                            Val::ValI(i) => Some(Val::ValI(i - 1)),
+                            Val::ValF(f) => Some(Val::ValF(*f)),
+                        };
+                        self.update_bounds(bounds_map, *var_id, None, upper);
+                    }
+                    ComparisonOp::Le => {
+                        // x <= c
+                        self.update_bounds(bounds_map, *var_id, None, Some(*val));
+                    }
+                    ComparisonOp::Gt => {
+                        // x > c  →  x >= c+1 (for integers)
+                        let lower = match val {
+                            Val::ValI(i) => Some(Val::ValI(i + 1)),
+                            Val::ValF(f) => Some(Val::ValF(*f)),
+                        };
+                        self.update_bounds(bounds_map, *var_id, lower, None);
+                    }
+                    ComparisonOp::Ge => {
+                        // x >= c
+                        self.update_bounds(bounds_map, *var_id, Some(*val), None);
+                    }
+                    ComparisonOp::Eq => {
+                        // x == c  →  x ∈ [c, c]
+                        self.update_bounds(bounds_map, *var_id, Some(*val), Some(*val));
+                    }
+                    ComparisonOp::Ne => {
+                        // x != c doesn't provide useful bounds for inference
+                    }
+                }
+            }
+        }
+        
+        // Pattern: Constant op Var (reverse)
+        if let (ExprBuilder::Val(val), ExprBuilder::Var(var_id)) = (left, right) {
+            if unbounded_vars.contains(var_id) {
+                match op {
+                    ComparisonOp::Lt => {
+                        // c < x  →  x >= c+1
+                        let lower = match val {
+                            Val::ValI(i) => Some(Val::ValI(i + 1)),
+                            Val::ValF(f) => Some(Val::ValF(*f)),
+                        };
+                        self.update_bounds(bounds_map, *var_id, lower, None);
+                    }
+                    ComparisonOp::Le => {
+                        // c <= x  →  x >= c
+                        self.update_bounds(bounds_map, *var_id, Some(*val), None);
+                    }
+                    ComparisonOp::Gt => {
+                        // c > x  →  x <= c-1
+                        let upper = match val {
+                            Val::ValI(i) => Some(Val::ValI(i - 1)),
+                            Val::ValF(f) => Some(Val::ValF(*f)),
+                        };
+                        self.update_bounds(bounds_map, *var_id, None, upper);
+                    }
+                    ComparisonOp::Ge => {
+                        // c >= x  →  x <= c
+                        self.update_bounds(bounds_map, *var_id, None, Some(*val));
+                    }
+                    ComparisonOp::Eq => {
+                        // c == x  →  x ∈ [c, c]
+                        self.update_bounds(bounds_map, *var_id, Some(*val), Some(*val));
+                    }
+                    ComparisonOp::Ne => {
+                        // c != x doesn't provide useful bounds
+                    }
+                }
+            }
+        }
+        
+        // Pattern: Var op Var (transitive bounds)
+        if let (ExprBuilder::Var(left_var), ExprBuilder::Var(right_var)) = (left, right) {
+            // If one is bounded and the other is unbounded, we can infer bounds
+            if unbounded_vars.contains(left_var) && !unbounded_vars.contains(right_var) {
+                // Get bounds of right_var
+                if let Some(right_bounds) = self.get_variable_bounds(*right_var) {
+                    match op {
+                        ComparisonOp::Lt => {
+                            // x < y, y bounded  →  x < y.max
+                            self.update_bounds(bounds_map, *left_var, None, Some(Val::ValI(right_bounds.1 - 1)));
+                        }
+                        ComparisonOp::Le => {
+                            // x <= y, y bounded  →  x <= y.max
+                            self.update_bounds(bounds_map, *left_var, None, Some(Val::ValI(right_bounds.1)));
+                        }
+                        ComparisonOp::Gt => {
+                            // x > y, y bounded  →  x > y.min
+                            self.update_bounds(bounds_map, *left_var, Some(Val::ValI(right_bounds.0 + 1)), None);
+                        }
+                        ComparisonOp::Ge => {
+                            // x >= y, y bounded  →  x >= y.min
+                            self.update_bounds(bounds_map, *left_var, Some(Val::ValI(right_bounds.0)), None);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Extract bounds from integer linear constraints
+    fn extract_linear_int_bounds(
+        &self,
+        coeffs: &[i32],
+        vars: &[VarId],
+        op: &crate::runtime_api::ComparisonOp,
+        constant: i32,
+        unbounded_vars: &[VarId],
+        bounds_map: &mut std::collections::HashMap<VarId, (Option<Val>, Option<Val>)>,
+    ) {
+        use crate::runtime_api::ComparisonOp;
+        
+        // Simple case: single variable linear constraint (e.g., 2x <= 10)
+        if vars.len() == 1 && unbounded_vars.contains(&vars[0]) {
+            let coeff = coeffs[0];
+            let var_id = vars[0];
+            
+            if coeff == 0 {
+                return; // Degenerate constraint
+            }
+            
+            match op {
+                ComparisonOp::Le => {
+                    // coeff * x <= constant  →  x <= constant / coeff (adjust for sign)
+                    if coeff > 0 {
+                        let upper = constant / coeff;
+                        self.update_bounds(bounds_map, var_id, None, Some(Val::ValI(upper)));
+                    } else {
+                        let lower = constant / coeff;
+                        self.update_bounds(bounds_map, var_id, Some(Val::ValI(lower)), None);
+                    }
+                }
+                ComparisonOp::Ge => {
+                    // coeff * x >= constant  →  x >= constant / coeff (adjust for sign)
+                    if coeff > 0 {
+                        let lower = (constant + coeff - 1) / coeff; // Ceiling division
+                        self.update_bounds(bounds_map, var_id, Some(Val::ValI(lower)), None);
+                    } else {
+                        let upper = constant / coeff;
+                        self.update_bounds(bounds_map, var_id, None, Some(Val::ValI(upper)));
+                    }
+                }
+                ComparisonOp::Eq => {
+                    // coeff * x == constant  →  x == constant / coeff (if divisible)
+                    if constant % coeff == 0 {
+                        let value = constant / coeff;
+                        self.update_bounds(bounds_map, var_id, Some(Val::ValI(value)), Some(Val::ValI(value)));
+                    }
+                }
+                _ => {}
+            }
+        }
+        
+        // TODO: Handle multi-variable linear constraints where only one variable is unbounded
+        // Example: x + y <= 10, y ∈ [0, 5]  →  x ∈ [-∞, 10 - 0] = [-∞, 10]
+    }
+    
+    /// Extract bounds from float linear constraints
+    fn extract_linear_float_bounds(
+        &self,
+        coeffs: &[f64],
+        vars: &[VarId],
+        op: &crate::runtime_api::ComparisonOp,
+        constant: f64,
+        unbounded_vars: &[VarId],
+        bounds_map: &mut std::collections::HashMap<VarId, (Option<Val>, Option<Val>)>,
+    ) {
+        use crate::runtime_api::ComparisonOp;
+        
+        // Simple case: single variable linear constraint
+        if vars.len() == 1 && unbounded_vars.contains(&vars[0]) {
+            let coeff = coeffs[0];
+            let var_id = vars[0];
+            
+            if coeff.abs() < 1e-10 {
+                return; // Degenerate constraint
+            }
+            
+            match op {
+                ComparisonOp::Le => {
+                    if coeff > 0.0 {
+                        let upper = constant / coeff;
+                        self.update_bounds(bounds_map, var_id, None, Some(Val::ValF(upper)));
+                    } else {
+                        let lower = constant / coeff;
+                        self.update_bounds(bounds_map, var_id, Some(Val::ValF(lower)), None);
+                    }
+                }
+                ComparisonOp::Ge => {
+                    if coeff > 0.0 {
+                        let lower = constant / coeff;
+                        self.update_bounds(bounds_map, var_id, Some(Val::ValF(lower)), None);
+                    } else {
+                        let upper = constant / coeff;
+                        self.update_bounds(bounds_map, var_id, None, Some(Val::ValF(upper)));
+                    }
+                }
+                ComparisonOp::Eq => {
+                    let value = constant / coeff;
+                    self.update_bounds(bounds_map, var_id, Some(Val::ValF(value)), Some(Val::ValF(value)));
+                }
+                _ => {}
+            }
+        }
+    }
+    
+    /// Extract bounds from AllDifferent constraints
+    fn extract_alldiff_bounds(
+        &self,
+        unbounded_var: VarId,
+        all_vars: &[VarId],
+        bounds_map: &mut std::collections::HashMap<VarId, (Option<Val>, Option<Val>)>,
+    ) {
+        // Find bounds of other variables in the AllDifferent constraint
+        let mut global_min: Option<i32> = None;
+        let mut global_max: Option<i32> = None;
+        
+        for &var_id in all_vars {
+            if var_id != unbounded_var {
+                if let Some((min, max)) = self.get_variable_bounds(var_id) {
+                    global_min = Some(global_min.map_or(min, |gmin| gmin.min(min)));
+                    global_max = Some(global_max.map_or(max, |gmax| gmax.max(max)));
+                }
+            }
+        }
+        
+        // Use the range of other variables as a hint for the unbounded variable
+        if let (Some(min), Some(max)) = (global_min, global_max) {
+            // Expand slightly to account for AllDifferent constraint
+            let expansion = (max - min).max(all_vars.len() as i32);
+            self.update_bounds(
+                bounds_map,
+                unbounded_var,
+                Some(Val::ValI(min - expansion / 2)),
+                Some(Val::ValI(max + expansion / 2)),
+            );
+        }
+    }
+    
+    /// Helper: Update bounds for a variable (taking tightest bounds)
+    fn update_bounds(
+        &self,
+        bounds_map: &mut std::collections::HashMap<VarId, (Option<Val>, Option<Val>)>,
+        var_id: VarId,
+        new_min: Option<Val>,
+        new_max: Option<Val>,
+    ) {
+        let entry = bounds_map.entry(var_id).or_insert((None, None));
+        
+        // Update minimum (take maximum of all lower bounds)
+        if let Some(new_min_val) = new_min {
+            entry.0 = Some(match entry.0 {
+                None => new_min_val,
+                Some(existing_min) => {
+                    if new_min_val > existing_min {
+                        new_min_val
+                    } else {
+                        existing_min
+                    }
+                }
+            });
+        }
+        
+        // Update maximum (take minimum of all upper bounds)
+        if let Some(new_max_val) = new_max {
+            entry.1 = Some(match entry.1 {
+                None => new_max_val,
+                Some(existing_max) => {
+                    if new_max_val < existing_max {
+                        new_max_val
+                    } else {
+                        existing_max
+                    }
+                }
+            });
+        }
+    }
+    
+    /// Helper: Get current bounds of a variable
+    fn get_variable_bounds(&self, var_id: VarId) -> Option<(i32, i32)> {
+        match &self.vars[var_id] {
+            crate::variables::Var::VarI(sparse_set) => {
+                if !sparse_set.is_empty() {
+                    Some((sparse_set.min(), sparse_set.max()))
+                } else {
+                    None
+                }
+            }
+            crate::variables::Var::VarF(_) => None, // TODO: Handle float bounds
+        }
+    }
+    
+    /// Phase 3: Apply inferred bounds to a variable
+    fn apply_inferred_bounds(
+        &mut self,
+        var_id: VarId,
+        min_bound: &Option<Val>,
+        max_bound: &Option<Val>,
+    ) -> Result<(), SolverError> {
+        match &mut self.vars[var_id] {
+            crate::variables::Var::VarI(sparse_set) => {
+                let current_min = sparse_set.min_universe_value();
+                let current_max = sparse_set.max_universe_value();
+                
+                // Determine new bounds
+                let new_min = if let Some(Val::ValI(min_val)) = min_bound {
+                    if *min_val > current_min {
+                        *min_val
+                    } else {
+                        current_min
+                    }
+                } else {
+                    current_min
+                };
+                
+                let new_max = if let Some(Val::ValI(max_val)) = max_bound {
+                    if *max_val < current_max {
+                        *max_val
+                    } else {
+                        current_max
+                    }
+                } else {
+                    current_max
+                };
+                
+                // Only update if bounds actually changed and are tighter
+                if new_min > current_min || new_max < current_max {
+                    // Reconstruct the variable with tighter bounds
+                    let new_var = crate::variables::domain::SparseSet::new(new_min, new_max);
+                    *sparse_set = new_var;
+                }
+            }
+            crate::variables::Var::VarF(interval) => {
+                // TODO: Apply bounds to float variables
+                // For now, just update if we have float bounds
+                if let Some(Val::ValF(min_val)) = min_bound {
+                    if *min_val > interval.min {
+                        interval.min = *min_val;
+                    }
+                }
+                if let Some(Val::ValF(max_val)) = max_bound {
+                    if *max_val < interval.max {
+                        interval.max = *max_val;
+                    }
+                }
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Check if a variable is still unbounded after inference
+    fn is_still_unbounded(&self, var_id: VarId) -> bool {
+        match &self.vars[var_id] {
+            crate::variables::Var::VarI(sparse_set) => {
+                let min_val = sparse_set.min_universe_value();
+                let max_val = sparse_set.max_universe_value();
+                min_val == i32::MIN || max_val == i32::MAX
+            }
+            crate::variables::Var::VarF(interval) => {
+                interval.min == f64::NEG_INFINITY || interval.max == f64::INFINITY
+            }
+        }
+    }
+    
+    /// Phase 4: Apply fallback bounds for variables that remain unbounded
+    fn apply_fallback_bounds(&mut self, var_id: VarId) -> Result<(), SolverError> {
+        // Use configured defaults or reasonable fallback
+        let default_int_min = -1_000_000;
+        let default_int_max = 1_000_000;
+        let default_float_min = -1e6;
+        let default_float_max = 1e6;
+        
+        match &mut self.vars[var_id] {
+            crate::variables::Var::VarI(sparse_set) => {
+                let current_min = sparse_set.min_universe_value();
+                let current_max = sparse_set.max_universe_value();
+                
+                let new_min = if current_min == i32::MIN { default_int_min } else { current_min };
+                let new_max = if current_max == i32::MAX { default_int_max } else { current_max };
+                
+                if new_min != current_min || new_max != current_max {
+                    let new_var = crate::variables::domain::SparseSet::new(new_min, new_max);
+                    *sparse_set = new_var;
+                }
+            }
+            crate::variables::Var::VarF(interval) => {
+                if interval.min == f64::NEG_INFINITY {
+                    interval.min = default_float_min;
+                }
+                if interval.max == f64::INFINITY {
+                    interval.max = default_float_max;
+                }
+            }
+        }
+        
+        Ok(())
+    }
+
     /// Optimize constraint processing order based on constraint characteristics.
     ///
     /// This method analyzes constraints (particularly AllDifferent) and reorders them
@@ -660,13 +1215,14 @@ impl Model {
         // For pure constraint satisfaction (no optimization objective), go directly to search
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
+        let float_precision = self.float_precision_digits;
         let (vars, props, pending_lp) = self.prepare_for_search()?;
         
         // Capture counts before moving to search
         let var_count = vars.count();
         let constraint_count = props.count();
         
-        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp);
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp, float_precision);
         
         let result = search_iter.next();
         
@@ -678,6 +1234,9 @@ impl Model {
             variable_count: var_count,
             constraint_count,
             peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
+            lp_solver_used: false,
+            lp_constraint_count: 0,
+            lp_stats: None,
         };
         
         // Check if search terminated due to timeout
@@ -810,6 +1369,11 @@ impl Model {
     /// Internal helper that validates the model and optimizes constraints before search.
     /// This ensures all solving methods benefit from validation and constraint optimization.
     fn prepare_for_search(mut self) -> Result<(crate::variables::Vars, crate::constraints::props::Propagators, Vec<crate::lpsolver::csp_integration::LinearConstraint>), crate::core::error::SolverError> {
+        // STEP 0: Infer bounds for unbounded variables using constraint AST analysis
+        // This happens BEFORE materialization so we can analyze all constraints
+        // and extract better bounds than the simple variable-context inference at creation time
+        self.infer_unbounded_from_asts()?;
+        
         // STEP 1: Materialize all pending constraint ASTs into propagators
         // This converts runtime API constraints (stored as AST) into CSP propagators
         // NOTE: We pass pending_lp_constraints separately so LP can use AST-extracted constraints
@@ -888,9 +1452,10 @@ impl Model {
     pub fn enumerate(self) -> impl Iterator<Item = Solution> {
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
+        let float_precision = self.float_precision_digits;
         match self.prepare_for_search() {
             Ok((vars, props, pending_lp)) => {
-                Box::new(search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp)) as Box<dyn Iterator<Item = Solution>>
+                Box::new(search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp, float_precision)) as Box<dyn Iterator<Item = Solution>>
             }
             Err(_) => {
                 // Validation failed - return empty iterator
@@ -947,6 +1512,7 @@ impl Model {
     pub fn enumerate_with_stats(self) -> (Vec<Solution>, crate::core::solution::SolveStats) {
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
+        let float_precision = self.float_precision_digits;
         let (vars, props, pending_lp) = match self.prepare_for_search() {
             Ok(result) => result,
             Err(_) => {
@@ -958,6 +1524,9 @@ impl Model {
                     variable_count: 0, // Unknown due to validation failure
                     constraint_count: 0, // Unknown due to validation failure
                     peak_memory_mb: 0, // No memory used if validation failed
+                    lp_solver_used: false,
+                    lp_constraint_count: 0,
+                    lp_stats: None,
                 };
                 return (Vec::new(), stats);
             }
@@ -967,7 +1536,7 @@ impl Model {
         let var_count = vars.count();
         let constraint_count = props.count();
 
-        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp);
+        let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp, float_precision);
         let mut solutions = Vec::with_capacity(8); // Start with reasonable capacity for solution collection
 
         // Collect all solutions - the search iterator will track statistics as it goes
@@ -983,6 +1552,9 @@ impl Model {
             variable_count: var_count,
             constraint_count,
             peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
+            lp_solver_used: false,
+            lp_constraint_count: 0,
+            lp_stats: None,
         };
         
         // Note: If timeout occurred, we return partial solutions found before timeout

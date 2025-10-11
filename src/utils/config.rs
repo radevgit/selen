@@ -79,14 +79,14 @@ pub struct SolverConfig {
     /// variable bounds. This can significantly improve performance on problems with
     /// many linear constraints.
     /// 
-    /// Default: false (LP integration is opt-in)
+    /// Default: true (LP integration is always enabled by default for optimal performance)
     /// 
-    /// **When to enable**:
+    /// **When to enable (default)**:
     /// - Models with ≥3 float linear constraints
     /// - Large variable domains (>1000 values)
     /// - Problems where interval propagation is slow
     /// 
-    /// **When to disable**:
+    /// **When to disable (opt-out)**:
     /// - Models with few (<3) linear constraints
     /// - Small, discrete problems (LP overhead not worth it)
     /// - When you want pure CSP solving behavior
@@ -105,7 +105,7 @@ impl Default for SolverConfig {
             timeout_ms: Some(60000),     // Default 60000ms = 1 minute timeout
             max_memory_mb: Some(2048),   // Default 2GB memory limit
             unbounded_inference_factor: 1000, // Default 1000x expansion
-            prefer_lp_solver: false,     // LP integration is opt-in
+            prefer_lp_solver: true,      // LP integration is always enabled by default
         }
     }
 }
@@ -364,18 +364,18 @@ mod tests {
     
     #[test]
     fn test_lp_solver_flag() {
-        // Default is disabled
+        // Default is enabled
         let config = SolverConfig::new();
-        assert_eq!(config.prefer_lp_solver, false);
-        
-        // Can enable
-        let config = SolverConfig::new().with_lp_solver();
         assert_eq!(config.prefer_lp_solver, true);
         
-        // Can disable after enabling
-        let config = SolverConfig::new()
-            .with_lp_solver()
-            .without_lp_solver();
+        // Can disable
+        let config = SolverConfig::new().without_lp_solver();
         assert_eq!(config.prefer_lp_solver, false);
+        
+        // Can re-enable after disabling
+        let config = SolverConfig::new()
+            .without_lp_solver()
+            .with_lp_solver();
+        assert_eq!(config.prefer_lp_solver, true);
     }
 }

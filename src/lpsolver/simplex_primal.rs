@@ -25,7 +25,7 @@ impl PrimalSimplex {
     }
     
     /// Estimate memory usage for matrices in MB
-    fn estimate_memory_mb(&self, a: &Matrix, basis: &Basis) -> f64 {
+    fn estimate_memory_mb(&self, a: &Matrix, _basis: &Basis) -> f64 {
         // Sum up memory from main constraint matrix, basis matrices, and working memory
         let mut total_bytes = a.memory_bytes();
         

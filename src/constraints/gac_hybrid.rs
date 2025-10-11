@@ -510,10 +510,6 @@ impl Matching {
     
     /// Find augmenting path using BFS with optimized visit tracking
     fn find_augmenting_path(graph: &BipartiteGraph, matching: &mut Self, start_var: Variable) -> bool {
-        use std::collections::VecDeque;
-        
-        let mut queue: VecDeque<Variable> = VecDeque::new();
-        
         // Use optimized visit tracking based on problem size
         let num_vars = graph.var_domains.len();
         let num_vals = graph.value_vars.len();

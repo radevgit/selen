@@ -1,9 +1,8 @@
 //! Core view system traits and types
 
-use crate::variables::{Val, VarId, Vars};
-use std::marker::PhantomData;
+use crate::variables::core::{VarId, Val, Vars};
 
-/// Represents the result type that a view produces
+/// The context in which a view is used
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[doc(hidden)]
 pub enum ViewType {
