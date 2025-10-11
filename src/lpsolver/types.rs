@@ -279,7 +279,7 @@ pub struct LpSolution {
 }
 
 /// Statistics collected during LP solving
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct LpStats {
     /// Total time spent solving (including both Phase I and Phase II)
     pub solve_time_ms: f64,

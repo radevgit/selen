@@ -148,6 +148,12 @@ pub struct SolveStats {
     pub constraint_count: usize,
     /// Peak memory usage estimate during solving (in MB)
     pub peak_memory_mb: usize,
+    /// Whether the LP solver was used during solving
+    pub lp_solver_used: bool,
+    /// Number of linear constraints extracted for LP solver
+    pub lp_constraint_count: usize,
+    /// Statistics from LP solver (if used)
+    pub lp_stats: Option<crate::lpsolver::types::LpStats>,
 }
 
 impl SolveStats {
@@ -167,6 +173,9 @@ impl SolveStats {
             variable_count,
             constraint_count,
             peak_memory_mb,
+            lp_solver_used: false,
+            lp_constraint_count: 0,
+            lp_stats: None,
         }
     }
 
