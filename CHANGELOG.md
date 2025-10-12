@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.4] - 2025-10-12
+- Bring back modulo to runtime API.
+
 ## [0.12.3] - 2025-10-11
 - Unbounded variables algorithm changed to work on AST
 

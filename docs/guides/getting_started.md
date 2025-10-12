@@ -60,8 +60,8 @@ fn main() {
     match m.solve() {
         Ok(solution) => {
             println!("Found solution!");
-            println!("x = {:?}", solution[x]);  // x = ValI(1)  
-            println!("y = {:?}", solution[y]);  // y = ValI(11)
+            println!("x = {}", solution.get_int(x));  // x = 1
+            println!("y = {}", solution.get_int(y));  // y = 11
         }
         Err(e) => {
             println!("No solution found: {:?}", e);
@@ -79,8 +79,8 @@ cargo run
 **Output:**
 ```
 Found solution!
-x = ValI(1)
-y = ValI(11)
+x = 1
+y = 11
 ```
 
 🎉 **Congratulations!** You've solved your first constraint satisfaction problem!
@@ -114,7 +114,7 @@ let is_active = m.bool();       // is_active ∈ {0, 1} (false, true)
 
 ## 🔧 Adding Constraints
 
-Use the constraint API with method calls to build your constraints:
+Use the runtime API with method calls to build your constraints:
 
 ```rust
 // Basic comparisons
@@ -126,13 +126,19 @@ m.new(y.ne(0));                    // y != 0
 m.new(x.add(y).eq(12));            // x + y == 12
 m.new(x.mul(y).le(50));            // x * y <= 50
 m.new(x.sub(y).ge(2));             // x - y >= 2
+m.new(x.div(y).eq(3));             // x / y == 3
+m.new(x.modulo(y).eq(1));          // x % y == 1 (divisor must be variable)
+
+// For constant divisors, create a bounded variable:
+let divisor = m.int(5, 5);         // Constant 5
+m.new(x.modulo(divisor).eq(2));    // x % 5 == 2
 
 // Complex expressions
-m.new(x.add(y.mul(2)).eq(z));      // x + y * 2 == z
+m.new(x.add(y.mul(2.0)).eq(z));    // x + y * 2 == z
 m.new(x.sub(y).abs().le(3));       // abs(x - y) <= 3
 
 // Complex chaining
-m.new(x.mul(2).add(y).le(10));     // x * 2 + y <= 10
+m.new(x.mul(2.0).add(y).le(10));   // x * 2 + y <= 10
 ```
 
 ## 🔗 Common Constraint Patterns
@@ -143,8 +149,7 @@ m.new(x.add(y).eq(10));             // Sum equals 10
 m.new(x.mul(y).le(50));             // Product at most 50
 m.new(x.sub(y).ge(2));              // Difference at least 2
 m.new(x.div(y).eq(3));              // x divided by y equals 3
-let mod_result = m.modulo(x, Val::from(3));
-m.new(mod_result.eq(1));            // x mod 3 equals 1
+m.new(x.modulo(y).eq(1));           // x % y equals 1 (remainder)
 ```
 
 ### Comparison Constraints
@@ -161,48 +166,48 @@ m.new(x.ne(0));                     // Not equal
 ```rust
 // All variables must have different values
 let vars = vec![x, y, z];
-post!(m, alldiff(vars));
-
-// All variables must have the same value
-post!(m, allequal(vars));
-
-// Sum of variables
-post!(m, sum(vars) == int(15));
+m.alldiff(&vars);
 
 // Element constraint: array[index] = value
-let array = vec![m.int(1, 10), m.int(1, 10), m.int(1, 10)];
-let index = m.int(0, 2);
-let value = m.int(1, 10);
-post!(m, element(array, index, value));
+// Example: if index=2, then value must equal array[2]
+let array = vec![x, y, z];
+let index = m.int(0, 2);        // Can be 0, 1, or 2
+let value = m.int(0, 10);
+m.elem(&array, index, value);   // value = array[index]
+
+// All must be equal
+let equal_vars = vec![a, b, c];
+m.alleq(&equal_vars);           // a = b = c
 ```
 
 ### Boolean Logic
 ```rust
 // Multiple constraints (implicit AND: all must be true)
-post!(m, x > int(5));
-post!(m, y < int(10));
+m.new(x.gt(5));
+m.new(y.lt(10));
+// Both constraints must be satisfied
 
-// Boolean variables with explicit logic
-let condition1 = m.bool();  // Represents: x > 5
-let condition2 = m.bool();  // Represents: y < 10
-post!(m, condition1 == (x > int(5)));
-post!(m, condition2 == (y < int(10)));
-post!(m, and([condition1, condition2]));  // Both conditions must be true
+// Boolean reification (constraint ⇔ boolean variable)
+let condition = m.bool();
+m.new(condition.eq(x.gt(5)));       // condition is true iff x > 5
 
-// Alternative: Use runtime API for constraint combinations
-// post!(m, x > 5 & y < 10);  // (x > 5) AND (y < 10)
+// OR logic: at least one constraint must be true
+m.new(x.gt(10).or(y.lt(5)));        // x > 10 OR y < 5
 
-// OR logic with boolean variables
-let options = vec![m.bool(), m.bool(), m.bool()];
-post!(m, options[0] == (x == int(1)));
-post!(m, options[1] == (x == int(5)));
-post!(m, options[2] == (x == int(9)));
-post!(m, or(options));  // At least one condition must be true
+// AND logic: both constraints must be true
+m.new(x.gt(5).and(y.lt(10)));       // x > 5 AND y < 10
 
-// NOT logic
-let is_equal = m.bool();
-post!(m, is_equal == (x == y));
-post!(m, not(is_equal));  // x must NOT equal y
+// NOT logic: constraint must be false
+m.new(x.eq(5).not());               // x != 5 (same as x.ne(5))
+
+// Complex boolean expressions
+m.new(x.gt(5).and(y.lt(10)).or(z.eq(0)));  // (x > 5 AND y < 10) OR z = 0
+
+// Implication: if condition then constraint
+// "if x > 5 then y must be < 10"
+let cond = m.bool();
+m.new(cond.eq(x.gt(5)));            // cond ⇔ (x > 5)
+m.new(cond.eq(0).or(y.lt(10)));     // NOT cond OR (y < 10) ≡ cond → (y < 10)
 ```
 
 ## 🎯 Solving and Reading Results
@@ -211,8 +216,8 @@ post!(m, not(is_equal));  // x must NOT equal y
 ```rust
 match m.solve() {
     Ok(solution) => {
-        println!("x = {:?}", solution[x]);
-        println!("y = {:?}", solution[y]);
+        println!("x = {}", solution.get_int(x));
+        println!("y = {}", solution.get_int(y));
     }
     Err(e) => println!("No solution: {:?}", e),
 }
@@ -223,18 +228,18 @@ match m.solve() {
 // Find the solution that maximizes x
 match m.maximize(x) {
     Ok(solution) => {
-        println!("Maximum x = {:?}", solution[x]);
-        println!("Corresponding y = {:?}", solution[y]);
+        println!("Maximum x = {}", solution.get_int(x));
+        println!("Corresponding y = {}", solution.get_int(y));
     }
     Err(e) => println!("No solution: {:?}", e),
 }
 
 // Find the solution that minimizes the sum x + y
 let sum_var = m.int(0, 100);
-post!(m, sum_var == x + y);
+m.new(sum_var.eq(x.add(y)));
 match m.minimize(sum_var) {
     Ok(solution) => {
-        println!("Minimum sum = {:?}", solution[sum_var]);
+        println!("Minimum sum = {}", solution.get_int(sum_var));
     }
     Err(e) => println!("No solution: {:?}", e),
 }
@@ -247,8 +252,8 @@ match m.enumerate() {
     Ok(solutions) => {
         println!("Found {} solutions:", solutions.len());
         for (i, solution) in solutions.iter().enumerate() {
-            println!("Solution {}: x = {:?}, y = {:?}", 
-                     i + 1, solution[x], solution[y]);
+            println!("Solution {}: x = {}, y = {}", 
+                     i + 1, solution.get_int(x), solution.get_int(y));
         }
     }
     Err(e) => println!("No solutions: {:?}", e),
@@ -256,23 +261,21 @@ match m.enumerate() {
 
 // Example output:
 // Found 3 solutions:
-// Solution 1: x = ValI(1), y = ValI(11)
-// Solution 2: x = ValI(2), y = ValI(10)  
-// Solution 3: x = ValI(3), y = ValI(9)
+// Solution 1: x = 1, y = 11
+// Solution 2: x = 2, y = 10  
+// Solution 3: x = 3, y = 9
 ```
 
 ### Reading Solution Values
 ```rust
 if let Ok(solution) = m.solve() {
-    // Get the actual integer value
-    if let Val::ValI(int_value) = solution[x] {
-        println!("x as integer: {}", int_value);
-    }
+    // Get integer value using get_int()
+    let x_value = solution.get_int(x);
+    println!("x as integer: {}", x_value);
     
-    // Get the actual float value  
-    if let Val::ValF(float_value) = solution[price] {
-        println!("price as float: {}", float_value);
-    }
+    // Get float value using get_float()
+    let price_value = solution.get_float(price);
+    println!("price as float: {}", price_value);
     
     // Debug format (shows type)
     println!("x = {:?}", solution[x]);  // ValI(5)
@@ -370,31 +373,28 @@ fn main() {
     
     // Constraints:
     // 1. Task A must finish before Task B starts
-    post!(m, task_a + duration_a <= task_b);
+    m.new(task_a.add(duration_a).le(task_b));
     
     // 2. Task B must finish before Task C starts  
-    post!(m, task_b + duration_b <= task_c);
+    m.new(task_b.add(duration_b).le(task_c));
     
     // 3. All tasks must complete by time 10
-    post!(m, task_c + duration_c <= 10);
+    m.new(task_c.add(duration_c).le(10));
     
     // Solve: minimize the total schedule length
     let makespan = m.int(0, 15);
-    post!(m, makespan == task_c + duration_c);
+    m.new(makespan.eq(task_c.add(duration_c)));
     
     match m.minimize(makespan) {
         Ok(solution) => {
             println!("📅 Optimal Schedule:");
-            println!("Task A: starts at {}, ends at {}", 
-                     solution[task_a], 
-                     if let Val::ValI(start) = solution[task_a] { start + duration_a } else { 0 });
-            println!("Task B: starts at {}, ends at {}", 
-                     solution[task_b], 
-                     if let Val::ValI(start) = solution[task_b] { start + duration_b } else { 0 });
-            println!("Task C: starts at {}, ends at {}", 
-                     solution[task_c], 
-                     if let Val::ValI(start) = solution[task_c] { start + duration_c } else { 0 });
-            println!("Total time: {:?}", solution[makespan]);
+            let a_start = solution.get_int(task_a);
+            let b_start = solution.get_int(task_b);
+            let c_start = solution.get_int(task_c);
+            println!("Task A: starts at {}, ends at {}", a_start, a_start + duration_a);
+            println!("Task B: starts at {}, ends at {}", b_start, b_start + duration_b);
+            println!("Task C: starts at {}, ends at {}", c_start, c_start + duration_c);
+            println!("Total time: {}", solution.get_int(makespan));
         }
         Err(e) => println!("❌ Cannot schedule tasks: {:?}", e),
     }

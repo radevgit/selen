@@ -98,6 +98,8 @@ pub enum ExprBuilder {
     Mul(Box<ExprBuilder>, Box<ExprBuilder>),
     /// Division of two expressions
     Div(Box<ExprBuilder>, Box<ExprBuilder>),
+    /// Modulo (remainder) of two expressions
+    Modulo(Box<ExprBuilder>, Box<ExprBuilder>),
 }
 
 /// A constraint that can be posted to the model
@@ -519,6 +521,10 @@ fn extract_linear_expr(expr: &ExprBuilder) -> Option<LinearExpr> {
                 constant: left_linear.constant / divisor,
             })
         }
+        ExprBuilder::Modulo(_, _) => {
+            // Modulo is non-linear in general
+            None
+        }
     }
 }
 
@@ -609,6 +615,12 @@ impl ExprBuilder {
         }
         
         ExprBuilder::Div(Box::new(self), Box::new(other))
+    }
+
+    /// Modulo (remainder) operation with another expression or value
+    #[inline]
+    pub fn modulo(self, other: impl Into<ExprBuilder>) -> ExprBuilder {
+        ExprBuilder::Modulo(Box::new(self), Box::new(other.into()))
     }
 
     /// Create an equality constraint
@@ -934,6 +946,21 @@ fn post_expression_constraint(model: &mut Model, expr: &ExprBuilder, result: Var
             // Post division constraint: left_var / right_var = result
             model.props.div(left_var, right_var, result)
         }
+        ExprBuilder::Modulo(left, right) => {
+            let left_var = create_result_var(model, left);
+            let right_var = create_result_var(model, right);
+            
+            // Post constraints for sub-expressions if needed
+            if !matches!(**left, ExprBuilder::Var(_)) {
+                post_expression_constraint(model, left, left_var);
+            }
+            if !matches!(**right, ExprBuilder::Var(_)) {
+                post_expression_constraint(model, right, right_var);
+            }
+            
+            // Post modulo constraint: left_var % right_var = result
+            model.props.modulo(left_var, right_var, result)
+        }
     }
 }
 
@@ -1158,6 +1185,7 @@ fn try_extract_linear_form(expr: &ExprBuilder) -> Option<(Vec<LinearCoefficient>
             Some((left_coeffs, left_vars, combined_const))
         }
         ExprBuilder::Div(_,_) => None, // Division is not linear
+        ExprBuilder::Modulo(_,_) => None, // Modulo is not linear
     }
 }
 
@@ -1517,6 +1545,9 @@ pub trait VarIdExt {
     /// Divide this variable by another value/variable
     fn div(self, other: impl Into<ExprBuilder>) -> ExprBuilder;
     
+    /// Modulo (remainder) of this variable by another value/variable
+    fn modulo(self, other: impl Into<ExprBuilder>) -> ExprBuilder;
+    
     /// Create equality constraint: this == other
     fn eq(self, other: impl Into<ExprBuilder>) -> Constraint;
     
@@ -1555,6 +1586,10 @@ impl VarIdExt for VarId {
     
     fn div(self, other: impl Into<ExprBuilder>) -> ExprBuilder {
         ExprBuilder::from_var(self).div(other)
+    }
+    
+    fn modulo(self, other: impl Into<ExprBuilder>) -> ExprBuilder {
+        ExprBuilder::from_var(self).modulo(other)
     }
     
     fn eq(self, other: impl Into<ExprBuilder>) -> Constraint {
