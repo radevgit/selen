@@ -116,6 +116,8 @@ pub enum ValueAccessError {
     ExpectedInteger { variable: VarId, actual_value: Val },
     /// Attempted to get float value from a variable containing an integer
     ExpectedFloat { variable: VarId, actual_value: Val },
+    /// Attempted to get boolean value from a variable containing value other than 0 or 1
+    ExpectedBoolean { variable: VarId, actual_value: Val },
 }
 
 impl std::fmt::Display for ValueAccessError {
@@ -126,6 +128,9 @@ impl std::fmt::Display for ValueAccessError {
             }
             ValueAccessError::ExpectedFloat { variable, actual_value } => {
                 write!(f, "Expected float value for variable {:?}, but found {:?}", variable, actual_value)
+            }
+            ValueAccessError::ExpectedBoolean { variable, actual_value } => {
+                write!(f, "Expected boolean value (0 or 1) for variable {:?}, but found {:?}", variable, actual_value)
             }
         }
     }
@@ -317,10 +322,7 @@ impl Solution {
     /// Use `try_get_int()` for safe error handling.
     #[must_use]
     pub fn get_int(&self, var: VarId) -> i32 {
-        match self[var] {
-            Val::ValI(i) => i,
-            actual_value => panic!("Expected integer for variable {:?}, found {:?}", var, actual_value), 
-        }
+        self.try_get_int(var).unwrap()
     }
     
     /// Get the float value for a variable (backward compatible panicking version)
@@ -328,9 +330,34 @@ impl Solution {
     /// Use `try_get_float()` for safe error handling.
     #[must_use] 
     pub fn get_float(&self, var: VarId) -> f64 {
+        self.try_get_float(var).unwrap()
+    }
+    
+    /// Get the boolean value for a variable
+    /// Booleans are represented as integers: 0 = false, 1 = true
+    /// Returns an error if the variable doesn't contain 0 or 1.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use selen::prelude::*;
+    /// 
+    /// let mut m = Model::default();
+    /// let b = m.bool();
+    /// m.new(b.eq(bool(true)));
+    /// 
+    /// let solution = m.solve().unwrap();
+    /// assert_eq!(solution.get_bool(b).unwrap(), true);
+    /// ```
+    #[must_use]
+    pub fn get_bool(&self, var: VarId) -> Result<bool, ValueAccessError> {
         match self[var] {
-            Val::ValF(f) => f,
-            actual_value => panic!("Expected float for variable {:?}, found {:?}", var, actual_value),
+            Val::ValI(0) => Ok(false),
+            Val::ValI(1) => Ok(true),
+            actual_value => Err(ValueAccessError::ExpectedBoolean {
+                variable: var,
+                actual_value,
+            }),
         }
     }
     
@@ -354,6 +381,20 @@ impl Solution {
         match self[var] {
             Val::ValF(f) => Ok(f),
             actual_value => Err(ValueAccessError::ExpectedFloat { 
+                variable: var, 
+                actual_value 
+            }),
+        }
+    }
+    
+    /// Get the boolean value for a variable (safe version)
+    /// Returns the boolean value if the variable contains 0 or 1, returns an error otherwise
+    #[must_use]
+    pub fn try_get_bool(&self, var: VarId) -> Result<bool, ValueAccessError> {
+        match self[var] {
+            Val::ValI(0) => Ok(false),
+            Val::ValI(1) => Ok(true),
+            actual_value => Err(ValueAccessError::ExpectedBoolean { 
                 variable: var, 
                 actual_value 
             }),
@@ -393,6 +434,17 @@ impl Solution {
         match self[var] {
             Val::ValF(f) => Some(f),
             Val::ValI(_) => None,
+        }
+    }
+    
+    /// Get the value for a variable as a boolean if possible (Option-based)
+    /// Returns Some(bool) if the value is 0 or 1, None otherwise
+    #[must_use]
+    pub fn as_bool(&self, var: VarId) -> Option<bool> {
+        match self[var] {
+            Val::ValI(0) => Some(false),
+            Val::ValI(1) => Some(true),
+            _ => None,
         }
     }
     

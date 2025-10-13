@@ -13,6 +13,27 @@ mod test_array_api_coverage;
 #[path = "../tests_all/test_global_constraints_coverage.rs"]
 mod test_global_constraints_coverage;
 
+#[path = "../tests_all/test_neq_coverage.rs"]
+mod test_neq_coverage;
+
+#[path = "../tests_all/test_neq_propagation.rs"]
+mod test_neq_propagation;
+
+#[path = "../tests_all/test_alldiff_coverage.rs"]
+mod test_alldiff_coverage;
+
+#[path = "../tests_all/test_error_coverage.rs"]
+mod test_error_coverage;
+
+#[path = "../tests_all/test_solution_coverage.rs"]
+mod test_solution_coverage;
+
+#[path = "../tests_all/test_validation_coverage.rs"]
+mod test_validation_coverage;
+
+#[path = "../tests_all/test_bool_constant.rs"]
+mod test_bool_constant;
+
 #[path = "../tests_all/test_array_float_constraints.rs"]
 mod test_array_float_constraints;
 

@@ -4,5 +4,4 @@
 //! Currently re-exports from existing modules for compatibility.
 
 // Re-export mathematical syntax functionality
-pub use crate::constraints::math_syntax::*;
 pub use crate::constraints::boolean_operators::*;
