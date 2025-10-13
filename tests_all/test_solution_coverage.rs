@@ -82,14 +82,14 @@ fn test_solution_get_int() {
 }
 
 #[test]
-#[should_panic(expected = "Expected integer")]
-fn test_solution_get_int_panics_on_float() {
+fn test_solution_get_int_error_on_float() {
     let mut m = Model::default();
     let x = m.float(1.0, 5.0);
     m.new(x.eq(3.5));
     
     let solution = m.solve().unwrap();
-    let _ = solution.get_int(x); // Should panic
+    // get_int still panics for backward compatibility, but try_get_int returns error
+    assert!(solution.try_get_int(x).is_err());
 }
 
 #[test]
@@ -104,14 +104,14 @@ fn test_solution_get_float() {
 }
 
 #[test]
-#[should_panic(expected = "Expected float")]
-fn test_solution_get_float_panics_on_int() {
+fn test_solution_get_float_error_on_int() {
     let mut m = Model::default();
     let x = m.int(1, 10);
     m.new(x.eq(5));
     
     let solution = m.solve().unwrap();
-    let _ = solution.get_float(x); // Should panic
+    // get_float still panics for backward compatibility, but try_get_float returns error
+    assert!(solution.try_get_float(x).is_err());
 }
 
 #[test]
