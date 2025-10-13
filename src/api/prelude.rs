@@ -46,3 +46,23 @@ pub const fn int(value: i32) -> crate::variables::Val {
 pub const fn float(value: f64) -> crate::variables::Val {
     crate::variables::Val::float(value)
 }
+
+/// Create a boolean value - shorthand for Val::ValI(0) or Val::ValI(1)
+/// 
+/// Booleans are represented as integers: false = 0, true = 1
+/// 
+/// # Examples
+/// 
+/// ```
+/// use selen::prelude::*;
+/// 
+/// let mut m = Model::default();
+/// let b = m.bool();
+/// 
+/// // Use bool() to create boolean constants
+/// m.new(b.eq(bool(true)));  // b == 1
+/// m.new(b.ne(bool(false))); // b != 0
+/// ```
+pub const fn bool(value: bool) -> crate::variables::Val {
+    crate::variables::Val::bool(value)
+}

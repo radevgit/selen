@@ -465,6 +465,8 @@ pub struct FloatLinEq {
 
 impl FloatLinEq {
     pub fn new(coefficients: Vec<f64>, variables: Vec<VarId>, constant: f64) -> Self {
+        // Validation should happen at the posting stage (in post_lin_eq), not here
+        // This constructor is called only after validation passes
         Self { coefficients, variables, constant }
     }
     

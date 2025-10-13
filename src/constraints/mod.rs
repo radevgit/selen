@@ -22,7 +22,6 @@ pub mod gac_bitset;
 
 // Moved files
 pub mod boolean_operators;
-pub mod math_syntax;
 pub mod operators;
 
 // Re-export GAC modules (gac_hybrid contains all common types)
@@ -31,7 +30,6 @@ pub use gac_sparseset::*;
 
 // Re-export moved files
 pub use boolean_operators::*;
-pub use math_syntax::*;
 pub use operators::*;
 
 // Props module  

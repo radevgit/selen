@@ -31,6 +31,20 @@ impl Val {
         Val::ValF(value)
     }
 
+    /// Create a boolean value (represented as integer 0 or 1)
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use selen::prelude::Val;
+    /// 
+    /// let true_val = Val::bool(true);   // Val::ValI(1)
+    /// let false_val = Val::bool(false); // Val::ValI(0)
+    /// ```
+    pub const fn bool(value: bool) -> Self {
+        Val::ValI(if value { 1 } else { 0 })
+    }
+
     /// Get the previous representable value
     pub fn prev(self) -> Self {
         match self {
