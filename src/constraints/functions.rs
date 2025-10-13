@@ -288,6 +288,20 @@ pub trait LinearCoeff: Copy {
 
 impl LinearCoeff for i32 {
     fn post_lin_eq(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
+        // Validate array lengths before creating AST
+        if coeffs.len() != vars.len() {
+            model.constraint_validation_errors.push(crate::core::SolverError::InvalidConstraint {
+                message: format!(
+                    "Linear constraint validation error: coefficients and variables must have same length (got {} coefficients but {} variables)",
+                    coeffs.len(),
+                    vars.len()
+                ),
+                constraint_name: Some("lin_eq".to_string()),
+                variables: None,
+            });
+            return;
+        }
+        
         // Phase 2: Create AST node instead of calling Model method directly
         use crate::runtime_api::{ConstraintKind, ComparisonOp};
         let ast = ConstraintKind::LinearInt {
@@ -299,6 +313,20 @@ impl LinearCoeff for i32 {
         model.pending_constraint_asts.push(ast);
     }
     fn post_lin_le(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
+        // Validate array lengths before creating AST
+        if coeffs.len() != vars.len() {
+            model.constraint_validation_errors.push(crate::core::SolverError::InvalidConstraint {
+                message: format!(
+                    "Linear constraint validation error: coefficients and variables must have same length (got {} coefficients but {} variables)",
+                    coeffs.len(),
+                    vars.len()
+                ),
+                constraint_name: Some("lin_le".to_string()),
+                variables: None,
+            });
+            return;
+        }
+        
         // Phase 2: Create AST node
         use crate::runtime_api::{ConstraintKind, ComparisonOp};
         let ast = ConstraintKind::LinearInt {
@@ -310,6 +338,20 @@ impl LinearCoeff for i32 {
         model.pending_constraint_asts.push(ast);
     }
     fn post_lin_ne(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
+        // Validate array lengths before creating AST
+        if coeffs.len() != vars.len() {
+            model.constraint_validation_errors.push(crate::core::SolverError::InvalidConstraint {
+                message: format!(
+                    "Linear constraint validation error: coefficients and variables must have same length (got {} coefficients but {} variables)",
+                    coeffs.len(),
+                    vars.len()
+                ),
+                constraint_name: Some("lin_ne".to_string()),
+                variables: None,
+            });
+            return;
+        }
+        
         // Phase 2: Create AST node
         use crate::runtime_api::{ConstraintKind, ComparisonOp};
         let ast = ConstraintKind::LinearInt {
@@ -360,6 +402,20 @@ impl LinearCoeff for i32 {
 
 impl LinearCoeff for f64 {
     fn post_lin_eq(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
+        // Validate array lengths before creating AST
+        if coeffs.len() != vars.len() {
+            model.constraint_validation_errors.push(crate::core::SolverError::InvalidConstraint {
+                message: format!(
+                    "Linear constraint validation error: coefficients and variables must have same length (got {} coefficients but {} variables)",
+                    coeffs.len(),
+                    vars.len()
+                ),
+                constraint_name: Some("lin_eq".to_string()),
+                variables: None,
+            });
+            return;
+        }
+        
         // Phase 2: Create AST node instead of calling Model method directly
         use crate::runtime_api::{ConstraintKind, ComparisonOp};
         let ast = ConstraintKind::LinearFloat {
@@ -371,6 +427,20 @@ impl LinearCoeff for f64 {
         model.pending_constraint_asts.push(ast);
     }
     fn post_lin_le(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
+        // Validate array lengths before creating AST
+        if coeffs.len() != vars.len() {
+            model.constraint_validation_errors.push(crate::core::SolverError::InvalidConstraint {
+                message: format!(
+                    "Linear constraint validation error: coefficients and variables must have same length (got {} coefficients but {} variables)",
+                    coeffs.len(),
+                    vars.len()
+                ),
+                constraint_name: Some("lin_le".to_string()),
+                variables: None,
+            });
+            return;
+        }
+        
         // Phase 2: Create AST node
         use crate::runtime_api::{ConstraintKind, ComparisonOp};
         let ast = ConstraintKind::LinearFloat {
@@ -382,6 +452,20 @@ impl LinearCoeff for f64 {
         model.pending_constraint_asts.push(ast);
     }
     fn post_lin_ne(model: &mut Model, coeffs: &[Self], vars: &[VarId], constant: Self) {
+        // Validate array lengths before creating AST
+        if coeffs.len() != vars.len() {
+            model.constraint_validation_errors.push(crate::core::SolverError::InvalidConstraint {
+                message: format!(
+                    "Linear constraint validation error: coefficients and variables must have same length (got {} coefficients but {} variables)",
+                    coeffs.len(),
+                    vars.len()
+                ),
+                constraint_name: Some("lin_ne".to_string()),
+                variables: None,
+            });
+            return;
+        }
+        
         // Phase 2: Create AST node
         use crate::runtime_api::{ConstraintKind, ComparisonOp};
         let ast = ConstraintKind::LinearFloat {

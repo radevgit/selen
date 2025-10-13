@@ -8,16 +8,12 @@
 
 use selen::prelude::*;
 
-#[cfg(test)]
-mod core_coverage {
-    use super::*;
+// =================================================================
+// ERROR HANDLING AND EDGE CASE COVERAGE TESTS
+// =================================================================
 
-    // =================================================================
-    // ERROR HANDLING AND EDGE CASE COVERAGE TESTS
-    // =================================================================
-    
-    #[test]
-    fn test_model_error_conditions_unsatisfiable() {
+#[test]
+fn test_model_error_conditions_unsatisfiable() {
         let mut model = Model::default();
         let x = model.int(1, 5);
         
@@ -552,4 +548,3 @@ mod core_coverage {
             }
         }
     }
-}

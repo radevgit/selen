@@ -10,7 +10,7 @@ fn test_a_passes() {
     let y = m.int(1, 10);
     let b = m.bool();
     
-    m.int_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     m.new(b.eq(1));
     m.new(x.eq(5));
     
@@ -28,7 +28,7 @@ fn test_b_flaky() {
     let y = m.int(1, 10);
     let b = m.bool();
     
-    m.int_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     m.new(b.eq(0)); // NOTE: b=0 here
     m.new(x.eq(5));
     

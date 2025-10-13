@@ -28,6 +28,10 @@ pub struct Model {
     /// We delay materialization to avoid creating duplicate propagators
     #[doc(hidden)]
     pub pending_constraint_asts: Vec<crate::runtime_api::ConstraintKind>,
+    /// Validation errors detected during constraint posting
+    /// These will be returned as errors during solve()
+    #[doc(hidden)]
+    pub constraint_validation_errors: Vec<crate::core::SolverError>,
 }
 
 impl Default for Model {
@@ -58,6 +62,7 @@ impl Model {
             memory_limit_exceeded: false,
             pending_lp_constraints: Vec::new(),
             pending_constraint_asts: Vec::new(),
+            constraint_validation_errors: Vec::new(),
         }
     }
 
@@ -81,6 +86,7 @@ impl Model {
             memory_limit_exceeded: false,
             pending_lp_constraints: Vec::new(),
             pending_constraint_asts: Vec::new(),
+            constraint_validation_errors: Vec::new(),
         }
     }
 
@@ -344,6 +350,11 @@ impl Model {
     /// ```
     #[must_use]
     pub fn minimize(self, objective: impl View) -> SolverResult<Solution> {
+        // Check for constraint validation errors first
+        if !self.constraint_validation_errors.is_empty() {
+            return Err(self.constraint_validation_errors[0].clone());
+        }
+        
         // First try specialized optimization (Step 2.4 precision handling)
         match self.try_optimization_minimize(&objective) {
             Some(mut solution) => {
@@ -469,6 +480,11 @@ impl Model {
     /// ```
     #[must_use]
     pub fn maximize(self, objective: impl View) -> SolverResult<Solution> {
+        // Check for constraint validation errors first
+        if !self.constraint_validation_errors.is_empty() {
+            return Err(self.constraint_validation_errors[0].clone());
+        }
+        
         // First try specialized optimization before falling back to opposite+minimize pattern
         match self.try_optimization_maximize(&objective) {
             Some(mut solution) => {
@@ -1204,6 +1220,11 @@ impl Model {
     /// ```
     #[must_use]
     pub fn solve(self) -> SolverResult<Solution> {
+        // Check for constraint validation errors first
+        if !self.constraint_validation_errors.is_empty() {
+            return Err(self.constraint_validation_errors[0].clone());
+        }
+        
         // Check if memory limit was exceeded during model building
         if self.memory_limit_exceeded {
             return Err(SolverError::MemoryLimit {

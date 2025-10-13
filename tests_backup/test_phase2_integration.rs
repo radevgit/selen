@@ -21,7 +21,7 @@ fn test_linear_eq_with_bool_clause() {
     let z = m.int(0, 10);
     
     // x + y + z = 10
-    m.int_lin_eq(&[1, 1, 1], &[x, y, z], 10);
+    m.lin_eq(&[1, 1, 1], &[x, y, z], 10);
     
     // At least one must equal 5
     let x_eq_5 = m.bool();
@@ -29,9 +29,9 @@ fn test_linear_eq_with_bool_clause() {
     let z_eq_5 = m.bool();
     
     let five = m.int(5, 5);
-    m.int_eq_reif(x, five, x_eq_5);
-    m.int_eq_reif(y, five, y_eq_5);
-    m.int_eq_reif(z, five, z_eq_5);
+    m.eq_reif(x, five, x_eq_5);
+    m.eq_reif(y, five, y_eq_5);
+    m.eq_reif(z, five, z_eq_5);
     
     m.bool_clause(&[x_eq_5, y_eq_5, z_eq_5], &[]);
     
@@ -56,15 +56,15 @@ fn test_linear_le_with_bool_clause() {
     let y = m.int(0, 10);
     
     // 2x + 3y <= 15
-    m.int_lin_le(&[2, 3], &[x, y], 15);
+    m.lin_le(&[2, 3], &[x, y], 15);
     
     // At least one must be zero
     let x_eq_0 = m.bool();
     let y_eq_0 = m.bool();
     
     let zero = m.int(0, 0);
-    m.int_eq_reif(x, zero, x_eq_0);
-    m.int_eq_reif(y, zero, y_eq_0);
+    m.eq_reif(x, zero, x_eq_0);
+    m.eq_reif(y, zero, y_eq_0);
     
     m.bool_clause(&[x_eq_0, y_eq_0], &[]);
     
@@ -92,7 +92,7 @@ fn test_cnf_with_linear_eq() {
     m.bool_clause(&[c], &[a]); // NOT a OR c (a -> c)
     
     // Exactly 2 must be true
-    m.int_lin_eq(&[1, 1, 1], &[a, b, c], 2);
+    m.lin_eq(&[1, 1, 1], &[a, b, c], 2);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -121,7 +121,7 @@ fn test_cnf_with_linear_le() {
     m.bool_clause(&[], &[a, b]); // NOT a OR NOT b (not both true)
     
     // At most 2 can be true
-    m.int_lin_le(&[1, 1, 1], &[a, b, c], 2);
+    m.lin_le(&[1, 1, 1], &[a, b, c], 2);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -153,7 +153,7 @@ fn test_reified_linear_eq() {
     let twelve = m.int(12, 12);
     
     // b <-> (sum = 12)
-    m.int_eq_reif(sum, twelve, b);
+    m.eq_reif(sum, twelve, b);
     
     // Force b = true
     m.new(b.eq(1));
@@ -185,7 +185,7 @@ fn test_reified_linear_eq_false() {
     let twelve = m.int(12, 12);
     
     // b <-> (sum = 12)
-    m.int_eq_reif(sum, twelve, b);
+    m.eq_reif(sum, twelve, b);
     
     // Force b = false
     m.new(b.eq(0));
@@ -209,8 +209,8 @@ fn test_multiple_linear_with_clause() {
     let y = m.int(0, 10);
     
     // Two linear equations
-    m.int_lin_eq(&[1, 1], &[x, y], 5);
-    m.int_lin_eq(&[2, 1], &[x, y], 8);
+    m.lin_eq(&[1, 1], &[x, y], 5);
+    m.lin_eq(&[2, 1], &[x, y], 8);
     
     // At least one specific value
     let x_eq_3 = m.bool();
@@ -219,8 +219,8 @@ fn test_multiple_linear_with_clause() {
     let three = m.int(3, 3);
     let two = m.int(2, 2);
     
-    m.int_eq_reif(x, three, x_eq_3);
-    m.int_eq_reif(y, two, y_eq_2);
+    m.eq_reif(x, three, x_eq_3);
+    m.eq_reif(y, two, y_eq_2);
     
     m.bool_clause(&[x_eq_3, y_eq_2], &[]);
     
@@ -243,7 +243,7 @@ fn test_negative_coeff_with_clause() {
     let y = m.int(-5, 5);
     
     // 3x - 2y = 4
-    m.int_lin_eq(&[3, -2], &[x, y], 4);
+    m.lin_eq(&[3, -2], &[x, y], 4);
     
     // At least one specific value
     let x_eq_2 = m.bool();
@@ -252,8 +252,8 @@ fn test_negative_coeff_with_clause() {
     let two = m.int(2, 2);
     let one = m.int(1, 1);
     
-    m.int_eq_reif(x, two, x_eq_2);
-    m.int_eq_reif(y, one, y_eq_1);
+    m.eq_reif(x, two, x_eq_2);
+    m.eq_reif(y, one, y_eq_1);
     
     m.bool_clause(&[x_eq_2, y_eq_1], &[]);
     
@@ -286,8 +286,8 @@ fn test_chained_reifications() {
     let fifteen = m.int(15, 15);
     
     // Reify the conditions
-    m.int_eq_reif(sum_xy, ten, b1);
-    m.int_eq_reif(sum_yz, fifteen, b2);
+    m.eq_reif(sum_xy, ten, b1);
+    m.eq_reif(sum_yz, fifteen, b2);
     
     // At least one must be true
     m.bool_clause(&[b1, b2], &[]);
@@ -327,7 +327,7 @@ fn test_3sat_with_linear() {
     m.bool_clause(&[a], &[c]);
     
     // Exactly 2 must be true
-    m.int_lin_eq(&[1, 1, 1], &[a, b, c], 2);
+    m.lin_eq(&[1, 1, 1], &[a, b, c], 2);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -355,12 +355,12 @@ fn test_reified_ne_with_clause() {
     let b = m.bool();
     
     // b <-> (x != y)
-    m.int_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     
     // b OR x=5
     let x_eq_5 = m.bool();
     let five = m.int(5, 5);
-    m.int_eq_reif(x, five, x_eq_5);
+    m.eq_reif(x, five, x_eq_5);
     
     m.bool_clause(&[b, x_eq_5], &[]);
     
@@ -391,23 +391,23 @@ fn test_large_integration() {
     let v5 = m.int(0, 10);
     
     // Linear constraints
-    m.int_lin_eq(&[1, 1, 1, 1, 1], &[v1, v2, v3, v4, v5], 20);
-    m.int_lin_le(&[2, 2, 1, 1, 1], &[v1, v2, v3, v4, v5], 25);
+    m.lin_eq(&[1, 1, 1, 1, 1], &[v1, v2, v3, v4, v5], 20);
+    m.lin_le(&[2, 2, 1, 1, 1], &[v1, v2, v3, v4, v5], 25);
     
     // Boolean clauses
     let v1_eq_5 = m.bool();
     let v2_eq_5 = m.bool();
     
     let five = m.int(5, 5);
-    m.int_eq_reif(v1, five, v1_eq_5);
-    m.int_eq_reif(v2, five, v2_eq_5);
+    m.eq_reif(v1, five, v1_eq_5);
+    m.eq_reif(v2, five, v2_eq_5);
     
     // At least one equals 5
     m.bool_clause(&[v1_eq_5, v2_eq_5], &[]);
     
     // v3 != v4
     let v3_ne_v4 = m.bool();
-    m.int_ne_reif(v3, v4, v3_ne_v4);
+    m.ne_reif(v3, v4, v3_ne_v4);
     m.new(v3_ne_v4.eq(1));
     
     let solution = m.solve().expect("Should find solution");

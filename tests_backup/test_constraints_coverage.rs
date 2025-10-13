@@ -425,8 +425,8 @@ mod constraints_coverage {
         let mut model = Model::default();
         let a = model.bool();
         let b = model.bool();
-        let c = model.bool();
-        let d = model.bool();
+        let _c = model.bool();
+        let _d = model.bool();
         
         // Test mixing single and array syntaxes
         model.new(a.eq(1));             // and(a,b) requires both true

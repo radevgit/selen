@@ -15,7 +15,7 @@ fn test_int_lin_eq_reif_true() {
     let b = m.bool();
     
     // b ⇔ (x + y = 10)
-    m.int_lin_eq_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_eq_reif(&[1, 1], &[x, y], 10, b);
     
     // Force b = 1 (equation must hold)
     m.new(b.eq(1));
@@ -40,7 +40,7 @@ fn test_int_lin_eq_reif_false() {
     let b = m.bool();
     
     // b ⇔ (x + y = 10)
-    m.int_lin_eq_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_eq_reif(&[1, 1], &[x, y], 10, b);
     
     // Force b = 0 (equation must NOT hold)
     m.new(b.eq(0));
@@ -65,7 +65,7 @@ fn test_int_lin_eq_reif_infer_true() {
     let b = m.bool();
     
     // b ⇔ (x + y = 10)
-    m.int_lin_eq_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_eq_reif(&[1, 1], &[x, y], 10, b);
     
     // Force values that make equation true
     m.new(x.eq(6));
@@ -88,7 +88,7 @@ fn test_int_lin_eq_reif_infer_false() {
     let b = m.bool();
     
     // b ⇔ (x + y = 10)
-    m.int_lin_eq_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_eq_reif(&[1, 1], &[x, y], 10, b);
     
     // Force values that make equation false
     m.new(x.eq(3));
@@ -111,7 +111,7 @@ fn test_int_lin_eq_reif_with_coefficients() {
     let b = m.bool();
     
     // b ⇔ (2*x + 3*y = 20)
-    m.int_lin_eq_reif(&[2, 3], &[x, y], 20, b);
+    m.lin_eq_reif(&[2, 3], &[x, y], 20, b);
     
     // Force b = 1
     m.new(b.eq(1));
@@ -134,7 +134,7 @@ fn test_int_lin_eq_reif_negative_coefficients() {
     let b = m.bool();
     
     // b ⇔ (x - y = 2)
-    m.int_lin_eq_reif(&[1, -1], &[x, y], 2, b);
+    m.lin_eq_reif(&[1, -1], &[x, y], 2, b);
     
     // Force x = 7, b = 1
     m.new(x.eq(7));
@@ -155,7 +155,7 @@ fn test_int_lin_eq_reif_empty_array() {
     let b = m.bool();
     
     // b ⇔ (empty sum = 0)  => should set b = 1
-    m.int_lin_eq_reif(&[], &[], 0, b);
+    m.lin_eq_reif(&[], &[], 0, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(1));
@@ -168,7 +168,7 @@ fn test_int_lin_eq_reif_empty_array_nonzero() {
     let b = m.bool();
     
     // b ⇔ (empty sum = 5)  => should set b = 0
-    m.int_lin_eq_reif(&[], &[], 5, b);
+    m.lin_eq_reif(&[], &[], 5, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(0));
@@ -187,7 +187,7 @@ fn test_int_lin_le_reif_true() {
     let b = m.bool();
     
     // b ⇔ (x + y ≤ 15)
-    m.int_lin_le_reif(&[1, 1], &[x, y], 15, b);
+    m.lin_le_reif(&[1, 1], &[x, y], 15, b);
     
     // Force b = 1 (inequality must hold)
     m.new(b.eq(1));
@@ -213,7 +213,7 @@ fn test_int_lin_le_reif_false() {
     let b = m.bool();
     
     // b ⇔ (x + y ≤ 8)
-    m.int_lin_le_reif(&[1, 1], &[x, y], 8, b);
+    m.lin_le_reif(&[1, 1], &[x, y], 8, b);
     
     // Force b = 0 (inequality must NOT hold, meaning x+y > 8)
     m.new(b.eq(0));
@@ -239,7 +239,7 @@ fn test_int_lin_le_reif_infer_true() {
     let b = m.bool();
     
     // b ⇔ (x + y ≤ 10)
-    m.int_lin_le_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_le_reif(&[1, 1], &[x, y], 10, b);
     
     // Force values that satisfy inequality
     m.new(x.eq(3));
@@ -262,7 +262,7 @@ fn test_int_lin_le_reif_infer_false() {
     let b = m.bool();
     
     // b ⇔ (x + y ≤ 5)
-    m.int_lin_le_reif(&[1, 1], &[x, y], 5, b);
+    m.lin_le_reif(&[1, 1], &[x, y], 5, b);
     
     // Force values that violate inequality
     m.new(x.eq(8));
@@ -285,7 +285,7 @@ fn test_int_lin_le_reif_with_coefficients() {
     let b = m.bool();
     
     // b ⇔ (2*x + 3*y ≤ 30)
-    m.int_lin_le_reif(&[2, 3], &[x, y], 30, b);
+    m.lin_le_reif(&[2, 3], &[x, y], 30, b);
     
     // Force b = 1, x = 6
     m.new(b.eq(1));
@@ -309,7 +309,7 @@ fn test_int_lin_le_reif_at_boundary() {
     let b = m.bool();
     
     // b ⇔ (x + y ≤ 10)
-    m.int_lin_le_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_le_reif(&[1, 1], &[x, y], 10, b);
     
     // Force x = 5, y = 5 (exactly at boundary)
     m.new(x.eq(5));
@@ -330,7 +330,7 @@ fn test_int_lin_le_reif_empty_array() {
     let b = m.bool();
     
     // b ⇔ (empty sum ≤ 5)  => 0 ≤ 5 is true, should set b = 1
-    m.int_lin_le_reif(&[], &[], 5, b);
+    m.lin_le_reif(&[], &[], 5, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(1));
@@ -343,7 +343,7 @@ fn test_int_lin_le_reif_empty_array_negative() {
     let b = m.bool();
     
     // b ⇔ (empty sum ≤ -5)  => 0 ≤ -5 is false, should set b = 0
-    m.int_lin_le_reif(&[], &[], -5, b);
+    m.lin_le_reif(&[], &[], -5, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(0));
@@ -362,7 +362,7 @@ fn test_int_lin_ne_reif_true() {
     let b = m.bool();
     
     // b ⇔ (x + y ≠ 10)
-    m.int_lin_ne_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_ne_reif(&[1, 1], &[x, y], 10, b);
     
     // Force b = 1 (inequality must hold: x+y≠10)
     m.new(b.eq(1));
@@ -387,7 +387,7 @@ fn test_int_lin_ne_reif_false() {
     let b = m.bool();
     
     // b ⇔ (x + y ≠ 10)
-    m.int_lin_ne_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_ne_reif(&[1, 1], &[x, y], 10, b);
     
     // Force b = 0 (must have x+y=10)
     m.new(b.eq(0));
@@ -412,7 +412,7 @@ fn test_int_lin_ne_reif_infer_true() {
     let b = m.bool();
     
     // b ⇔ (x + y ≠ 10)
-    m.int_lin_ne_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_ne_reif(&[1, 1], &[x, y], 10, b);
     
     // Force values that make inequality true
     m.new(x.eq(3));
@@ -435,7 +435,7 @@ fn test_int_lin_ne_reif_infer_false() {
     let b = m.bool();
     
     // b ⇔ (x + y ≠ 10)
-    m.int_lin_ne_reif(&[1, 1], &[x, y], 10, b);
+    m.lin_ne_reif(&[1, 1], &[x, y], 10, b);
     
     // Force values that make equation true (inequality false)
     m.new(x.eq(6));
@@ -458,7 +458,7 @@ fn test_int_lin_ne_reif_with_coefficients() {
     let b = m.bool();
     
     // b ⇔ (2*x + 3*y ≠ 20)
-    m.int_lin_ne_reif(&[2, 3], &[x, y], 20, b);
+    m.lin_ne_reif(&[2, 3], &[x, y], 20, b);
     
     // Force b = 1 (must have 2*x + 3*y ≠ 20)
     m.new(b.eq(1));
@@ -482,7 +482,7 @@ fn test_int_lin_ne_reif_three_variables() {
     let b = m.bool();
     
     // b ⇔ (x + y + z ≠ 15)
-    m.int_lin_ne_reif(&[1, 1, 1], &[x, y, z], 15, b);
+    m.lin_ne_reif(&[1, 1, 1], &[x, y, z], 15, b);
     
     // Force specific values
     m.new(x.eq(5));
@@ -505,7 +505,7 @@ fn test_int_lin_ne_reif_empty_array() {
     let b = m.bool();
     
     // b ⇔ (empty sum ≠ 5)  => 0 ≠ 5 is true, should set b = 1
-    m.int_lin_ne_reif(&[], &[], 5, b);
+    m.lin_ne_reif(&[], &[], 5, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(1));
@@ -518,7 +518,7 @@ fn test_int_lin_ne_reif_empty_array_zero() {
     let b = m.bool();
     
     // b ⇔ (empty sum ≠ 0)  => 0 ≠ 0 is false, should set b = 0
-    m.int_lin_ne_reif(&[], &[], 0, b);
+    m.lin_ne_reif(&[], &[], 0, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(0));
@@ -539,13 +539,13 @@ fn test_multiple_int_lin_reif_constraints() {
     let b3 = m.bool();
     
     // b1 ⇔ (x + y = 10)
-    m.int_lin_eq_reif(&[1, 1], &[x, y], 10, b1);
+    m.lin_eq_reif(&[1, 1], &[x, y], 10, b1);
     
     // b2 ⇔ (x + y ≤ 8)
-    m.int_lin_le_reif(&[1, 1], &[x, y], 8, b2);
+    m.lin_le_reif(&[1, 1], &[x, y], 8, b2);
     
     // b3 ⇔ (x + y ≠ 7)
-    m.int_lin_ne_reif(&[1, 1], &[x, y], 7, b3);
+    m.lin_ne_reif(&[1, 1], &[x, y], 7, b3);
     
     // Force x = 5, y = 5
     m.new(x.eq(5));
@@ -570,7 +570,7 @@ fn test_int_lin_reif_mismatched_lengths() {
     let b = m.bool();
     
     // Mismatched lengths should force b = 0
-    m.int_lin_eq_reif(&[1, 2], &[x], 5, b);
+    m.lin_eq_reif(&[1, 2], &[x], 5, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(0));

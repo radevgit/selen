@@ -15,7 +15,7 @@ fn test_float_lin_eq_reif_forces_true() {
     let b = m.bool();
     
     // b <=> (x + y = 7.5)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
     
     // Force b = true
     m.new(b.eq(1));
@@ -35,7 +35,7 @@ fn test_float_lin_eq_reif_forces_false() {
     let b = m.bool();
     
     // b <=> (x + y = 7.5)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
     
     // Force b = false and fix values that would satisfy
     m.new(b.eq(0));
@@ -55,7 +55,7 @@ fn test_float_lin_eq_reif_infers_true() {
     let b = m.bool();
     
     // b <=> (x + y = 7.5)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(1)); // Must be true
@@ -72,7 +72,7 @@ fn test_float_lin_eq_reif_infers_false() {
     
     // b <=> (x + y = 7.5)
     // But x = 5, y = 5, so x + y = 10 ≠ 7.5
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
     
     let solution = m.solve().expect("Should find solution");
     assert_eq!(solution[b], Val::ValI(0)); // Must be false
@@ -86,7 +86,7 @@ fn test_float_lin_eq_reif_with_coefficients() {
     let b = m.bool();
     
     // b <=> (2.0*x + 3.0*y = 18.0)
-    m.float_lin_eq_reif(&[2.0, 3.0], &[x, y], 18.0, b);
+    m.lin_eq_reif(&[2.0, 3.0], &[x, y], 18.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(3.0));
@@ -105,7 +105,7 @@ fn test_float_lin_eq_reif_negative_coefficients() {
     let b = m.bool();
     
     // b <=> (x - y = 3.0)
-    m.float_lin_eq_reif(&[1.0, -1.0], &[x, y], 3.0, b);
+    m.lin_eq_reif(&[1.0, -1.0], &[x, y], 3.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(7.0));
@@ -124,7 +124,7 @@ fn test_float_lin_eq_reif_three_variables() {
     let b = m.bool();
     
     // b <=> (x + y + z = 15.0)
-    m.float_lin_eq_reif(&[1.0, 1.0, 1.0], &[x, y, z], 15.0, b);
+    m.lin_eq_reif(&[1.0, 1.0, 1.0], &[x, y, z], 15.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(5.0));
@@ -142,7 +142,7 @@ fn test_float_lin_eq_reif_zero_constant() {
     let b = m.bool();
     
     // b <=> (x + y = 0.0)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 0.0, b);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 0.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(3.0));
@@ -163,7 +163,7 @@ fn test_float_lin_le_reif_forces_true() {
     let b = m.bool();
     
     // b <=> (x + y ≤ 10.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(6.0));
@@ -182,7 +182,7 @@ fn test_float_lin_le_reif_forces_false() {
     let b = m.bool();
     
     // b <=> (x + y ≤ 10.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     m.new(b.eq(0)); // Force inequality to be false (x + y > 10)
     m.new(x.eq(6.0));
@@ -204,7 +204,7 @@ fn test_float_lin_le_reif_infers_true() {
     let b = m.bool();
     
     // b <=> (x + y ≤ 10.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     // Max possible sum is 6.0, always ≤ 10.0
     let solution = m.solve().expect("Should find solution");
@@ -219,7 +219,7 @@ fn test_float_lin_le_reif_infers_false() {
     let b = m.bool();
     
     // b <=> (x + y ≤ 10.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     // Min possible sum is 16.0, always > 10.0
     let solution = m.solve().expect("Should find solution");
@@ -234,7 +234,7 @@ fn test_float_lin_le_reif_at_boundary() {
     let b = m.bool();
     
     // b <=> (x + y ≤ 10.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     // Sum is exactly 10.0, so ≤ 10.0 is true
     let solution = m.solve().expect("Should find solution");
@@ -249,7 +249,7 @@ fn test_float_lin_le_reif_with_coefficients() {
     let b = m.bool();
     
     // b <=> (2.0*x + 3.0*y ≤ 30.0)
-    m.float_lin_le_reif(&[2.0, 3.0], &[x, y], 30.0, b);
+    m.lin_le_reif(&[2.0, 3.0], &[x, y], 30.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(6.0));
@@ -268,7 +268,7 @@ fn test_float_lin_le_reif_negative_coefficients() {
     let b = m.bool();
     
     // b <=> (x - y ≤ 3.0)
-    m.float_lin_le_reif(&[1.0, -1.0], &[x, y], 3.0, b);
+    m.lin_le_reif(&[1.0, -1.0], &[x, y], 3.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(8.0));
@@ -292,7 +292,7 @@ fn test_float_lin_ne_reif_forces_true() {
     let b = m.bool();
     
     // b <=> (x + y ≠ 10.0)
-    m.float_lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     m.new(b.eq(1)); // Force inequality
     m.new(x.eq(5.0));
@@ -309,7 +309,7 @@ fn test_float_lin_ne_reif_forces_false() {
     let b = m.bool();
     
     // b <=> (x + y ≠ 10.0)
-    m.float_lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     m.new(b.eq(0)); // Force equality (x + y = 10)
     m.new(x.eq(3.0));
@@ -326,7 +326,7 @@ fn test_float_lin_ne_reif_infers_true() {
     let b = m.bool();
     
     // b <=> (x + y ≠ 10.0)
-    m.float_lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     // x + y = 12.0 ≠ 10.0
     let solution = m.solve().expect("Should find solution");
@@ -341,7 +341,7 @@ fn test_float_lin_ne_reif_infers_false() {
     let b = m.bool();
     
     // b <=> (x + y ≠ 10.0)
-    m.float_lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     // x + y = 10.0, so b must be false
     let solution = m.solve().expect("Should find solution");
@@ -356,7 +356,7 @@ fn test_float_lin_ne_reif_with_coefficients() {
     let b = m.bool();
     
     // b <=> (2.0*x + 3.0*y ≠ 18.0)
-    m.float_lin_ne_reif(&[2.0, 3.0], &[x, y], 18.0, b);
+    m.lin_ne_reif(&[2.0, 3.0], &[x, y], 18.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(3.0));
@@ -376,7 +376,7 @@ fn test_float_lin_ne_reif_three_variables() {
     let b = m.bool();
     
     // b <=> (x + y + z ≠ 15.0)
-    m.float_lin_ne_reif(&[1.0, 1.0, 1.0], &[x, y, z], 15.0, b);
+    m.lin_ne_reif(&[1.0, 1.0, 1.0], &[x, y, z], 15.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(5.0));
@@ -398,7 +398,7 @@ fn test_float_lin_reif_precision() {
     let b = m.bool();
     
     // b <=> (x + y = 0.3)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 0.3, b);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 0.3, b);
     
     m.new(b.eq(1));
     m.new(x.eq(0.1));
@@ -419,10 +419,10 @@ fn test_multiple_float_lin_reif() {
     let b2 = m.bool();
     
     // b1 <=> (x + y = 10.0)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 10.0, b1);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 10.0, b1);
     
     // b2 <=> (x + y ≤ 8.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 8.0, b2);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], 8.0, b2);
     
     m.new(x.eq(4.0));
     m.new(y.eq(4.0));
@@ -441,10 +441,10 @@ fn test_float_lin_reif_with_bool_logic() {
     let b2 = m.bool();
     
     // b1 <=> (x + y = 10.0)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 10.0, b1);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 10.0, b1);
     
     // b2 <=> (x + y ≠ 10.0)
-    m.float_lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b2);
+    m.lin_ne_reif(&[1.0, 1.0], &[x, y], 10.0, b2);
     
     // b1 and b2 should be opposites
     let solution = m.solve().expect("Should find solution");
@@ -460,7 +460,7 @@ fn test_float_lin_eq_reif_single_variable() {
     let b = m.bool();
     
     // b <=> (2.0*x = 6.0)
-    m.float_lin_eq_reif(&[2.0], &[x], 6.0, b);
+    m.lin_eq_reif(&[2.0], &[x], 6.0, b);
     
     m.new(b.eq(1));
     
@@ -476,7 +476,7 @@ fn test_float_lin_le_reif_negative_constant() {
     let b = m.bool();
     
     // b <=> (x + y ≤ -5.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], -5.0, b);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], -5.0, b);
     
     m.new(b.eq(1));
     m.new(x.eq(-3.0));

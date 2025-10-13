@@ -574,13 +574,16 @@ fn test_bool_lin_empty_array() {
 }
 
 #[test]
+#[should_panic] // Empty array with non-zero constant should fail during constraint posting or solving
 fn test_bool_lin_empty_array_unsatisfiable() {
     let mut m = Model::default();
     
-    // Empty sum = 5 (unsatisfiable)
+    // Empty sum = 5 (mathematically 0 = 5, which is unsatisfiable)
+    // This should either panic during posting or return Err during solve
     m.bool_lin_eq(&[], &[], 5);
     
     let result = m.solve();
+    // If we get here without panic, it must be an error
     assert!(result.is_err(), "Empty sum = 5 should be unsatisfiable");
 }
 

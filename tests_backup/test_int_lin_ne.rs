@@ -10,7 +10,7 @@ fn test_int_lin_ne_basic() {
     let y = m.int(1, 5);
     
     // x + y ≠ 6
-    m.int_lin_ne(&[1, 1], &[x, y], 6);
+    m.lin_ne(&[1, 1], &[x, y], 6);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -30,7 +30,7 @@ fn test_int_lin_ne_with_coefficients() {
     let y = m.int(0, 10);
     
     // 2*x + 3*y ≠ 12
-    m.int_lin_ne(&[2, 3], &[x, y], 12);
+    m.lin_ne(&[2, 3], &[x, y], 12);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -50,7 +50,7 @@ fn test_int_lin_ne_negative_coefficients() {
     let y = m.int(0, 10);
     
     // 2*x - y ≠ 5
-    m.int_lin_ne(&[2, -1], &[x, y], 5);
+    m.lin_ne(&[2, -1], &[x, y], 5);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -70,7 +70,7 @@ fn test_int_lin_ne_three_variables() {
     let z = m.int(1, 3);
     
     // x + y + z ≠ 6
-    m.int_lin_ne(&[1, 1, 1], &[x, y, z], 6);
+    m.lin_ne(&[1, 1, 1], &[x, y, z], 6);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -90,7 +90,7 @@ fn test_int_lin_ne_forced_solution() {
     let y = m.int(1, 5);
     
     // 2*x + y ≠ 10  =>  6 + y ≠ 10  =>  y ≠ 4
-    m.int_lin_ne(&[2, 1], &[x, y], 10);
+    m.lin_ne(&[2, 1], &[x, y], 10);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -107,7 +107,7 @@ fn test_int_lin_ne_empty_array() {
     let mut m = Model::default();
     
     // Empty sum ≠ 0 (this should be unsatisfiable)
-    m.int_lin_ne(&[], &[], 0);
+    m.lin_ne(&[], &[], 0);
     
     let result = m.solve();
     assert!(result.is_err(), "Empty sum = 0, so ≠ 0 should be unsatisfiable");
@@ -118,7 +118,7 @@ fn test_int_lin_ne_empty_array_satisfiable() {
     let mut m = Model::default();
     
     // Empty sum ≠ 5 (this should be satisfiable since 0 ≠ 5)
-    m.int_lin_ne(&[], &[], 5);
+    m.lin_ne(&[], &[], 5);
     
     let result = m.solve();
     assert!(result.is_ok(), "Empty sum = 0, so ≠ 5 should be satisfiable");
@@ -132,7 +132,7 @@ fn test_int_lin_ne_large_coefficients() {
     let y = m.int(0, 10);
     
     // 100*x + 50*y ≠ 250
-    m.int_lin_ne(&[100, 50], &[x, y], 250);
+    m.lin_ne(&[100, 50], &[x, y], 250);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -152,10 +152,10 @@ fn test_int_lin_ne_combined_with_eq() {
     let z = m.int(1, 5);
     
     // x + y + z = 10
-    m.int_lin_eq(&[1, 1, 1], &[x, y, z], 10);
+    m.lin_eq(&[1, 1, 1], &[x, y, z], 10);
     
     // 2*x + y ≠ 8
-    m.int_lin_ne(&[2, 1], &[x, y], 8);
+    m.lin_ne(&[2, 1], &[x, y], 8);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -177,7 +177,7 @@ fn test_int_lin_ne_zero_coefficients() {
     let z = m.int(1, 5);
     
     // 2*x + 0*y + 3*z ≠ 11
-    m.int_lin_ne(&[2, 0, 3], &[x, y, z], 11);
+    m.lin_ne(&[2, 0, 3], &[x, y, z], 11);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -196,7 +196,7 @@ fn test_int_lin_ne_single_variable() {
     let x = m.int(0, 10);
     
     // 3*x ≠ 9  =>  x ≠ 3
-    m.int_lin_ne(&[3], &[x], 9);
+    m.lin_ne(&[3], &[x], 9);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -215,7 +215,7 @@ fn test_int_lin_ne_unsatisfiable() {
     let y = m.int(3, 3);  // Fixed to 3
     
     // x + y ≠ 8, but x=5 and y=3, so x+y=8
-    m.int_lin_ne(&[1, 1], &[x, y], 8);
+    m.lin_ne(&[1, 1], &[x, y], 8);
     
     let result = m.solve();
     assert!(result.is_err(), "Should be unsatisfiable");
@@ -229,7 +229,7 @@ fn test_int_lin_ne_propagation() {
     let y = m.int(1, 1);  // Fixed to 1
     
     // x + y ≠ 3  =>  x + 1 ≠ 3  =>  x ≠ 2
-    m.int_lin_ne(&[1, 1], &[x, y], 3);
+    m.lin_ne(&[1, 1], &[x, y], 3);
     
     let solution = m.solve().expect("Should find solution");
     

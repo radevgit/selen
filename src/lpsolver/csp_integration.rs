@@ -49,14 +49,21 @@ pub struct LinearConstraint {
 
 impl LinearConstraint {
     /// Create a new linear constraint
+    /// 
+    /// Note: Validation should happen at the posting stage (in post_lin_eq, etc.)
+    /// This constructor is called only after validation passes.
     pub fn new(
         coefficients: Vec<f64>,
         variables: Vec<VarId>,
         relation: ConstraintRelation,
         rhs: f64,
     ) -> Self {
-        assert_eq!(coefficients.len(), variables.len(), 
-                   "Coefficients and variables must have same length");
+        // Debug assertion to catch programming errors, but won't panic in release builds
+        debug_assert_eq!(
+            coefficients.len(),
+            variables.len(),
+            "Coefficients and variables must have same length"
+        );
         Self {
             coefficients,
             variables,

@@ -15,7 +15,7 @@ fn test_float_eq_reif_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x = y)
-    m.float_eq_reif(x, y, b);
+    m.eq_reif(x, y, b);
     
     // Force b to be true
     m.new(b.eq(1));
@@ -46,7 +46,7 @@ fn test_float_eq_reif_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x = y)
-    m.float_eq_reif(x, y, b);
+    m.eq_reif(x, y, b);
     
     // Force b to be false
     m.new(b.eq(0));
@@ -77,7 +77,7 @@ fn test_float_eq_reif_inference_to_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x = y)
-    m.float_eq_reif(x, y, b);
+    m.eq_reif(x, y, b);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -102,7 +102,7 @@ fn test_float_ne_reif_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≠ y)
-    m.float_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     
     // Force b to be true
     m.new(b.eq(1));
@@ -132,7 +132,7 @@ fn test_float_ne_reif_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≠ y)
-    m.float_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     
     // Force b to be false
     m.new(b.eq(0));
@@ -166,7 +166,7 @@ fn test_float_lt_reif_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x < y)
-    m.float_lt_reif(x, y, b);
+    m.lt_reif(x, y, b);
     
     // Force b to be true
     m.new(b.eq(1));
@@ -196,7 +196,7 @@ fn test_float_lt_reif_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x < y)
-    m.float_lt_reif(x, y, b);
+    m.lt_reif(x, y, b);
     
     // Force b to be false
     m.new(b.eq(0));
@@ -226,7 +226,7 @@ fn test_float_lt_reif_inference() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x < y)
-    m.float_lt_reif(x, y, b);
+    m.lt_reif(x, y, b);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -251,7 +251,7 @@ fn test_float_le_reif_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≤ y)
-    m.float_le_reif(x, y, b);
+    m.le_reif(x, y, b);
     
     // Force b to be true
     m.new(b.eq(1));
@@ -281,7 +281,7 @@ fn test_float_le_reif_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≤ y)
-    m.float_le_reif(x, y, b);
+    m.le_reif(x, y, b);
     
     // Force b to be false
     m.new(b.eq(0));
@@ -315,7 +315,7 @@ fn test_float_gt_reif_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x > y)
-    m.float_gt_reif(x, y, b);
+    m.gt_reif(x, y, b);
     
     // Force b to be true
     m.new(b.eq(1));
@@ -345,7 +345,7 @@ fn test_float_gt_reif_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x > y)
-    m.float_gt_reif(x, y, b);
+    m.gt_reif(x, y, b);
     
     // Force b to be false
     m.new(b.eq(0));
@@ -379,7 +379,7 @@ fn test_float_ge_reif_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≥ y)
-    m.float_ge_reif(x, y, b);
+    m.ge_reif(x, y, b);
     
     // Force b to be true
     m.new(b.eq(1));
@@ -409,7 +409,7 @@ fn test_float_ge_reif_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≥ y)
-    m.float_ge_reif(x, y, b);
+    m.ge_reif(x, y, b);
     
     // Force b to be false
     m.new(b.eq(0));
@@ -439,7 +439,7 @@ fn test_float_ge_reif_inference() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≥ y)
-    m.float_ge_reif(x, y, b);
+    m.ge_reif(x, y, b);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -466,10 +466,10 @@ fn test_float_reif_combined() {
     let b2 = m.bool();
     
     // b1 ⇔ (x < y)
-    m.float_lt_reif(x, y, b1);
+    m.lt_reif(x, y, b1);
     
     // b2 ⇔ (y < z)
-    m.float_lt_reif(y, z, b2);
+    m.lt_reif(y, z, b2);
     
     // Force both to be true
     m.new(b1.eq(1));

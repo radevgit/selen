@@ -1,6 +1,7 @@
 //! Tests for float linear constraints (FlatZinc integration)
 
 use selen::prelude::*;
+use selen::core::SolverError;
 
 // ═══════════════════════════════════════════════════════════════════════
 // float_lin_eq tests
@@ -14,7 +15,7 @@ fn test_float_lin_eq_simple() {
     let y = m.float(0.0, 10.0);
     
     // x + y = 7.5
-    m.float_lin_eq(&[1.0, 1.0], &[x, y], 7.5);
+    m.lin_eq(&[1.0, 1.0], &[x, y], 7.5);
     
     // Force x = 3.0
     m.new(x.eq(3.0));
@@ -38,7 +39,7 @@ fn test_float_lin_eq_with_coefficients() {
     let y = m.float(0.0, 10.0);
     
     // 2.5*x + 3.7*y = 18.5
-    m.float_lin_eq(&[2.5, 3.7], &[x, y], 18.5);
+    m.lin_eq(&[2.5, 3.7], &[x, y], 18.5);
     
     // Force x = 2.0 using builder API (should work with float_lin_eq)
     m.new(x.eq(2.0));
@@ -65,7 +66,7 @@ fn test_float_lin_eq_negative_coefficient() {
     let y = m.float(0.0, 10.0);
     
     // 5.0*x - 2.0*y = 6.0
-    m.float_lin_eq(&[5.0, -2.0], &[x, y], 6.0);
+    m.lin_eq(&[5.0, -2.0], &[x, y], 6.0);
     
     // Force x = 4.0
     m.new(x.eq(4.0));
@@ -90,7 +91,7 @@ fn test_float_lin_eq_three_variables() {
     let z = m.float(0.0, 10.0);
     
     // 2.0*x + 3.0*y - z = 10.0
-    m.float_lin_eq(&[2.0, 3.0, -1.0], &[x, y, z], 10.0);
+    m.lin_eq(&[2.0, 3.0, -1.0], &[x, y, z], 10.0);
     
     // Force x = 2.0 and y = 3.0
     m.new(x.eq(2.0));
@@ -121,7 +122,7 @@ fn test_float_lin_le_simple() {
     let y = m.float(0.0, 10.0);
     
     // x + y ≤ 10.5
-    m.float_lin_le(&[1.0, 1.0], &[x, y], 10.5);
+    m.lin_le(&[1.0, 1.0], &[x, y], 10.5);
     
     // Force x = 8.0
     m.new(x.eq(8.0));
@@ -146,7 +147,7 @@ fn test_float_lin_le_with_coefficients() {
     let y = m.float(0.0, 10.0);
     
     // 2.0*x + 3.0*y ≤ 20.0
-    m.float_lin_le(&[2.0, 3.0], &[x, y], 20.0);
+    m.lin_le(&[2.0, 3.0], &[x, y], 20.0);
     
     // Force x = 5.0
     m.new(x.eq(5.0));
@@ -171,7 +172,7 @@ fn test_float_lin_le_negative_coefficient() {
     let y = m.float(0.0, 10.0);
     
     // x - y ≤ 5.0
-    m.float_lin_le(&[1.0, -1.0], &[x, y], 5.0);
+    m.lin_le(&[1.0, -1.0], &[x, y], 5.0);
     
     // Force x = 8.0
     m.new(x.eq(8.0));
@@ -200,7 +201,7 @@ fn test_float_lin_ne_simple() {
     let y = m.float(0.0, 10.0);
     
     // x + y ≠ 5.0
-    m.float_lin_ne(&[1.0, 1.0], &[x, y], 5.0);
+    m.lin_ne(&[1.0, 1.0], &[x, y], 5.0);
     
     // Force x = 2.0
     m.new(x.eq(2.0));
@@ -225,7 +226,7 @@ fn test_float_lin_ne_with_coefficients() {
     let y = m.float(0.0, 10.0);
     
     // 2.0*x + 3.0*y ≠ 12.0
-    m.float_lin_ne(&[2.0, 3.0], &[x, y], 12.0);
+    m.lin_ne(&[2.0, 3.0], &[x, y], 12.0);
     
     // Force x = 3.0
     m.new(x.eq(3.0));
@@ -253,7 +254,7 @@ fn test_float_lin_eq_single_variable() {
     let x = m.float(0.0, 10.0);
     
     // 3.5*x = 7.0
-    m.float_lin_eq(&[3.5], &[x], 7.0);
+    m.lin_eq(&[3.5], &[x], 7.0);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -272,7 +273,7 @@ fn test_float_lin_le_single_variable() {
     let x = m.float(0.0, 10.0);
     
     // 2.0*x ≤ 10.0
-    m.float_lin_le(&[2.0], &[x], 10.0);
+    m.lin_le(&[2.0], &[x], 10.0);
     
     let solution = m.solve().expect("Should find solution");
     
@@ -293,7 +294,7 @@ fn test_float_lin_eq_infeasible() {
     let y = m.float(0.0, 5.0);
     
     // x + y = 20.0 (impossible with given domains)
-    m.float_lin_eq(&[1.0, 1.0], &[x, y], 20.0);
+    m.lin_eq(&[1.0, 1.0], &[x, y], 20.0);
     
     let result = m.solve();
     
@@ -307,11 +308,21 @@ fn test_float_lin_eq_mismatched_lengths() {
     let x = m.float(0.0, 10.0);
     let y = m.float(0.0, 10.0);
     
-    // Mismatched lengths should create an unsatisfiable constraint
-    m.float_lin_eq(&[1.0, 2.0, 3.0], &[x, y], 10.0);
+    // Mismatched lengths should be caught during validation and returned as error
+    m.lin_eq(&[1.0, 2.0, 3.0], &[x, y], 10.0);
     
     let result = m.solve();
-    assert!(result.is_err(), "Should not find solution due to mismatched lengths");
+    
+    assert!(result.is_err(), "Should return error for mismatched lengths");
+    if let Err(e) = result {
+        match e {
+            SolverError::InvalidConstraint { message, .. } => {
+                assert!(message.contains("coefficients and variables must have same length"), 
+                        "Error message should mention length mismatch: {}", message);
+            }
+            _ => panic!("Expected InvalidConstraint error, got: {:?}", e),
+        }
+    }
 }
 
 #[test]
@@ -321,11 +332,21 @@ fn test_float_lin_le_mismatched_lengths() {
     let x = m.float(0.0, 10.0);
     let y = m.float(0.0, 10.0);
     
-    // Mismatched lengths should create an unsatisfiable constraint
-    m.float_lin_le(&[1.0], &[x, y], 10.0);
+    // Mismatched lengths should be caught during validation and returned as error
+    m.lin_le(&[1.0], &[x, y], 10.0);
     
     let result = m.solve();
-    assert!(result.is_err(), "Should not find solution due to mismatched lengths");
+    
+    assert!(result.is_err(), "Should return error for mismatched lengths");
+    if let Err(e) = result {
+        match e {
+            SolverError::InvalidConstraint { message, .. } => {
+                assert!(message.contains("coefficients and variables must have same length"),
+                        "Error message should mention length mismatch: {}", message);
+            }
+            _ => panic!("Expected InvalidConstraint error, got: {:?}", e),
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -344,7 +365,7 @@ fn test_loan_example() {
     let balance = m.float(0.0, 15000.0);
     
     // Linear equation: 1.05*principal + 1.03*interest - 1.0*payment = balance
-    m.float_lin_eq(&[1.05, 1.03, -1.0, -1.0], 
+    m.lin_eq(&[1.05, 1.03, -1.0, -1.0], 
                    &[principal, interest, payment, balance], 
                    0.0);
     
@@ -377,7 +398,7 @@ fn test_float_lin_eq_reif_true() {
     let b = m.bool();
     
     // b ⇔ (2.0*x + 3.0*y = 12.0)
-    m.float_lin_eq_reif(&[2.0, 3.0], &[x, y], 12.0, b);
+    m.lin_eq_reif(&[2.0, 3.0], &[x, y], 12.0, b);
     
     // Force x = 3.0, y = 2.0 (which makes 2*3 + 3*2 = 12)
     m.new(x.eq(3.0));
@@ -397,7 +418,7 @@ fn test_float_lin_eq_reif_false() {
     let b = m.bool();
     
     // b ⇔ (2.0*x + 3.0*y = 12.0)
-    m.float_lin_eq_reif(&[2.0, 3.0], &[x, y], 12.0, b);
+    m.lin_eq_reif(&[2.0, 3.0], &[x, y], 12.0, b);
     
     // Force x = 1.0, y = 1.0 (which makes 2*1 + 3*1 = 5, not 12)
     m.new(x.eq(1.0));
@@ -417,7 +438,7 @@ fn test_float_lin_eq_reif_force_true() {
     let b = m.bool();
     
     // b ⇔ (x + y = 7.5)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 7.5, b);
     
     // Force b = 1 and x = 3.0
     m.new(b.eq(1));
@@ -439,7 +460,7 @@ fn test_float_lin_eq_reif_force_false() {
     let b = m.bool();
     
     // b ⇔ (x + y = 5.0)
-    m.float_lin_eq_reif(&[1.0, 1.0], &[x, y], 5.0, b);
+    m.lin_eq_reif(&[1.0, 1.0], &[x, y], 5.0, b);
     
     // Force b = 0 (constraint must not hold)
     m.new(b.eq(0));
@@ -460,7 +481,7 @@ fn test_float_lin_le_reif_true() {
     let b = m.bool();
     
     // b ⇔ (x + y ≤ 10.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     // Force x = 4.0, y = 5.0 (which makes 4 + 5 = 9 ≤ 10)
     m.new(x.eq(4.0));
@@ -480,7 +501,7 @@ fn test_float_lin_le_reif_false() {
     let b = m.bool();
     
     // b ⇔ (x + y ≤ 10.0)
-    m.float_lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
+    m.lin_le_reif(&[1.0, 1.0], &[x, y], 10.0, b);
     
     // Force x = 8.0, y = 5.0 (which makes 8 + 5 = 13 > 10)
     m.new(x.eq(8.0));
@@ -500,7 +521,7 @@ fn test_float_lin_le_reif_force_true() {
     let b = m.bool();
     
     // b ⇔ (2.0*x + 3.0*y ≤ 20.0)
-    m.float_lin_le_reif(&[2.0, 3.0], &[x, y], 20.0, b);
+    m.lin_le_reif(&[2.0, 3.0], &[x, y], 20.0, b);
     
     // Force b = 1 and x = 5.0
     m.new(b.eq(1));
@@ -523,7 +544,7 @@ fn test_float_lin_ne_reif_true() {
     let b = m.bool();
     
     // b ⇔ (x + y ≠ 5.0)
-    m.float_lin_ne_reif(&[1.0, 1.0], &[x, y], 5.0, b);
+    m.lin_ne_reif(&[1.0, 1.0], &[x, y], 5.0, b);
     
     // Force x = 2.0, y = 1.0 (which makes 2 + 1 = 3 ≠ 5)
     m.new(x.eq(2.0));
@@ -543,7 +564,7 @@ fn test_float_lin_ne_reif_false() {
     let b = m.bool();
     
     // b ⇔ (x + y ≠ 5.0)
-    m.float_lin_ne_reif(&[1.0, 1.0], &[x, y], 5.0, b);
+    m.lin_ne_reif(&[1.0, 1.0], &[x, y], 5.0, b);
     
     // Force x = 2.0, y = 3.0 (which makes 2 + 3 = 5, so NOT not-equal)
     m.new(x.eq(2.0));
@@ -563,7 +584,7 @@ fn test_float_lin_ne_reif_force_true() {
     let b = m.bool();
     
     // b ⇔ (2.0*x + 3.0*y ≠ 12.0)
-    m.float_lin_ne_reif(&[2.0, 3.0], &[x, y], 12.0, b);
+    m.lin_ne_reif(&[2.0, 3.0], &[x, y], 12.0, b);
     
     // Force b = 1 and x = 3.0
     m.new(b.eq(1));

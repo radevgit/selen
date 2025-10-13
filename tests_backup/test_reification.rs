@@ -11,7 +11,7 @@ fn test_int_eq_reif_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x = y)
-    m.int_eq_reif(x, y, b);
+    m.eq_reif(x, y, b);
     
     // Force b to be true
     m.new(b.eq(1));
@@ -37,7 +37,7 @@ fn test_int_eq_reif_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x = y)
-    m.int_eq_reif(x, y, b);
+    m.eq_reif(x, y, b);
     
     // Force b to be false
     m.new(b.eq(0));
@@ -63,7 +63,7 @@ fn test_int_eq_reif_inference_to_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x = y)
-    m.int_eq_reif(x, y, b);
+    m.eq_reif(x, y, b);
     
     // Force both x and y to 5
     m.new(x.eq(5));
@@ -87,7 +87,7 @@ fn test_int_eq_reif_inference_to_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x = y)
-    m.int_eq_reif(x, y, b);
+    m.eq_reif(x, y, b);
     
     // Force x and y to different values
     m.new(x.eq(5));
@@ -111,7 +111,7 @@ fn test_int_ne_reif_true() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≠ y)
-    m.int_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     
     // Force b to be true
     m.new(b.eq(1));
@@ -137,7 +137,7 @@ fn test_int_ne_reif_false() {
     let b = m.bool();
     
     // Post reified constraint: b ⇔ (x ≠ y)
-    m.int_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     
     // Force b to be false
     m.new(b.eq(0));

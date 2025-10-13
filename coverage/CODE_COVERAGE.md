@@ -7,4 +7,6 @@
 Only directory: cargo llvm-cov --html -- --include 'src/flatzinc/*' - does not work.
 cargo llvm-cov --html --ignore-filename-regex '^(?!src/flatzinc/)'
 cargo llvm-cov --html --ignore-filename-regex '(src/(?!flatzinc)|tests|examples|benchmarks|debug)'
+
+cargo llvm-cov --html --ignore-filename-regex '(tests/|examples/|benchmarks/|debug/)' --output-dir target/llvm-cov
 ```

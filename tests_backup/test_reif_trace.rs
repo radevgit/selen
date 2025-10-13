@@ -13,7 +13,7 @@ fn trace_propagation_steps() {
     let b = m.bool();
     
     println!("Step 1: Post int_ne_reif(x, y, b)");
-    m.int_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     println!("  Propagators registered: {}", m.constraint_count());
     
     println!("\nStep 2: Post b = 0");
@@ -64,7 +64,7 @@ fn trace_reverse_order() {
     println!("  Propagators registered: {}", m.constraint_count());
     
     println!("\nStep 3: Post int_ne_reif(x, y, b)");
-    m.int_ne_reif(x, y, b);
+    m.ne_reif(x, y, b);
     println!("  Propagators registered: {}", m.constraint_count());
     
     println!("\nStep 4: Solve");
