@@ -62,6 +62,32 @@ impl Model {
         result
     }
 
+    /// Post a boolean implication constraint: `a → b` (if a then b).
+    /// 
+    /// If `a` is true (1), then `b` must be true (1).
+    /// If `a` is false (0), then `b` can be either true or false.
+    /// 
+    /// This is logically equivalent to `¬a ∨ b`.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let a = m.bool();
+    /// let b = m.bool();
+    /// 
+    /// m.implies(a, b);  // a → b (if a then b)
+    /// m.new(a.eq(bool(true)));
+    /// 
+    /// let solution = m.solve().unwrap();
+    /// // Since a is true, b must also be true
+    /// assert_eq!(solution.get_bool(b).unwrap(), true);
+    /// ```
+    pub fn implies(&mut self, a: VarId, b: VarId) {
+        // a → b is equivalent to ¬a ∨ b
+        self.bool_clause(&[b], &[a]);
+    }
+
     /// Post a boolean clause constraint: `(∨ pos[i]) ∨ (∨ ¬neg[i])`.
     /// 
     /// This implements the FlatZinc `bool_clause` constraint, which represents

@@ -168,3 +168,6 @@ mod test_unbounded_inference;
 
 #[path = "../tests_all/test_unbounded_variables.rs"]
 mod test_unbounded_variables;
+
+#[path = "../tests_all/test_implies.rs"]
+mod test_implies;

@@ -60,6 +60,7 @@ m.gcc(&vars, values, counts);          // global cardinality constraint
 let and_result = m.bool_and(&[a, b]);  // a AND b
 let or_result = m.bool_or(&[a, b]);    // a OR b
 let not_result = m.bool_not(a);        // NOT a
+m.implies(a, b);                       // a → b (if a then b)
 m.bool_clause(&[a, b], &[c]);          // a ∨ b ∨ ¬c (CNF clause)
 
 // Fluent expression building (runtime API)
