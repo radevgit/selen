@@ -11,7 +11,15 @@ A Constraint Satisfaction Problem (CSP) solver library written in Rust with zero
 This library provides efficient algorithms and data structures for solving constraint satisfaction problems. CSPs are mathematical problems defined as a set of objects whose state must satisfy a number of constraints or limitations.
 
 
-**Variable Types**: `int`, `float`, mixed constraints
+**Variable Types**: `int`, `float`, `bool`, mixed constraints
+```rust
+let x = m.int(1, 10);                  // Single: integer variable from 1 to 10
+let vars = m.ints(5, 1, 10);           // Array: 5 integer variables, each from 1 to 10
+let y = m.float(0.0, 100.0);           // Single: float variable from 0.0 to 100.0
+let coords = m.floats(3, 0.0, 1.0);    // Array: 3 float variables (x, y, z coordinates)
+let b = m.bool();                      // Single: boolean variable (0 or 1)
+let flags = m.bools(8);                // Array: 8 boolean variables
+```
 
 **Constraint API**
 ```rust
