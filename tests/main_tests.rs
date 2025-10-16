@@ -173,5 +173,8 @@ mod test_unbounded_variables;
 #[path = "../tests_all/test_implies.rs"]
 mod test_implies;
 
+#[path = "../tests_all/test_count_var.rs"]
+mod test_count_var;
+
 #[path = "../tests_all/test_element_computed_index.rs"]
 mod test_element_computed_index;

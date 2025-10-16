@@ -111,6 +111,25 @@ impl Model {
         self.props.count_constraint(vars.to_vec(), target_value, count_var)
     }
 
+    /// Count constraint with variable target: count(vars, target_var) = count_var.
+    ///
+    /// This constraint counts how many variables in the array equal the target_var
+    /// and constrains the count to equal count_var. This is a generalization of the
+    /// count constraint that supports dynamic target values.
+    ///
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
+    /// let target = m.int(1, 5);  // Variable target
+    /// let count = m.int(0, 3);
+    /// m.count_var(&vars, target, count);  // Count how many vars equal target
+    /// ```
+    pub fn count_var(&mut self, vars: &[VarId], target_var: VarId, count_var: VarId) -> PropId {
+        self.props.count_var_constraint(vars.to_vec(), target_var, count_var)
+    }
+
     /// Between constraint: lower <= middle <= upper.
     ///
     /// This constraint enforces that middle is between lower and upper (inclusive).

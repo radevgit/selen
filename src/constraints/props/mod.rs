@@ -7,6 +7,7 @@ mod bool_logic;
 pub mod cardinality;
 pub mod conditional;
 mod count;
+mod count_var;
 mod div;
 mod element;
 mod eq;
@@ -956,6 +957,34 @@ impl Propagators {
         all_vars.push(count_var);
 
         self.push_new_prop_with_metadata(count_instance, ConstraintType::Count, all_vars, metadata)
+    }
+
+    /// Declare a new propagator to enforce that exactly count_var variables in vars equal target_var.
+    /// This is the count constraint with a variable target: count(vars, target_var, count_var).
+    pub fn count_var_constraint(
+        &mut self,
+        vars: Vec<VarId>,
+        target_var: VarId,
+        count_var: VarId,
+    ) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintData, ConstraintType, ViewInfo};
+
+        let count_var_instance = count_var::CountVar::new(vars.clone(), target_var, count_var);
+
+        let mut operands: Vec<ViewInfo> = vars
+            .iter()
+            .map(|&var_id| ViewInfo::Variable { var_id })
+            .collect();
+        operands.push(ViewInfo::Variable { var_id: target_var });
+        operands.push(ViewInfo::Variable { var_id: count_var });
+
+        let metadata = ConstraintData::NAry { operands };
+
+        let mut all_vars = vars.clone();
+        all_vars.push(target_var);
+        all_vars.push(count_var);
+
+        self.push_new_prop_with_metadata(count_var_instance, ConstraintType::Count, all_vars, metadata)
     }
 
     /// Declare a new propagator to enforce that array[index] == value.

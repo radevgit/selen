@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.8] - 2025-10-16
+- Introduced count_var() constraint for variable counts
+
 ## [0.12.7] - 2025-10-16
 - Removed constraint optimization order. 
 - Fixed element issue with computed index
