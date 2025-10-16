@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.7] - 2025-10-16
+- Removed constraint optimization order. 
+- Fixed element issue with computed index
+
 ## [0.12.5] - 2025-10-13
 - Improved test coverage. Small fixes.
 

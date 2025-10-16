@@ -1157,24 +1157,8 @@ impl Model {
     ///
     /// This method analyzes constraints (particularly AllDifferent) and reorders them
     /// to prioritize constraints with more fixed values, which tend to propagate more effectively.
-    /// This can significantly improve solving performance by doing more effective propagation earlier.
-    ///
-    /// Should be called after all constraints are added but before solving.
-    /// 
-    ///
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let vars: Vec<_> = m.int_vars(4, 1, 4).collect();
-    /// m.alldiff(&vars);
-    /// m.optimize_constraint_order();
-    /// ```
-    pub fn optimize_constraint_order(&mut self) -> &mut Self {
-        // Universal constraint optimization that works for all constraint types
-        self.props.optimize_universal_constraint_order(&self.vars);
-        self
-    }
 
+    // Removed: optimize_constraint_order (no longer functional, see benchmarks and discussion)
     #[doc(hidden)]
     /// Create a search engine for this model that allows direct control over search.
     ///
@@ -1405,8 +1389,7 @@ impl Model {
         let validator = crate::core::validation::ModelValidator::new(&self.vars, &self.props);
         validator.validate()?;
         
-        // STEP 3: Optimize constraint order for better performance
-        self.optimize_constraint_order();
+    // STEP 3: Constraint ordering optimization removed (see benchmarks and discussion)
         
         Ok((self.vars, self.props, self.pending_lp_constraints))
     }

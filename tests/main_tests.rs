@@ -1,3 +1,4 @@
+
 //! Main integration test file that includes all other tests as modules
 //! This reduces compilation time by having a single test executable instead of many.
 
@@ -171,3 +172,6 @@ mod test_unbounded_variables;
 
 #[path = "../tests_all/test_implies.rs"]
 mod test_implies;
+
+#[path = "../tests_all/test_element_computed_index.rs"]
+mod test_element_computed_index;

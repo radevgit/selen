@@ -48,9 +48,6 @@ fn solve_sudoku(puzzle: &[[i32; 9]; 9]) -> Option<([[i32; 9]; 9], usize, usize)>
         }
     }
     
-    // OPTIMIZATION 3: Optimize constraint order for better propagation
-    m.optimize_constraint_order();
-    
     // Solve the model with embedded statistics
     let solution = m.solve();
     

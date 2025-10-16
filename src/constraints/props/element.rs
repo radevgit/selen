@@ -90,35 +90,60 @@ impl Element {
         let value_max = self.value.max(ctx);
         let valid_indices = self.get_valid_indices(ctx);
 
-        // Remove invalid indices where no array element can match the value
-        let mut valid_indices_filtered = Vec::new();
-        
-        for idx in valid_indices {
-            if let Some(array_var) = self.array.get(idx as usize) {
+        // If index is fixed, constrain the specific array element
+        if valid_indices.len() == 1 {
+            let idx = valid_indices[0] as usize;
+            if let Some(&array_var) = self.array.get(idx) {
+                // Force array[index] == value
                 let array_min = array_var.min(ctx);
                 let array_max = array_var.max(ctx);
-                
-                // Check if this array element's domain overlaps with value's domain
-                if !(array_max < value_min || array_min > value_max) {
-                    valid_indices_filtered.push(idx);
+
+                // Intersect domains
+                let new_min = if array_min > value_min { array_min } else { value_min };
+                let new_max = if array_max < value_max { array_max } else { value_max };
+
+                if new_min > new_max {
+                    return None;
+                }
+
+                if array_var.min(ctx) < new_min {
+                    array_var.try_set_min(new_min, ctx)?;
+                }
+                if array_var.max(ctx) > new_max {
+                    array_var.try_set_max(new_max, ctx)?;
                 }
             }
-        }
-
-        // Update index domain to only valid indices
-        if !valid_indices_filtered.is_empty() {
-            let new_index_min = *valid_indices_filtered.first().unwrap();
-            let new_index_max = *valid_indices_filtered.last().unwrap();
-            
-            if self.index.min(ctx) < Val::ValI(new_index_min) {
-                let _min = self.index.try_set_min(Val::ValI(new_index_min), ctx)?;
-            }
-            if self.index.max(ctx) > Val::ValI(new_index_max) {
-                let _max = self.index.try_set_max(Val::ValI(new_index_max), ctx)?;
-            }
         } else {
-            // No valid indices - constraint is unsatisfiable
-            return None;
+            // Multiple possible indices - remove invalid indices where no array element can match the value
+            let mut valid_indices_filtered = Vec::new();
+            
+            for idx in valid_indices {
+                if let Some(array_var) = self.array.get(idx as usize) {
+                    let array_min = array_var.min(ctx);
+                    let array_max = array_var.max(ctx);
+                    
+                    // Check if this array element's domain overlaps with value's domain
+                    if !(array_max < value_min || array_min > value_max) {
+                        valid_indices_filtered.push(idx);
+                    }
+                }
+            }
+
+            // Update index domain to only valid indices
+            if !valid_indices_filtered.is_empty() {
+                let new_index_min = *valid_indices_filtered.first().unwrap();
+                let new_index_max = *valid_indices_filtered.last().unwrap();
+                
+                if self.index.min(ctx) < Val::ValI(new_index_min) {
+                    self.index.try_set_min(Val::ValI(new_index_min), ctx)?;
+                }
+                if self.index.max(ctx) > Val::ValI(new_index_max) {
+                    self.index.try_set_max(Val::ValI(new_index_max), ctx)?;
+                }
+            } else {
+                // No valid indices - constraint is unsatisfiable
+                return None;
+            }
         }
 
         Some(())
@@ -135,7 +160,7 @@ impl Element {
         // If index is singleton, directly constrain value to equal array[index]
         if valid_indices.len() == 1 {
             let idx = valid_indices[0] as usize;
-            if let Some(array_var) = self.array.get(idx) {
+            if let Some(&array_var) = self.array.get(idx) {
                 // Force array[index] == value
                 let array_min = array_var.min(ctx);
                 let array_max = array_var.max(ctx);
@@ -151,28 +176,28 @@ impl Element {
                 }
 
                 if self.value.min(ctx) < new_min {
-                    let _min = self.value.try_set_min(new_min, ctx)?;
+                    self.value.try_set_min(new_min, ctx)?;
                 }
                 if self.value.max(ctx) > new_max {
-                    let _max = self.value.try_set_max(new_max, ctx)?;
+                    self.value.try_set_max(new_max, ctx)?;
                 }
 
                 // Update array[index] to intersection as well
                 if array_var.min(ctx) < new_min {
-                    let _min = array_var.try_set_min(new_min, ctx)?;
+                    array_var.try_set_min(new_min, ctx)?;
                 }
                 if array_var.max(ctx) > new_max {
-                    let _max = array_var.try_set_max(new_max, ctx)?;
+                    array_var.try_set_max(new_max, ctx)?;
                 }
             }
         } else {
             // Multiple possible indices - constrain value to union of possible array values
             if let Some((min_possible, max_possible)) = self.compute_possible_values(ctx) {
                 if self.value.min(ctx) < min_possible {
-                    let _min = self.value.try_set_min(min_possible, ctx)?;
+                    self.value.try_set_min(min_possible, ctx)?;
                 }
                 if self.value.max(ctx) > max_possible {
-                    let _max = self.value.try_set_max(max_possible, ctx)?;
+                    self.value.try_set_max(max_possible, ctx)?;
                 }
             }
         }
@@ -191,15 +216,57 @@ impl Prune for Element {
 
         // Constrain index to valid range [0, array.len()-1]
         if self.index.min(ctx) < Val::ValI(0) {
-            let _min = self.index.try_set_min(Val::ValI(0), ctx)?;
+            self.index.try_set_min(Val::ValI(0), ctx)?;
         }
         if self.index.max(ctx) >= Val::ValI(array_len) {
-            let _max = self.index.try_set_max(Val::ValI(array_len - 1), ctx)?;
+            self.index.try_set_max(Val::ValI(array_len - 1), ctx)?;
         }
 
-        // Propagate constraints in both directions
-        self.propagate_from_value(ctx)?;
-        self.propagate_from_index(ctx)?;
+        // Check if index is fixed (singleton domain)
+        let index_min = self.index.min(ctx);
+        let index_max = self.index.max(ctx);
+        
+        if index_min == index_max {
+            // Index is fixed - enforce array[index] == value
+            let idx = match index_min {
+                Val::ValI(i) => i as usize,
+                Val::ValF(f) => f as usize,
+            };
+            
+            if let Some(&array_var) = self.array.get(idx) {
+                let array_min = array_var.min(ctx);
+                let array_max = array_var.max(ctx);
+                let value_min = self.value.min(ctx);
+                let value_max = self.value.max(ctx);
+                
+                // Compute intersection
+                let new_min = if array_min > value_min { array_min } else { value_min };
+                let new_max = if array_max < value_max { array_max } else { value_max };
+
+                if new_min > new_max {
+                    return None; // No overlap - constraint is violated
+                }
+                
+                // Update both array[index] and value to their intersection
+                if array_var.min(ctx) < new_min {
+                    array_var.try_set_min(new_min, ctx)?;
+                }
+                if array_var.max(ctx) > new_max {
+                    array_var.try_set_max(new_max, ctx)?;
+                }
+                
+                if self.value.min(ctx) < new_min {
+                    self.value.try_set_min(new_min, ctx)?;
+                }
+                if self.value.max(ctx) > new_max {
+                    self.value.try_set_max(new_max, ctx)?;
+                }
+            }
+        } else {
+            // Index not fixed - use general propagation
+            self.propagate_from_value(ctx)?;
+            self.propagate_from_index(ctx)?;
+        }
 
         Some(())
     }
