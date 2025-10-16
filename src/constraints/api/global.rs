@@ -10,7 +10,7 @@
 //! - at_least, at_most, exactly: cardinality constraints
 
 use crate::model::Model;
-use crate::variables::{VarId, Val};
+use crate::variables::{VarId, Val, View};
 use crate::constraints::props::PropId;
 
 impl Model {
@@ -97,37 +97,30 @@ impl Model {
     /// Count constraint: count how many variables equal a target value.
     ///
     /// This constraint counts the number of variables in the list that equal
-    /// the target value, and constrains the count to equal count_var.
+    /// the target_var and constrains the count to equal count_var.
+    ///
+    /// The target parameter accepts both variables and constants (impl View):
+    /// - Use a VarId directly: `m.count(&vars, target_var, count)`
+    /// - Use a Val constant: `m.count(&vars, Val::int(3), count)` 
+    /// - Use an expression via explicit variable: `m.count(&vars, computed_var, count)`
     ///
     /// # Examples
     /// ```
     /// use selen::prelude::*;
+    /// use selen::variables::Val;
     /// let mut m = Model::default();
     /// let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
     /// let count = m.int(0, 3);
-    /// m.count(&vars, int(3), count);  // Count how many vars equal 3
+    /// 
+    /// // Count with constant target - pass Val directly!
+    /// m.count(&vars, Val::int(3), count);  // Count how many vars equal 3
+    /// 
+    /// // Count with variable target
+    /// let var_target = m.int(1, 5);  // Variable with range
+    /// m.count(&vars, var_target, count);  // Count how many vars equal var_target
     /// ```
-    pub fn count(&mut self, vars: &[VarId], target_value: Val, count_var: VarId) -> PropId {
-        self.props.count_constraint(vars.to_vec(), target_value, count_var)
-    }
-
-    /// Count constraint with variable target: count(vars, target_var) = count_var.
-    ///
-    /// This constraint counts how many variables in the array equal the target_var
-    /// and constrains the count to equal count_var. This is a generalization of the
-    /// count constraint that supports dynamic target values.
-    ///
-    /// # Examples
-    /// ```
-    /// use selen::prelude::*;
-    /// let mut m = Model::default();
-    /// let vars = vec![m.int(1, 5), m.int(1, 5), m.int(1, 5)];
-    /// let target = m.int(1, 5);  // Variable target
-    /// let count = m.int(0, 3);
-    /// m.count_var(&vars, target, count);  // Count how many vars equal target
-    /// ```
-    pub fn count_var(&mut self, vars: &[VarId], target_var: VarId, count_var: VarId) -> PropId {
-        self.props.count_var_constraint(vars.to_vec(), target_var, count_var)
+    pub fn count(&mut self, vars: &[VarId], target_var: impl View, count_var: VarId) -> PropId {
+        self.props.count_constraint(vars.to_vec(), target_var, count_var)
     }
 
     /// Between constraint: lower <= middle <= upper.
@@ -205,7 +198,9 @@ impl Model {
         let mut prop_ids = Vec::with_capacity(values.len());
         
         for (&value, &count_var) in values.iter().zip(counts.iter()) {
-            let prop_id = self.props.count_constraint(vars.to_vec(), Val::int(value), count_var);
+            // Create a fixed variable for the constant value
+            let target_var = self.int(value, value);
+            let prop_id = self.props.count_constraint(vars.to_vec(), target_var, count_var);
             prop_ids.push(prop_id);
         }
         

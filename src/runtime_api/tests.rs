@@ -438,8 +438,9 @@ fn test_count_constraint() {
     let vars: Vec<_> = (0..5).map(|_| m.int(1, 3)).collect();
     let count_result = m.int(0, 5);
     
-    // Count occurrences of value 2
-    m.count(&vars, Val::int(2), count_result);
+    // Count occurrences of value 2 - create a fixed variable for the target
+    let target = m.int(2, 2);
+    m.count(&vars, target, count_result);
     
     // Force exactly 2 occurrences of value 2
     m.new(count_result.eq(2));

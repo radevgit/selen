@@ -1686,8 +1686,9 @@ impl ModelExt for Model {
     }
     
     fn count(&mut self, vars: &[VarId], value: i32, result: VarId) -> PropId {
-        // Use existing count constraint
-        self.props.count_constraint(vars.to_vec(), Val::int(value), result)
+        // Create a fixed variable for the constant value
+        let target_var = self.int(value, value);
+        self.props.count_constraint(vars.to_vec(), target_var, result)
     }
     
     fn betw(&mut self, var: VarId, min: i32, max: i32) -> PropId {
@@ -1713,7 +1714,9 @@ impl ModelExt for Model {
         
         for (&value, &count_var) in values.iter().zip(counts.iter()) {
             // For each value, create a count constraint
-            let prop_id = self.props.count_constraint(vars.to_vec(), Val::int(value), count_var);
+            // Create a fixed variable for the constant value
+            let target_var = self.int(value, value);
+            let prop_id = self.props.count_constraint(vars.to_vec(), target_var, count_var);
             prop_ids.push(prop_id);
         }
         

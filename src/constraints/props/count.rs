@@ -1,49 +1,66 @@
 use crate::{
     constraints::props::{Propagate, Prune},
-    variables::{Val, VarId},
+    variables::VarId,
     variables::views::{Context, View},
 };
 
 /// Count constraint implementation
 /// 
-/// Ensures that exactly `count_var` variables from `vars` equal `target_value`.
+/// Ensures that exactly `count_var` variables from `vars` equal `target`.
 /// This is a global constraint commonly used in scheduling, resource allocation,
-/// and counting problems.
+/// and counting problems. 
+///
+/// The target parameter is generic over any View implementation, allowing:
+/// - VarId for dynamic targets
+/// - Val for constant targets  
+/// - VarIdBin for computed targets
 #[derive(Clone, Debug)]
 #[doc(hidden)]
-pub struct Count {
+pub struct Count<T: View> {
     vars: Vec<VarId>,
-    target_value: Val,
+    target: T,
     count_var: VarId,
 }
 
-impl Count {
-    pub fn new(vars: Vec<VarId>, target_value: Val, count_var: VarId) -> Self {
+impl<T: View> Count<T> {
+    pub const fn new(vars: Vec<VarId>, target: T, count_var: VarId) -> Self {
         Self {
             vars,
-            target_value,
+            target,
             count_var,
         }
     }
 
-    /// Count number of variables that definitely equal the target value
+    /// Count number of variables that definitely equal the target's value
     fn count_definitely_equal(&self, ctx: &Context) -> i64 {
+        let target_min = self.target.min(ctx);
+        let target_max = self.target.max(ctx);
+        
+        // If target is not fixed, we can't determine definite equality yet
+        if target_min != target_max {
+            return 0;
+        }
+        
         self.vars.iter()
             .filter(|&&var| {
                 let min = var.min(ctx);
                 let max = var.max(ctx);
-                min == max && min == self.target_value
+                min == max && min == target_min
             })
             .count() as i64
     }
 
-    /// Count number of variables that could possibly equal the target value
+    /// Count number of variables that could possibly equal the target's value
     fn count_possibly_equal(&self, ctx: &Context) -> i64 {
+        let target_min = self.target.min(ctx);
+        let target_max = self.target.max(ctx);
+        
         self.vars.iter()
             .filter(|&&var| {
-                let min = var.min(ctx);
-                let max = var.max(ctx);
-                min <= self.target_value && self.target_value <= max
+                let var_min = var.min(ctx);
+                let var_max = var.max(ctx);
+                // Variable possibly equals target if their domains overlap
+                var_min <= target_max && var_max >= target_min
             })
             .count() as i64
     }
@@ -55,43 +72,45 @@ impl Count {
         
         // The count variable must be at least the number of variables definitely equal
         // and at most the number of variables possibly equal
+        let definitely_equal_val = crate::variables::Val::ValI(definitely_equal as i32);
+        let possibly_equal_val = crate::variables::Val::ValI(possibly_equal as i32);
         
         // Set lower bound: at least definitely_equal
-        self.count_var.try_set_min(Val::ValI(definitely_equal as i32), ctx)?;
+        self.count_var.try_set_min(definitely_equal_val, ctx)?;
         
         // Set upper bound: at most possibly_equal  
-        self.count_var.try_set_max(Val::ValI(possibly_equal as i32), ctx)?;
+        self.count_var.try_set_max(possibly_equal_val, ctx)?;
         
-        // If count is fixed, we might be able to propagate to the vars
+        // If count is fixed and target is fixed, we might be able to propagate to the vars
         let count_min = self.count_var.min(ctx);
         let count_max = self.count_var.max(ctx);
-        if count_min == count_max {
+        let target_min = self.target.min(ctx);
+        let target_max = self.target.max(ctx);
+        
+        if count_min == count_max && target_min == target_max {
             let target_count = match count_min {
-                Val::ValI(i) => i as i64,
-                Val::ValF(f) => f as i64,
+                crate::variables::Val::ValI(i) => i as i64,
+                crate::variables::Val::ValF(f) => f as i64,
             };
             
-            // If we already have enough variables equal to target, forbid others
+            // If we already have enough variables equal to target, forbid others from having target value
             if definitely_equal == target_count {
                 for &var in &self.vars {
                     let min = var.min(ctx);
                     let max = var.max(ctx);
-                    if min != max && min <= self.target_value && self.target_value <= max {
-                        // Remove target_value from this variable's domain
-                        if self.target_value == min {
-                            // Exclude by increasing min
-                            match self.target_value {
-                                Val::ValI(i) => var.try_set_min(Val::ValI(i + 1), ctx)?,
-                                Val::ValF(f) => var.try_set_min(Val::ValF(f + 1.0), ctx)?,
-                            };
-                        } else if self.target_value == max {
-                            // Exclude by decreasing max
-                            match self.target_value {
-                                Val::ValI(i) => var.try_set_max(Val::ValI(i - 1), ctx)?,
-                                Val::ValF(f) => var.try_set_max(Val::ValF(f - 1.0), ctx)?,
-                            };
+                    if min != max && min <= target_min && target_min <= max {
+                        // Remove target_min from this variable's domain by constraining around it
+                        // This is a simplified version - full domain removal is complex
+                        match (target_min, min, max) {
+                            (crate::variables::Val::ValI(tgt), crate::variables::Val::ValI(min_val), crate::variables::Val::ValI(max_val)) => {
+                                if tgt == min_val && tgt < max_val {
+                                    var.try_set_min(crate::variables::Val::ValI(tgt + 1), ctx)?;
+                                } else if tgt == max_val && tgt > min_val {
+                                    var.try_set_max(crate::variables::Val::ValI(tgt - 1), ctx)?;
+                                }
+                            }
+                            _ => {} // Skip for float values
                         }
-                        // For values in the middle, this is more complex - skip for now
                     }
                 }
             }
@@ -100,10 +119,10 @@ impl Count {
                 for &var in &self.vars {
                     let min = var.min(ctx);
                     let max = var.max(ctx);
-                    if min != max && min <= self.target_value && self.target_value <= max {
-                        // Force this variable to equal target_value
-                        var.try_set_min(self.target_value, ctx)?;
-                        var.try_set_max(self.target_value, ctx)?;
+                    if min != max && min <= target_min && target_min <= max {
+                        // Force this variable to equal target_min
+                        var.try_set_min(target_min, ctx)?;
+                        var.try_set_max(target_min, ctx)?;
                     }
                 }
             }
@@ -113,16 +132,20 @@ impl Count {
     }
 }
 
-impl Prune for Count {
+impl<T: View> Prune for Count<T> {
     fn prune(&self, ctx: &mut Context) -> Option<()> {
         // Propagate bounds on the count variable based on current variable states
         self.propagate_count_bounds(ctx)
     }
 }
 
-impl Propagate for Count {
+impl<T: View + 'static> Propagate for Count<T> {
     fn list_trigger_vars(&self) -> impl Iterator<Item = VarId> {
-        self.vars.iter().chain(std::iter::once(&self.count_var)).copied()
+        let target_vars: Vec<VarId> = self.target.get_underlying_var().into_iter().collect();
+        self.vars.iter()
+            .copied()
+            .chain(target_vars.into_iter())
+            .chain(std::iter::once(self.count_var))
     }
 }
 
@@ -131,6 +154,7 @@ mod test_count_direct {
     use super::*;
     use crate::variables::Vars;
     use crate::variables::views::Context;
+    use crate::variables::Val;
     
     #[test]
     fn test_count_constraint_direct() {
@@ -138,9 +162,10 @@ mod test_count_direct {
         let v1 = vars.new_var_with_bounds(Val::int(1), Val::int(3));
         let v2 = vars.new_var_with_bounds(Val::int(1), Val::int(3));
         let v3 = vars.new_var_with_bounds(Val::int(1), Val::int(3));
-        let count_var = vars.new_var_with_bounds(Val::int(1), Val::int(1));
+        let target_var = vars.new_var_with_bounds(Val::int(1), Val::int(1));
+        let count_var = vars.new_var_with_bounds(Val::int(0), Val::int(3));
         
-        let count = Count::new(vec![v1, v2, v3], Val::int(1), count_var);
+        let count = Count::new(vec![v1, v2, v3], target_var, count_var);
         let mut events = Vec::new();
         let mut ctx = Context::new(&mut vars, &mut events);
         
@@ -157,9 +182,10 @@ mod test_count_direct {
         let mut vars = Vars::new();
         let v1 = vars.new_var_with_bounds(Val::int(1), Val::int(3));
         let v2 = vars.new_var_with_bounds(Val::int(1), Val::int(3));
-        let count_var = vars.new_var_with_bounds(Val::int(1), Val::int(1));
+        let target_var = vars.new_var_with_bounds(Val::int(2), Val::int(2));
+        let count_var = vars.new_var_with_bounds(Val::int(0), Val::int(2));
         
-        let count = Count::new(vec![v1, v2], Val::int(1), count_var);
+        let count = Count::new(vec![v1, v2], target_var, count_var);
         
         // Store as trait object exactly like the propagator system does
         let trait_object: Box<dyn Prune> = Box::new(count);

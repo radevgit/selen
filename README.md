@@ -49,8 +49,7 @@ m.alldiff(&[x, y, z]);                 // all variables different
 m.alleq(&[x, y, z]);                   // all variables equal
 m.element(&array, index, value);       // array[index] == value
 m.table(&vars, tuples);                // table constraint (valid tuples)
-m.count(&vars, value, count_var);      // count occurrences of constant value
-m.count_var(&vars, target_var, count_var); // count occurrences of variable value
+m.count(&vars, target_var, count_var); // count how many vars equal target_var
 m.between(lower, middle, upper);       // lower <= middle <= upper
 m.at_least(&vars, value, n);           // at least n vars == value
 m.at_most(&vars, value, n);            // at most n vars == value
@@ -134,7 +133,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-selen = "0.12"
+selen = "0.14"
 ```
 
 ## Examples

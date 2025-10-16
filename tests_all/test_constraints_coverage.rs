@@ -601,7 +601,8 @@ mod constraints_coverage {
         let result = m.int(0, 4);
         
         // Count how many vars equal 2
-        m.count(&vars, Val::int(2), result);
+        let target_2 = m.int(2, 2);
+        m.count(&vars, target_2, result);
         m.new(result.ge(1)); // At least one variable should be 2
         
         let solution = m.solve().unwrap();
@@ -939,7 +940,8 @@ mod constraints_coverage {
         // Multiple count constraints
         for i in 0..3 {
             let count_var = m.int(0, 5);
-            m.count(&vars, Val::int(i), count_var);
+            let target = m.int(i, i);
+            m.count(&vars, target, count_var);
         }
         
         // Should be solvable despite complexity
@@ -1546,7 +1548,8 @@ mod constraints_coverage {
         
         // At least 2 variables should be true (value 1)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.ge(2));
         
         let solution = model.solve();
@@ -1568,7 +1571,8 @@ mod constraints_coverage {
         
         // Require at least 3 variables to be 1 - impossible
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.ge(3));
         
         let solution = model.solve();
@@ -1582,7 +1586,8 @@ mod constraints_coverage {
         
         // At most 2 variables should be true (value 1)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.le(2));
         
         let solution = model.solve();
@@ -1606,7 +1611,8 @@ mod constraints_coverage {
         model.new(vars[1].eq(1));
         
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.le(2));
         
         let solution = model.solve();
@@ -1627,7 +1633,8 @@ mod constraints_coverage {
         
         // Exactly 2 variables should be true (value 1)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.eq(2));
         
         let solution = model.solve();
@@ -1652,7 +1659,8 @@ mod constraints_coverage {
         
         // Require exactly 1 variable to be 1 - impossible since both must be 1
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.eq(1));
         
         let solution = model.solve();
@@ -1666,7 +1674,8 @@ mod constraints_coverage {
         
         // Exactly 2 variables should equal 2
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(2), count_var);
+        let target_val = model.int(2, 2);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.eq(2));
         
         let solution = model.solve();
@@ -1691,7 +1700,8 @@ mod constraints_coverage {
         
         // Exactly 0 variables should be true (all should be false)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.eq(0));
         
         let solution = model.solve();
@@ -1714,7 +1724,8 @@ mod constraints_coverage {
         
         // Exactly all variables should be true
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.eq(vars.len() as i32));
         
         let solution = model.solve();
@@ -1741,7 +1752,8 @@ mod constraints_coverage {
         
         // Exactly 2 variables should be true (including the forced one)
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.eq(2));
         
         let solution = model.solve();
@@ -1770,17 +1782,20 @@ mod constraints_coverage {
         
         // At least 1 variable should equal 0
         let count_0_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(0), count_0_var);
+        let target_val = model.int(0, 0);
+        model.count(&vars, target_val, count_0_var);
         model.new(count_0_var.ge(1));
         
         // At most 2 variables should equal 1
         let count_1_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_1_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_1_var);
         model.new(count_1_var.le(2));
         
         // Exactly 1 variable should equal 2
         let count_2_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(2), count_2_var);
+        let target_val = model.int(2, 2);
+        model.count(&vars, target_val, count_2_var);
         model.new(count_2_var.eq(1));
         
         let solution = model.solve();
@@ -1811,7 +1826,8 @@ mod constraints_coverage {
         
         // Exactly 3 variables should equal 5
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(5), count_var);
+        let target_val = model.int(5, 5);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.eq(3));
         
         let solution = model.solve();
@@ -1842,7 +1858,8 @@ mod constraints_coverage {
         
         // Exactly 1 variable should be true
         let count_var = model.int(0, vars.len() as i32);
-        model.count(&vars, Val::int(1), count_var);
+        let target_val = model.int(1, 1);
+        model.count(&vars, target_val, count_var);
         model.new(count_var.eq(1));
         
         // Force one variable to be true
