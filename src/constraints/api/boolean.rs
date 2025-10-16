@@ -62,6 +62,24 @@ impl Model {
         result
     }
 
+    #[doc(hidden)]
+    /// Create a variable representing the boolean XOR of two operands.
+    /// Returns a variable that is 1 if exactly one operand is non-zero, 0 otherwise.
+    /// 
+    /// # Examples
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let a = m.bool();
+    /// let b = m.bool();
+    /// let xor_result = m.bool_xor(a, b);
+    /// ```
+    pub fn bool_xor(&mut self, x: VarId, y: VarId) -> VarId {
+        let result = self.bool(); // Create a boolean variable (0 or 1)
+        self.props.bool_xor(x, y, result);
+        result
+    }
+
     /// Post a boolean implication constraint: `a → b` (if a then b).
     /// 
     /// If `a` is true (1), then `b` must be true (1).

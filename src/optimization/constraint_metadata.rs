@@ -66,6 +66,8 @@ pub enum ConstraintType {
     BooleanOr,
     /// Boolean NOT constraint (result = NOT operand)
     BooleanNot,
+    /// Boolean XOR constraint (result = a XOR b)
+    BooleanXor,
     /// Reified equality constraint (b ⇔ (x = y))
     EqualityReified,
     /// Reified inequality constraint (b ⇔ (x ≠ y))
@@ -417,6 +419,7 @@ impl ConstraintRegistry {
                 ConstraintType::BooleanAnd |
                 ConstraintType::BooleanOr |
                 ConstraintType::BooleanNot |
+                ConstraintType::BooleanXor |
                 ConstraintType::AllDifferent | 
                 ConstraintType::AllEqual |
                 ConstraintType::Element |

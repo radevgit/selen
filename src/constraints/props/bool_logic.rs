@@ -269,3 +269,113 @@ impl Propagate for BoolNot {
             .chain(core::iter::once(self.operand))
     }
 }
+
+/// Boolean XOR constraint: `result = a XOR b`.
+/// This constraint enforces that the result variable equals the logical XOR of two boolean operands.
+/// XOR is true (1) when exactly one operand is true (non-zero).
+/// Variables are treated as boolean: 0 = false, non-zero = true.
+#[derive(Clone, Debug)]
+#[doc(hidden)]
+pub struct BoolXor {
+    x: VarId,
+    y: VarId,
+    result: VarId,
+}
+
+impl BoolXor {
+    pub fn new(x: VarId, y: VarId, result: VarId) -> Self {
+        Self { x, y, result }
+    }
+}
+
+impl Prune for BoolXor {
+    fn prune(&self, ctx: &mut Context) -> Option<()> {
+        // XOR truth table (treating as boolean: 0 = false, 1 = true):
+        // x | y | x XOR y
+        // --+---+--------
+        // 0 | 0 |   0
+        // 0 | 1 |   1
+        // 1 | 0 |   1
+        // 1 | 1 |   0
+        //
+        // So: result = 1 iff (x = 0 and y = 1) or (x = 1 and y = 0)
+        //     result = 0 iff (x = 0 and y = 0) or (x = 1 and y = 1)
+
+        let x_min = self.x.min(ctx);
+        let x_max = self.x.max(ctx);
+        let y_min = self.y.min(ctx);
+        let y_max = self.y.max(ctx);
+        let result_min = self.result.min(ctx);
+        let result_max = self.result.max(ctx);
+
+        // Case 1: result is fixed to 1 (must be true)
+        if result_min >= Val::ValI(1) {
+            // x XOR y must be true
+            // This means: (x=0 AND y=1) OR (x=1 AND y=0)
+            
+            // If x is definitely 0, then y must be definitely 1
+            if x_max <= Val::ValI(0) {
+                let _min = self.y.try_set_min(Val::ValI(1), ctx)?;
+            }
+            // If x is definitely 1 (>= 1), then y must be definitely 0
+            if x_min >= Val::ValI(1) {
+                let _max = self.y.try_set_max(Val::ValI(0), ctx)?;
+            }
+            // Similarly for y
+            if y_max <= Val::ValI(0) {
+                let _min = self.x.try_set_min(Val::ValI(1), ctx)?;
+            }
+            if y_min >= Val::ValI(1) {
+                let _max = self.x.try_set_max(Val::ValI(0), ctx)?;
+            }
+        }
+
+        // Case 2: result is fixed to 0 (must be false)
+        if result_max <= Val::ValI(0) {
+            // x XOR y must be false
+            // This means: (x=0 AND y=0) OR (x=1 AND y=1)
+            
+            // If x is definitely 0, then y must be definitely 0
+            if x_max <= Val::ValI(0) {
+                let _max = self.y.try_set_max(Val::ValI(0), ctx)?;
+            }
+            // If x is definitely 1, then y must be definitely 1
+            if x_min >= Val::ValI(1) {
+                let _min = self.y.try_set_min(Val::ValI(1), ctx)?;
+            }
+            // Similarly for y
+            if y_max <= Val::ValI(0) {
+                let _max = self.x.try_set_max(Val::ValI(0), ctx)?;
+            }
+            if y_min >= Val::ValI(1) {
+                let _min = self.x.try_set_min(Val::ValI(1), ctx)?;
+            }
+        }
+
+        // Case 3: Propagate from fixed x and y to result
+        // If both x and y are fixed (or determinable)
+        if x_min == x_max && y_min == y_max {
+            let x_bool = x_min >= Val::ValI(1);
+            let y_bool = y_min >= Val::ValI(1);
+            let xor_result = x_bool != y_bool; // XOR operation
+            
+            if xor_result {
+                let _min = self.result.try_set_min(Val::ValI(1), ctx)?;
+                let _max = self.result.try_set_max(Val::ValI(1), ctx)?;
+            } else {
+                let _min = self.result.try_set_min(Val::ValI(0), ctx)?;
+                let _max = self.result.try_set_max(Val::ValI(0), ctx)?;
+            }
+        }
+
+        Some(())
+    }
+}
+
+impl Propagate for BoolXor {
+    fn list_trigger_vars(&self) -> impl Iterator<Item = VarId> {
+        core::iter::once(self.result)
+            .chain(core::iter::once(self.x))
+            .chain(core::iter::once(self.y))
+    }
+}

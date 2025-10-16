@@ -1362,6 +1362,27 @@ impl Propagators {
         )
     }
 
+    pub fn bool_xor(&mut self, x: VarId, y: VarId, result: VarId) -> PropId {
+        use crate::optimization::constraint_metadata::{ConstraintData, ConstraintType, ViewInfo};
+
+        let x_info = ViewInfo::Variable { var_id: x };
+        let y_info = ViewInfo::Variable { var_id: y };
+        let result_info = ViewInfo::Variable { var_id: result };
+
+        let variables = vec![x, y, result];
+
+        let metadata = ConstraintData::NAry {
+            operands: vec![x_info, y_info, result_info],
+        };
+
+        self.push_new_prop_with_metadata(
+            self::bool_logic::BoolXor::new(x, y, result),
+            ConstraintType::BooleanXor,
+            variables,
+            metadata,
+        )
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // 🔄 Reification Constraints
     // ═══════════════════════════════════════════════════════════════════════

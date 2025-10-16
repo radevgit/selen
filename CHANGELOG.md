@@ -4,6 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [0.14.0] - 2025-10-16
 - count(var, var) now uses Vies-s and can work with both const and vars
+- Boolean XOR implemented
 
 ## [0.12.8] - 2025-10-16
 - Introduced count_var() constraint for variable counts
