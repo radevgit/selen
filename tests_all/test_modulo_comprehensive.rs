@@ -697,3 +697,273 @@ fn test_modulo_original_selen_modulo_test() {
         }
     }
 }
+
+// ============================================================================
+// Variable-to-Variable Equality Pattern Tests
+// ============================================================================
+// These tests verify that the variable-to-variable equality pattern
+// works correctly with modulo constraints. Previously this pattern
+// would fail because bounds weren't applied immediately.
+// ============================================================================
+
+#[test]
+fn test_var_to_var_equality_simple_modulo() {
+    println!("\nTest: Variable-to-variable equality with simple modulo");
+    let mut m = Model::default();
+    
+    let dividend = m.int(1, 100);
+    let divisor = m.int(1, 10);
+    
+    // Create constant variables
+    let const_47 = m.int(47, 47);
+    let const_10 = m.int(10, 10);
+    
+    // Create modulo FIRST with unconstrained variables
+    let mod_result = m.modulo(dividend, divisor);
+    
+    // THEN post variable-to-variable equality constraints
+    m.new(dividend.eq(const_47));
+    m.new(divisor.eq(const_10));
+    
+    match m.solve() {
+        Ok(sol) => {
+            let div_val = sol.get_int(dividend);
+            let vis_val = sol.get_int(divisor);
+            let res_val = sol.get_int(mod_result);
+            
+            assert_eq!(div_val, 47, "dividend should be 47");
+            assert_eq!(vis_val, 10, "divisor should be 10");
+            assert_eq!(res_val, 7, "47 mod 10 should be 7");
+        }
+        Err(e) => panic!("Expected solution with var-to-var equality but got error: {:?}", e),
+    }
+}
+
+#[test]
+fn test_var_to_var_equality_multiple_mods() {
+    println!("\nTest: Multiple modulo constraints with variable-to-variable equality");
+    let mut m = Model::default();
+    
+    let x = m.int(1, 100);
+    let y = m.int(1, 50);
+    let z = m.int(1, 100);
+    
+    // Create constant variables
+    let const_42 = m.int(42, 42);
+    let const_37 = m.int(37, 37);
+    let const_7 = m.int(7, 7);
+    let const_5 = m.int(5, 5);
+    
+    // Create multiple modulo constraints
+    let mod1 = m.modulo(x, const_7);
+    let mod2 = m.modulo(y, const_5);
+    let mod3 = m.modulo(z, const_7);
+    
+    // Post variable-to-variable equality constraints
+    m.new(x.eq(const_42));
+    m.new(y.eq(const_37));
+    
+    // Also constraint the modulos
+    m.new(mod1.le(6));
+    m.new(mod2.le(4));
+    m.new(mod3.ge(0));
+    
+    match m.solve() {
+        Ok(sol) => {
+            let x_val = sol.get_int(x);
+            let y_val = sol.get_int(y);
+            let mod1_val = sol.get_int(mod1);
+            let mod2_val = sol.get_int(mod2);
+            
+            assert_eq!(x_val, 42);
+            assert_eq!(y_val, 37);
+            assert_eq!(mod1_val, 42 % 7, "42 mod 7 = 0");
+            assert_eq!(mod2_val, 37 % 5, "37 mod 5 = 2");
+        }
+        Err(e) => panic!("Expected solution but got error: {:?}", e),
+    }
+}
+
+#[test]
+fn test_var_to_var_equality_chain() {
+    println!("\nTest: Variable-to-variable equality chain with modulo");
+    let mut m = Model::default();
+    
+    let x = m.int(1, 100);
+    let y = m.int(1, 100);
+    
+    // Create constant variables
+    let const_55 = m.int(55, 55);
+    let const_12 = m.int(12, 12);
+    
+    // Direct equalities to constants
+    m.new(x.eq(const_55));
+    m.new(y.eq(const_55));
+    
+    // Create modulo
+    let mod_result = m.modulo(x, const_12);
+    let mod_result2 = m.modulo(y, const_12);
+    
+    match m.solve() {
+        Ok(sol) => {
+            let x_val = sol.get_int(x);
+            let y_val = sol.get_int(y);
+            let res_val = sol.get_int(mod_result);
+            let res_val2 = sol.get_int(mod_result2);
+            
+            assert_eq!(x_val, 55);
+            assert_eq!(y_val, 55);
+            assert_eq!(res_val, 55 % 12, "55 mod 12 = 7");
+            assert_eq!(res_val2, 55 % 12, "55 mod 12 = 7");
+        }
+        Err(e) => panic!("Expected solution with equality chain but got error: {:?}", e),
+    }
+}
+
+#[test]
+fn test_var_to_var_equality_with_constraint_after() {
+    println!("\nTest: Variable-to-variable equality with constraint on result");
+    let mut m = Model::default();
+    
+    let x = m.int(1, 100);
+    let y = m.int(2, 20);
+    
+    let const_50 = m.int(50, 50);
+    let const_7 = m.int(7, 7);
+    
+    // Post var-to-var equality
+    m.new(x.eq(const_50));
+    
+    // Create modulo
+    let mod_result = m.modulo(x, y);
+    
+    // Constrain divisor via var-to-var equality
+    m.new(y.eq(const_7));
+    
+    // Add constraint on result
+    m.new(mod_result.ge(1));
+    m.new(mod_result.le(6));
+    
+    match m.solve() {
+        Ok(sol) => {
+            let x_val = sol.get_int(x);
+            let y_val = sol.get_int(y);
+            let res_val = sol.get_int(mod_result);
+            
+            assert_eq!(x_val, 50);
+            assert_eq!(y_val, 7);
+            assert_eq!(res_val, 50 % 7, "50 mod 7 = 1");
+        }
+        Err(e) => panic!("Expected solution but got error: {:?}", e),
+    }
+}
+
+#[test]
+fn test_var_to_var_equality_large_values() {
+    println!("\nTest: Variable-to-variable equality with large values");
+    let mut m = Model::default();
+    
+    let dividend = m.int(1, 100000);
+    let divisor = m.int(1, 10000);
+    
+    let const_99999 = m.int(99999, 99999);
+    let const_103 = m.int(103, 103);
+    
+    // Create modulo first
+    let mod_result = m.modulo(dividend, divisor);
+    
+    // Apply var-to-var equality
+    m.new(dividend.eq(const_99999));
+    m.new(divisor.eq(const_103));
+    
+    match m.solve() {
+        Ok(sol) => {
+            let div_val = sol.get_int(dividend);
+            let vis_val = sol.get_int(divisor);
+            let res_val = sol.get_int(mod_result);
+            
+            assert_eq!(div_val, 99999);
+            assert_eq!(vis_val, 103);
+            assert_eq!(res_val, 99999 % 103, "99999 mod 103 = 9");
+        }
+        Err(e) => panic!("Expected solution with large values but got error: {:?}", e),
+    }
+}
+
+#[test]
+fn test_var_to_var_equality_with_negative_results() {
+    println!("\nTest: Variable-to-variable equality with potential negative modulo");
+    let mut m = Model::default();
+    
+    let x = m.int(-100, 100);
+    let y = m.int(1, 20);
+    
+    let const_neg25 = m.int(-25, -25);
+    let const_6 = m.int(6, 6);
+    
+    // Create modulo with potential negative dividend
+    let mod_result = m.modulo(x, y);
+    
+    // Apply var-to-var equality
+    m.new(x.eq(const_neg25));
+    m.new(y.eq(const_6));
+    
+    match m.solve() {
+        Ok(sol) => {
+            let x_val = sol.get_int(x);
+            let y_val = sol.get_int(y);
+            let res_val = sol.get_int(mod_result);
+            
+            assert_eq!(x_val, -25);
+            assert_eq!(y_val, 6);
+            // Rust modulo: -25 % 6 = -1
+            assert_eq!(res_val, -25 % 6);
+        }
+        Err(e) => panic!("Expected solution with negative dividend but got error: {:?}", e),
+    }
+}
+
+#[test]
+fn test_var_to_var_equality_multiple_equality_constraints() {
+    println!("\nTest: Multiple variable-to-variable equalities in same model");
+    let mut m = Model::default();
+    
+    let a = m.int(1, 100);
+    let b = m.int(1, 100);
+    let c = m.int(1, 20);
+    let d = m.int(1, 20);
+    
+    let const_60 = m.int(60, 60);
+    let const_75 = m.int(75, 75);
+    let const_8 = m.int(8, 8);
+    let const_9 = m.int(9, 9);
+    
+    // Multiple modulo operations
+    let mod1 = m.modulo(a, c);
+    let mod2 = m.modulo(b, d);
+    
+    // Multiple var-to-var equalities
+    m.new(a.eq(const_60));
+    m.new(b.eq(const_75));
+    m.new(c.eq(const_8));
+    m.new(d.eq(const_9));
+    
+    match m.solve() {
+        Ok(sol) => {
+            let a_val = sol.get_int(a);
+            let b_val = sol.get_int(b);
+            let c_val = sol.get_int(c);
+            let d_val = sol.get_int(d);
+            let mod1_val = sol.get_int(mod1);
+            let mod2_val = sol.get_int(mod2);
+            
+            assert_eq!(a_val, 60);
+            assert_eq!(b_val, 75);
+            assert_eq!(c_val, 8);
+            assert_eq!(d_val, 9);
+            assert_eq!(mod1_val, 60 % 8, "60 mod 8 = 4");
+            assert_eq!(mod2_val, 75 % 9, "75 mod 9 = 3");
+        }
+        Err(e) => panic!("Expected solution with multiple equalities but got error: {:?}", e),
+    }
+}

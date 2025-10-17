@@ -1,6 +1,6 @@
 [package]
 name = "selen"
-version = "0.14.1"
+version = "0.14.2"
 edition = "2024"
 description = "Constraint Satisfaction Problem (CSP) solver"
 rust-version = "1.88"

@@ -161,12 +161,92 @@ impl Model {
     /// This is called after LP extraction and solving to create the propagators
     /// needed for the CSP search phase.
     pub(crate) fn materialize_pending_asts(&mut self) {
+        // STEP 0: Pre-process equality constraints to apply immediate bounds
+        // This ensures that Var==Var constraints are applied to variable domains
+        // BEFORE other constraints (like modulo) are materialized and create result variables
+        // based on operand bounds
+        self.apply_immediate_var_eq_bounds();
+        
         // Take ownership of the pending ASTs to avoid borrow checker issues
         let asts = std::mem::take(&mut self.pending_constraint_asts);
         
         // Materialize each AST into propagators
         for ast in asts {
             crate::runtime_api::materialize_constraint_kind(self, &ast);
+        }
+    }
+    
+    /// Pre-process pending ASTs to apply immediate bounds for Var==Var equality constraints
+    /// This ensures variables are constrained BEFORE other constraints see their bounds
+    fn apply_immediate_var_eq_bounds(&mut self) {
+        use crate::runtime_api::{ExprBuilder, ConstraintKind, ComparisonOp};
+        
+        // Collect all Var==Var equality constraints
+        let mut eq_constraints = Vec::new();
+        for ast in self.pending_constraint_asts.iter() {
+            if let ConstraintKind::Binary { left, op, right } = ast {
+                if matches!(op, ComparisonOp::Eq) {
+                    if let (ExprBuilder::Var(var1), ExprBuilder::Var(var2)) = (left, right) {
+                        eq_constraints.push((*var1, *var2));
+                    }
+                }
+            }
+        }
+        
+        // Apply bounds for each Var==Var constraint
+        for (var1, var2) in eq_constraints {
+            if var1.to_index() < self.vars.count() && var2.to_index() < self.vars.count() {
+                // Collect bounds from both variables
+                let (var1_min, var1_max, is_var1_int) = match &self.vars[var1] {
+                    crate::variables::Var::VarI(ss) => (ss.min(), ss.max(), true),
+                    crate::variables::Var::VarF(_) => (0, 0, false),
+                };
+                
+                let (var2_min, var2_max, is_var2_int) = match &self.vars[var2] {
+                    crate::variables::Var::VarI(ss) => (ss.min(), ss.max(), true),
+                    crate::variables::Var::VarF(_) => (0, 0, false),
+                };
+                
+                // Only apply for integer variables
+                if is_var1_int && is_var2_int {
+                    // Compute intersection bounds
+                    let intersection_min = if var1_min > var2_min { var1_min } else { var2_min };
+                    let intersection_max = if var1_max < var2_max { var1_max } else { var2_max };
+                    
+                    if intersection_min <= intersection_max {
+                        // Collect values to remove BEFORE any mutable borrows
+                        let var1_to_remove: Vec<i32> = if let crate::variables::Var::VarI(ss) = &self.vars[var1] {
+                            ss.iter()
+                                .filter(|val| *val < intersection_min || *val > intersection_max)
+                                .collect()
+                        } else {
+                            Vec::new()
+                        };
+                        
+                        let var2_to_remove: Vec<i32> = if let crate::variables::Var::VarI(ss) = &self.vars[var2] {
+                            ss.iter()
+                                .filter(|val| *val < intersection_min || *val > intersection_max)
+                                .collect()
+                        } else {
+                            Vec::new()
+                        };
+                        
+                        // Now remove values from var1
+                        if let crate::variables::Var::VarI(sparse_set) = &mut self.vars[var1] {
+                            for val in var1_to_remove {
+                                sparse_set.remove(val);
+                            }
+                        }
+                        
+                        // Remove values from var2
+                        if let crate::variables::Var::VarI(sparse_set) = &mut self.vars[var2] {
+                            for val in var2_to_remove {
+                                sparse_set.remove(val);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
     

@@ -1198,6 +1198,65 @@ fn add_coefficients(a: &LinearCoefficient, b: &LinearCoefficient) -> LinearCoeff
     }
 }
 
+/// Helper function to apply intersection bounds for Var==Var equality constraints
+/// This ensures modulo and other constraints see correct operand bounds immediately
+fn apply_var_eq_bounds(model: &mut Model, var1: VarId, var2: VarId) {
+    if var1.to_index() >= model.vars.count() || var2.to_index() >= model.vars.count() {
+        return;
+    }
+    
+    // Collect bounds from both variables
+    let (var1_min, var1_max, is_var1_int) = match &model.vars[var1] {
+        crate::variables::Var::VarI(ss) => (ss.min(), ss.max(), true),
+        crate::variables::Var::VarF(_) => (0, 0, false),
+    };
+    
+    let (var2_min, var2_max, is_var2_int) = match &model.vars[var2] {
+        crate::variables::Var::VarI(ss) => (ss.min(), ss.max(), true),
+        crate::variables::Var::VarF(_) => (0, 0, false),
+    };
+    
+    // Only apply for integer variables
+    if is_var1_int && is_var2_int {
+        // Compute intersection bounds
+        let intersection_min = if var1_min > var2_min { var1_min } else { var2_min };
+        let intersection_max = if var1_max < var2_max { var1_max } else { var2_max };
+        
+        if intersection_min <= intersection_max {
+            // Collect values to remove BEFORE any mutable borrows
+            let var1_to_remove: Vec<i32> = if let crate::variables::Var::VarI(ss) = &model.vars[var1] {
+                ss.iter()
+                    .filter(|val| *val < intersection_min || *val > intersection_max)
+                    .collect()
+            } else {
+                Vec::new()
+            };
+            
+            let var2_to_remove: Vec<i32> = if let crate::variables::Var::VarI(ss) = &model.vars[var2] {
+                ss.iter()
+                    .filter(|val| *val < intersection_min || *val > intersection_max)
+                    .collect()
+            } else {
+                Vec::new()
+            };
+            
+            // Now remove values from var1
+            if let crate::variables::Var::VarI(sparse_set) = &mut model.vars[var1] {
+                for val in var1_to_remove {
+                    sparse_set.remove(val);
+                }
+            }
+            
+            // Remove values from var2
+            if let crate::variables::Var::VarI(sparse_set) = &mut model.vars[var2] {
+                for val in var2_to_remove {
+                    sparse_set.remove(val);
+                }
+            }
+        }
+    }
+}
+
 /// Post a constraint by storing its AST for later materialization
 /// This allows LP extraction BEFORE creating propagators
 /// 
@@ -1208,6 +1267,18 @@ fn add_coefficients(a: &LinearCoefficient, b: &LinearCoefficient) -> LinearCoeff
 #[inline]
 #[doc(hidden)]
 pub fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
+    // **IMMEDIATE BOUNDS APPLICATION:** Handle Var==Var equality constraints
+    // Apply bounds immediately to ensure modulo and other constraints see correct operand bounds
+    // This must be done BEFORE storing in ASTs or materializing
+    if let ConstraintKind::Binary { left, op, right } = kind {
+        if matches!(op, ComparisonOp::Eq) {
+            if let (ExprBuilder::Var(var1), ExprBuilder::Var(var2)) = (left, right) {
+                // Apply intersection bounds immediately
+                apply_var_eq_bounds(model, *var1, *var2);
+            }
+        }
+    }
+    
     // **IMMEDIATE MATERIALIZATION (BEFORE CONVERSION):** Simple binary equals constraints
     // Post these immediately so they propagate before other constraints run
     // MUST BE DONE BEFORE try_convert_to_linear_ast() since that converts Var==Val to LinearInt
