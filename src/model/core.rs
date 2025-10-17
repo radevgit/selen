@@ -618,10 +618,58 @@ impl Model {
     /// This provides much better bounds than the simple variable-context inference
     /// at creation time, since all constraints are available for analysis.
     ///
+    /// **SPECIAL CASE**: Also applies simple binary equals constraints to ALL variables
+    /// (even bounded ones) to ensure that deferred equality constraints like `x.eq(47)`
+    /// are honored before other constraints (like modulo) are posted.
+    ///
     /// # Returns
     /// Ok(()) if inference succeeds, Err if unbounded variables cannot be reasonably bounded.
     fn infer_unbounded_from_asts(&mut self) -> Result<(), SolverError> {
         use std::collections::HashMap;
+        
+        // **SPECIAL HANDLING FOR EQUALS CONSTRAINTS**
+        // Apply simple binary equals constraints (Var == Val) to tighten bounds
+        // This must happen BEFORE materializing other constraints that might depend on bounds
+        for constraint_ast in &self.pending_constraint_asts {
+            if let crate::runtime_api::ConstraintKind::Binary { left, op, right } = constraint_ast {
+                if matches!(op, crate::runtime_api::ComparisonOp::Eq) {
+                    // Pattern: Var == Constant
+                    if let (crate::runtime_api::ExprBuilder::Var(var_id), crate::runtime_api::ExprBuilder::Val(val)) = (left, right) {
+                        // Apply this equality constraint immediately
+                        match &mut self.vars[*var_id] {
+                            crate::variables::Var::VarI(sparse_set) => {
+                                if let Val::ValI(i) = val {
+                                    sparse_set.remove_all_but(*i);
+                                }
+                            }
+                            crate::variables::Var::VarF(interval) => {
+                                if let Val::ValF(f) = val {
+                                    interval.min = *f;
+                                    interval.max = *f;
+                                }
+                            }
+                        }
+                    }
+                    // Pattern: Constant == Var
+                    else if let (crate::runtime_api::ExprBuilder::Val(val), crate::runtime_api::ExprBuilder::Var(var_id)) = (left, right) {
+                        // Apply this equality constraint immediately
+                        match &mut self.vars[*var_id] {
+                            crate::variables::Var::VarI(sparse_set) => {
+                                if let Val::ValI(i) = val {
+                                    sparse_set.remove_all_but(*i);
+                                }
+                            }
+                            crate::variables::Var::VarF(interval) => {
+                                if let Val::ValF(f) = val {
+                                    interval.min = *f;
+                                    interval.max = *f;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         // PHASE 1: Identify unbounded variables
         let unbounded_vars = self.identify_unbounded_variables();
@@ -682,6 +730,104 @@ impl Model {
         }
         
         unbounded
+    }
+    
+    /// Infer bounds for an expression recursively
+    /// 
+    /// This method computes the bounds of an expression based on the bounds of its operands.
+    /// For variables, it looks up their current bounds. For constants, it uses the constant's value.
+    /// For arithmetic expressions, it computes bounds based on the operation and operand bounds.
+    fn infer_expr_bounds(&self, expr: &crate::runtime_api::ExprBuilder) -> Option<(i32, i32)> {
+        use crate::runtime_api::ExprBuilder;
+        
+        match expr {
+            ExprBuilder::Var(var_id) => {
+                // Get bounds of the variable directly
+                self.get_variable_bounds(*var_id)
+            }
+            ExprBuilder::Val(val) => {
+                // For constants, return a point interval
+                match val {
+                    Val::ValI(i) => Some((*i, *i)),
+                    Val::ValF(f) => {
+                        // For float constants, convert to int bounds (lossy)
+                        Some((f.floor() as i32, f.ceil() as i32))
+                    }
+                }
+            }
+            ExprBuilder::Add(left, right) => {
+                // a + b: bounds are [a.min + b.min, a.max + b.max]
+                let left_bounds = self.infer_expr_bounds(left)?;
+                let right_bounds = self.infer_expr_bounds(right)?;
+                Some((left_bounds.0 + right_bounds.0, left_bounds.1 + right_bounds.1))
+            }
+            ExprBuilder::Sub(left, right) => {
+                // a - b: bounds are [a.min - b.max, a.max - b.min]
+                let left_bounds = self.infer_expr_bounds(left)?;
+                let right_bounds = self.infer_expr_bounds(right)?;
+                Some((left_bounds.0 - right_bounds.1, left_bounds.1 - right_bounds.0))
+            }
+            ExprBuilder::Mul(left, right) => {
+                // a * b: check all corners since multiplication can flip bounds
+                let left_bounds = self.infer_expr_bounds(left)?;
+                let right_bounds = self.infer_expr_bounds(right)?;
+                
+                let products = [
+                    left_bounds.0 * right_bounds.0,
+                    left_bounds.0 * right_bounds.1,
+                    left_bounds.1 * right_bounds.0,
+                    left_bounds.1 * right_bounds.1,
+                ];
+                
+                let min = *products.iter().min().unwrap_or(&0);
+                let max = *products.iter().max().unwrap_or(&0);
+                Some((min, max))
+            }
+            ExprBuilder::Div(left, right) => {
+                // a / b: be conservative - similar to multiplication
+                let left_bounds = self.infer_expr_bounds(left)?;
+                let right_bounds = self.infer_expr_bounds(right)?;
+                
+                // Avoid division by zero
+                if right_bounds.0 <= 0 && right_bounds.1 >= 0 {
+                    return None; // Can't infer bounds if divisor includes 0
+                }
+                
+                // Compute all possible quotients
+                let mut quotients = Vec::new();
+                if right_bounds.0 != 0 {
+                    quotients.push(left_bounds.0 / right_bounds.0);
+                    quotients.push(left_bounds.1 / right_bounds.0);
+                }
+                if right_bounds.1 != 0 {
+                    quotients.push(left_bounds.0 / right_bounds.1);
+                    quotients.push(left_bounds.1 / right_bounds.1);
+                }
+                
+                if quotients.is_empty() {
+                    return None;
+                }
+                
+                let min = *quotients.iter().min().unwrap_or(&0);
+                let max = *quotients.iter().max().unwrap_or(&0);
+                Some((min, max))
+            }
+            ExprBuilder::Modulo(left, right) => {
+                // a % b: result is in [0, max(|b.min|, |b.max|) - 1]
+                let _left_bounds = self.infer_expr_bounds(left)?;
+                let right_bounds = self.infer_expr_bounds(right)?;
+                
+                // Modulo result is always in range [0, |divisor| - 1] (for positive divisor)
+                // or more generally, [-(|divisor|-1), |divisor|-1]
+                let divisor_abs = right_bounds.0.abs().max(right_bounds.1.abs());
+                
+                if divisor_abs <= 0 {
+                    return None; // Invalid divisor
+                }
+                
+                Some((-(divisor_abs - 1), divisor_abs - 1))
+            }
+        }
     }
     
     /// Phase 2: Extract bounds from a single constraint AST
@@ -849,6 +995,26 @@ impl Model {
                         }
                         _ => {}
                     }
+                }
+            }
+        }
+        
+        // Pattern: Var op Expression (e.g., remainder = modulo(number, divisor))
+        if let ExprBuilder::Var(var_id) = left {
+            if unbounded_vars.contains(var_id) {
+                match op {
+                    ComparisonOp::Eq => {
+                        // Try to infer bounds from the right-hand expression
+                        if let Some(expr_bounds) = self.infer_expr_bounds(right) {
+                            self.update_bounds(
+                                bounds_map,
+                                *var_id,
+                                Some(Val::ValI(expr_bounds.0)),
+                                Some(Val::ValI(expr_bounds.1)),
+                            );
+                        }
+                    }
+                    _ => {} // Other operators don't help with bounds inference
                 }
             }
         }

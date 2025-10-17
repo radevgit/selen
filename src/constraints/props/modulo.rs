@@ -22,6 +22,8 @@ impl<U: View, V: View> Prune for Modulo<U, V> {
         let x_max = self.x.max(ctx);
         let y_min = self.y.min(ctx);
         let y_max = self.y.max(ctx);
+        let s_min = self.s.min(ctx);
+        let s_max = self.s.max(ctx);
         
         // If y contains zero or values too close to zero, we can't safely compute modulo
         if Val::range_contains_unsafe_divisor(y_min, y_max) {
@@ -29,13 +31,50 @@ impl<U: View, V: View> Prune for Modulo<U, V> {
             return Some(());
         }
 
-        // Calculate possible modulo results
-        let mut s_candidates = Vec::new();
+        // CASE 1: Both x and y are fixed → exact computation
+        if x_min == x_max && y_min == y_max {
+            if let Some(exact_result) = x_min.safe_mod(y_min) {
+                // Set s to this exact value
+                self.s.try_set_min(exact_result, ctx)?;
+                self.s.try_set_max(exact_result, ctx)?;
+                return Some(());
+            }
+        }
+
+        // CASE 2: y is fixed (and non-zero) → compute s bounds based on x range
+        if y_min == y_max {
+            if let Val::ValI(y_val) = y_min {
+                if y_val != 0 {
+                    // For modulo: s is in range [0, |y|-1] when y > 0
+                    // or [-(|y|-1), 0] when y < 0
+                    if y_val > 0 {
+                        let s_theoretical_min = Val::ValI(0);
+                        let s_theoretical_max = Val::ValI(y_val - 1);
+                        
+                        let new_s_min = if s_theoretical_min > s_min { s_theoretical_min } else { s_min };
+                        let new_s_max = if s_theoretical_max < s_max { s_theoretical_max } else { s_max };
+                        
+                        self.s.try_set_min(new_s_min, ctx)?;
+                        self.s.try_set_max(new_s_max, ctx)?;
+                    } else {
+                        // y_val < 0
+                        let s_theoretical_min = Val::ValI(y_val + 1);
+                        let s_theoretical_max = Val::ValI(0);
+                        
+                        let new_s_min = if s_theoretical_min > s_min { s_theoretical_min } else { s_min };
+                        let new_s_max = if s_theoretical_max < s_max { s_theoretical_max } else { s_max };
+                        
+                        self.s.try_set_min(new_s_min, ctx)?;
+                        self.s.try_set_max(new_s_max, ctx)?;
+                    }
+                }
+            }
+        }
+
+        // CASE 3: Both x and y are in bounded ranges → compute s bounds
+        let mut s_candidates = Vec::with_capacity(4);
         
-        // For modulo, the result is always in range [0, |y|-1] for positive y
-        // and [-|y|+1, 0] for negative y, but we need to be more careful with mixed signs
-        
-        // Sample points at domain boundaries and some intermediate values
+        // Sample points at domain boundaries
         let x_samples = if x_min == x_max {
             vec![x_min]
         } else {
@@ -52,7 +91,7 @@ impl<U: View, V: View> Prune for Modulo<U, V> {
         for &x_val in &x_samples {
             for &y_val in &y_samples {
                 if let Some(mod_result) = x_val.safe_mod(y_val) {
-                    // Check if the result is not NaN or infinite
+                    // Check if the result is valid
                     match mod_result {
                         Val::ValF(f) if f.is_finite() => s_candidates.push(mod_result),
                         Val::ValI(_) => s_candidates.push(mod_result),
@@ -64,70 +103,52 @@ impl<U: View, V: View> Prune for Modulo<U, V> {
         
         if !s_candidates.is_empty() {
             // Find bounds for s based on modulo properties
-            let s_min = s_candidates.iter().fold(s_candidates[0], |acc, &x| if x < acc { x } else { acc });
-            let s_max = s_candidates.iter().fold(s_candidates[0], |acc, &x| if x > acc { x } else { acc });
+            let s_computed_min = s_candidates.iter().fold(s_candidates[0], |acc, &x| if x < acc { x } else { acc });
+            let s_computed_max = s_candidates.iter().fold(s_candidates[0], |acc, &x| if x > acc { x } else { acc });
             
-            // For modulo, we know more about the bounds:
-            // If y > 0: 0 <= s < y
-            // If y < 0: y < s <= 0
-            // We can use this to tighten bounds further
-            let y_abs_min = match (y_min, y_max) {
-                (Val::ValI(min_i), Val::ValI(max_i)) => {
-                    if min_i > 0 { Some(Val::ValI(0)) }
-                    else if max_i < 0 { Some(Val::ValI(max_i + 1)) }
-                    else { None }
-                },
-                (Val::ValF(min_f), Val::ValF(max_f)) => {
-                    if min_f > 0.0 { Some(Val::ValF(0.0)) }
-                    else if max_f < 0.0 { Some(Val::ValF(max_f + 1.0)) }
-                    else { None }
-                },
-                _ => None,
-            };
-            
-            let y_abs_max = match (y_min, y_max) {
-                (Val::ValI(min_i), Val::ValI(max_i)) => {
-                    if min_i > 0 { Some(Val::ValI(max_i - 1)) }
-                    else if max_i < 0 { Some(Val::ValI(0)) }
-                    else { None }
-                },
-                (Val::ValF(min_f), Val::ValF(max_f)) => {
-                    if min_f > 0.0 { Some(Val::ValF(max_f - f64::EPSILON)) }
-                    else if max_f < 0.0 { Some(Val::ValF(0.0)) }
-                    else { None }
-                },
-                _ => None,
-            };
-            
-            // Use the tighter bounds if available
-            let final_s_min = if let Some(theoretical_min) = y_abs_min {
-                if theoretical_min > s_min { theoretical_min } else { s_min }
-            } else { s_min };
-            
-            let final_s_max = if let Some(theoretical_max) = y_abs_max {
-                if theoretical_max < s_max { theoretical_max } else { s_max }
-            } else { s_max };
-            
-            // Propagate bounds to s
-            let _min = self.s.try_set_min(final_s_min, ctx)?;
-            let _max = self.s.try_set_max(final_s_max, ctx)?;
+            // CRITICAL FIX: Allow expansion if current domain is too narrow
+            // This can happen when result variable was created before deferred constraints applied
+            // and those deferred constraints now require larger modulo values.
+            // We must try to set the bounds, and if it fails, return None (fail the space)
+            self.s.try_set_min(s_computed_min, ctx)?;
+            self.s.try_set_max(s_computed_max, ctx)?;
         }
-        
-        // Back-propagation is complex for modulo, so we do limited propagation
-        // We can at least ensure that if s is known and y is known, we can constrain x
-        let s_min = self.s.min(ctx);
-        let s_max = self.s.max(ctx);
-        
-        // If y and s are both fixed, we can derive some constraints on x
+
+        // CASE 4: Back-propagation from s to x (when y and s are fixed)
         if y_min == y_max && s_min == s_max {
-            // x = k * y + s for some integer k
-            // We need to find valid values of k such that x is in its domain
-            let y_val = y_min;
-            let s_val = s_min;
-            
-            if let (Some(_), Some(_)) = (y_val.safe_div(Val::ValI(1)), s_val.safe_div(Val::ValI(1))) {
-                // For now, we don't do complex back-propagation for modulo
-                // This would require more sophisticated interval arithmetic
+            if let (Val::ValI(y_val), Val::ValI(s_val)) = (y_min, s_min) {
+                if y_val != 0 && s_val >= 0 && s_val < y_val.abs() {
+                    // x = k * y + s for some integer k
+                    // We need to find the range of k such that x remains in bounds
+                    let x_current_min = x_min;
+                    let x_current_max = x_max;
+                    
+                    // Find the minimum and maximum k
+                    let mut valid_x_values = Vec::with_capacity(8);
+                    
+                    if let (Val::ValI(x_curr_min), Val::ValI(x_curr_max)) = (x_current_min, x_current_max) {
+                        // Try k values that produce x in the valid range
+                        let k_min_theoretical = (x_curr_min - s_val) / y_val;
+                        let k_max_theoretical = (x_curr_max - s_val) / y_val;
+                        
+                        // Try a range around these theoretical k values
+                        for k in (k_min_theoretical - 1)..=(k_max_theoretical + 1) {
+                            let candidate_x = k * y_val + s_val;
+                            if candidate_x >= x_curr_min && candidate_x <= x_curr_max {
+                                valid_x_values.push(Val::ValI(candidate_x));
+                            }
+                        }
+                        
+                        if !valid_x_values.is_empty() {
+                            let new_x_min = valid_x_values.iter().fold(valid_x_values[0], |acc, &x| if x < acc { x } else { acc });
+                            let new_x_max = valid_x_values.iter().fold(valid_x_values[0], |acc, &x| if x > acc { x } else { acc });
+                            
+                            // Try to tighten x bounds
+                            self.x.try_set_min(new_x_min, ctx)?;
+                            self.x.try_set_max(new_x_max, ctx)?;
+                        }
+                    }
+                }
             }
         }
         

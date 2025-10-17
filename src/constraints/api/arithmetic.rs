@@ -167,8 +167,14 @@ impl Model {
         let y_min = y.min_raw(&self.vars);
         let y_max = y.max_raw(&self.vars);
         
-        // Calculate bounds for modulo result
-        // This is conservative - the actual bounds depend on the signs of x and y
+        // IMPORTANT: We must create the result variable with bounds that account for
+        // potential pending deferred constraints. Since we can't know what those are,
+        // we use CONSERVATIVE bounds that encompass all possible modulo results.
+        
+        // For modulo, the result is always in range [0, |divisor|-1] when divisor > 0
+        // So we need to find the range that could result from ANY x in its range
+        // and ANY y in its range that isn't zero.
+        
         let mut min = Val::ValI(i32::MAX);
         let mut max = Val::ValI(i32::MIN);
         
@@ -207,6 +213,39 @@ impl Model {
                 Val::ValF(f) => Val::ValF(-f),
             };
             max = y_abs_max;
+        } else {
+            // CRITICAL FIX: Even with sampled bounds, we need to be MORE conservative
+            // to handle deferred constraints that might widen the operand domains.
+            // Expand the bounds to cover all possible modulo results.
+            match (min, max) {
+                (Val::ValI(_min_i), Val::ValI(_max_i)) => {
+                    // For integers, check what the worst-case modulo result could be
+                    // given the range of divisors
+                    if let (Val::ValI(y_min_i), Val::ValI(y_max_i)) = (y_min, y_max) {
+                        // The maximum modulo result magnitude is (max(|y|) - 1)
+                        let y_abs_max = if y_min_i.abs() > y_max_i.abs() {
+                            y_min_i.abs()
+                        } else {
+                            y_max_i.abs()
+                        };
+                        
+                        if y_abs_max > 0 {
+                            // Result can be [-(y_abs_max-1), y_abs_max-1]
+                            // Only expand if needed to encompass computed range
+                            let new_min = Val::ValI(-(y_abs_max - 1));
+                            let new_max = Val::ValI(y_abs_max - 1);
+                            
+                            if new_min < min {
+                                min = new_min;
+                            }
+                            if new_max > max {
+                                max = new_max;
+                            }
+                        }
+                    }
+                }
+                _ => {} // For floats, keep as-is
+            }
         }
         
         let s = self.new_var_unchecked(min, max);

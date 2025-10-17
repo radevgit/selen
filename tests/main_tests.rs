@@ -184,3 +184,7 @@ mod test_bool_xor;
 
 #[path = "../tests_all/test_element_computed_index.rs"]
 mod test_element_computed_index;
+
+#[path = "../tests_all/test_modulo_comprehensive.rs"]
+mod test_modulo_comprehensive;
+

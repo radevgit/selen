@@ -1200,9 +1200,31 @@ fn add_coefficients(a: &LinearCoefficient, b: &LinearCoefficient) -> LinearCoeff
 
 /// Post a constraint by storing its AST for later materialization
 /// This allows LP extraction BEFORE creating propagators
+/// 
+/// **SPECIAL HANDLING:** Binary equals constraints are materialized immediately
+/// to ensure they run before other constraints that depend on the variable's bounds.
+/// This fixes issues where deferred constraints like `x.eq(47)` aren't propagated
+/// before modulo/division constraints need to use x's bounds.
 #[inline]
 #[doc(hidden)]
 pub fn post_constraint_kind(model: &mut Model, kind: &ConstraintKind) -> PropId {
+    // **IMMEDIATE MATERIALIZATION (BEFORE CONVERSION):** Simple binary equals constraints
+    // Post these immediately so they propagate before other constraints run
+    // MUST BE DONE BEFORE try_convert_to_linear_ast() since that converts Var==Val to LinearInt
+    if let ConstraintKind::Binary { left, op, right } = kind {
+        if matches!(op, ComparisonOp::Eq) {
+            // Only immediate-materialize simple Var op Val patterns
+            let is_var_eq_val = matches!(left, ExprBuilder::Var(_)) && matches!(right, ExprBuilder::Val(_));
+            let is_val_eq_var = matches!(left, ExprBuilder::Val(_)) && matches!(right, ExprBuilder::Var(_));
+            
+            if is_var_eq_val || is_val_eq_var {
+                // Materialize immediately
+                let prop_id = materialize_constraint_kind(model, kind);
+                return prop_id;
+            }
+        }
+    }
+    
     // STEP 0: Try to convert expression-based constraints to linear AST
     let kind = try_convert_to_linear_ast(kind);
     
@@ -1229,6 +1251,48 @@ pub(crate) fn materialize_constraint_kind(model: &mut Model, kind: &ConstraintKi
     // This is the original post_constraint_kind logic that actually creates propagators
     match kind {
         ConstraintKind::Binary { left, op, right } => {
+            // **IMMEDIATE BOUNDS APPLICATION** for Var==Val constraints
+            // This ensures that deferred equals constraints immediately constrain the variable domain
+            // so that subsequent constraints (like modulo) see the correct bounds.
+            // This fixes the issue where constraints posted via `x.eq(47)` weren't applied until search time.
+            if matches!(op, ComparisonOp::Eq) {
+                if let (ExprBuilder::Var(var), ExprBuilder::Val(val)) = (left, right) {
+                    // Check bounds to avoid panic if memory limit was hit
+                    if var.to_index() < model.vars.count() {
+                        match &mut model.vars[*var] {
+                            crate::variables::Var::VarI(sparse_set) => {
+                                if let Val::ValI(i) = val {
+                                    sparse_set.remove_all_but(*i);
+                                }
+                            }
+                            crate::variables::Var::VarF(interval) => {
+                                if let Val::ValF(f) = val {
+                                    interval.min = *f;
+                                    interval.max = *f;
+                                }
+                            }
+                        }
+                    }
+                } else if let (ExprBuilder::Val(val), ExprBuilder::Var(var)) = (left, right) {
+                    // Check bounds to avoid panic if memory limit was hit
+                    if var.to_index() < model.vars.count() {
+                        match &mut model.vars[*var] {
+                            crate::variables::Var::VarI(sparse_set) => {
+                                if let Val::ValI(i) = val {
+                                    sparse_set.remove_all_but(*i);
+                                }
+                            }
+                            crate::variables::Var::VarF(interval) => {
+                                if let Val::ValF(f) = val {
+                                    interval.min = *f;
+                                    interval.max = *f;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
             // Optimization: Handle simple var-constant constraints directly
             if let (ExprBuilder::Var(var), ExprBuilder::Val(val)) = (left, right) {
                 return post_var_val_constraint(model, *var, op, *val);
