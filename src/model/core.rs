@@ -1512,15 +1512,28 @@ impl Model {
             });
         }
         
+        // Record start time for initialization time tracking
+        let init_start = std::time::Instant::now();
+        
+        // Capture variable type counts from the model before search
+        let int_var_count = self.vars.int_var_count;
+        let bool_var_count = self.vars.bool_var_count;
+        let float_var_count = self.vars.float_var_count;
+        let set_var_count = self.vars.set_var_count;
+        
         // For pure constraint satisfaction (no optimization objective), go directly to search
         let timeout = self.timeout_duration();
         let memory_limit = self.memory_limit_mb();
         let float_precision = self.float_precision_digits;
         let (vars, props, pending_lp) = self.prepare_for_search()?;
         
-        // Capture counts before moving to search
+        // Capture counts AFTER prepare_for_search (which materializes all constraints into propagators)
         let var_count = vars.count();
         let constraint_count = props.count();
+        let propagators_count = props.count();  // Same as constraint_count after materialization
+        
+        // Record initialization time (time spent setting up model, materializing constraints, etc.)
+        let init_time = init_start.elapsed();
         
         let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Enumerate, timeout, memory_limit, pending_lp, float_precision);
         
@@ -1536,16 +1549,16 @@ impl Model {
             peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
             lp_solver_used: false,
             lp_constraint_count: 0,
-                    lp_variable_count: 0,
-                    lp_stats: None,
-                    bool_variables: 0,
-                    float_variables: 0,
-                    init_time: std::time::Duration::ZERO,
-                    int_variables: 0,
-                    objective: 0.0,
-                    objective_bound: 0.0,
-                    propagators: 0,
-                    set_variables: 0,
+            lp_variable_count: 0,
+            lp_stats: None,
+            bool_variables: bool_var_count,
+            float_variables: float_var_count,
+            init_time: init_time,
+            int_variables: int_var_count,
+            objective: 0.0,
+            objective_bound: 0.0,
+            propagators: propagators_count,
+            set_variables: set_var_count,
         };
         
         // Check if search terminated due to timeout
