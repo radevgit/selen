@@ -257,6 +257,10 @@ impl ConstraintAwareOptimizer {
         let mut space = Space {
             vars: vars.clone(),
             props: props.clone(),
+            lp_solver_used: false,
+            lp_constraint_count: 0,
+            lp_variable_count: 0,
+            lp_stats: None,
         };
         
         // Create agenda with all propagators initially scheduled

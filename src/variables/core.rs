@@ -449,38 +449,64 @@ impl std::fmt::Debug for VarId {
 
 /// Collection of decision variables
 #[derive(Clone, Debug, Default)]
-pub struct Vars(Vec<Var>);
+pub struct Vars {
+    vars: Vec<Var>,
+    /// Count of integer variables
+    pub int_var_count: usize,
+    /// Count of boolean variables (subset of int_var_count where domain is [0,1])
+    pub bool_var_count: usize,
+    /// Count of float variables
+    pub float_var_count: usize,
+    /// Count of set variables (reserved for future use)
+    pub set_var_count: usize,
+}
 
 impl Vars {
     /// Create a new empty collection of variables.
     #[doc(hidden)]
     pub fn new() -> Self {
-        Vars(Vec::new())
+        Vars {
+            vars: Vec::new(),
+            int_var_count: 0,
+            bool_var_count: 0,
+            float_var_count: 0,
+            set_var_count: 0,
+        }
     }
 
     /// Create a new decision variable.
     #[doc(hidden)]
     pub fn new_var_with_bounds(&mut self, min: Val, max: Val) -> VarId {
-        let v = VarId(self.0.len());
+        let v = VarId(self.vars.len());
 
         match (min, max) {
             (Val::ValI(min), Val::ValI(max)) => {
                 // Create SparseSet for integer variables
                 let sparse_set = SparseSet::new(min, max);
-                self.0.push(Var::VarI(sparse_set))
+                self.vars.push(Var::VarI(sparse_set));
+                
+                // Track if it's a boolean variable (domain is [0, 1])
+                if min == 0 && max == 1 {
+                    self.bool_var_count += 1;
+                } else {
+                    self.int_var_count += 1;
+                }
             },
             (Val::ValF(min), Val::ValF(max)) => {
                 let interval = FloatInterval::new(min as f64, max as f64);
-                self.0.push(Var::VarF(interval))
+                self.vars.push(Var::VarF(interval));
+                self.float_var_count += 1;
             },
             // type coercion
             (Val::ValI(min), Val::ValF(max)) => {
                 let interval = FloatInterval::new(min as f64, max as f64);
-                self.0.push(Var::VarF(interval))
+                self.vars.push(Var::VarF(interval));
+                self.float_var_count += 1;
             },
             (Val::ValF(min), Val::ValI(max)) => {
                 let interval = FloatInterval::new(min as f64, max as f64);
-                self.0.push(Var::VarF(interval))
+                self.vars.push(Var::VarF(interval));
+                self.float_var_count += 1;
             },
         }
 
@@ -490,26 +516,36 @@ impl Vars {
     /// Create a new decision variable with custom float step size.
     #[doc(hidden)]
     pub fn new_var_with_bounds_and_step(&mut self, min: Val, max: Val, float_step: f64) -> VarId {
-        let v = VarId(self.0.len());
+        let v = VarId(self.vars.len());
 
         match (min, max) {
             (Val::ValI(min), Val::ValI(max)) => {
                 // Create SparseSet for integer variables - use unchecked to preserve invalid bounds
                 let sparse_set = SparseSet::new_unchecked(min, max);
-                self.0.push(Var::VarI(sparse_set))
+                self.vars.push(Var::VarI(sparse_set));
+                
+                // Track if it's a boolean variable (domain is [0, 1])
+                if min == 0 && max == 1 {
+                    self.bool_var_count += 1;
+                } else {
+                    self.int_var_count += 1;
+                }
             },
             (Val::ValF(min), Val::ValF(max)) => {
                 let interval = FloatInterval::with_step_unchecked(min as f64, max as f64, float_step);
-                self.0.push(Var::VarF(interval))
+                self.vars.push(Var::VarF(interval));
+                self.float_var_count += 1;
             },
             // type coercion
             (Val::ValI(min), Val::ValF(max)) => {
                 let interval = FloatInterval::with_step_unchecked(min as f64, max as f64, float_step);
-                self.0.push(Var::VarF(interval))
+                self.vars.push(Var::VarF(interval));
+                self.float_var_count += 1;
             },
             (Val::ValF(min), Val::ValI(max)) => {
                 let interval = FloatInterval::with_step_unchecked(min as f64, max as f64, float_step);
-                self.0.push(Var::VarF(interval))
+                self.vars.push(Var::VarF(interval));
+                self.float_var_count += 1;
             },
         }
 
@@ -533,9 +569,13 @@ impl Vars {
     /// ```
     #[doc(hidden)]
     pub fn new_var_with_values(&mut self, values: Vec<i32>) -> VarId {
-        let v = VarId(self.0.len());
+        let v = VarId(self.vars.len());
         let sparse_set = SparseSet::new_from_values(values);
-        self.0.push(Var::VarI(sparse_set));
+        self.vars.push(Var::VarI(sparse_set));
+        
+        // Track as integer variable (not boolean, since this is for arbitrary value sets)
+        self.int_var_count += 1;
+        
         v
     }
 
@@ -544,7 +584,7 @@ impl Vars {
     /// Get the first unassigned variable.
     #[doc(hidden)]
     pub fn get_unassigned_var(&self) -> Option<VarId> {
-        for (index, var) in self.0.iter().enumerate() {
+        for (index, var) in self.vars.iter().enumerate() {
             if !var.is_assigned() {
                 return Some(VarId(index));
             }
@@ -562,20 +602,20 @@ impl Vars {
     /// Get the number of variables in this collection.
     #[doc(hidden)]
     pub fn count(&self) -> usize {
-        self.0.len()
+        self.vars.len()
     }
 
     /// Get an iterator over all variables with their indices for validation.
     #[doc(hidden)]
     pub fn iter_with_indices(&self) -> impl Iterator<Item = (usize, &Var)> {
-        self.0.iter().enumerate()
+        self.vars.iter().enumerate()
     }
     
     /// Get the FloatInterval for a variable if it's a float variable.
     /// Returns None for integer variables.
     #[doc(hidden)]
     pub fn get_float_interval(&self, var_id: VarId) -> Option<&FloatInterval> {
-        match &self.0[var_id.0] {
+        match &self.vars[var_id.0] {
             Var::VarF(interval) => Some(interval),
             Var::VarI(_) => None,
         }
@@ -598,7 +638,7 @@ impl Vars {
     #[doc(hidden)]
     pub fn into_solution(self) -> Solution {
         // Extract values for each decision variable - convert to old Val type for now
-        let values: Vec<crate::variables::Val> = self.0.into_iter().map(|v| {
+        let values: Vec<crate::variables::Val> = self.vars.into_iter().map(|v| {
             let val = v.get_assignment();
             match val {
                 Val::ValI(i) => crate::variables::Val::ValI(i),
@@ -617,7 +657,7 @@ impl Vars {
     #[doc(hidden)]
     pub fn into_solution_with_stats(self, stats: crate::core::solution::SolveStats) -> Solution {
         // Extract values for each decision variable - convert to old Val type for now
-        let values: Vec<crate::variables::Val> = self.0.into_iter().map(|v| {
+        let values: Vec<crate::variables::Val> = self.vars.into_iter().map(|v| {
             let val = v.get_assignment();
             match val {
                 Val::ValI(i) => crate::variables::Val::ValI(i),
@@ -631,7 +671,7 @@ impl Vars {
     /// Save state of all sparse set variables for efficient backtracking
     #[doc(hidden)]
     pub fn save_sparse_states(&self) -> Vec<Option<SparseSetState>> {
-        self.0.iter().map(|var| {
+        self.vars.iter().map(|var| {
             match var {
                 Var::VarF(_) => None, // Float variables don't need state saving
                 Var::VarI(sparse_set) => Some(sparse_set.save_state()),
@@ -642,9 +682,9 @@ impl Vars {
     /// Restore state of all sparse set variables from saved state
     #[doc(hidden)]
     pub fn restore_sparse_states(&mut self, states: &[Option<SparseSetState>]) {
-        debug_assert_eq!(self.0.len(), states.len(), "State vector size mismatch");
+        debug_assert_eq!(self.vars.len(), states.len(), "State vector size mismatch");
         
-        for (var, state_opt) in self.0.iter_mut().zip(states.iter()) {
+        for (var, state_opt) in self.vars.iter_mut().zip(states.iter()) {
             match (var, state_opt) {
                 (Var::VarF(_), None) => {
                     // Float variables don't have saved state - nothing to restore
@@ -662,7 +702,7 @@ impl Vars {
     /// Iterator over variables for analysis
     #[doc(hidden)]
     pub fn iter(&self) -> std::slice::Iter<'_, Var> {
-        self.0.iter()
+        self.vars.iter()
     }
 }
 
@@ -671,13 +711,13 @@ impl Index<VarId> for Vars {
     type Output = Var;
 
     fn index(&self, index: VarId) -> &Self::Output {
-        &self.0[index.0]
+        &self.vars[index.0]
     }
 }
 
 impl IndexMut<VarId> for Vars {
     fn index_mut(&mut self, index: VarId) -> &mut Self::Output {
-        &mut self.0[index.0]
+        &mut self.vars[index.0]
     }
 }
 

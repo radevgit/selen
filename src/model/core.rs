@@ -435,20 +435,39 @@ impl Model {
             return Err(self.constraint_validation_errors[0].clone());
         }
         
+        // Record start time for initialization time tracking
+        let init_start = std::time::Instant::now();
+        
+        // Capture variable type counts from the model before optimization/search
+        let int_var_count = self.vars.int_var_count;
+        let bool_var_count = self.vars.bool_var_count;
+        let float_var_count = self.vars.float_var_count;
+        let set_var_count = self.vars.set_var_count;
+        
         // First try specialized optimization (Step 2.4 precision handling)
         match self.try_optimization_minimize(&objective) {
             Some(mut solution) => {
                 // Optimization succeeded - update with minimal stats since no search was performed
+                // Note: propagators_count will be set after prepare_for_search in fallback path
                 solution.stats = crate::core::solution::SolveStats {
                     propagation_count: 0,
                     node_count: 0,
                     solve_time: std::time::Duration::ZERO,
-                    variable_count: solution.stats.variable_count, // Preserve if already set
+                    variables: solution.stats.variables, // Preserve if already set
                     constraint_count: solution.stats.constraint_count, // Preserve if already set
                     peak_memory_mb: solution.stats.peak_memory_mb, // Preserve from optimization
                     lp_solver_used: false,
                     lp_constraint_count: 0,
+                    lp_variable_count: 0,
                     lp_stats: None,
+                    bool_variables: bool_var_count,
+                    float_variables: float_var_count,
+                    init_time: init_start.elapsed(),  // Time to run optimization
+                    int_variables: int_var_count,
+                    objective: 0.0,
+                    objective_bound: 0.0,
+                    propagators: 0,  // Would be available after prepare_for_search in fallback
+                    set_variables: set_var_count,
                 };
                 Ok(solution)
             }
@@ -459,9 +478,13 @@ impl Model {
                 let float_precision = self.float_precision_digits;
                 let (vars, props, pending_lp) = self.prepare_for_search()?;
 
-                // Capture counts before moving to search
+                // Capture counts AFTER prepare_for_search (which materializes all constraints into propagators)
                 let var_count = vars.count();
                 let constraint_count = props.count();
+                let propagators_count = props.count();  // Same as constraint_count after materialization
+                
+                // Record initialization time (time spent setting up model, materializing constraints, etc.)
+                let init_time = init_start.elapsed();
 
                 let mut search_iter = search_with_timeout_and_memory(vars, props, mode::Minimize::new(objective), timeout, memory_limit, pending_lp, float_precision);
                 let mut last_solution = None;
@@ -478,12 +501,21 @@ impl Model {
                     propagation_count: current_count,
                     node_count: search_iter.get_node_count(),
                     solve_time: search_iter.elapsed_time(),
-                    variable_count: var_count,
+                    variables: var_count,
                     constraint_count,
                     peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
                     lp_solver_used: false,
                     lp_constraint_count: 0,
+                    lp_variable_count: 0,
                     lp_stats: None,
+                    bool_variables: bool_var_count,
+                    float_variables: float_var_count,
+                    init_time: init_time,  // Use captured initialization time
+                    int_variables: int_var_count,
+                    objective: 0.0,
+                    objective_bound: 0.0,
+                    propagators: propagators_count,
+                    set_variables: set_var_count,
                 };
                 
                 // Check if search terminated due to timeout
@@ -565,6 +597,15 @@ impl Model {
             return Err(self.constraint_validation_errors[0].clone());
         }
         
+        // Record start time for initialization time tracking
+        let init_start = std::time::Instant::now();
+        
+        // Capture variable type counts from the model before optimization/search
+        let int_var_count = self.vars.int_var_count;
+        let bool_var_count = self.vars.bool_var_count;
+        let float_var_count = self.vars.float_var_count;
+        let set_var_count = self.vars.set_var_count;
+        
         // First try specialized optimization before falling back to opposite+minimize pattern
         match self.try_optimization_maximize(&objective) {
             Some(mut solution) => {
@@ -573,19 +614,27 @@ impl Model {
                     propagation_count: 0,
                     node_count: 0,
                     solve_time: std::time::Duration::ZERO,
-                    variable_count: solution.stats.variable_count, // Preserve if already set
+                    variables: solution.stats.variables, // Preserve if already set
                     constraint_count: solution.stats.constraint_count, // Preserve if already set
                     peak_memory_mb: solution.stats.peak_memory_mb, // Preserve from optimization
                     lp_solver_used: false,
                     lp_constraint_count: 0,
+                    lp_variable_count: 0,
                     lp_stats: None,
+                    bool_variables: bool_var_count,
+                    float_variables: float_var_count,
+                    init_time: init_start.elapsed(),  // Time to run optimization
+                    int_variables: int_var_count,
+                    objective: 0.0,
+                    objective_bound: 0.0,
+                    propagators: 0,  // Would be available after prepare_for_search in fallback
+                    set_variables: set_var_count,
                 };
                 Ok(solution)
             }
             None => {
                 // Optimization router failed - use search-based minimize(opposite)
-                // BUT: we need to correct the objective variable value in the result
-                // since minimize(opposite) negates the objective bounds
+                // The variable type counts will be preserved through the minimize() call
                 match self.minimize(objective.opposite()) {
                     Ok(solution) => {
 
@@ -1482,12 +1531,21 @@ impl Model {
             propagation_count: search_iter.get_propagation_count(),
             node_count: search_iter.get_node_count(),
             solve_time: search_iter.elapsed_time(),
-            variable_count: var_count,
+            variables: var_count,
             constraint_count,
             peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
             lp_solver_used: false,
             lp_constraint_count: 0,
-            lp_stats: None,
+                    lp_variable_count: 0,
+                    lp_stats: None,
+                    bool_variables: 0,
+                    float_variables: 0,
+                    init_time: std::time::Duration::ZERO,
+                    int_variables: 0,
+                    objective: 0.0,
+                    objective_bound: 0.0,
+                    propagators: 0,
+                    set_variables: 0,
         };
         
         // Check if search terminated due to timeout
@@ -1771,12 +1829,21 @@ impl Model {
                     propagation_count: 0,
                     node_count: 0,
                     solve_time: std::time::Duration::ZERO,
-                    variable_count: 0, // Unknown due to validation failure
+                    variables: 0, // Unknown due to validation failure
                     constraint_count: 0, // Unknown due to validation failure
                     peak_memory_mb: 0, // No memory used if validation failed
                     lp_solver_used: false,
                     lp_constraint_count: 0,
+                    lp_variable_count: 0,
                     lp_stats: None,
+                    bool_variables: 0,
+                    float_variables: 0,
+                    init_time: std::time::Duration::ZERO,
+                    int_variables: 0,
+                    objective: 0.0,
+                    objective_bound: 0.0,
+                    propagators: 0,
+                    set_variables: 0,
                 };
                 return (Vec::new(), stats);
             }
@@ -1799,12 +1866,21 @@ impl Model {
             propagation_count: search_iter.get_propagation_count(),
             node_count: search_iter.get_node_count(),
             solve_time: search_iter.elapsed_time(),
-            variable_count: var_count,
+            variables: var_count,
             constraint_count,
             peak_memory_mb: search_iter.get_memory_usage_mb(), // Direct MB usage
             lp_solver_used: false,
             lp_constraint_count: 0,
-            lp_stats: None,
+                    lp_variable_count: 0,
+                    lp_stats: None,
+                    bool_variables: 0,
+                    float_variables: 0,
+                    init_time: std::time::Duration::ZERO,
+                    int_variables: 0,
+                    objective: 0.0,
+                    objective_bound: 0.0,
+                    propagators: 0,
+                    set_variables: 0,
         };
         
         // Note: If timeout occurred, we return partial solutions found before timeout

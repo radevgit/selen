@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.3] - 2025-10-17
+- Improved Solver statistics to match standard statistics in MiniZinc
+
 ## [0.14.2] - 2025-10-17
 - Fix Variable-to-variable equality pattern
 

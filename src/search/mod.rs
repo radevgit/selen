@@ -17,6 +17,14 @@ pub mod branch;
 pub struct Space {
     pub vars: Vars,
     pub props: Propagators,
+    /// Whether LP solver was used at root node
+    pub lp_solver_used: bool,
+    /// Number of linear constraints extracted for LP
+    pub lp_constraint_count: usize,
+    /// Number of variables used in LP solver
+    pub lp_variable_count: usize,
+    /// Statistics from LP solver (if used)
+    pub lp_stats: Option<crate::lpsolver::types::LpStats>,
 }
 
 impl Space {
@@ -30,19 +38,30 @@ impl Space {
         self.props.get_node_count()
     }
 
-    /// Estimate memory usage for this space in KB (simple approximation)
-    pub fn estimate_memory_kb(&self) -> usize {
+    /// Estimate memory usage for this space in MB (simple approximation)
+    pub fn estimate_memory_mb(&self) -> usize {
         // Simple estimation based on variable count and domain complexity
         // Average variable with domain uses ~50-100 bytes
-        let var_memory_kb = (self.vars.count() * 100) / 1024; // ~100 bytes per variable
+        let var_memory_bytes = self.vars.count() * 100;
         
         // Propagators are more complex, estimate ~200-500 bytes each
-        let prop_memory_kb = (self.props.count() * 300) / 1024; // ~300 bytes per propagator
+        let prop_memory_bytes = self.props.count() * 300;
         
         // Base overhead for the space structure itself
-        let base_memory_kb = 1; // 1KB base
+        let base_memory_bytes = 1024; // 1KB base
         
-        base_memory_kb + var_memory_kb + prop_memory_kb
+        // CSP memory in MB
+        let csp_memory_mb = (base_memory_bytes + var_memory_bytes + prop_memory_bytes) / (1024 * 1024);
+        
+        // Add LP memory if LP solver was used
+        let lp_memory_mb = if let Some(ref lp_stats) = self.lp_stats {
+            lp_stats.peak_memory_mb as usize
+        } else {
+            0
+        };
+        
+        // Total memory in MB (minimum 1MB for rounding)
+        (csp_memory_mb + lp_memory_mb).max(1)
     }
 }
 
@@ -90,7 +109,22 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     // ===== LP SOLVER INTEGRATION (Root Node Only) =====
     // Try LP solving at root node if suitable linear system exists
     let (mut vars, props) = (vars, props);
+    
+    // Initialize LP tracking fields for Space
+    let mut lp_solver_used = false;
+    let mut lp_constraint_count = 0;
+    let mut lp_variable_count = 0;
+    let mut lp_stats_opt = None;
+    
     {
+        // Build linear system from TWO sources:
+        // 1. AST-extracted constraints (runtime API: x.add(y).eq(z))
+        //    - Extracted BEFORE materialization in post_constraint_kind()
+        //    - No propagators created yet (delayed materialization)
+        // 2. Propagator-scanned constraints (old API: m.add(x,y), m.mul(x,y))
+        //    - Old API creates propagators immediately (no AST)
+        //    - Must scan propagators to find linear relationships
+        // Result: Both APIs work together without duplication
         // Build linear system from TWO sources:
         // 1. AST-extracted constraints (runtime API: x.add(y).eq(z))
         //    - Extracted BEFORE materialization in post_constraint_kind()
@@ -176,6 +210,10 @@ pub fn search_with_timeout_and_memory<M: Mode>(
                 eprintln!("LP: Problem has {} vars, {} constraints", lp_problem.n_vars, lp_problem.n_constraints);
             }
             
+            // Capture LP statistics before solving
+            lp_constraint_count = linear_system.constraints.len();
+            lp_variable_count = linear_system.variables.len();
+            
             // Create LP config with tolerance based on float precision
             // Also propagate timeout and memory limits from solver config
             let tolerance = crate::variables::domain::float_interval::precision_to_step_size(float_precision_digits);
@@ -192,6 +230,10 @@ pub fn search_with_timeout_and_memory<M: Mode>(
                     if LP_DEBUG {
                         eprintln!("LP: Solution status = {:?}", solution.status);
                     }
+                    
+                    // Capture LP statistics from solution
+                    lp_solver_used = true;
+                    lp_stats_opt = Some(solution.stats.clone());
                     
                     // Check if LP found the problem infeasible
                     if solution.status == crate::lpsolver::LpStatus::Infeasible {
@@ -242,7 +284,14 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     if LP_DEBUG {
         eprintln!("LP: Starting initial propagation...");
     }
-    let Some((is_stalled, space)) = propagate(Space { vars, props }, agenda) else {
+    let Some((is_stalled, space)) = propagate(Space { 
+        vars, 
+        props,
+        lp_solver_used,
+        lp_constraint_count,
+        lp_variable_count,
+        lp_stats: lp_stats_opt,
+    }, agenda) else {
         if LP_DEBUG {
             eprintln!("LP: Initial propagation returned None (infeasible)");
         }
@@ -329,12 +378,21 @@ impl<M: Mode> Iterator for Search<M> {
                     propagation_count: space.get_propagation_count(),
                     node_count: space.get_node_count(),
                     solve_time: std::time::Duration::ZERO, // TODO: Track solve time in Space
-                    variable_count: space.vars.count(),
+                    variables: space.vars.count(),
                     constraint_count: space.props.count(),
-                    peak_memory_mb: space.estimate_memory_kb() / 1024, // Convert KB to MB
-                    lp_solver_used: false,
-                    lp_constraint_count: 0,
-                    lp_stats: None,
+                    peak_memory_mb: space.estimate_memory_mb(),
+                    int_variables: space.vars.int_var_count,
+                    bool_variables: space.vars.bool_var_count,
+                    float_variables: space.vars.float_var_count,
+                    set_variables: space.vars.set_var_count,
+                    propagators: space.props.count(),
+                    lp_solver_used: space.lp_solver_used,
+                    lp_constraint_count: space.lp_constraint_count,
+                    lp_variable_count: space.lp_variable_count,
+                    lp_stats: space.lp_stats,
+                    init_time: std::time::Duration::ZERO,
+                    objective: 0.0,
+                    objective_bound: 0.0,
                 };
                 space.vars.into_solution_with_stats(stats)
             }),
@@ -572,12 +630,21 @@ impl<M: Mode, B: Iterator<Item = (Space, crate::constraints::props::PropId)>> It
                             propagation_count: space.get_propagation_count(),
                             node_count: space.get_node_count(),
                             solve_time: std::time::Duration::ZERO, // TODO: Track solve time in Engine
-                            variable_count: space.vars.count(),
+                            variables: space.vars.count(),
                             constraint_count: space.props.count(),
-                            peak_memory_mb: space.estimate_memory_kb() / 1024, // Convert KB to MB
-                            lp_solver_used: false,
-                            lp_constraint_count: 0,
-                            lp_stats: None,
+                            peak_memory_mb: space.estimate_memory_mb(),
+                            int_variables: space.vars.int_var_count,
+                            bool_variables: space.vars.bool_var_count,
+                            float_variables: space.vars.float_var_count,
+                            set_variables: space.vars.set_var_count,
+                            propagators: space.props.count(),
+                            lp_solver_used: space.lp_solver_used,
+                            lp_constraint_count: space.lp_constraint_count,
+                            lp_variable_count: space.lp_variable_count,
+                            lp_stats: space.lp_stats,
+                            init_time: std::time::Duration::ZERO,
+                            objective: 0.0,
+                            objective_bound: 0.0,
                         };
                         return Some(space.vars.into_solution_with_stats(stats));
                     }

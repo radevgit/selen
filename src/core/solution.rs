@@ -42,7 +42,7 @@
 //! println!("Solve time: {:.3}ms", stats.solve_time.as_secs_f64() * 1000.0);
 //! println!("Peak memory usage: {}MB", stats.peak_memory_mb);
 //! println!("Problem size: {} variables, {} constraints", 
-//!          stats.variable_count, stats.constraint_count);
+//!          stats.variables, stats.constraint_count);
 //!
 //! // Use convenience analysis methods
 //! println!("Search efficiency: {:.1} propagations/node", stats.efficiency());
@@ -83,7 +83,7 @@
 //! println!("  Peak memory: {}MB", stats.peak_memory_mb);
 //! 
 //! println!("Problem characteristics:");
-//! println!("  Variables: {}", stats.variable_count);
+//! println!("  Variables: {}", stats.variables);
 //! println!("  Constraints: {}", stats.constraint_count);
 //! 
 //! // Use all convenience analysis methods
@@ -141,28 +141,67 @@ impl std::error::Error for ValueAccessError {}
 /// Statistics collected during the solving process.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SolveStats {
+    // ===== Search Metrics =====
     /// Number of propagation steps performed during solving
     pub propagation_count: usize,
     /// Number of search nodes (branching points) explored during solving
     pub node_count: usize,
-    /// Total time spent solving
+
+    // ===== Timing =====
+    /// Total time spent solving (in seconds)
     pub solve_time: Duration,
-    /// Number of variables in the problem
-    pub variable_count: usize,
+    /// Initialisation time (in seconds)
+    pub init_time: Duration,
+
+    // ===== Memory =====
+    /// Peak memory usage during solving (in MB)
+    /// 
+    /// This is the TOTAL peak memory used, including:
+    /// - CSP solver memory (search stack, variables, propagators)
+    /// - LP solver memory (if LP was used)
+    /// 
+    /// For breakdown of LP-specific memory, see lp_stats.peak_memory_mb
+    pub peak_memory_mb: usize,
+
+    // ===== Variable Counts =====
+    /// Total number of variables
+    pub variables: usize,
+    /// Number of integer variables created
+    pub int_variables: usize,
+    /// Number of bool variables created
+    pub bool_variables: usize,
+    /// Number of float variables created
+    pub float_variables: usize,
+    /// Number of set variables created
+    pub set_variables: usize,
+
+    // ===== Constraint Metrics =====
     /// Number of constraints in the problem
     pub constraint_count: usize,
-    /// Peak memory usage estimate during solving (in MB)
-    pub peak_memory_mb: usize,
+    /// Number of propagators created
+    pub propagators: usize,
+
+    // ===== Objective =====
+    /// Current objective value
+    pub objective: f64,
+    /// Dual bound on the objective value
+    pub objective_bound: f64,
+
+    // ===== LP Solver Integration =====
     /// Whether the LP solver was used during solving
     pub lp_solver_used: bool,
     /// Number of linear constraints extracted for LP solver
     pub lp_constraint_count: usize,
+    /// Number of variables used in LP solver (subset of total variables that appear in linear constraints)
+    pub lp_variable_count: usize,
     /// Statistics from LP solver (if used)
     pub lp_stats: Option<crate::lpsolver::types::LpStats>,
 }
 
 impl SolveStats {
-    /// Create new statistics with all fields
+    /// Create new statistics with core fields (for backward compatibility)
+    /// 
+    /// Other fields are set to default values.
     pub fn new(
         propagation_count: usize,
         node_count: usize,
@@ -175,11 +214,68 @@ impl SolveStats {
             propagation_count,
             node_count,
             solve_time,
-            variable_count,
+            variables: variable_count,
             constraint_count,
             peak_memory_mb,
+            init_time: Duration::ZERO,
+            
+            int_variables: 0,
+            bool_variables: 0,
+            float_variables: 0,
+            set_variables: 0,
+            
+            propagators: 0,
+            objective: 0.0,
+            objective_bound: 0.0,
+            
             lp_solver_used: false,
             lp_constraint_count: 0,
+            lp_variable_count: 0,
+            lp_stats: None,
+        }
+    }
+
+    /// Create new statistics with all fields
+    pub fn with_all_fields(
+        propagation_count: usize,
+        node_count: usize,
+        solve_time: Duration,
+        init_time: Duration,
+        variables: usize,
+        int_variables: usize,
+        bool_variables: usize,
+        float_variables: usize,
+        set_variables: usize,
+        constraint_count: usize,
+        propagators: usize,
+        peak_memory_mb: usize,
+        objective: f64,
+        objective_bound: f64,
+    ) -> Self {
+        Self {
+            propagation_count,
+            node_count,
+            
+            solve_time,
+            init_time,
+            
+            peak_memory_mb,
+            
+            variables,
+            int_variables,
+            bool_variables,
+            float_variables,
+            set_variables,
+            
+            constraint_count,
+            propagators,
+            
+            objective,
+            objective_bound,
+            
+            lp_solver_used: false,
+            lp_constraint_count: 0,
+            lp_variable_count: 0,
             lp_stats: None,
         }
     }
@@ -214,20 +310,71 @@ impl SolveStats {
     /// Display a summary of the solving statistics
     pub fn display_summary(&self) {
         println!("=== Solving Statistics ===");
-        println!("Time: {:.3}ms", self.solve_time.as_secs_f64() * 1000.0);
-        println!("Memory: {}MB peak usage", self.peak_memory_mb);
-        println!("Problem: {} variables, {} constraints", self.variable_count, self.constraint_count);
-        println!("Search: {} propagations, {} nodes", 
-                 self.propagation_count, self.node_count);
         
-        if self.node_count > 0 {
-            println!("Efficiency: {:.1} propagations/node", self.efficiency());
-        } else {
-            println!("Efficiency: Pure propagation (no search required)");
+        // Timing
+        println!("Timing:");
+        println!("  Solve time: {:.3}ms", self.solve_time.as_secs_f64() * 1000.0);
+        println!("  Init time: {:.3}ms", self.init_time.as_secs_f64() * 1000.0);
+        
+        // Memory
+        println!("Memory:");
+        println!("  Total peak usage: {}MB", self.peak_memory_mb);
+        
+        // LP Solver information (if used)
+        if self.lp_solver_used {
+            if let Some(ref lp_stats) = self.lp_stats {
+                println!("    (includes LP solver: {:.2}MB)", lp_stats.peak_memory_mb);
+            }
         }
         
-        if self.propagation_count > 0 {
-            println!("Performance: {:.2}μs/propagation", 
+        // Problem characteristics
+        println!("Problem:");
+        println!("  Total variables: {}", self.variables);
+        if self.int_variables > 0 {
+            println!("    - Integer: {}", self.int_variables);
+        }
+        if self.bool_variables > 0 {
+            println!("    - Bool: {}", self.bool_variables);
+        }
+        if self.float_variables > 0 {
+            println!("    - Float: {}", self.float_variables);
+        }
+        if self.set_variables > 0 {
+            println!("    - Set: {}", self.set_variables);
+        }
+        println!("  Constraints: {}", self.constraint_count);
+        println!("  Propagators: {}", self.propagators);
+        
+        // LP Solver information (if used)
+        if self.lp_solver_used {
+            println!("LP Solver:");
+            println!("  Linear constraints: {}", self.lp_constraint_count);
+            println!("  Linear variables: {}", self.lp_variable_count);
+        }
+        
+        // Search metrics
+        println!("Search:");
+        println!("  Nodes: {}", self.node_count);
+        println!("  Propagations: {}", self.propagation_count);
+        
+        // Objective (if applicable)
+        if self.objective != 0.0 || self.objective_bound != 0.0 {
+            println!("Objective:");
+            println!("  Current value: {}", self.objective);
+            println!("  Bound: {}", self.objective_bound);
+        }
+        
+        // Efficiency analysis
+        if self.node_count > 0 {
+            println!("Efficiency:");
+            println!("  {:.1} propagations/node", self.efficiency());
+            println!("  {:.2}μs/propagation", 
+                     self.time_per_propagation().as_nanos() as f64 / 1000.0);
+            println!("  {:.2}μs/node", 
+                     self.time_per_node().as_nanos() as f64 / 1000.0);
+        } else if self.propagation_count > 0 {
+            println!("Efficiency: Pure propagation (no search required)");
+            println!("  {:.2}μs/propagation", 
                      self.time_per_propagation().as_nanos() as f64 / 1000.0);
         }
         println!("==========================");

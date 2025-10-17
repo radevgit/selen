@@ -286,7 +286,7 @@ fn test_solve_stats_new() {
     assert_eq!(stats.propagation_count, 100);
     assert_eq!(stats.node_count, 50);
     assert_eq!(stats.solve_time, Duration::from_secs(1));
-    assert_eq!(stats.variable_count, 10);
+    assert_eq!(stats.variables, 10);
     assert_eq!(stats.constraint_count, 20);
     assert_eq!(stats.peak_memory_mb, 512);
 }

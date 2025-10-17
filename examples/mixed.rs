@@ -32,27 +32,51 @@ fn main() {
             println!("wn = {:?}", sol[wn]);
             println!("hn = {:?}", sol[hn]);
             println!("Total (wn + hn) = {:?}", sol[objective]);
-            println!("\nSolver Statistics:");
-            println!("==================");
+            
+            // Extract objective value from solution
+            let obj_value = match sol[objective] {
+                Val::ValI(v) => v as f64,
+                Val::ValF(v) => v,
+            };
+            
+            println!("\n========== Solver Statistics ==========\n");
             let stats = sol.stats();
-            println!("Propagation count: {}", stats.propagation_count);
-            println!("Node count: {}", stats.node_count);
-            println!("Solve time: {:?}", stats.solve_time);
-            println!("Variable count: {}", stats.variable_count);
-            println!("Constraint count: {}", stats.constraint_count);
+            
+            println!("Propagations: {}", stats.propagation_count);
+            println!("Nodes: {}", stats.node_count);
+            println!("Objective: {}", obj_value);
+            println!("Objective bound: {}", stats.objective_bound);
+            
+            println!("Total variables: {}", stats.variables);
+            println!("Integer variables: {}", stats.int_variables);
+            println!("Boolean variables: {}", stats.bool_variables);
+            println!("Float variables: {}", stats.float_variables);
+            
+            println!("Constraints: {}", stats.constraint_count);
+            println!("Propagators: {}", stats.propagators);
+            
+            println!("Solve time (ms): {:.3}", stats.solve_time.as_secs_f64() * 1000.0);
+            println!("Init time (ms): {:.3}", stats.init_time.as_secs_f64() * 1000.0);
             println!("Peak memory (MB): {}", stats.peak_memory_mb);
+            
             println!("LP solver used: {}", stats.lp_solver_used);
-            println!("LP constraint count: {}", stats.lp_constraint_count);
+            println!("LP constraints: {}", stats.lp_constraint_count);
+            println!("LP variables: {}", stats.lp_variable_count);
+            
             if let Some(ref lp_stats) = stats.lp_stats {
-                println!("\nLP Solver Statistics:");
-                println!("  Total solve time: {:.2}ms", lp_stats.solve_time_ms);
-                println!("  Phase I time: {:.2}ms", lp_stats.phase1_time_ms);
-                println!("  Phase II time: {:.2}ms", lp_stats.phase2_time_ms);
-                println!("  Phase I iterations: {}", lp_stats.phase1_iterations);
-                println!("  Phase II iterations: {}", lp_stats.phase2_iterations);
-                println!("  Variables: {}", lp_stats.n_variables);
-                println!("  Constraints: {}", lp_stats.n_constraints);
+                println!("LP solve time (ms): {:.2}", lp_stats.solve_time_ms);
+                println!("LP phase1 time (ms): {:.2}", lp_stats.phase1_time_ms);
+                println!("LP phase2 time (ms): {:.2}", lp_stats.phase2_time_ms);
+                println!("LP phase1 iterations: {}", lp_stats.phase1_iterations);
+                println!("LP phase2 iterations: {}", lp_stats.phase2_iterations);
+                println!("LP factorizations: {}", lp_stats.factorizations);
+                println!("LP n_variables: {}", lp_stats.n_variables);
+                println!("LP n_constraints: {}", lp_stats.n_constraints);
+                println!("LP peak memory (MB): {:.2}", lp_stats.peak_memory_mb);
+                println!("LP phase1 needed: {}", lp_stats.phase1_needed);
             }
+            
+            println!("\n======================================\n");
         }
         Err(e) => {
             println!("No solution found: {:?}", e);
