@@ -19,6 +19,15 @@ let y = m.float(0.0, 100.0);           // Single: float variable from 0.0 to 100
 let coords = m.floats(3, 0.0, 1.0);    // Array: 3 float variables (x, y, z coordinates)
 let b = m.bool();                      // Single: boolean variable (0 or 1)
 let flags = m.bools(8);                // Array: 8 boolean variables
+
+// Multidimensional arrays
+let matrix = m.ints_2d(3, 4, 1, 10);        // 2D: 3×4 matrix of ints [1..10]
+let board = m.floats_2d(5, 5, 0.0, 1.0);    // 2D: 5×5 matrix of floats [0..1]
+let flags_2d = m.bools_2d(8, 8);            // 2D: 8×8 matrix of booleans
+let cube = m.ints_3d(2, 3, 4, 1, 10);       // 3D: 2×3×4 cube of ints [1..10]
+let temps = m.floats_3d(12, 24, 60, -10.0, 50.0); // 3D: 12×24×60 cube of floats
+let states = m.bools_3d(4, 5, 6);           // 3D: 4×5×6 cube of booleans
+
 ```
 
 **Constraint API**
@@ -48,7 +57,11 @@ let total = m.sum(&[x, y, z]);         // sum of variables
 m.alldiff(&[x, y, z]);                 // all variables different
 m.alleq(&[x, y, z]);                   // all variables equal
 m.element(&array, index, value);       // array[index] == value
+m.element_2d(&matrix, row_idx, col_idx, value);  // matrix[row][col] == value
+m.element_3d(&cube, d_idx, r_idx, c_idx, value); // cube[d][r][c] == value
 m.table(&vars, tuples);                // table constraint (valid tuples)
+m.table_2d(&matrix, tuples);           // each row matches a valid tuple
+m.table_3d(&cube, tuples);             // each row in each layer matches a valid tuple
 m.count(&vars, target_var, count_var); // count how many vars equal target_var
 m.between(lower, middle, upper);       // lower <= middle <= upper
 m.at_least(&vars, value, n);           // at least n vars == value
@@ -134,7 +147,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-selen = "0.14"
+selen = "0.15"
 ```
 
 ## Examples

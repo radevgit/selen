@@ -192,4 +192,164 @@ impl Model {
     pub fn bools(&mut self, n: usize) -> Vec<VarId> {
         self.int_vars(n, 0, 1).collect()
     }
+
+    // ========================================================================
+    // 2D ARRAY VARIABLE CREATION
+    // ========================================================================
+
+    /// Create a 2D array of integer variables with the same bounds.
+    /// 
+    /// Creates a 2D grid of `rows × cols` integer variables, each with the same bounds.
+    /// Useful for grid-based problems like Sudoku, scheduling matrices, or spatial grids.
+    ///
+    /// # Arguments
+    /// * `rows` - Number of rows
+    /// * `cols` - Number of columns
+    /// * `min` - Minimum value for each variable (inclusive)
+    /// * `max` - Maximum value for each variable (inclusive)
+    ///
+    /// # Returns
+    /// A `Vec<Vec<VarId>>` representing the 2D grid
+    ///
+    /// # Example
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let grid = m.ints_2d(3, 4, 1, 10);  // 3×4 grid, each var in [1..10]
+    /// let sudoku = m.ints_2d(9, 9, 1, 9); // 9×9 Sudoku grid
+    /// ```
+    pub fn ints_2d(&mut self, rows: usize, cols: usize, min: i32, max: i32) -> Vec<Vec<VarId>> {
+        (0..rows)
+            .map(|_| self.ints(cols, min, max))
+            .collect()
+    }
+
+    /// Create a 2D array of floating-point variables with the same bounds.
+    /// 
+    /// Creates a 2D grid of `rows × cols` floating-point variables.
+    ///
+    /// # Arguments
+    /// * `rows` - Number of rows
+    /// * `cols` - Number of columns
+    /// * `min` - Minimum value for each variable (inclusive)
+    /// * `max` - Maximum value for each variable (inclusive)
+    ///
+    /// # Returns
+    /// A `Vec<Vec<VarId>>` representing the 2D grid
+    ///
+    /// # Example
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let temps = m.floats_2d(5, 10, 0.0, 100.0); // 5×10 temperature matrix
+    /// ```
+    pub fn floats_2d(&mut self, rows: usize, cols: usize, min: f64, max: f64) -> Vec<Vec<VarId>> {
+        (0..rows)
+            .map(|_| self.floats(cols, min, max))
+            .collect()
+    }
+
+    /// Create a 2D array of boolean variables.
+    /// 
+    /// Creates a 2D grid of `rows × cols` boolean variables (0 or 1).
+    ///
+    /// # Arguments
+    /// * `rows` - Number of rows
+    /// * `cols` - Number of columns
+    ///
+    /// # Returns
+    /// A `Vec<Vec<VarId>>` representing the 2D grid of booleans
+    ///
+    /// # Example
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let board = m.bools_2d(8, 8);  // 8×8 boolean board
+    /// ```
+    pub fn bools_2d(&mut self, rows: usize, cols: usize) -> Vec<Vec<VarId>> {
+        (0..rows)
+            .map(|_| self.bools(cols))
+            .collect()
+    }
+
+    // ========================================================================
+    // 3D ARRAY VARIABLE CREATION
+    // ========================================================================
+
+    /// Create a 3D array of integer variables with the same bounds.
+    /// 
+    /// Creates a 3D cube of `depth × rows × cols` integer variables.
+    /// Useful for 3D scheduling, spatial problems, or multi-layer grids.
+    ///
+    /// # Arguments
+    /// * `depth` - Number of layers/depth
+    /// * `rows` - Number of rows per layer
+    /// * `cols` - Number of columns per layer
+    /// * `min` - Minimum value for each variable (inclusive)
+    /// * `max` - Maximum value for each variable (inclusive)
+    ///
+    /// # Returns
+    /// A `Vec<Vec<Vec<VarId>>>` representing the 3D cube
+    ///
+    /// # Example
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let cube = m.ints_3d(4, 5, 6, 1, 10);  // 4×5×6 cube, each var in [1..10]
+    /// ```
+    pub fn ints_3d(&mut self, depth: usize, rows: usize, cols: usize, min: i32, max: i32) -> Vec<Vec<Vec<VarId>>> {
+        (0..depth)
+            .map(|_| self.ints_2d(rows, cols, min, max))
+            .collect()
+    }
+
+    /// Create a 3D array of floating-point variables with the same bounds.
+    /// 
+    /// Creates a 3D cube of `depth × rows × cols` floating-point variables.
+    ///
+    /// # Arguments
+    /// * `depth` - Number of layers/depth
+    /// * `rows` - Number of rows per layer
+    /// * `cols` - Number of columns per layer
+    /// * `min` - Minimum value for each variable (inclusive)
+    /// * `max` - Maximum value for each variable (inclusive)
+    ///
+    /// # Returns
+    /// A `Vec<Vec<Vec<VarId>>>` representing the 3D cube
+    ///
+    /// # Example
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let temps = m.floats_3d(12, 24, 60, -10.0, 50.0); // 12×24×60 3D temp data
+    /// ```
+    pub fn floats_3d(&mut self, depth: usize, rows: usize, cols: usize, min: f64, max: f64) -> Vec<Vec<Vec<VarId>>> {
+        (0..depth)
+            .map(|_| self.floats_2d(rows, cols, min, max))
+            .collect()
+    }
+
+    /// Create a 3D array of boolean variables.
+    /// 
+    /// Creates a 3D cube of `depth × rows × cols` boolean variables (0 or 1).
+    ///
+    /// # Arguments
+    /// * `depth` - Number of layers/depth
+    /// * `rows` - Number of rows per layer
+    /// * `cols` - Number of columns per layer
+    ///
+    /// # Returns
+    /// A `Vec<Vec<Vec<VarId>>>` representing the 3D cube of booleans
+    ///
+    /// # Example
+    /// ```
+    /// use selen::prelude::*;
+    /// let mut m = Model::default();
+    /// let cube = m.bools_3d(4, 5, 6);  // 4×5×6 cube of booleans
+    /// ```
+    pub fn bools_3d(&mut self, depth: usize, rows: usize, cols: usize) -> Vec<Vec<Vec<VarId>>> {
+        (0..depth)
+            .map(|_| self.bools_2d(rows, cols))
+            .collect()
+    }
 }
