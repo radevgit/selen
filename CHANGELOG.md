@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0] - 2025-10-18
+- Multydimentional arrays and element_2d, table_2d
+
 ## [0.14.3] - 2025-10-17
 - Improved Solver statistics to match standard statistics in MiniZinc
 
