@@ -68,6 +68,7 @@ m.at_least(&vars, value, n);           // at least n vars == value
 m.at_most(&vars, value, n);            // at most n vars == value
 m.exactly(&vars, value, n);            // exactly n vars == value
 m.gcc(&vars, values, counts);          // global cardinality constraint
+m.cumulative(&starts, &durations, &demands, capacity);  // cumulative resource constraint
 
 // Boolean operations (return boolean variables)
 let and_result = m.bool_and(&[a, b]);  // a AND b
@@ -112,7 +113,8 @@ m.bool_lin_le_reif(&[1, 1], &[a, b], 1, c);  // c ↔ (a + b <= 1)
 m.bool_lin_ne_reif(&[1, 1], &[a, b], 0, c);  // c ↔ (a + b != 0)
 
 // Type conversion functions (from constraints::functions)
-let float_result = to_float(&mut m, int_var);      // convert int to float
+let float_result = int2float(&mut m, int_var);      // convert int to float
+let int_result = bool2int(&mut m, bool_var);        // convert bool to int
 let floor_result = floor(&mut m, float_var);       // floor(float_var)
 let ceil_result = ceil(&mut m, float_var);         // ceil(float_var)
 let round_result = round(&mut m, float_var);       // round(float_var)

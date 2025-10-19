@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.1] - 2025-10-19
+- Added bool2int and exposed some functions.
+
 ## [0.15.0] - 2025-10-18
 - Multydimentional arrays and element_2d, table_2d
 

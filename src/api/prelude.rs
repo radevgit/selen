@@ -33,7 +33,7 @@ pub use crate::constraints::functions::{
     // Advanced constraints
     element, table, gcc, cumulative,
     // Type conversion
-    to_float, floor, ceil, round,
+    int2float, bool2int, floor, ceil, round,
 };
 
 // Convenient constructor functions for common values

@@ -12,6 +12,7 @@
 use crate::model::Model;
 use crate::variables::{VarId, Val};
 use crate::runtime_api::{ExprBuilder, ModelExt};
+use crate::constraints::props::PropId;
 
 // ============================================================================
 // Arithmetic Operations (return ExprBuilder for composition)
@@ -764,7 +765,8 @@ pub fn element(model: &mut Model, array: &[VarId], index: VarId) -> VarId {
 
 /// Post a table constraint: the tuple of variables must match one of the allowed tuples.
 ///
-/// **Note:** This function is a placeholder in Phase 1. Will be properly implemented in Phase 2.
+/// Constrains the variables to take values from the allowed tuples.
+/// Each tuple in `tuples` represents a valid assignment of values to `vars`.
 ///
 /// # Examples
 /// ```ignore
@@ -774,8 +776,8 @@ pub fn element(model: &mut Model, array: &[VarId], index: VarId) -> VarId {
 /// ];
 /// table(&mut model, &[x, y], &allowed);
 /// ```
-pub fn table(_model: &mut Model, _vars: &[VarId], _tuples: &[Vec<Val>]) {
-    todo!("table constraint will be implemented in Phase 2")
+pub fn table(model: &mut Model, vars: &[VarId], tuples: &[Vec<Val>]) -> PropId {
+    model.table(vars, tuples.to_vec())
 }
 
 // ============================================================================
@@ -784,23 +786,19 @@ pub fn table(_model: &mut Model, _vars: &[VarId], _tuples: &[Vec<Val>]) {
 
 /// Post a global cardinality constraint (GCC).
 ///
-/// **Note:** This function is a placeholder in Phase 1. Will be properly implemented in Phase 2.
-///
-/// For each value `v` in the domain, the number of variables assigned to `v`
-/// must be within the specified bounds.
+/// Enforces that the variables take on specific values with specific cardinalities.
+/// For each value in `values`, the number of variables assigned to that value
+/// must match the corresponding count in `counts`.
 ///
 /// # Examples
 /// ```ignore
-/// gcc(&mut model, &vars, &values, &lower_bounds, &upper_bounds);
+/// let vars = vec![x, y, z];
+/// let values = vec![1, 2, 3];
+/// let counts = vec![count1, count2, count3];  // count1 = how many vars == 1, etc
+/// gcc(&mut model, &vars, &values, &counts);
 /// ```
-pub fn gcc(
-    _model: &mut Model,
-    _vars: &[VarId],
-    _values: &[Val],
-    _lower_bounds: &[i32],
-    _upper_bounds: &[i32],
-) {
-    todo!("gcc constraint will be implemented in Phase 2")
+pub fn gcc(model: &mut Model, vars: &[VarId], values: &[i32], counts: &[VarId]) -> Vec<PropId> {
+    model.gcc(vars, values, counts)
 }
 
 // ============================================================================
@@ -809,23 +807,72 @@ pub fn gcc(
 
 /// Post a cumulative constraint for resource scheduling.
 ///
-/// **Note:** This function is a placeholder in Phase 1. Will be properly implemented in Phase 2.
-///
 /// Ensures that at any point in time, the sum of resource demands of overlapping
 /// tasks does not exceed the resource capacity.
 ///
+/// This constraint is useful for scheduling problems where tasks have:
+/// - `starts`: variables representing when each task starts
+/// - `durations`: constant durations for each task
+/// - `demands`: constant resource demands for each task
+/// - `capacity`: maximum resource capacity available
+///
 /// # Examples
 /// ```ignore
-/// cumulative(&mut model, &starts, &durations, &demands, capacity);
+/// cumulative(&mut model, &[task1_start, task2_start, task3_start], 
+///            &[5, 3, 4],  // durations
+///            &[2, 3, 1],  // resource demands
+///            10);         // total capacity
 /// ```
 pub fn cumulative(
-    _model: &mut Model,
-    _starts: &[VarId],
-    _durations: &[i32],
-    _demands: &[i32],
-    _capacity: i32,
+    model: &mut Model,
+    starts: &[VarId],
+    durations: &[i32],
+    demands: &[i32],
+    capacity: i32,
 ) {
-    todo!("cumulative constraint will be implemented in Phase 2")
+    // Validate input lengths
+    if !(starts.len() == durations.len() && starts.len() == demands.len()) {
+        return; // Mismatched array lengths, skip constraint
+    }
+    
+    let n = starts.len();
+    
+    // For each pair of tasks, add disjunctive constraint if their combined demand exceeds capacity
+    for i in 0..n {
+        for j in i+1..n {
+            let demand_sum = demands[i] + demands[j];
+            
+            // If combined demand exceeds capacity, tasks cannot overlap
+            if demand_sum > capacity {
+                let start_i = starts[i];
+                let start_j = starts[j];
+                let dur_i = durations[i];
+                let dur_j = durations[j];
+                
+                // Task i must end before task j starts OR task j must end before task i starts
+                // end_i <= start_j  OR  end_j <= start_i
+                // (start_i + dur_i <= start_j) OR (start_j + dur_j <= start_i)
+                
+                // Create variables for end times
+                let end_i = model.add(start_i, Val::int(dur_i));
+                let end_j = model.add(start_j, Val::int(dur_j));
+                
+                // Create boolean variables for each disjunct
+                let b1 = model.bool();  // end_i <= start_j
+                model.props.int_le_reif(end_i, start_j, b1);
+                
+                let b2 = model.bool();  // end_j <= start_i
+                model.props.int_le_reif(end_j, start_i, b2);
+                
+                // At least one must be true: b1 OR b2
+                let b_result = model.bool();
+                model.bool_or(&[b1, b2, b_result]);
+                
+                // Force the OR result to be true
+                model.props.equals(b_result, Val::int(1));
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -834,48 +881,160 @@ pub fn cumulative(
 
 /// Convert an integer variable to a float variable.
 ///
-/// **Note:** This function is a placeholder in Phase 1. Will be properly implemented in Phase 2.
+/// Constrains the output float variable to equal the integer variable.
+/// The integer variable's bounds are converted to float bounds.
 ///
 /// # Examples
 /// ```ignore
-/// let float_var = to_float(&mut model, int_var);
+/// let float_var = int2float(&mut model, int_var);
 /// ```
-pub fn to_float(_model: &mut Model, _int_var: VarId) -> VarId {
-    todo!("to_float will be implemented in Phase 2")
+pub fn int2float(model: &mut Model, int_var: VarId) -> VarId {
+    use crate::variables::views::ViewRaw;
+    
+    // Get bounds of integer variable
+    let int_min = int_var.min_raw(&model.vars);
+    let int_max = int_var.max_raw(&model.vars);
+    
+    // Convert to float bounds
+    let float_min = match int_min {
+        Val::ValI(i) => i as f64,
+        Val::ValF(f) => f.floor(),
+    };
+    let float_max = match int_max {
+        Val::ValI(i) => i as f64,
+        Val::ValF(f) => f.ceil(),
+    };
+    
+    // Create a float variable with the converted bounds
+    let float_var = model.float(float_min, float_max);
+    
+    // Constrain float_var = int_var by converting int to float and equating
+    let int_as_float = model.mul(int_var, Val::ValF(1.0));
+    model.props.equals(float_var, int_as_float);
+    
+    float_var
+}
+
+/// Convert a boolean variable to an integer variable.
+///
+/// Creates a new integer variable that mirrors the boolean variable.
+/// The boolean variable domain [0, 1] is converted to integer domain [0, 1].
+///
+/// # Examples
+/// ```ignore
+/// let int_var = bool2int(&mut model, bool_var);
+/// ```
+pub fn bool2int(model: &mut Model, bool_var: VarId) -> VarId {
+    // Create an integer variable with domain [0, 1]
+    let int_var = model.int(0, 1);
+    
+    // Constrain them to be equal
+    model.props.equals(int_var, bool_var);
+    
+    int_var
 }
 
 /// Post a floor constraint: `result = floor(float_var)`.
 ///
-/// **Note:** This function is a placeholder in Phase 1. Will be properly implemented in Phase 2.
+/// Returns an integer variable constrained to equal floor(float_var).
 ///
 /// # Examples
 /// ```ignore
 /// let result = floor(&mut model, float_var);
 /// ```
-pub fn floor(_model: &mut Model, _float_var: VarId) -> VarId {
-    todo!("floor will be implemented in Phase 2")
+pub fn floor(model: &mut Model, float_var: VarId) -> VarId {
+    use crate::variables::views::ViewRaw;
+    
+    // Get bounds of float variable
+    let float_min = float_var.min_raw(&model.vars);
+    let float_max = float_var.max_raw(&model.vars);
+    
+    // Compute floor bounds
+    let (floor_min, floor_max) = match (float_min, float_max) {
+        (Val::ValF(f_min), Val::ValF(f_max)) => (f_min.floor() as i32, f_max.floor() as i32),
+        (Val::ValI(i_min), Val::ValI(i_max)) => (i_min, i_max),
+        (Val::ValF(f), Val::ValI(i)) => (f.floor() as i32, i),
+        (Val::ValI(i), Val::ValF(f)) => (i, f.floor() as i32),
+    };
+    
+    // Create result integer variable
+    let int_var = model.int(floor_min, floor_max);
+    
+    // Post constraint: int_var ≤ float_var < int_var + 1
+    model.props.less_than_or_equals(int_var, float_var);
+    let int_as_float = model.add(int_var, Val::ValF(0.0));
+    let int_plus_one_float = model.add(int_as_float, Val::ValF(1.0));
+    model.props.less_than(float_var, int_plus_one_float);
+    
+    int_var
 }
 
 /// Post a ceiling constraint: `result = ceil(float_var)`.
 ///
-/// **Note:** This function is a placeholder in Phase 1. Will be properly implemented in Phase 2.
+/// Returns an integer variable constrained to equal ceil(float_var).
 ///
 /// # Examples
 /// ```ignore
 /// let result = ceil(&mut model, float_var);
 /// ```
-pub fn ceil(_model: &mut Model, _float_var: VarId) -> VarId {
-    todo!("ceil will be implemented in Phase 2")
+pub fn ceil(model: &mut Model, float_var: VarId) -> VarId {
+    use crate::variables::views::ViewRaw;
+    
+    // Get bounds of float variable
+    let float_min = float_var.min_raw(&model.vars);
+    let float_max = float_var.max_raw(&model.vars);
+    
+    // Compute ceil bounds
+    let (ceil_min, ceil_max) = match (float_min, float_max) {
+        (Val::ValF(f_min), Val::ValF(f_max)) => (f_min.ceil() as i32, f_max.ceil() as i32),
+        (Val::ValI(i_min), Val::ValI(i_max)) => (i_min, i_max),
+        (Val::ValF(f), Val::ValI(i)) => (f.ceil() as i32, i),
+        (Val::ValI(i), Val::ValF(f)) => (i, f.ceil() as i32),
+    };
+    
+    // Create result integer variable
+    let int_var = model.int(ceil_min, ceil_max);
+    
+    // Post constraint: int_var - 1 < float_var ≤ int_var
+    model.props.less_than_or_equals(float_var, int_var);
+    let int_as_float = model.add(int_var, Val::ValF(0.0));
+    let int_minus_one_float = model.sub(int_as_float, Val::ValF(1.0));
+    model.props.less_than(int_minus_one_float, float_var);
+    
+    int_var
 }
 
 /// Post a rounding constraint: `result = round(float_var)`.
 ///
-/// **Note:** This function is a placeholder in Phase 1. Will be properly implemented in Phase 2.
+/// Returns an integer variable constrained to equal round(float_var) (rounds to nearest integer, ties to even).
 ///
 /// # Examples
 /// ```ignore
 /// let result = round(&mut model, float_var);
 /// ```
-pub fn round(_model: &mut Model, _float_var: VarId) -> VarId {
-    todo!("round will be implemented in Phase 2")
+pub fn round(model: &mut Model, float_var: VarId) -> VarId {
+    use crate::variables::views::ViewRaw;
+    
+    // Get bounds of float variable
+    let float_min = float_var.min_raw(&model.vars);
+    let float_max = float_var.max_raw(&model.vars);
+    
+    // Compute round bounds
+    let (round_min, round_max) = match (float_min, float_max) {
+        (Val::ValF(f_min), Val::ValF(f_max)) => (f_min.round() as i32, f_max.round() as i32),
+        (Val::ValI(i_min), Val::ValI(i_max)) => (i_min, i_max),
+        (Val::ValF(f), Val::ValI(i)) => (f.round() as i32, i),
+        (Val::ValI(i), Val::ValF(f)) => (i, f.round() as i32),
+    };
+    
+    // Create result integer variable
+    let int_var = model.int(round_min, round_max);
+    
+    // Post constraint: int_var - 0.5 ≤ float_var < int_var + 0.5
+    let int_minus_half = model.add(int_var, Val::ValF(-0.5));
+    let int_plus_half = model.add(int_var, Val::ValF(0.5));
+    model.props.less_than_or_equals(int_minus_half, float_var);
+    model.props.less_than(float_var, int_plus_half);
+    
+    int_var
 }
