@@ -190,3 +190,7 @@ mod test_modulo_comprehensive;
 
 #[path = "../tests_all/test_newly_implemented_functions.rs"]
 mod test_newly_implemented_functions;
+
+#[path = "../tests_all/test_incremental_sum_integration.rs"]
+mod test_incremental_sum_integration;
+
