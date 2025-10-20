@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.2] - 2025-10-20
+- Table constraint using GAC algorithm.
+
 ## [0.15.1] - 2025-10-19
 - Added bool2int and exposed some functions.
 
