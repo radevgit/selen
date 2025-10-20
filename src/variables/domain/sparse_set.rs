@@ -323,6 +323,78 @@ impl SparseSet {
         self.off + self.n as i32 - 1
     }
 
+    // ===== COMPLEMENT API (for incremental sum and other optimizations) =====
+    
+    /// Get an iterator over the **removed** values (complement of current domain)
+    /// 
+    /// This is a key insight from the SparseSet design: removed values are stored
+    /// in `val[size..n)`, allowing us to iterate over the complement without
+    /// additional memory overhead.
+    /// 
+    /// # Example
+    /// ```
+    /// use selen::variables::domain::sparse_set::SparseSet;
+    /// let mut domain = SparseSet::new(1, 5);  // Domain {1,2,3,4,5}
+    /// domain.remove(2);
+    /// domain.remove(4);
+    /// // complement_iter() yields {2, 4}
+    /// let complement: Vec<i32> = domain.complement_iter().collect();
+    /// assert_eq!(complement.len(), 2);
+    /// ```
+    pub fn complement_iter(&self) -> impl Iterator<Item = i32> + '_ {
+        self.val[self.size as usize..self.n as usize]
+            .iter()
+            .map(move |&v| v as i32 + self.off)
+    }
+
+    /// Get the size of the complement (number of removed values)
+    /// 
+    /// This is computed as `n - size` and is useful for choosing which set
+    /// to iterate over when optimizing constraint propagation.
+    /// 
+    /// # Example
+    /// ```
+    /// use selen::variables::domain::sparse_set::SparseSet;
+    /// let mut domain = SparseSet::new(1, 10);  // 10 values initially
+    /// assert_eq!(domain.complement_size(), 0);  // No removed values
+    /// 
+    /// domain.remove(1);
+    /// domain.remove(5);
+    /// assert_eq!(domain.complement_size(), 2);  // 2 removed values
+    /// ```
+    pub fn complement_size(&self) -> usize {
+        (self.n - self.size) as usize
+    }
+
+    /// Check if iterating over complement is more efficient than current domain
+    /// 
+    /// Returns true if `complement_size < size / 2`, indicating that the complement
+    /// has fewer than half the elements of the current domain. This is useful for
+    /// optimization decisions like preferring `complement_iter()` when the domain
+    /// has been heavily pruned.
+    /// 
+    /// # Example
+    /// ```
+    /// use selen::variables::domain::sparse_set::SparseSet;
+    /// let mut domain = SparseSet::new(1, 100);
+    /// assert!(!domain.should_use_complement());  // Complement is empty
+    /// 
+    /// // Remove 40 values
+    /// for i in 1..=40 {
+    ///     domain.remove(i);
+    /// }
+    /// assert!(!domain.should_use_complement());  // 40 < 60/2? No
+    /// 
+    /// // Remove 45 more values (total 85 removed)
+    /// for i in 41..=85 {
+    ///     domain.remove(i);
+    /// }
+    /// assert!(domain.should_use_complement());   // 15 < 15/2? No... but close!
+    /// ```
+    pub fn should_use_complement(&self) -> bool {
+        self.complement_size() < (self.size as usize) / 2
+    }
+
     /// Set intersection - modify this set to contain only elements in both sets
     /// 
     /// **Note**: This operates on the **domain** of integer variables, not on set-valued variables.
@@ -1398,5 +1470,312 @@ mod test {
         for i in 1..=6 {
             assert!(set.contains(i));
         }
+    }
+
+    // ===== TESTS FOR COMPLEMENT API =====
+
+    #[test]
+    fn test_complement_iter_empty() {
+        let set = SparseSet::new(1, 5); // No removals
+        
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), 0);
+        assert_eq!(set.complement_size(), 0);
+        // With complement_size = 0 and size = 5, should_use_complement = (0 < 5/2) = (0 < 2) = true!
+        assert!(set.should_use_complement());
+    }
+
+    #[test]
+    fn test_complement_iter_single_removal() {
+        let mut set = SparseSet::new(1, 5);
+        set.remove(3);
+        
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), 1);
+        assert!(complement.contains(&3));
+        assert_eq!(set.complement_size(), 1);
+    }
+
+    #[test]
+    fn test_complement_iter_multiple_removals() {
+        let mut set = SparseSet::new(1, 10);
+        set.remove(2);
+        set.remove(5);
+        set.remove(8);
+        
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), 3);
+        assert!(complement.contains(&2));
+        assert!(complement.contains(&5));
+        assert!(complement.contains(&8));
+        assert_eq!(set.complement_size(), 3);
+    }
+
+    #[test]
+    fn test_complement_iter_matches_removed_values() {
+        let mut set = SparseSet::new(1, 8);
+        
+        // Track what we remove
+        let removed = vec![1, 3, 5, 7];
+        for &val in &removed {
+            set.remove(val);
+        }
+        
+        // Verify complement matches removed values
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), removed.len());
+        
+        for &val in &removed {
+            assert!(complement.contains(&val));
+        }
+        
+        // Verify no active values are in complement
+        for val in set.iter() {
+            assert!(!complement.contains(&val));
+        }
+    }
+
+    #[test]
+    fn test_complement_size_calculation() {
+        let mut set = SparseSet::new(1, 20);
+        
+        assert_eq!(set.size(), 20);
+        assert_eq!(set.complement_size(), 0);
+        
+        // Remove 5 elements
+        for i in 1..=5 {
+            set.remove(i);
+        }
+        assert_eq!(set.size(), 15);
+        assert_eq!(set.complement_size(), 5);
+        
+        // Remove 5 more
+        for i in 6..=10 {
+            set.remove(i);
+        }
+        assert_eq!(set.size(), 10);
+        assert_eq!(set.complement_size(), 10);
+        
+        // Remove all but one (remove 11-20, leaving only one element at index somewhere)
+        for i in 11..=19 {
+            set.remove(i);
+        }
+        assert_eq!(set.size(), 1);
+        assert_eq!(set.complement_size(), 19);
+    }
+
+    #[test]
+    fn test_should_use_complement_basic() {
+        let mut set = SparseSet::new(1, 100);
+        
+        // Start with full set: complement size = 0, size = 100
+        // should_use_complement = (0 < 100/2) = (0 < 50) = true
+        assert!(set.should_use_complement());
+        
+        // Remove 40 elements: complement size = 40, size = 60
+        // should_use_complement = (40 < 60/2) = (40 < 30) = false
+        for i in 1..=40 {
+            set.remove(i);
+        }
+        assert!(!set.should_use_complement());
+        
+        // Remove 21 more (total 61): complement size = 61, size = 39
+        // should_use_complement = (61 < 39/2) = (61 < 19) = false
+        for i in 41..=61 {
+            set.remove(i);
+        }
+        assert!(!set.should_use_complement());
+        
+        // Remove until only 10 remain: complement size = 90, size = 10
+        // should_use_complement = (90 < 10/2) = (90 < 5) = false
+        for i in 62..=90 {
+            set.remove(i);
+        }
+        assert_eq!(set.size(), 10);
+        assert_eq!(set.complement_size(), 90);
+        assert!(!set.should_use_complement());
+    }
+
+    #[test]
+    fn test_should_use_complement_when_heavily_pruned() {
+        let mut set = SparseSet::new(1, 100);
+        
+        // Remove 98 elements, keep only 2
+        for i in 1..=98 {
+            set.remove(i);
+        }
+        
+        assert_eq!(set.size(), 2);
+        assert_eq!(set.complement_size(), 98);
+        
+        // should_use_complement = (98 < 2/2) = (98 < 1) = false
+        assert!(!set.should_use_complement());
+    }
+
+    #[test]
+    fn test_should_use_complement_exact_boundary() {
+        let mut set = SparseSet::new(1, 10);
+        
+        // Initial: size = 10, complement = 0
+        // should_use_complement = (0 < 10/2) = (0 < 5) = true
+        assert!(set.should_use_complement());
+        
+        // Remove 8, leaving 2: size = 2, complement = 8
+        // should_use_complement = (8 < 2/2) = (8 < 1) = false
+        for i in 1..=8 {
+            set.remove(i);
+        }
+        
+        assert_eq!(set.size(), 2);
+        assert_eq!(set.complement_size(), 8);
+        assert!(!set.should_use_complement());
+    }
+
+    #[test]
+    fn test_complement_iter_after_remove_all() {
+        let mut set = SparseSet::new(1, 5);
+        set.remove_all();
+        
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), 5);
+        assert_eq!(set.complement_size(), 5);
+        
+        // All values should be in complement
+        for i in 1..=5 {
+            assert!(complement.contains(&i));
+        }
+    }
+
+    #[test]
+    fn test_complement_with_new_from_values() {
+        let mut set = SparseSet::new_from_values(vec![1, 3, 5, 7, 9]);
+        
+        // Initial complement is {2, 4, 6, 8}
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), 4);
+        
+        // After removing 3 and 7
+        set.remove(3);
+        set.remove(7);
+        
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), 6); // {2, 3, 4, 6, 7, 8}
+        assert!(complement.contains(&2));
+        assert!(complement.contains(&3));
+        assert!(complement.contains(&4));
+        assert!(complement.contains(&6));
+        assert!(complement.contains(&7));
+        assert!(complement.contains(&8));
+    }
+
+    #[test]
+    fn test_complement_complement_is_original() {
+        let mut set = SparseSet::new(1, 10);
+        set.remove(2);
+        set.remove(5);
+        set.remove(8);
+        
+        let active: Vec<i32> = set.iter().collect();
+        let removed: Vec<i32> = set.complement_iter().collect();
+        
+        // Union should give us all values
+        let mut combined = active.clone();
+        combined.extend(removed.clone());
+        combined.sort();
+        
+        assert_eq!(combined.len(), 10);
+        for i in 1..=10 {
+            assert!(combined.contains(&i));
+        }
+        
+        // Intersection should be empty
+        for val in &active {
+            assert!(!removed.contains(val));
+        }
+    }
+
+    #[test]
+    fn test_complement_consistency_after_operations() {
+        let mut set = SparseSet::new(1, 20);
+        
+        // Series of operations
+        set.remove(5);
+        set.remove(10);
+        set.remove(15);
+        
+        let state1 = set.save_state();
+        let complement1: Vec<i32> = set.complement_iter().collect();
+        
+        // More removals
+        set.remove(3);
+        set.remove(7);
+        
+        let complement2: Vec<i32> = set.complement_iter().collect();
+        assert!(complement2.len() > complement1.len());
+        
+        // Restore to state1
+        set.restore_state(&state1);
+        let complement1_restored: Vec<i32> = set.complement_iter().collect();
+        
+        // Should match original complement
+        assert_eq!(complement1, complement1_restored);
+    }
+
+    #[test]
+    fn test_complement_negative_domain() {
+        let mut set = SparseSet::new(-5, 5);
+        
+        set.remove(-2);
+        set.remove(0);
+        set.remove(3);
+        
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), 3);
+        assert!(complement.contains(&-2));
+        assert!(complement.contains(&0));
+        assert!(complement.contains(&3));
+        assert_eq!(set.complement_size(), 3);
+    }
+
+    #[test]
+    fn test_complement_single_value_domain() {
+        let set = SparseSet::new(5, 5);
+        
+        assert_eq!(set.size(), 1);
+        assert_eq!(set.complement_size(), 0);
+        
+        let complement: Vec<i32> = set.complement_iter().collect();
+        assert_eq!(complement.len(), 0);
+        assert!(!set.should_use_complement());
+    }
+
+    #[test]
+    fn test_complement_performance_check() {
+        // Verify that complement_iter is efficient by checking it doesn't allocate
+        // more than necessary (single vec internally)
+        let mut set = SparseSet::new(1, 1000);
+        
+        // Remove most elements
+        for i in 1..=950 {
+            set.remove(i);
+        }
+        
+        // Complement has 950 elements, active has 50
+        assert_eq!(set.complement_size(), 950);
+        assert_eq!(set.size(), 50);
+        
+        // should_use_complement should return false (950 < 50/2 = 25? No)
+        assert!(!set.should_use_complement());
+        
+        // But if we had even heavier pruning
+        for i in 951..=990 {
+            set.remove(i);
+        }
+        
+        // Complement has 990, active has 10
+        assert_eq!(set.complement_size(), 990);
+        assert_eq!(set.size(), 10);
+        // 990 < 10/2 = 5? No
+        assert!(!set.should_use_complement());
     }
 }

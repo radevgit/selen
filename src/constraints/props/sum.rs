@@ -16,20 +16,34 @@ impl<V> Sum<V> {
 
 impl<V: View> Prune for Sum<V> {
     fn prune(&self, ctx: &mut Context) -> Option<()> {
-        // Derive minimum and maximum values the sum of terms can reach
-        let min_of_terms: Val = self.xs.iter().map(|x| x.min(ctx)).sum();
-        let max_of_terms: Val = self.xs.iter().map(|x| x.max(ctx)).sum();
+        // === Phase 1: Forward Propagation (O(n)) ===
+        // Compute minimum and maximum values the sum of terms can reach
+        let mut min_of_terms: Val = Val::ValI(0);
+        let mut max_of_terms: Val = Val::ValI(0);
+        
+        for x in &self.xs {
+            min_of_terms = min_of_terms + x.min(ctx);
+            max_of_terms = max_of_terms + x.max(ctx);
+        }
 
         let _ = self.s.try_set_min(min_of_terms, ctx)?;
         let _ = self.s.try_set_max(max_of_terms, ctx)?;
 
-        // Current bounds of the sum of all terms
+        // === Phase 2: Reverse Propagation (O(n)) ===
         let min = self.s.min(ctx);
         let max = self.s.max(ctx);
 
+        // For each variable, compute bounds using precomputed totals
         for x in &self.xs {
-            let _ = x.try_set_min(min - (max_of_terms - x.max(ctx)), ctx)?;
-            let _ = x.try_set_max(max - (min_of_terms - x.min(ctx)), ctx)?;
+            // Cache min/max to avoid repeated calls
+            let x_min = x.min(ctx);
+            let x_max = x.max(ctx);
+            
+            let sum_mins_except = min_of_terms - x_min;
+            let sum_maxs_except = max_of_terms - x_max;
+            
+            let _ = x.try_set_min(min - sum_maxs_except, ctx)?;
+            let _ = x.try_set_max(max - sum_mins_except, ctx)?;
         }
 
         Some(())
