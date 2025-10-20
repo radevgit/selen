@@ -32,75 +32,44 @@ impl Table {
         Self { vars, tuples }
     }
 
-    /// Check if a partial assignment is compatible with at least one tuple
-    fn has_compatible_tuple(&self, assignment: &[Option<Val>], ctx: &Context) -> bool {
-        'tuple_loop: for tuple in &self.tuples {
-            // Check if this tuple is compatible with current domains
-            for (i, &var) in self.vars.iter().enumerate() {
-                let tuple_val = tuple[i];
-                
-                // Check if tuple value is within current domain
-                let min_val = var.min(ctx);
-                let max_val = var.max(ctx);
-                
-                if tuple_val < min_val || tuple_val > max_val {
-                    continue 'tuple_loop; // This tuple is incompatible
-                }
-                
-                // If we have a specific assignment, check compatibility
-                if let Some(assigned_val) = assignment[i] {
-                    if !self.values_equal(tuple_val, assigned_val, var, ctx) {
-                        continue 'tuple_loop; // This tuple is incompatible
-                    }
-                }
+    /// Check if a tuple is supported by current domains (all values are in domains)
+    fn is_tuple_supported(&self, tuple: &[Val], ctx: &Context) -> bool {
+        for (i, &var) in self.vars.iter().enumerate() {
+            let tuple_val = tuple[i];
+            let min_val = var.min(ctx);
+            let max_val = var.max(ctx);
+            
+            if tuple_val < min_val || tuple_val > max_val {
+                return false;
             }
-            return true; // Found at least one compatible tuple
         }
-        false // No compatible tuples found
+        true
     }
 
-    /// Get all possible values for a variable at given position that appear in valid tuples
+    /// Check if there's at least one supported tuple in the table
+    fn has_supported_tuple(&self, ctx: &Context) -> bool {
+        self.tuples.iter().any(|tuple| self.is_tuple_supported(tuple, ctx))
+    }
+
+    /// Get all possible values for a variable that appear in supported tuples
     fn get_supported_values(&self, var_index: usize, ctx: &Context) -> Vec<Val> {
         let mut supported_values = Vec::new();
-        let var = self.vars[var_index];
-        let min_val = var.min(ctx);
-        let max_val = var.max(ctx);
 
         for tuple in &self.tuples {
+            // Only consider tuples where all values are in current domains
+            if !self.is_tuple_supported(tuple, ctx) {
+                continue;
+            }
+
             let tuple_val = tuple[var_index];
             
-            // Check if tuple value is within current domain
-            if tuple_val >= min_val && tuple_val <= max_val {
-                // Check if this tuple is compatible with other variables' domains
-                let mut compatible = true;
-                for (i, &other_var) in self.vars.iter().enumerate() {
-                    if i == var_index {
-                        continue;
-                    }
-                    
-                    let other_min = other_var.min(ctx);
-                    let other_max = other_var.max(ctx);
-                    let other_tuple_val = tuple[i];
-                    
-                    if other_tuple_val < other_min || other_tuple_val > other_max {
-                        compatible = false;
-                        break;
-                    }
-                }
-                
-                if compatible && !supported_values.iter().any(|&v| self.values_equal(v, tuple_val, var, ctx)) {
-                    supported_values.push(tuple_val);
-                }
+            // Add value if not already in list (using exact comparison for now)
+            if !supported_values.iter().any(|&v| v == tuple_val) {
+                supported_values.push(tuple_val);
             }
         }
         
         supported_values
-    }
-
-    /// Check if two values are equal using proper precision context
-    fn values_equal(&self, val1: Val, val2: Val, target_var: VarId, ctx: &Context) -> bool {
-        let target_interval = ctx.vars().get_float_interval(target_var);
-        val1.equals_with_intervals(&val2, target_interval, None)
     }
 
     /// Narrow domain to only supported values
@@ -143,20 +112,43 @@ impl Table {
 
 impl Prune for Table {
     fn prune(&self, ctx: &mut Context) -> Option<()> {
-        // Quick feasibility check: ensure at least one tuple is compatible with current domains
-        let assignment = vec![None; self.vars.len()]; // No specific assignments yet
-        if !self.has_compatible_tuple(&assignment, ctx) {
-            return None; // No compatible tuples found
+        // GAC (Generalized Arc Consistency) implementation
+        // Quick feasibility check: ensure at least one tuple is supported by current domains
+        if !self.has_supported_tuple(ctx) {
+            return None; // No supported tuples - constraint is unsatisfiable
         }
 
-        // For each variable, narrow its domain to only values that appear in compatible tuples
-        for var_index in 0..self.vars.len() {
-            self.narrow_domain_to_supported(var_index, ctx)?;
-        }
+        // Iteratively narrow domains until fixpoint
+        // This is the key difference from AC3: we keep iterating until no changes
+        loop {
+            let mut changed = false;
 
-        // Additional consistency check: verify we still have compatible tuples after domain narrowing
-        if !self.has_compatible_tuple(&assignment, ctx) {
-            return None;
+            // For each variable, narrow its domain to only values that appear in supported tuples
+            for var_index in 0..self.vars.len() {
+                let var = self.vars[var_index];
+                let old_min = var.min(ctx);
+                let old_max = var.max(ctx);
+
+                // Narrow domain to supported values
+                self.narrow_domain_to_supported(var_index, ctx)?;
+
+                let new_min = var.min(ctx);
+                let new_max = var.max(ctx);
+
+                if old_min != new_min || old_max != new_max {
+                    changed = true;
+                }
+            }
+
+            // If nothing changed, we've reached fixpoint
+            if !changed {
+                break;
+            }
+
+            // Verify we still have at least one supported tuple after changes
+            if !self.has_supported_tuple(ctx) {
+                return None;
+            }
         }
 
         Some(())

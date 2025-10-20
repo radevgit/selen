@@ -377,19 +377,21 @@ impl SparseSet {
     /// ```
     /// use selen::variables::domain::sparse_set::SparseSet;
     /// let mut domain = SparseSet::new(1, 100);
-    /// assert!(!domain.should_use_complement());  // Complement is empty
+    /// // Initially: size=100, complement_size=0. 0 < 50? Yes, but we check this only matters when complement > 0
     /// 
-    /// // Remove 40 values
-    /// for i in 1..=40 {
+    /// // Remove 10 values: size becomes 90, complement_size becomes 10
+    /// for i in 1..=10 {
     ///     domain.remove(i);
     /// }
-    /// assert!(!domain.should_use_complement());  // 40 < 60/2? No
+    /// // 10 < 90/2 = 10 < 45? Yes, so we SHOULD use complement
+    /// assert!(domain.should_use_complement());
     /// 
-    /// // Remove 45 more values (total 85 removed)
-    /// for i in 41..=85 {
+    /// // Remove 50 more values: size becomes 40, complement_size becomes 60
+    /// for i in 11..=60 {
     ///     domain.remove(i);
     /// }
-    /// assert!(domain.should_use_complement());   // 15 < 15/2? No... but close!
+    /// // 60 < 40/2 = 60 < 20? No, so we should NOT use complement
+    /// assert!(!domain.should_use_complement());
     /// ```
     pub fn should_use_complement(&self) -> bool {
         self.complement_size() < (self.size as usize) / 2
