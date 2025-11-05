@@ -188,6 +188,9 @@ mod test_element_computed_index;
 #[path = "../tests_all/test_modulo_comprehensive.rs"]
 mod test_modulo_comprehensive;
 
+#[path = "../tests_all/test_modulo_alleq_bug.rs"]
+mod test_modulo_alleq_bug;
+
 #[path = "../tests_all/test_newly_implemented_functions.rs"]
 mod test_newly_implemented_functions;
 

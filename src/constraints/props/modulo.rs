@@ -74,28 +74,49 @@ impl<U: View, V: View> Prune for Modulo<U, V> {
         // CASE 3: Both x and y are in bounded ranges → compute s bounds
         let mut s_candidates = Vec::with_capacity(4);
         
-        // Sample points at domain boundaries
-        let x_samples = if x_min == x_max {
-            vec![x_min]
+        // When y is fixed, we can compute all possible remainders efficiently
+        if y_min == y_max {
+            // y is fixed: iterate through all x values to find all possible remainders
+            if let Val::ValI(y_val) = y_min {
+                if y_val != 0 {
+                    // For integer modulo with fixed divisor, check all values in x domain
+                    if let (Val::ValI(x_min_int), Val::ValI(x_max_int)) = (x_min, x_max) {
+                        for x_val in x_min_int..=x_max_int {
+                            if let Some(mod_result) = Val::ValI(x_val).safe_mod(Val::ValI(y_val)) {
+                                match mod_result {
+                                    Val::ValF(f) if f.is_finite() => s_candidates.push(mod_result),
+                                    Val::ValI(_) => s_candidates.push(mod_result),
+                                    _ => {} // Skip NaN or infinite results
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } else {
-            vec![x_min, x_max]
-        };
-        
-        let y_samples = if y_min == y_max {
-            vec![y_min]
-        } else {
-            vec![y_min, y_max]
-        };
-        
-        // Calculate modulo for all combinations of boundary values
-        for &x_val in &x_samples {
-            for &y_val in &y_samples {
-                if let Some(mod_result) = x_val.safe_mod(y_val) {
-                    // Check if the result is valid
-                    match mod_result {
-                        Val::ValF(f) if f.is_finite() => s_candidates.push(mod_result),
-                        Val::ValI(_) => s_candidates.push(mod_result),
-                        _ => {} // Skip NaN or infinite results
+            // y is not fixed: sample boundary values of both x and y
+            let x_samples = if x_min == x_max {
+                vec![x_min]
+            } else {
+                vec![x_min, x_max]
+            };
+            
+            let y_samples = if y_min == y_max {
+                vec![y_min]
+            } else {
+                vec![y_min, y_max]
+            };
+            
+            // Calculate modulo for all combinations of boundary values
+            for &x_val in &x_samples {
+                for &y_val in &y_samples {
+                    if let Some(mod_result) = x_val.safe_mod(y_val) {
+                        // Check if the result is valid
+                        match mod_result {
+                            Val::ValF(f) if f.is_finite() => s_candidates.push(mod_result),
+                            Val::ValI(_) => s_candidates.push(mod_result),
+                            _ => {} // Skip NaN or infinite results
+                        }
                     }
                 }
             }

@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.3] - 2025-11-05
+- Fix bug in modulo for only sampled boundary values (min/max) 
+  of the dividend domain which missed intermediate values.
+
 ## [0.15.2] - 2025-10-20
 - Table constraint using GAC algorithm.
 
