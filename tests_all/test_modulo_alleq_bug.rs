@@ -1,15 +1,21 @@
 /// Test for modulo constraint bug fix
 /// 
-/// Issue: Modulo constraint with fixed divisor was only checking boundary values
+/// Issue 1 (FIXED): Modulo constraint with fixed divisor was only checking boundary values
 /// of the dividend domain, missing intermediate values that produce different remainders.
 /// 
 /// Example: With b ∈ [1,3] and divisor 2:
 /// - Old behavior: Only checked 1 and 3 → {1, 1} % 2 → remainders {1}
 /// - New behavior: Checks all 1, 2, 3 → {1, 2, 3} % 2 → remainders {0, 1}
-/// 
-/// This test verifies that when a % divisor == b % divisor, the solver correctly
-/// finds solutions even when the dividend domain has intermediate values that
-/// produce different remainders.
+///
+/// Issue 2 (FIXED): Modulo constraint with variable (non-constant) divisor was only checking
+/// boundary values of the divisor, missing intermediate divisor values that could satisfy constraints.
+///
+/// Example: With c ∈ [2,3] (variable divisor) and a ∈ [0,0], b ∈ [5,7]:
+/// - Old behavior: Only checked c=2 and c=3, but with boundary sampling of x/y, missed valid solutions
+/// - New behavior: When divisor range is small, enumerate all divisor values
+///
+/// This test verifies that when constraints involve modulo with variable divisors,
+/// the solver correctly finds solutions even when intermediate divisor values are needed.
 
 use selen::prelude::*;
 
@@ -178,6 +184,44 @@ fn test_modulo_with_range_and_constraints() {
             
             // Valid values: 13, 18 (from [10, 20] where x % 5 = 3)
             assert!(div_val == 13 || div_val == 18, "dividend should be 13 or 18");
+        }
+        Err(e) => {
+            panic!("Expected solution but got error: {:?}", e);
+        }
+    }
+}
+
+#[test]
+fn test_modulo_with_variable_divisor() {
+    // Test the variable divisor bug: c ∈ [2,3], a ∈ [0,0], b ∈ [5,7]
+    // With constraint: a % c == b % c
+    let mut model = Model::default();
+
+    let a = model.int(0, 0);           // Fixed to 0
+    let b = model.int(5, 7);           // Domain {5, 6, 7}
+    let c = model.int(2, 3);           // Variable divisor {2, 3}
+
+    let a_mod_c = model.modulo(a, c);
+    let b_mod_c = model.modulo(b, c);
+    
+    model.eq_op(a_mod_c, b_mod_c);
+
+    match model.solve() {
+        Ok(solution) => {
+            let a_val = solution.get_int(a);
+            let b_val = solution.get_int(b);
+            let c_val = solution.get_int(c);
+            let a_mod_val = solution.get_int(a_mod_c);
+            let b_mod_val = solution.get_int(b_mod_c);
+
+            assert_eq!(a_val, 0, "a should be 0");
+            assert!(b_val >= 5 && b_val <= 7, "b should be in [5, 7]");
+            assert!(c_val == 2 || c_val == 3, "c should be 2 or 3");
+            assert_eq!(a_mod_val, b_mod_val, "a % c should equal b % c");
+            
+            // When c=2: 0%2=0, b%2=0 only for b=6
+            // When c=3: 0%3=0, b%3=0 only for b=6
+            assert_eq!(b_val, 6, "b should be 6");
         }
         Err(e) => {
             panic!("Expected solution but got error: {:?}", e);

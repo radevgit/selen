@@ -191,6 +191,9 @@ mod test_modulo_comprehensive;
 #[path = "../tests_all/test_modulo_alleq_bug.rs"]
 mod test_modulo_alleq_bug;
 
+#[path = "../tests_all/test_modulo_edge_cases.rs"]
+mod test_modulo_edge_cases;
+
 #[path = "../tests_all/test_constraint_combinations.rs"]
 mod test_constraint_combinations;
 

@@ -1,6 +1,8 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [0.15.4] - 2025-11-05
+- Another bug in modulo for not constant divisor
+- Test covering a lot of scenarios for the modulo
 
 ## [0.15.3] - 2025-11-05
 - Fix bug in modulo for only sampled boundary values (min/max) 

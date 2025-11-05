@@ -72,9 +72,9 @@ impl<U: View, V: View> Prune for Modulo<U, V> {
         }
 
         // CASE 3: Both x and y are in bounded ranges → compute s bounds
-        let mut s_candidates = Vec::with_capacity(4);
+        let mut s_candidates = Vec::with_capacity(16);
         
-        // When y is fixed, we can compute all possible remainders efficiently
+        // Special handling for fixed or small-range divisors
         if y_min == y_max {
             // y is fixed: iterate through all x values to find all possible remainders
             if let Val::ValI(y_val) = y_min {
@@ -93,8 +93,59 @@ impl<U: View, V: View> Prune for Modulo<U, V> {
                     }
                 }
             }
+        } else if let (Val::ValI(y_min_int), Val::ValI(y_max_int)) = (y_min, y_max) {
+            // y is variable: check if divisor range is small enough to enumerate
+            if y_max_int - y_min_int <= 10 {
+                // Small divisor range: enumerate all divisor values
+                // For x, use boundary values only (unless x is also small)
+                let x_samples = if let (Val::ValI(x_min_int), Val::ValI(x_max_int)) = (x_min, x_max) {
+                    if x_max_int - x_min_int <= 10 {
+                        // Small x range too: check all x values
+                        (x_min_int..=x_max_int).map(Val::ValI).collect::<Vec<_>>()
+                    } else {
+                        // Large x range: check boundaries
+                        vec![x_min, x_max]
+                    }
+                } else {
+                    vec![x_min, x_max]
+                };
+                
+                // Enumerate all divisor values
+                for y_val in y_min_int..=y_max_int {
+                    for &x_val in &x_samples {
+                        if let Some(mod_result) = x_val.safe_mod(Val::ValI(y_val)) {
+                            match mod_result {
+                                Val::ValF(f) if f.is_finite() => s_candidates.push(mod_result),
+                                Val::ValI(_) => s_candidates.push(mod_result),
+                                _ => {} // Skip NaN or infinite results
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Large divisor range: only check boundary values
+                let x_samples = if x_min == x_max {
+                    vec![x_min]
+                } else {
+                    vec![x_min, x_max]
+                };
+                
+                let y_samples = vec![y_min, y_max];
+                
+                for &x_val in &x_samples {
+                    for &y_val in &y_samples {
+                        if let Some(mod_result) = x_val.safe_mod(y_val) {
+                            match mod_result {
+                                Val::ValF(f) if f.is_finite() => s_candidates.push(mod_result),
+                                Val::ValI(_) => s_candidates.push(mod_result),
+                                _ => {} // Skip NaN or infinite results
+                            }
+                        }
+                    }
+                }
+            }
         } else {
-            // y is not fixed: sample boundary values of both x and y
+            // Non-integer bounds: fall back to boundary sampling
             let x_samples = if x_min == x_max {
                 vec![x_min]
             } else {
@@ -107,11 +158,9 @@ impl<U: View, V: View> Prune for Modulo<U, V> {
                 vec![y_min, y_max]
             };
             
-            // Calculate modulo for all combinations of boundary values
             for &x_val in &x_samples {
                 for &y_val in &y_samples {
                     if let Some(mod_result) = x_val.safe_mod(y_val) {
-                        // Check if the result is valid
                         match mod_result {
                             Val::ValF(f) if f.is_finite() => s_candidates.push(mod_result),
                             Val::ValI(_) => s_candidates.push(mod_result),
