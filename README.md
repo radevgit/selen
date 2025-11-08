@@ -210,3 +210,7 @@ fn main() {
 }
 ```
 
+## Related Projects
+
+Selen is part of the open-sourced [Nest2D](https://nest2d.com) projects collection.
+
