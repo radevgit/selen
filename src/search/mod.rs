@@ -10,13 +10,22 @@ pub mod mode;
 pub mod agenda;
 #[doc(hidden)]
 pub mod branch;
+#[doc(hidden)]
+pub mod trail;
 
-/// Data required to perform search, now uses Clone for efficient backtracking.
+/// Data required to perform search with trail-based backtracking.
+///
+/// The Space structure now includes a trail for efficient backtracking.
+/// Instead of cloning the entire space on every branch, we record only
+/// the changes to variable domains on a trail, allowing O(k) backtracking
+/// where k is the number of changes, rather than O(n×m) full cloning.
 #[doc(hidden)]
 #[derive(Clone, Debug)]
 pub struct Space {
     pub vars: Vars,
     pub props: Propagators,
+    /// Trail for efficient backtracking without cloning
+    pub trail: trail::Trail,
     /// Whether LP solver was used at root node
     pub lp_solver_used: bool,
     /// Number of linear constraints extracted for LP
@@ -284,9 +293,10 @@ pub fn search_with_timeout_and_memory<M: Mode>(
     if LP_DEBUG {
         eprintln!("LP: Starting initial propagation...");
     }
-    let Some((is_stalled, space)) = propagate(Space { 
-        vars, 
+    let Some((is_stalled, space)) = propagate(Space {
+        vars,
         props,
+        trail: trail::Trail::new(),
         lp_solver_used,
         lp_constraint_count,
         lp_variable_count,
