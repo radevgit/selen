@@ -542,10 +542,12 @@ impl View for Val {
 }
 
 impl ViewRaw for VarId {
+    #[inline]
     fn get_underlying_var_raw(self) -> Option<VarId> {
         Some(self)
     }
 
+    #[inline]
     fn min_raw(self, vars: &Vars) -> Val {
         match vars[self] {
             Var::VarI(ref sparse_set) => Val::ValI(sparse_set.min()),
@@ -553,6 +555,7 @@ impl ViewRaw for VarId {
         }
     }
 
+    #[inline]
     fn max_raw(self, vars: &Vars) -> Val {
         match vars[self] {
             Var::VarI(ref sparse_set) => Val::ValI(sparse_set.max()),
@@ -562,6 +565,7 @@ impl ViewRaw for VarId {
 }
 
 impl View for VarId {
+    #[inline]
     fn result_type(self, ctx: &Context) -> ViewType {
         match &ctx.vars[self] {
             Var::VarF { .. } => ViewType::Float,
@@ -569,10 +573,12 @@ impl View for VarId {
         }
     }
 
+    #[inline]
     fn try_set_min(self, min: Val, ctx: &mut Context) -> Option<Val> {
         ctx.try_set_min(self, min)
     }
 
+    #[inline]
     fn try_set_max(self, max: Val, ctx: &mut Context) -> Option<Val> {
         ctx.try_set_max(self, max)
     }

@@ -142,25 +142,31 @@ impl SparseSet {
         sparse_set
     }
 
+    #[inline]
     pub fn min(&self) -> i32 {
         debug_assert!(!self.is_empty());
         self.min as i32 + self.off
     }
+    #[inline]
     pub fn max(&self) -> i32 {
         debug_assert!(!self.is_empty());
         self.max as i32 + self.off
     }
 
+    #[inline]
     pub fn size(&self) -> usize {
         self.size as usize
     }
     // If variable domain is fixed to value
+    #[inline]
     pub fn is_fixed(&self) -> bool {
         self.size == 1
     }
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.size == 0
     }
+    #[inline]
     pub fn contains(&self, v: i32) -> bool {
         // outside range
         if v < self.off {
@@ -170,6 +176,7 @@ impl SparseSet {
         self.contains_intl(v as u32)
     }
     // This method operates on the shifted value (one cannot shift now).
+    #[inline]
     fn contains_intl(&self, v: u32) -> bool {
         if v >= self.n {
             false

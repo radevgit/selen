@@ -253,19 +253,21 @@ impl BitSetDomain {
     
     /// Insert a value into the domain
     /// Returns true if the value was successfully inserted
+    #[inline]
     pub fn insert(&mut self, value: i32) -> bool {
         if value < self.min_val || value > self.max_val {
             return false; // Value outside universe
         }
-        
+
         let bit_pos = (value - self.min_val) as usize;
         let was_present = (self.mask & (1u128 << bit_pos)) != 0;
         self.mask |= 1u128 << bit_pos;
         !was_present
     }
-    
+
     /// Remove a value from the domain
     /// Returns true if the value was present and removed
+    #[inline]
     pub fn remove(&mut self, value: i32) -> bool {
         if value < self.min_val || value > self.max_val {
             return false; // Value not in universe
@@ -317,6 +319,7 @@ impl BitSetDomain {
     }
     
     /// Get the minimum value in the domain
+    #[inline]
     pub fn min(&self) -> Option<i32> {
         if self.mask == 0 {
             return None;
@@ -324,8 +327,9 @@ impl BitSetDomain {
         let first_bit = self.mask.trailing_zeros() as usize;
         Some(self.min_val + first_bit as i32)
     }
-    
+
     /// Get the maximum value in the domain
+    #[inline]
     pub fn max(&self) -> Option<i32> {
         if self.mask == 0 {
             return None;
