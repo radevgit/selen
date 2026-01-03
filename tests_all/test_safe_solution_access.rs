@@ -1,5 +1,5 @@
-use selen::core::{Solution, SolveStats, ValueAccessError};
-use selen::variables::{VarId, Val};
+use selen::core::ValueAccessError;
+use selen::variables::Val;
 use selen::api::Model;
 
 #[test]

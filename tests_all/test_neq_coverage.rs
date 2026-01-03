@@ -65,7 +65,7 @@ fn test_neq_float_boundary_min() {
     
     let solution = m.solve().expect("Should find solution");
     let x_val = solution[x].as_float().unwrap();
-    let y_val = solution[y].as_float().unwrap();
+    let _y_val = solution[y].as_float().unwrap();
     // With float discretization, might assign same value, so just check it solved
     assert!(x_val >= 1.0 && x_val <= 5.0);
 }
@@ -80,7 +80,7 @@ fn test_neq_float_boundary_max() {
     
     let solution = m.solve().expect("Should find solution");
     let x_val = solution[x].as_float().unwrap();
-    let y_val = solution[y].as_float().unwrap();
+    let _y_val = solution[y].as_float().unwrap();
     // With float discretization, might assign same value, so just check it solved
     assert!(x_val >= 1.0 && x_val <= 5.0);
 }
