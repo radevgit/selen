@@ -56,5 +56,5 @@ fn test_unchecked_methods_still_panic() {
     let solution = result;
     
     // This should panic because we're trying to get an int from a float variable
-    solution.get_int_unchecked(float_var);
+    _ = solution.get_int_unchecked(float_var);
 }

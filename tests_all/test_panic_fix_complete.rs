@@ -1,5 +1,6 @@
 use selen::prelude::*;
 
+#[test]
 fn main() {
     println!("=== Testing Min/Max Functions - No Panics Expected ===\n");
     
