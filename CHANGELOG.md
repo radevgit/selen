@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.15.5] - 2026-01-04
+- Performance improvements by `literadix`
+
 ## [0.15.4] - 2025-11-05
 - Another bug in modulo for not constant divisor
 - Test covering a lot of scenarios for the modulo
