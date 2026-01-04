@@ -1,5 +1,6 @@
 use selen::prelude::*;
 
+#[test]
 fn main() {
     println!("Testing min/max functions with empty input...");
     

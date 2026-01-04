@@ -1,4 +1,3 @@
-use selen::prelude::*;
 use selen::core::error::SolverError;
 
 #[test]

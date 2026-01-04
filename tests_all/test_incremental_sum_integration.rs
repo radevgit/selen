@@ -311,7 +311,7 @@ fn test_incremental_sum_adaptive_strategy_three_variable_sum() {
     
     let mut x1 = SparseSet::new(1, 10);
     let mut x2 = SparseSet::new(1, 10);
-    let mut x3 = SparseSet::new(1, 10);
+    let x3 = SparseSet::new(1, 10);
     
     // Simulate heavy pruning on x1: keep 2 values, remove 8
     for i in 3..=10 {
@@ -331,11 +331,11 @@ fn test_incremental_sum_adaptive_strategy_three_variable_sum() {
     let sum_mins_except_x1 = x2.min() + x3.min();  // 3 + 1 = 4
     let sum_maxs_except_x1 = x2.max() + x3.max();  // 10 + 10 = 20
     
-    let sum_mins_except_x2 = x1.min() + x3.min();  // 1 + 1 = 2
-    let sum_maxs_except_x2 = x1.max() + x3.max();  // 2 + 10 = 12
+    let _sum_mins_except_x2 = x1.min() + x3.min();  // 1 + 1 = 2
+    let _sum_maxs_except_x2 = x1.max() + x3.max();  // 2 + 10 = 12
     
-    let sum_mins_except_x3 = x1.min() + x2.min();  // 1 + 3 = 4
-    let sum_maxs_except_x3 = x1.max() + x2.max();  // 2 + 10 = 12
+    let _sum_mins_except_x3 = x1.min() + x2.min();  // 1 + 3 = 4
+    let _sum_maxs_except_x3 = x1.max() + x2.max();  // 2 + 10 = 12
     
     // Verify adaptive strategy decisions
     // x1: 8 removed, 2 remaining: 8 < 2/2=1? NO

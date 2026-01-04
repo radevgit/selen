@@ -1,6 +1,7 @@
 use selen::prelude::*;
 use std::time::Instant;
 
+#[test] 
 fn main() -> SolverResult<()> {
     println!("Testing embedded statistics API (replacing solve_with_callback)...");
     

@@ -368,7 +368,7 @@ fn test_combined_min_max_element() {
         m.float(2.4, 2.4),
     ];
     
-    let min_result = m.array_float_minimum(&array)
+    let _min_result = m.array_float_minimum(&array)
         .expect("Should compute minimum");
     let max_result = m.array_float_maximum(&array)
         .expect("Should compute maximum");
