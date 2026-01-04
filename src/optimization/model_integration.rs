@@ -596,6 +596,7 @@ impl OptimizationRouter {
         let mut space = Space {
             vars: working_vars,
             props: props.clone(),
+            trail: crate::search::trail::Trail::new(),
             lp_solver_used: false,
             lp_constraint_count: 0,
             lp_variable_count: 0,

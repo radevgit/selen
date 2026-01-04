@@ -67,10 +67,11 @@ crate-type = ["lib"]
 #divan = "0.1.21"
 
 [profile.release]
-lto = true
+lto = "fat"           # Full LTO across crates
 codegen-units = 1
 panic = "abort"
 opt-level = 3
+overflow-checks = false  # Disable in release
 
 
 [lints.rustdoc]
